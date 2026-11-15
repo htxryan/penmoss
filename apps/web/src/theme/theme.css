@@ -450,6 +450,8 @@ fieldset:disabled .theme-card {
 
 .tp-code {
   margin: 0 0 0.6rem;
+  /* A block, not in a line of the preview's text: the note's code at the Note Font Size. */
+  font-size: var(--pm-note-preview-code-size);
   padding: 0.5rem 0.65rem;
   overflow-x: auto;
   border-radius: 0;

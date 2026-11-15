@@ -133,6 +133,7 @@
   /* Appearance's preview of a note, a little under the note's own sizes. */
   --pm-note-preview-title-size: calc(var(--pm-note-size, 16px) * 1.15);
   --pm-note-preview-text-size: calc(var(--pm-note-size, 16px) * 0.875);
+  --pm-note-preview-code-size: calc(var(--pm-note-size, 16px) * 0.85);
 }
 
 /* Phones: titles a step smaller, and the note's title a little under the desktop's (A554). */
