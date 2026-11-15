@@ -4,7 +4,7 @@ import { readdir, rm, stat, truncate, utimes, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MeaningIndex, chunkKey, fakeEmbedder, type MeaningNote } from '@penmoss/core/search';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CLAIM_TTL_MS, FileVectorCache, removeOtherVectors, vectorsDir } from '../src/file-cache';
 import { Lease, leaseHolder, leasePath } from '../src/lease';
 
@@ -199,7 +199,11 @@ describe('the indexer lease (A1157)', () => {
     const app = await Lease.acquire(home, 'app', { heartbeatMs: 20 });
     const old = new Date(Date.now() - 120_000);
     await utimes(leasePath(home), old, old);
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    // The next beat touches the file again.
+    await vi.waitFor(
+      async () => expect((await stat(leasePath(home))).mtimeMs).toBeGreaterThan(old.getTime()),
+      { timeout: 2_000, interval: 10 },
+    );
     expect(await Lease.acquire(home, 'cli', { staleMs: 30_000 })).toBeUndefined();
     await app!.release();
   });

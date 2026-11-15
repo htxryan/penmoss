@@ -113,12 +113,20 @@ describe('a process that lost the race keeps trying (A1350)', () => {
     expect(app).toBeDefined();
     // `penmoss mcp` opens while the app indexes: it loses the race, then keeps trying.
     const changes: boolean[] = [];
-    const keeper = new LeaseKeeper(() => Lease.acquire(home, 'mcp', options(MCP)), {
-      retryMs: 20,
-      onChange: (held) => changes.push(held),
-    });
+    let tries = 0;
+    const keeper = new LeaseKeeper(
+      () => {
+        tries++;
+        return Lease.acquire(home, 'mcp', options(MCP));
+      },
+      { retryMs: 20, onChange: (held) => changes.push(held) },
+    );
     expect(await keeper.start()).toBe(false);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // It tries again and again, and loses each time while the app lives.
+    await vi.waitFor(() => expect(tries).toBeGreaterThanOrEqual(4), {
+      timeout: 2_000,
+      interval: 10,
+    });
     expect(keeper.held).toBe(false);
     // The app quits without letting go (killed); the file names its dead pid.
     mac.running.delete(APP);
