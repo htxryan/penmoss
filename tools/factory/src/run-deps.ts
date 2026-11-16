@@ -98,6 +98,11 @@ export interface RunDeps {
   keep?(name: string, text: string): void;
   /** The last proof run's output for a platform (`runs/<run>/proof-<platform>.log`), if kept. */
   proofLog?(platform: Platform): string | undefined;
+  /**
+   * The tracked files the sandbox's worktree has uncommitted changes to, as the gate checks them
+   * (PEN-141): a session that reported done with some gets one more turn to commit them.
+   */
+  uncommitted?(sandbox: RunSandbox): Promise<readonly string[]>;
   /** `.factory/result.json` from the worktree, parsed (or why it couldn't be). */
   readResult(sandbox: RunSandbox): Promise<ResultRead>;
   /**
@@ -230,6 +235,11 @@ export interface RunInput {
    * than running the agent again.
    */
   readonly resume?: { readonly run: string; readonly result: AgentResult };
+  /**
+   * A recovered run's gate rounds so far (PEN-142): the rounds the runs it recovers used, from
+   * the ledger (`roundsUsed`). Its rounds go on from there, so the limit holds across recoveries.
+   */
+  readonly firstRound?: number;
   /**
    * A recovered run whose agent had finished, and Ryan's comments on the card since it did
    * (A1347): the agent runs again with them, rather than the run going on from the gate.

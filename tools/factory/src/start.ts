@@ -356,6 +356,48 @@ function lastFinished(
 }
 
 /**
+ * The gate rounds the card's runs have used since its last fresh claim (PEN-142): one after the
+ * highest `round` its implementation gate logged (`gate-failed`, `validation-mismatch`) since a
+ * `claimed` without `recovered`. A recovered run's rounds go on from there, so Blocked and
+ * cleared doesn't give a card a fresh set. A rebase's or review's gate (with a `phase`) isn't an
+ * implementation round. 0 when there are none.
+ */
+export function roundsUsed(ledger: string, issue: number): number {
+  let used = 0;
+  for (const line of ledger.split('\n')) {
+    if (!line.trim()) continue;
+    let e: {
+      event?: string;
+      issue?: number;
+      run?: string;
+      round?: unknown;
+      phase?: string;
+      recovered?: boolean;
+    };
+    try {
+      e = JSON.parse(line) as typeof e;
+    } catch {
+      continue; // A torn last line from a crash.
+    }
+    if ((e.issue ?? Number(String(e.run ?? '').split('-')[0])) !== issue) continue;
+    if (e.event === 'claimed' && !e.recovered) used = 0;
+    else if (
+      (e.event === 'gate-failed' || e.event === 'validation-mismatch') &&
+      !e.phase &&
+      typeof e.round === 'number'
+    )
+      used = Math.max(used, e.round + 1);
+  }
+  return used;
+}
+
+/** `roundsUsed` from the factory's ledger (`runs.jsonl`); 0 when there is none yet. */
+export function roundsUsedFrom(config: FactoryConfig, issue: number): number {
+  const ledger = join(expandHome(config.stateDir), 'runs.jsonl');
+  return existsSync(ledger) ? roundsUsed(readFileSync(ledger, 'utf8'), issue) : 0;
+}
+
+/**
  * For a recovered run (R12): the run whose agent last finished its work on the card, from the
  * ledger, with the result the host kept in its folder (`runs/<run>/result.json`) and when the
  * ledger says it finished. Nothing when there is none, or the result no longer reads: the run
@@ -490,6 +532,7 @@ export async function executeRun(
       ...(images ? { images } : {}),
       ...(recovered ? { recovered } : {}),
       ...(recovered ? recoveryInput(resumeFrom(config, item.number), issue, tracker.owner) : {}),
+      ...(recovered ? { firstRound: roundsUsedFrom(config, item.number) } : {}),
     });
   } catch (error) {
     if (error instanceof BlockedByRyan) {

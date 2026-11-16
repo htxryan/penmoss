@@ -30,11 +30,12 @@ import {
 import type { HostContext } from './host-context.ts';
 import type { HostDeps } from './host.ts';
 import type { RunSandbox } from './run-deps.ts';
+import { porcelainPaths } from './agent-round.ts';
 
 /** The agent sessions of the run, and the result each wrote. */
 export function agentDeps(
   ctx: HostContext,
-): Pick<HostDeps, 'runAgent' | 'canContinue' | 'continueAgent' | 'readResult'> {
+): Pick<HostDeps, 'runAgent' | 'canContinue' | 'continueAgent' | 'readResult' | 'uncommitted'> {
   const { config, slot, exec, options, runDir, sandboxes } = ctx;
   // A session with a chat in the Claude app signs in with the factory's own login: the host
   // refreshes it if it must, and stages its access token for this slot until the session ends.
@@ -138,6 +139,11 @@ export function agentDeps(
     runAgent: (handle, prompt) => session(handle, prompt),
     canContinue: (handle) => lastSessions.get(handle)?.resume !== undefined,
     continueAgent: (handle, message) => session(handle, message, true),
+    // In the sandbox, as the gate checks it: the host never runs git in a run's worktree (A1230).
+    uncommitted: async (handle) => {
+      const status = await handle.exec('git status --porcelain --untracked-files=no');
+      return status.exitCode === 0 ? porcelainPaths(status.stdout) : [];
+    },
     readResult: (handle) => {
       const path = join(handle.worktreePath, RESULT_PATH);
       if (!existsSync(path))
