@@ -117,6 +117,8 @@ export function fake(overrides: {
   rendered?: string;
   /** `git diff --raw` of the branch's own changes in the gate (carry.ts); default: none. */
   raw?: string;
+  /** What each `uncommitted` call finds after an agent session, in order (PEN-141); then none. */
+  uncommitted?: string[][];
 }): Fake {
   const calls: string[] = [];
   const comments: string[] = [];
@@ -229,6 +231,14 @@ export function fake(overrides: {
             calls.push('agent continued');
             prompts.push(message);
             return Promise.resolve({ output: 'done' });
+          },
+        }
+      : {}),
+    ...(overrides.uncommitted
+      ? {
+          uncommitted: () => {
+            calls.push('uncommitted?');
+            return Promise.resolve(overrides.uncommitted!.shift() ?? []);
           },
         }
       : {}),

@@ -66,7 +66,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       `Restarted: ${pr} is as the factory last pushed it, so the run goes back to waiting on its CI, without running the gate, proof and validation again (A1298). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.\n\n${marker('claim')}`,
     );
     await deps.setStatus(item, config.status.working);
-    deps.log('claimed', { issue: item.number });
+    deps.log('claimed', { issue: item.number, recovered: true });
     // As a resumed round logs it, so a later restart still finds the result.
     deps.log('agent-finished', { status: 'done', from: resumed.run });
     deps.log('resumed-at-ci', { pr });
@@ -93,21 +93,28 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       : input.recovered
         ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
         : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
+  // A recovered run's rounds go on from the runs it recovers (PEN-142), so the limit holds.
+  const first = input.recovered ? (input.firstRound ?? 0) : 0;
+  const used =
+    first > 0
+      ? ` Earlier runs used ${first} of this card's ${config.rounds.gateFix + 1} gate rounds; this run goes on from there.`
+      : '';
   await deps.comment(
     item.number,
-    `${how} Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
+    `${how}${used} Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
   );
   await deps.setStatus(item, config.status.working);
-  deps.log('claimed', { issue: item.number });
+  // `recovered` marks the lineage: a fresh claim starts the card's round count again.
+  deps.log('claimed', { issue: item.number, ...(input.recovered ? { recovered: true } : {}) });
 
   // Recovered with Ryan's replies since its agent finished: the agent's round comes first.
   let prompt =
     input.recovered && input.replies?.length
       ? `${input.prompt}\n\n${repliesSection(branch, input.replies)}`
       : input.prompt;
-  for (let round = 0; ; round++) {
+  for (let round = first; ; round++) {
     let result: AgentResult;
-    if (round === 0 && resumed) {
+    if (round === first && resumed) {
       // The same event a finished round writes, naming where its result is, for a later restart.
       deps.log('agent-finished', { status: 'done', from: resumed.run });
       result = resumed.result;
@@ -206,7 +213,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
     if (round >= config.rounds.gateFix) {
       return block(
         'gate-failed',
-        `The gate stopped this run after ${round + 1} round(s): ${verdict.feedback}`,
+        `The gate stopped this run after ${round + 1} round(s)${first > 0 ? ' on this card, counting earlier runs' : ''}: ${verdict.feedback}`,
       );
     }
     // Another round: the agent sees exactly what the gate saw.

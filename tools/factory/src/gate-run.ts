@@ -31,6 +31,7 @@ import type { AgentResult } from './result.ts';
 import { excerpt, tail } from './gate-log.ts';
 import type { RunSandbox, RunDeps } from './run-deps.ts';
 import { withTimeout } from './timeout.ts';
+import { porcelainPaths } from './agent-round.ts';
 import { whenVmFree } from './vm-wait.ts';
 
 /**
@@ -158,12 +159,20 @@ export async function gateAndProve(
   const gate = await deps.openSandbox(branch);
   try {
     const clean = await gate.exec('git status --porcelain --untracked-files=no');
-    if (clean.stdout.trim() !== '')
+    if (clean.stdout.trim() !== '') {
+      // Named, so a person reading the Blocked reason knows recovery is a commit (PEN-141).
+      const files = porcelainPaths(clean.stdout);
+      const shown = files
+        .slice(0, 10)
+        .map((f) => `\`${f}\``)
+        .join(', ');
+      const more = files.length > 10 ? `, and ${files.length - 10} more` : '';
       return {
         ok: false,
-        reason: 'uncommitted changes',
-        feedback: 'the branch has uncommitted changes to tracked files.',
+        reason: `uncommitted changes (${files.length} file${files.length === 1 ? '' : 's'})`,
+        feedback: `the agent left ${files.length} tracked file${files.length === 1 ? '' : 's'} uncommitted: ${shown}${more}. Commit them on the branch.`,
       };
+    }
     // Up to date with main before anything is checked (F6). The harness resolves new decision
     // rows on both sides; any other conflict is the agent's to resolve.
     const rebased = await deps.rebase(gate);
