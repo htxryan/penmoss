@@ -2,6 +2,7 @@ package app.penmoss.git.firstrun
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -168,17 +170,21 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
                     },
                 ) {
                     Lead("GitHub asks for this code. Copy it and open GitHub, enter it there and approve Penmoss, then come back: this screen goes on by itself.")
-                    Text(
-                        state.userCode,
-                        Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 16.dp, vertical = 16.dp)
-                            .testTag("github-signin-code")
-                            .semantics { contentDescription = "Code ${state.userCode}" },
-                        style = MaterialTheme.roles.pageTitle,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
+                    // The code, with Copy beside it, where people look for it.
+                    Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(vertical = 16.dp)) {
+                        Text(
+                            state.userCode,
+                            Modifier
+                                .align(Alignment.Center)
+                                .testTag("github-signin-code")
+                                .semantics { contentDescription = "Code ${state.userCode}" },
+                            style = MaterialTheme.roles.pageTitle,
+                        )
+                        app.penmoss.ui.common.IconButton(
+                            onClick = { deps.copy(state.userCode) },
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).testTag("github-signin-copy"),
+                        ) { LucideGlyph("copy", contentDescription = "Copy Code") }
+                    }
                     Working("Waiting for you to approve…", "github-signin-waiting")
                 }
                 return

@@ -155,6 +155,13 @@ private fun ButtonIcon(name: String) {
     Spacer(Modifier.width(8.dp))
 }
 
+/** One of Lucide's icons on its own (an icon-only button's), [size] square. */
+@Composable
+internal fun LucideGlyph(name: String, contentDescription: String?, size: androidx.compose.ui.unit.Dp = 22.dp) {
+    val icon = rememberLucideIcons()?.icon(name)
+    if (icon != null) Icon(LucideAssets.vector(icon), contentDescription, Modifier.size(size)) else Spacer(Modifier.size(size))
+}
+
 @Composable
 private fun ButtonWords(text: String) {
     Text(text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
