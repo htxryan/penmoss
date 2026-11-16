@@ -38,7 +38,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import app.penmoss.ui.common.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
