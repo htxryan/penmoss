@@ -46,7 +46,7 @@ Builds from the Alpha channel use the same app and certificate, so an Alpha buil
 
 ## Notebooks
 
-The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. The gear at the top opens **Settings**, which has a **Search Settings** field (a match opens its screen scrolled to the setting, marked for a moment) and five groups: **Look and Feel** (Appearance, Home, Symbols), **Writing** (Daily Notes, Quick Capture, Keyboard Shortcuts), **Notebooks**, **Agents** (Agent Activity) and **This Phone** (Storage, GitHub, What’s New).
+The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. On a notebook's Home, **☰** (or a swipe from the left edge) opens the menu with the Mac sidebar's places: **Home**, **Search**, **Today**, **This Week**, **Journal**, **All Notes**, **Tags** and **Graph**; your **Notebooks**, to switch to another, and **All Notebooks**; then **Quick Capture**, **Trash**, **Settings** and **Send Feedback**. The **⋮** menu has **New Folder**, **Reorder Folders** and which of Home's sections show. The gear at the top opens **Settings**, which has a **Search Settings** field (a match opens its screen scrolled to the setting, marked for a moment) and five groups: **Look and Feel** (Appearance, Home, Symbols), **Writing** (Daily Notes, Quick Capture, Keyboard Shortcuts), **Notebooks**, **Agents** (Agent Activity) and **This Phone** (Storage, GitHub, What’s New).
 
 Under **Notebooks**, each notebook has a row with its sync state; tap it for the notebook's page, which has three tabs:
 

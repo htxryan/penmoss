@@ -78,8 +78,13 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
         val changeLayout = { key: String, value: kotlinx.serialization.json.JsonElement ->
             if (graph.device.settings.value.known) graph.device.changeSetting(key, value)
         }
+        // The drawer's Notebooks (A1604): every notebook on this phone, with its badge.
+        val notebookViews by graph.device.git.list.collectAsStateWithLifecycle()
+        val badges by graph.device.git.badges.collectAsStateWithLifecycle(emptyMap())
         HomeScreen(
             HomeUi(
+                notebookId = graph.localId,
+                notebooks = notebookViews.map { DrawerNotebook(it.localId, it.name, badges[it.localId]) },
                 title = graph.name,
                 notebook = graph.name,
                 badge = app.penmoss.engine.settings.NotebookBadges.badgeOf(graph.notebookId, graph.name, own.settings.values),
@@ -152,7 +157,14 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 onCapture = { openCapture(root.context) },
                 onCommands = { nav.open("search?actions=true") },
                 onStatus = { nav.open(SettingsRoutes.notebook(graph.localId, app.penmoss.git.NotebookTab.SYNC)) },
-                onFeedback = { root.openFeedback("Home's ⋮ menu", null, null, null, 0) },
+                onFeedback = { root.openFeedback("Home's menu", null, null, null, 0) },
+                onNotebook = { app.penmoss.git.GitNotebookActivity.open(root.context, it) },
+                onAllNotebooks = {
+                    root.context.startActivity(
+                        android.content.Intent(root.context, app.penmoss.ui.MainActivity::class.java)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                    )
+                },
             ),
         )
     }

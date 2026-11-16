@@ -37,6 +37,12 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.material.icons.Icons
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
@@ -153,6 +159,10 @@ data class HomeUi(
     val layout: HomeLayout = HomeLayout(),
     /** Each Quick Access note's notebook, by note id, when Settings shows it (T53 item 10). */
     val quickAccessNotebooks: Map<String, String> = emptyMap(),
+    /** This notebook's local id, which the drawer marks among [notebooks] (A1604). */
+    val notebookId: String = "",
+    /** The notebooks on this phone, the drawer's Notebooks (A1604). */
+    val notebooks: List<DrawerNotebook> = emptyList(),
 )
 
 /** What Home's taps, presses and pulls do (A6). */
@@ -208,6 +218,10 @@ class HomeActions(
     val onQuickAccessMove: (id: String, index: Int) -> Unit = { _, _ -> },
     /** A new note at the notebook's top level, from its heading's long press (T53 item 4). */
     val onNotebookNewNote: () -> Unit = onNewNote,
+    /** Opens another notebook on this phone, from the drawer (A1604). */
+    val onNotebook: (localId: String) -> Unit = {},
+    /** The app's first screen, every notebook on this phone (A1604). */
+    val onAllNotebooks: () -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -245,6 +259,15 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
         ui.status.isEmpty() -> SyncDot(DotState.IDLE, "Not synced yet")
         else -> SyncDot(DotState.SYNCED, ui.status)
     }
+    // The hamburger's drawer, with the Mac sidebar's areas (A1604).
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
+    BackHandler(enabled = drawer.isOpen) { drawerScope.launch { drawer.close() } }
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        gesturesEnabled = !ui.reordering,
+        drawerContent = { HomeDrawerSheet(ui, actions) { drawerScope.launch { drawer.close() } } },
+    ) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -252,7 +275,11 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                 modifier = Modifier.underSelectionBar(),
                 title = { Text(if (ui.reordering) "Reorder Folders" else ui.title) },
                 navigationIcon = {
-                    if (ui.reordering) BackButton { actions.onReorder(false) }
+                    if (ui.reordering) {
+                        BackButton { actions.onReorder(false) }
+                    } else {
+                        TipIconButton(Icons.Default.Menu, "Open Menu", onClick = { drawerScope.launch { drawer.open() } }, modifier = Modifier.testTag("homeMenu"))
+                    }
                 },
                 actions = {
                     if (ui.reordering) {
@@ -267,38 +294,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         Box {
                             TipIconButton(Icons.Default.MoreVert, "More Options", onClick = { more = true }, modifier = Modifier.testTag("homeMore"))
                             DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("Quick Capture") },
-                                    onClick = {
-                                        more = false
-                                        actions.onCapture()
-                                    },
-                                    modifier = Modifier.testTag("homeCapture"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("All Notes") },
-                                    onClick = {
-                                        more = false
-                                        actions.onAllNotes()
-                                    },
-                                    modifier = Modifier.testTag("homeAllNotes"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Journal") },
-                                    onClick = {
-                                        more = false
-                                        actions.onJournal()
-                                    },
-                                    modifier = Modifier.testTag("homeJournal"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Tags") },
-                                    onClick = {
-                                        more = false
-                                        actions.onTags()
-                                    },
-                                    modifier = Modifier.testTag("homeTags"),
-                                )
                                 DropdownMenuItem(
                                     text = { Text("New Folder") },
                                     onClick = {
@@ -315,24 +310,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                             actions.onReorder(true)
                                         },
                                         modifier = Modifier.testTag("homeReorder"),
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = { Text("Trash") },
-                                    onClick = {
-                                        more = false
-                                        actions.onTrash()
-                                    },
-                                    modifier = Modifier.testTag("openTrash"),
-                                )
-                                if (actions.onFeedback != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Send Feedback") },
-                                        onClick = {
-                                            more = false
-                                            actions.onFeedback()
-                                        },
-                                        modifier = Modifier.testTag("homeFeedback"),
                                     )
                                 }
                                 HorizontalDivider()
@@ -525,6 +502,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                 }
             }
         }
+    }
     }
 }
 

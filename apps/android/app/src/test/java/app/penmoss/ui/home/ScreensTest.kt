@@ -157,17 +157,15 @@ class ScreensTest {
         // Today and This Week are icons in Home's row, named and with tooltips (T51, A932).
         compose.onNodeWithContentDescription("Today").performClick()
         compose.onNodeWithContentDescription("This Week").performClick()
-        // All notes moved to the overflow menu (T40 P5, JR2).
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithText("All Notes").performClick()
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithText("Journal").performClick()
-        // Quick capture inside the app (T40 P9, PL1), first in the menu.
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithText("Quick Capture").performClick()
-        // Send feedback (T49, D41), last in the menu.
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithTag("homeFeedback").performClick()
+        // All Notes, Journal, Quick Capture and Send Feedback are in the hamburger's drawer (A1604).
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("homeAllNotes").performScrollTo().performClick()
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("homeJournal").performScrollTo().performClick()
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("homeCapture").performScrollTo().performClick()
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("homeFeedback").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Search").performClick()
         compose.onNodeWithContentDescription("New Note").performClick()
         assertEquals(listOf("n1"), opened)

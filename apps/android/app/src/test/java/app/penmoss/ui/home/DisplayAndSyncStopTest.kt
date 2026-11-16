@@ -21,6 +21,9 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.engine.settings.DisplayKeys
@@ -91,11 +94,11 @@ class DisplayAndSyncStopTest {
         compose.onNodeWithTag("homeCommands").assertContentDescriptionEquals("Commands").performClick()
         compose.onNodeWithTag("homeSearch").performClick()
         assertEquals(listOf("tags", "today", "week", "graph", "commands", "search"), ran)
-        // Graph and Commands left Home's ⋮ menu for the row.
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithText("Graph").assertDoesNotExist()
+        // Graph and Commands left Home's ⋮ menu for the row; the drawer has Graph among the sidebar's areas (A1604).
+        compose.onAllNodes(hasText("Graph") and !hasTestTag("drawerGraph")).assertCountEquals(0)
         compose.onNodeWithText("Commands").assertDoesNotExist()
-        compose.onNodeWithText("Journal").performClick()
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("homeJournal").performScrollTo().performClick()
 
         shortcuts = HomeShortcuts.of(settings(DisplayKeys.TODAY to false, DisplayKeys.GRAPH to false, DisplayKeys.COMMANDS to false, DisplayKeys.TAGS to false))
         compose.onNodeWithTag("homeTagsShortcut").assertDoesNotExist()
