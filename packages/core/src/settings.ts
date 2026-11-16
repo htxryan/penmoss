@@ -10,6 +10,8 @@
  * Which settings are the notebook's own and which a device's is `isNotebookSetting`, here; where
  * each is kept is `@penmoss/model`'s (`NOTEBOOK_MAP`, `DEVICE_MAP`, `mergedSettings`).
  */
+import { DISPLAY_SETTING_KEYS } from './display';
+import { FONT_SETTING_KEYS } from './fonts';
 import {
   DEFAULT_DAILY_TEMPLATE,
   DEFAULT_TIME_ZONE,
@@ -17,6 +19,12 @@ import {
   isTimeZone,
   type PeriodKind,
 } from './periodic';
+import {
+  HIDDEN_SECTIONS_SETTING,
+  QUICK_ACCESS_NOTEBOOK_SETTING,
+  RECENT_COUNT_SETTING,
+  SECTION_ORDER_SETTING,
+} from './sidebar-layout';
 
 type Settings = Readonly<Record<string, unknown>>;
 
@@ -40,6 +48,47 @@ export const DAD_JOKES_SETTING = 'home.dadJokes';
  */
 export function isNotebookSetting(key: string): boolean {
   return key === TIME_ZONE_SETTING || key.startsWith('template.') || key.startsWith('badge.');
+}
+
+/**
+ * The platforms whose devices keep their own copy of the look and layout (PEN-156, A1605): every
+ * Mac and browser is `desktop`, every Android phone `mobile`.
+ */
+export const SETTINGS_PLATFORMS = ['desktop', 'mobile'] as const;
+export type SettingsPlatform = (typeof SETTINGS_PLATFORMS)[number];
+
+/**
+ * The per-platform keys with no prefix (PEN-156, A1605): the theme and its mode (`@penmoss/ui/theme`'s
+ * `THEME_SETTING` and `MODE_SETTING`), the fonts and the note text's size, the sidebar's (Home's)
+ * shortcut buttons, its sections' order and visibility, Recent Notes' length and Quick Access's
+ * notebook names. Custom themes (`theme.custom.*`) stay shared, so a theme made on one is there
+ * to pick on the other.
+ */
+export const PLATFORM_SETTING_KEYS: readonly string[] = [
+  'theme.id',
+  'theme.mode',
+  ...FONT_SETTING_KEYS,
+  ...DISPLAY_SETTING_KEYS,
+  SECTION_ORDER_SETTING,
+  HIDDEN_SECTIONS_SETTING,
+  RECENT_COUNT_SETTING,
+  QUICK_ACCESS_NOTEBOOK_SETTING,
+];
+
+/** The per-platform keys by prefix: the keyboard shortcuts (`@penmoss/editor/keys`' `keys.<command>`). */
+export const PLATFORM_SETTING_PREFIXES: readonly string[] = ['keys.'];
+
+/**
+ * A device setting each platform keeps its own copy of (PEN-156, A1605): the Macs one, the phones
+ * another, in the primary notebook beside the shared device map. While a platform has no copy of
+ * one, the shared value shows. Every other device setting (Daily Notes, Quick Capture, Quick
+ * Access pins, Symbols, …) stays shared by every device.
+ */
+export function isPlatformSetting(key: string): boolean {
+  return (
+    PLATFORM_SETTING_KEYS.includes(key) ||
+    PLATFORM_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))
+  );
 }
 
 /** The time zone setting, or the default when unset or unknown here. */

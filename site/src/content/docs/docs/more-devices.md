@@ -47,5 +47,6 @@ See [The penmoss CLI](/docs/reference/cli/).
 ## Which settings follow you
 
 - **The notebook's own settings** go with it to every device: its time zone and its daily and weekly templates.
-- **Your app settings** (theme, sidebar, shortcuts and the rest) are kept in your **Primary Notebook**, so another device that opens the same notebook gets them too.
+- **Your app settings** are kept in your **Primary Notebook**, so another device that opens the same notebook gets them too.
+- **Your Macs and your phones each have their own** appearance (mode, theme, fonts, text size), sidebar or Home layout and keyboard shortcuts: a change on a Mac reaches your other Macs, and a change on a phone your other phones. Until you change one on a platform, it shows what you had before ([Settings](/docs/reference/settings/#kept-apart-for-your-macs-and-your-phones)).
 - **This device only:** which notebook is primary, the Mac's window settings (compact title bar, menu bar icon, the capture hotkey), and everything under **This Mac** in Settings: Semantic Search, the GitHub sign-in and Updates.

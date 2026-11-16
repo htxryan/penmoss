@@ -209,7 +209,7 @@ fun ShortcutsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Keyboard Shortcuts") },
+                title = { app.penmoss.ui.settings.PlatformHeadline("Keyboard Shortcuts", many = true) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             )
         },
@@ -218,7 +218,7 @@ fun ShortcutsScreen(
             item(key = "intro") {
                 Column(Modifier.settingRow("keyboard-shortcuts").padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "For a hardware keyboard. Changes sync to your other devices. Shortcuts need Ctrl or Alt so typing never runs a command. " +
+                        "For a hardware keyboard. Changes reach your other Android phones; your Macs keep their own. Shortcuts need Ctrl or Alt so typing never runs a command. " +
                             "Meta+/ lists the ones that work where you are.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

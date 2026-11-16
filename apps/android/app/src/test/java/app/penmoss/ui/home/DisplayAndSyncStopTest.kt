@@ -16,6 +16,9 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -154,6 +157,18 @@ class DisplayAndSyncStopTest {
         compose.onNodeWithTag("display-quickAccessNotebook").performScrollTo()
         compose.onNodeWithText("Show Notebook Names").assertExists()
         compose.onNodeWithText("Shows 10").assertExists()
+    }
+
+    /** PEN-156, A1605: Home's shortcuts and sections are kept for the phones, and the phone marks both groups. */
+    @Test
+    fun homesGroupsCarryThePhoneMark() {
+        compose.setContent {
+            PenmossTheme {
+                DisplayScreen(displayChoices(Settings()), enabled = true, onChange = { _, _ -> }, onBack = {})
+            }
+        }
+        compose.onAllNodesWithTag("platformOnly").assertCountEquals(2)
+        compose.onAllNodesWithTag("platformOnly").onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
     }
 
     @Test

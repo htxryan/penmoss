@@ -18,7 +18,7 @@
  * The epoch (A5) is the engine store's own: a store made afresh (its data lost) has a new one,
  * so every copy on the phone is replaced from git instead of being merged into nothing.
  */
-import { isNotebookSetting } from '@penmoss/core/settings';
+import { isNotebookSetting, type SettingsPlatform } from '@penmoss/core/settings';
 import {
   isPurged,
   isUpdate,
@@ -49,12 +49,10 @@ import {
   fallbackFolder,
   moveNote,
   readFolderTrash,
-  DEVICE_MAP,
   deviceSettings,
-  readSettings,
   readWorkspace,
   registerNote,
-  setSetting,
+  writeSetting,
 } from '@penmoss/model/workspace';
 import { parseMarkdown } from '@penmoss/core';
 import { appendCapture, captureTime, splitCapture } from '@penmoss/model/capture';
@@ -159,6 +157,8 @@ const INBOX = 'Inbox';
 
 /** The app's own route for them: only Penmoss's Kotlin reaches this server (never an agent). */
 export const DEVICE_SETTINGS_PATH = '/android/device-settings';
+/** Every phone shares the phones' copy of the look and layout (PEN-156, A1605). */
+export const SETTINGS_PLATFORM: SettingsPlatform = 'mobile';
 /**
  * The agent sessions the WorkspaceDoc lists (T60, A1060, A1076), for Send to… and the gone check:
  * the app's own route, as the device settings'.
@@ -462,15 +462,19 @@ export class LocalServer {
     };
   }
 
-  /** The device map (A1014): every `device/<key>`, the notebook's own keys left out as the Mac does. */
+  /**
+   * The device map (A1014): every `device/<key>`, the notebook's own keys left out as the Mac does,
+   * with the phones' own copy of the look and layout over the shared one (PEN-156, A1605).
+   */
   deviceSettings(): Record<string, unknown> {
-    return deviceSettings(this.workspace);
+    return deviceSettings(this.workspace, SETTINGS_PLATFORM);
   }
 
   /**
    * `PUT /android/device-settings` `{ set: { key: value | null } }` (A1014): each written as the
-   * Mac writes it (`setSetting(doc, 'device', key, value)`, the JSON value as it is), a null
-   * removing it so its default shows. Answers the device map after the change.
+   * Mac writes it (`writeSetting`, the JSON value as it is), a null removing it so its default
+   * shows. The look and layout go to the phones' own copy (`mobile/<key>`, A1605), the Macs' and
+   * the shared value left alone. Answers the device map after the change.
    */
   private async changeDeviceSettings(body: Body): Promise<LocalReply> {
     const set = body['set'];
@@ -492,7 +496,7 @@ export class LocalServer {
         return refusal(403, 'setting_not_allowed', `${key} is the notebook's own setting`);
       }
     }
-    const live = readSettings(this.workspace, DEVICE_MAP);
+    const live = this.deviceSettings();
     const writes = entries.filter(
       ([key, value]) => JSON.stringify(live[key] ?? null) !== JSON.stringify(value ?? null),
     );
@@ -500,7 +504,13 @@ export class LocalServer {
       await this.write(() => {
         this.workspace.transact(() => {
           for (const [key, value] of writes) {
-            setSetting(this.workspace, DEVICE_MAP, key, value === null ? undefined : value);
+            writeSetting(
+              this.workspace,
+              key,
+              value === null ? undefined : value,
+              null,
+              SETTINGS_PLATFORM,
+            );
           }
         });
       });

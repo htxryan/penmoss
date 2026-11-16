@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "platforms": ["desktop", "mobile"],
+  "android": "mobile",
+  "keys": [
+    "theme.id",
+    "theme.mode",
+    "font.interface",
+    "font.note",
+    "font.noteSize",
+    "sidebar.tags",
+    "sidebar.today",
+    "sidebar.thisWeek",
+    "sidebar.graph",
+    "sidebar.commands",
+    "sidebar.sectionOrder",
+    "sidebar.hiddenSections",
+    "sidebar.recentCount",
+    "quickAccess.showNotebook"
+  ],
+  "prefixes": ["keys."],
+  "samples": {
+    "theme.id": true,
+    "theme.mode": true,
+    "theme.custom.custom-ink": false,
+    "font.interface": true,
+    "font.noteSize": true,
+    "sidebar.graph": true,
+    "sidebar.sectionOrder": true,
+    "sidebar.hiddenSections": true,
+    "sidebar.recentCount": true,
+    "quickAccess.showNotebook": true,
+    "quickAccess.notes": false,
+    "keys.app.search": true,
+    "keysTyped": false,
+    "symbols.list": false,
+    "capture.destination": false,
+    "timeZone": false,
+    "template.daily": false
+  }
+}

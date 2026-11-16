@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DAILY_TEMPLATE, DEFAULT_WEEKLY_TEMPLATE } from '../src/periodic';
 import {
+  isPlatformSetting,
   captureDestinationOf,
   DAD_JOKES_SETTING,
   dadJokesOf,
@@ -56,5 +57,45 @@ describe('the synced settings with no feature module of their own', () => {
     expect(isNotebookSetting('template.daily')).toBe(true);
     expect(isNotebookSetting('theme.id')).toBe(false);
     expect(isNotebookSetting('capture.destination')).toBe(false);
+  });
+});
+
+describe('isPlatformSetting (PEN-156, A1605)', () => {
+  it('names the look, the sidebar layout and the keyboard shortcuts', () => {
+    for (const key of [
+      'theme.id',
+      'theme.mode',
+      'font.interface',
+      'font.note',
+      'font.noteSize',
+      'sidebar.tags',
+      'sidebar.today',
+      'sidebar.thisWeek',
+      'sidebar.graph',
+      'sidebar.commands',
+      'sidebar.sectionOrder',
+      'sidebar.hiddenSections',
+      'sidebar.recentCount',
+      'quickAccess.showNotebook',
+      'keys.app.search',
+    ]) {
+      expect(isPlatformSetting(key), key).toBe(true);
+    }
+  });
+
+  it('leaves the shared settings shared', () => {
+    for (const key of [
+      'theme.custom.ink',
+      'quickAccess.notes',
+      'symbols.list',
+      'capture.destination',
+      'timeZone',
+      'template.daily',
+      'badge.color',
+      'note.fullWidth',
+      'tooltip.delay',
+    ]) {
+      expect(isPlatformSetting(key), key).toBe(false);
+    }
   });
 });

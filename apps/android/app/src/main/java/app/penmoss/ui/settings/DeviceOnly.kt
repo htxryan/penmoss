@@ -50,3 +50,41 @@ internal fun DeviceOnlyHeadline(text: String) {
         DeviceOnlyMark()
     }
 }
+
+/** What the phone mark says (PEN-156, A1605): kept for the phones, apart from the Macs. */
+const val PLATFORM_TIP = "This setting is kept for your Android phones only. Your Macs keep their own."
+
+/** What the phone mark says after a group's title. */
+const val PLATFORM_GROUP_TIP = "These settings are kept for your Android phones only. Your Macs keep their own."
+
+/**
+ * A setting every phone shares and the Macs keep apart (PEN-156, A1605), as the laptop marks one
+ * kept on this phone alone (A1559): the phone, its sentence a tooltip on a long press and its
+ * content description.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun PlatformMark(modifier: Modifier = Modifier, many: Boolean = false) {
+    val tip = if (many) PLATFORM_GROUP_TIP else PLATFORM_TIP
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(tip) } },
+        state = rememberTooltipState(),
+    ) {
+        Icon(
+            SettingsIcons.Phone,
+            contentDescription = tip,
+            modifier = modifier.size(18.dp).testTag("platformOnly"),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** A title with the phone mark after it: a screen's, or a group's ([many]). */
+@Composable
+internal fun PlatformHeadline(text: String, many: Boolean = false) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text)
+        PlatformMark(many = many)
+    }
+}

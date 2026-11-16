@@ -65,7 +65,8 @@ class SettingsHeaderTest {
         screen()
         compose.onNodeWithContentDescription("About Settings").performClick()
         compose.onNodeWithTag("settingsInfoText").assertContentDescriptionEquals(
-            "Settings are synced through your primary notebook, Personal. Those marked with a laptop stay on this phone only.",
+            "Settings are synced through your primary notebook, Personal. Those marked with a laptop stay on this phone only, " +
+                "and those marked with a phone are kept for your Android phones, apart from your Macs.",
         )
         compose.onNodeWithTag("settingsInfoOk").performClick()
         compose.onNodeWithTag("settingsInfoText").assertDoesNotExist()
@@ -74,7 +75,8 @@ class SettingsHeaderTest {
     @Test
     fun theWordsReadWithoutANameWhenThereIsNoNotebook() {
         assertEquals(
-            "Settings are synced through your primary notebook. Those marked ⁠laptop⁠ stay on this phone only.",
+            "Settings are synced through your primary notebook. Those marked ⁠laptop⁠ stay on this phone only, " +
+                "and those marked ⁠phone⁠ are kept for your Android phones, apart from your Macs.",
             settingsInfoText(null),
         )
     }

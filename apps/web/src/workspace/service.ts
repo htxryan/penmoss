@@ -7,6 +7,7 @@
  */
 import { ulid } from '@penmoss/core/ids';
 import { journalFolderId, type PeriodKind } from '@penmoss/core/periodic';
+import type { SettingsPlatform } from '@penmoss/core/settings';
 import { type SortMode } from '@penmoss/core/workspace';
 import type { ReplicaStore } from '@penmoss/model/record';
 import { ReplicaKeeper } from '../store/keeper';
@@ -37,6 +38,9 @@ import {
 import { isPurged, markPurged, unmarkPurged } from '@penmoss/git-notebook';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import type { MovePlan } from './model';
+
+/** The web and the Mac app share the Macs' copy of the look and layout (PEN-156, A1605). */
+export const SETTINGS_PLATFORM: SettingsPlatform = 'desktop';
 
 /** Where captures filed as new notes go (T30). */
 export const INBOX = 'Inbox';
@@ -369,14 +373,20 @@ export class Workspace {
     setTagDescription(this.doc, tag, text);
   }
 
-  /** The settings: the device's, with the notebook's own over them (A827). */
+  /**
+   * The settings: the device's, with the notebook's own over them (A827), and the Macs' own copy
+   * of the look and layout over the shared one (PEN-156, A1605).
+   */
   settings(): Record<string, unknown> {
-    return mergedSettings(this.doc);
+    return mergedSettings(this.doc, SETTINGS_PLATFORM);
   }
 
-  /** Sets one setting (undefined removes it), straight in: the engine commits it (A827). */
+  /**
+   * Sets one setting (undefined removes it), straight in: the engine commits it (A827). The look
+   * and layout go to the Macs' own copy, leaving the phones' and the shared one alone (A1605).
+   */
   setSetting(key: string, value: unknown): void {
-    writeSetting(this.doc, key, value);
+    writeSetting(this.doc, key, value, null, SETTINGS_PLATFORM);
   }
 
   /** The salt of derived folder ids (A820): a git notebook's id, or its own (A1021). */

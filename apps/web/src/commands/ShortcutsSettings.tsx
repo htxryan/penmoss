@@ -8,7 +8,7 @@ import {
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState, useSyncExternalStore } from 'react';
 import { desktop } from '../desktop/bridge';
-import { GroupHead } from '../theme/look-rows';
+import { GroupHead, ScopeMarker } from '../theme/look-rows';
 import '../journal/writing.css';
 import { settingId } from '../pages/settings-index';
 import { linkHandler, settingsPath } from '../router';
@@ -338,6 +338,8 @@ export function ShortcutsSettings() {
       <SettingsHeader
         id={`${id}-title`}
         title="Keyboard Shortcuts"
+        // Kept for the Macs, apart from the phones (PEN-156, A1605).
+        beside={<ScopeMarker many kind="platform" />}
         intro="A shortcut needs ⌘, Ctrl or Alt, so typing never runs a command."
         actions={resetToDefaults('top')}
       />

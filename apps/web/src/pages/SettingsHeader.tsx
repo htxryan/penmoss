@@ -13,7 +13,7 @@ import { gitNotebookPath, linkHandler } from '../router';
 import { useTooltipDelay } from '../shell/tooltip-state';
 import { usePopover } from '../shell/popover';
 import { useSourcesState } from '../sources/hooks';
-import { thisDevice } from '../theme/device-only';
+import { thesePlatforms, thisDevice } from '../theme/device-only';
 
 /**
  * Every Settings page's header (Ryan's chosen design, A1560): a small "Settings" with an (i) that
@@ -273,7 +273,8 @@ export function SettingsInfo() {
         <span className="settings-info-laptop" role="img" aria-label="with a laptop">
           <Icon name="laptop" size={14} />
         </span>{' '}
-        stay on {thisDevice()} only.
+        stay on {thisDevice()} only, or are kept for {thesePlatforms()} apart from your phones, as
+        each one says.
       </div>
     </span>
   );

@@ -30,6 +30,9 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
@@ -196,6 +199,19 @@ class SettingsScreensTest {
         compose.onNodeWithTag("mode-light").assertIsSelected()
         compose.onNodeWithTag("mode-system").assertIsNotSelected()
         compose.onNodeWithText("Always light, whatever the phone’s setting.").assertIsDisplayed()
+    }
+
+    /** PEN-156, A1605: the phone marks Appearance's Theme group, kept for the phones apart from the Macs. */
+    @Test
+    fun theThemeCarriesThePhoneMarkAndSaysItIsKeptForPhones() {
+        compose.setContent {
+            PenmossTheme {
+                AppearanceScreen("system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52, enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {})
+            }
+        }
+        compose.onAllNodesWithTag("platformOnly").onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
+        // The laptop (this phone alone, A1559) marks nothing here.
+        compose.onAllNodesWithTag("deviceOnly").assertCountEquals(0)
     }
 
     /** A1582: beside the preview, the interface's text at its real size, labelled, and the note's font and size. */

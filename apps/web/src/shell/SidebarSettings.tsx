@@ -65,7 +65,9 @@ export function SidebarSettings() {
       />
       <div className="lf-split lf-split-narrow">
         <div className="lf-controls">
-          <GroupHead id={`${id}-shortcuts`}>Shortcuts</GroupHead>
+          <GroupHead id={`${id}-shortcuts`} scope="platform">
+            Shortcuts
+          </GroupHead>
           <div
             className="lf-group"
             role="group"
@@ -140,7 +142,7 @@ function SectionSettings({ layout }: { readonly layout: SidebarLayout }) {
   });
   return (
     <>
-      <GroupHead id={`${id}-h`} hint="Drag, or Alt+↑ and Alt+↓, to reorder">
+      <GroupHead id={`${id}-h`} scope="platform" hint="Drag, or Alt+↑ and Alt+↓, to reorder">
         Sections
       </GroupHead>
       <ol
