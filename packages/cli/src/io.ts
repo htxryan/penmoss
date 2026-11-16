@@ -182,6 +182,8 @@ export interface NotebookIo {
     },
   ): Promise<void>;
   remove(name: string, force: boolean): Promise<NotebookEntry>;
+  /** The clones whose state has the note with this full id, without opening them (PEN-158). */
+  holding?(id: string): Promise<NotebookEntry[]>;
   /** Sets (or with null forgets) the personal access token a notebook's git calls use. */
   setToken(name: string, token: string | null): Promise<void>;
   status(name: string): Promise<NotebookStatus>;

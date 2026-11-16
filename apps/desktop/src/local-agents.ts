@@ -203,6 +203,36 @@ const sameTarget = (
   b: { remote: string; branch: string; dir: string },
 ) => a.remote === b.remote && a.branch === b.branch && a.dir === b.dir;
 
+/**
+ * A clone of the app's notebook (PEN-159): its target, or, once the clone has synced, the same
+ * notebook id. A remote written another way (`git@github.com:o/r.git` for
+ * `https://github.com/o/r.git`, or an SSH host alias) is the same notebook, so it never gets a
+ * second automatic clone.
+ */
+const ofNotebook = (entry: GitNotebookEntry, clone: NotebookEntry) =>
+  sameTarget(entry, clone) ||
+  (clone.notebookId !== undefined && clone.notebookId === entry.notebookId);
+
+/**
+ * The automatic clones to remove (PEN-159): any whose notebook is gone from the app, and of
+ * several of one notebook, every one after the first added (the one `penmoss mcp` serves,
+ * A1097's order), so agents already using it keep it.
+ */
+export function automaticToRemove(
+  app: readonly GitNotebookEntry[],
+  clones: readonly NotebookEntry[],
+): NotebookEntry[] {
+  const kept = new Set<GitNotebookEntry>();
+  return clones.filter((clone) => {
+    if (!clone.automatic) return false;
+    const entry = app.find((each) => ofNotebook(each, clone));
+    if (!entry) return true;
+    if (kept.has(entry)) return true;
+    kept.add(entry);
+    return false;
+  });
+}
+
 export class LocalAgents {
   constructor(private readonly options: LocalAgentsOptions) {}
 
@@ -371,16 +401,19 @@ export class LocalAgents {
     const app = await this.options.all();
     const notebooks = this.options.notebooks();
     let clones = await notebooks.list();
-    for (const clone of clones) {
-      if (!clone.automatic || app.some(({ entry }) => sameTarget(entry, clone))) continue;
+    const entries = app.map(({ entry }) => entry);
+    for (const clone of automaticToRemove(entries, clones)) {
+      const why = entries.some((entry) => ofNotebook(entry, clone))
+        ? 'a second copy of its notebook'
+        : 'its notebook gone from the app';
       await notebooks.remove(clone.name, false).then(
-        () => this.options.log?.(`agents: removed ${clone.name}, its notebook gone from the app`),
+        () => this.options.log?.(`agents: removed ${clone.name}, ${why}`),
         (error: unknown) => this.options.log?.(`agents: kept ${clone.name}: ${cliMessage(error)}`),
       );
     }
     clones = await notebooks.list();
     for (const { entry, token } of app) {
-      const automatic = clones.find((each) => each.automatic && sameTarget(each, entry));
+      const automatic = clones.find((each) => each.automatic && ofNotebook(entry, each));
       // A token added, changed or forgotten in the app reaches its automatic clone.
       if (automatic && this.tokens.get(entry.localId) !== token) {
         await notebooks.setToken(automatic.name, token).then(
@@ -395,14 +428,14 @@ export class LocalAgents {
       for (const clone of clones) {
         // Names are matched ignoring case, so a clone told only a change of case is left be.
         const known = clone.notebookName?.toLowerCase();
-        if (!sameTarget(clone, entry) || !known || known === entry.name.toLowerCase()) continue;
+        if (!ofNotebook(entry, clone) || !known || known === entry.name.toLowerCase()) continue;
         await notebooks.set(clone.name, { notebookName: entry.name }).then(
           () => this.options.log?.(`agents: ${clone.name} is now “${entry.name}”`),
           (error: unknown) =>
             this.options.log?.(`agents: could not rename ${clone.name}: ${cliMessage(error)}`),
         );
       }
-      if (clones.some((each) => each.writer.kind === 'agent' && sameTarget(each, entry))) {
+      if (clones.some((each) => each.writer.kind === 'agent' && ofNotebook(entry, each))) {
         this.waits.delete(entry.localId);
         continue;
       }
@@ -446,14 +479,10 @@ export class LocalAgents {
     }
   }
 
-  /** The agents' clones of exactly this notebook's remote, branch and directory. */
+  /** The agents' clones of this notebook: its target, or its id however the remote is written. */
   private async agentsOf(entry: GitNotebookEntry): Promise<NotebookEntry[]> {
     return (await this.options.notebooks().list()).filter(
-      (each) =>
-        each.writer.kind === 'agent' &&
-        each.remote === entry.remote &&
-        each.branch === entry.branch &&
-        each.dir === entry.dir,
+      (each) => each.writer.kind === 'agent' && ofNotebook(entry, each),
     );
   }
 

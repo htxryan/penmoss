@@ -30,7 +30,7 @@ On a machine without the app, build the CLI from the [repository](https://github
 Add a notebook once with `penmoss notebook add <remote>` ([below](#git-notebooks)), or let the Mac app add yours. Then every note command runs on a notebook:
 
 - **`--notebook <name>`** names it: a clone's own name, or the notebook's name as the Mac app shows it (`--notebook "Notes"`), ignoring case. A notebook that was renamed is still found by its old names, unless another notebook has that name now. Of several clones of one notebook, `penmoss mcp` picks an agent's and the other commands a person's.
-- **Without `--notebook`**, it runs on the only notebook on this machine.
+- **Without `--notebook`**, it runs on the notebook that holds the note you name by its id or short id, else on the only notebook on this machine.
 - **With none, or several,** it exits 2 and says so: with none, add one with `penmoss notebook add`; with several, it names them all.
 
 `penmoss mcp` serves every notebook with an agent copy when you leave out `--notebook`, and only the notebook you name when you give it. See [More than one notebook](/docs/reference/mcp/#more-than-one-notebook).
@@ -72,7 +72,7 @@ Every note command accepts `--json`, `--notebook <name>` and `--no-sync`. `penmo
 
 ### Naming notes and folders
 
-- **A note** is its id (26 characters), its short id (such as `K7QD-9HTF2CXA`, from **Copy Agent Reference**) or its exact title. Titles match ignoring the case of A–Z only. No match exits 4; several exit 6 and list their ids. A short id names its notebook too, so `--notebook` can be left out: `penmoss cat K7QD-9HTF2CXA` finds the notebook on this Mac.
+- **A note** is its id (26 characters), its short id (such as `K7QD-9HTF2CXA`, from **Copy Agent Reference**) or its exact title. Titles match ignoring the case of A–Z only. No match exits 4; several exit 6 and list their ids. A short id or a full id names its notebook too, so `--notebook` can be left out: `penmoss cat K7QD-9HTF2CXA` finds the notebook on this Mac. Pass `--notebook` for an id two notebooks here both hold.
 - **A folder** is its path from the top, such as `Journal/2026` (ignoring case), its id, or `/` for the top level.
 
 ### Input

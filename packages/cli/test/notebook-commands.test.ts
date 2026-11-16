@@ -60,11 +60,19 @@ describe('penmoss notebook', () => {
     const id = made.json()['id'] as string;
     expect((await cli(['cat', id, '--body'])).stdout).toBe('here\n');
     await cli(['notebook', 'add', hosts.url('second'), '--name', 'second']);
-    const which = await cli(['cat', id]);
+    // A title names no notebook: with two, it is a usage error that names them.
+    const which = await cli(['cat', 'Only']);
     expect(which.code).toBe(2);
     expect(which.stderr).toContain(
       '2 git notebooks are on this machine (first, second): pass --notebook <name>',
     );
+    // A full id does (PEN-158): the clone that holds it, as penmoss mcp finds it.
+    expect((await cli(['cat', id, '--body'])).stdout).toBe('here\n');
+    expect((await cli(['cat', id.toLowerCase(), '--body'])).stdout).toBe('here\n');
+    // An id no clone here holds is still the usage error.
+    const nowhere = await cli(['cat', '01M7ZZZZZZZZZZZZZZZZZZZZZZ']);
+    expect(nowhere.code).toBe(2);
+    expect(nowhere.stderr).toContain('pass --notebook <name>');
     expect((await cli(['cat', id, '--notebook', 'first', '--body'])).stdout).toBe('here\n');
     expect((await cli(['cat', id, '--notebook', 'second'])).code).toBe(4);
   });

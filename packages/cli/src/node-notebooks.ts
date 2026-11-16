@@ -286,6 +286,14 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
       return publicEntry(entry);
     },
 
+    async holding(id) {
+      const all = (await registry.read()).notebooks;
+      const held = await Promise.all(
+        all.map((entry) => new FileStorage(clones.dir(entry)).holdsNote(id)),
+      );
+      return all.filter((_, at) => held[at]).map(publicEntry);
+    },
+
     async set(name, change) {
       await registry.find(name);
       await registry.update(name, (each) => {
