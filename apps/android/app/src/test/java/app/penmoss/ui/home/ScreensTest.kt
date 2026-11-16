@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -159,6 +160,11 @@ class ScreensTest {
         compose.onNodeWithContentDescription("This Week").performClick()
         // All Notes, Journal, Quick Capture and Send Feedback are in the hamburger's drawer (A1604).
         compose.onNodeWithTag("homeMenu").performClick()
+        // Its places are a 4×2 grid of tiles (item 10, A1607): Home and This Week share a row,
+        // Journal starts the next.
+        val home = compose.onNodeWithTag("drawerHome").getBoundsInRoot()
+        assertEquals(home.top, compose.onNodeWithTag("drawerThisWeek").getBoundsInRoot().top)
+        assertTrue(compose.onNodeWithTag("homeJournal").getBoundsInRoot().top >= home.bottom)
         compose.onNodeWithTag("homeAllNotes").performScrollTo().performClick()
         compose.onNodeWithTag("homeMenu").performClick()
         compose.onNodeWithTag("homeJournal").performScrollTo().performClick()
