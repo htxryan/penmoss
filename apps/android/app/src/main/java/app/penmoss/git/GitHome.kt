@@ -51,7 +51,16 @@ import kotlinx.coroutines.launch
  * personal notes.
  */
 @Composable
-fun NotebooksHome(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
+fun NotebooksHome(
+    graph: app.penmoss.DeviceGraph,
+    onBack: () -> Unit,
+    /**
+     * Opened from the launcher (A1608): go straight to the primary notebook's notes list, then
+     * [onLanded] (the activity finishes). All Notebooks in the drawer opens this screen without it.
+     */
+    land: Boolean = false,
+    onLanded: () -> Unit = {},
+) {
     val context = LocalContext.current
     val nav = rememberNavController()
     // Settings' (i) names the primary notebook on every Settings screen (A1560).
@@ -78,6 +87,14 @@ fun NotebooksHome(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
                             if (localId != null) GitNotebookActivity.open(context, localId)
                         },
                     )
+                    land -> {
+                        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                        androidx.compose.runtime.LaunchedEffect(Unit) {
+                            val primary = graph.git.journal()?.takeIf { id -> views.any { it.localId == id } } ?: views.first().localId
+                            GitNotebookActivity.open(context, primary)
+                            onLanded()
+                        }
+                    }
                     else -> GitNotebooksRoute(
                         graph.git,
                         onOpen = { GitNotebookActivity.open(context, it) },

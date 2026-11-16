@@ -39,12 +39,12 @@ import app.penmoss.ui.common.roles
 data class DrawerNotebook(val localId: String, val name: String, val badge: app.penmoss.engine.settings.NotebookBadge? = null)
 
 /**
- * The notebook Home's drawer (Ryan's Android feedback, 15 Nov 2026; A1604, A1607): Android's
- * hamburger menu with the Mac sidebar's areas. First the places its shortcuts and sections lead to
- * as a 4×2 grid of tiles (Home, Search, Today, This Week; Journal for its Calendar, All Notes, Tags,
- * Graph), then Notebooks (each
- * on this phone, this one marked, and All Notebooks), then Quick Capture, Trash, Settings and Send
- * Feedback. A pick closes the drawer, then goes.
+ * The notebook screen's drawer (Ryan's Android feedback, 15 Nov 2026; A1604, A1607, A1608):
+ * Android's hamburger menu with the Mac sidebar's areas. First its places as a 4×2 grid of tiles
+ * (Search, Today, This Week, Journal for its Calendar; All Notes, Tags, Graph, Quick Capture), then
+ * the sidebar's sections as pages: Quick Access, Recent Notes, and Notebooks (each one's notes list,
+ * this one's marked while it shows, and All Notebooks), then Trash, Settings and Send Feedback. A
+ * pick closes the drawer, then goes.
  */
 @Composable
 internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit) {
@@ -56,9 +56,9 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
             Spacer(Modifier.height(16.dp))
             // The places, as a grid of tiles (item 10, A1607): the notebook's name is the
-            // selected row under Notebooks, so the drawer has no title of its own.
+            // selected row under Notebooks, so the drawer has no title of its own. Home went (item
+            // 11, A1608): its sections are pages below, and Quick Capture fills the grid.
             val places = listOf(
-                Place("Home", "house", "drawerHome", selected = true) {},
                 Place("Search", "search", "drawerSearch", onClick = actions.onSearch),
                 Place("Today", "calendar", "drawerToday", onClick = actions.onToday),
                 Place("This Week", "calendar-range", "drawerThisWeek", onClick = actions.onThisWeek),
@@ -66,6 +66,7 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                 Place("All Notes", "files", "homeAllNotes", onClick = actions.onAllNotes),
                 Place("Tags", "tag", "homeTags", onClick = actions.onTags),
                 Place("Graph", "waypoints", "drawerGraph", onClick = actions.onGraph),
+                Place("Capture", "zap", "homeCapture", onClick = actions.onCapture),
             )
             for (row in places.chunked(4)) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
@@ -73,8 +74,12 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                 }
             }
             Spacer(Modifier.height(6.dp))
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            // The sidebar's sections as pages (item 11, A1608): Quick Access and Recent Notes here,
+            // and each notebook's notes list under Notebooks.
+            Item("Quick Access", "star", "drawerQuickAccess", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
+            Item("Recent Notes", "clock", "drawerRecent", selected = ui.page == HomePage.RECENT, onClick = go { actions.onPage(HomePage.RECENT) })
             if (ui.notebooks.isNotEmpty()) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 Text(
                     "Notebooks",
                     Modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics { heading() },
@@ -85,8 +90,8 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                     val here = notebook.localId == ui.notebookId
                     NavigationDrawerItem(
                         label = { Text(notebook.name, maxLines = 1) },
-                        selected = here,
-                        onClick = go { if (!here) actions.onNotebook(notebook.localId) },
+                        selected = here && ui.page == HomePage.NOTES,
+                        onClick = go { if (here) actions.onPage(HomePage.NOTES) else actions.onNotebook(notebook.localId) },
                         icon = notebook.badge?.let { badge -> { NotebookBadgeView(badge, notebook.name) } },
                         modifier = Modifier.testTag("drawerNotebook-${notebook.localId}"),
                         // Square, as the app's controls are (SquareControls.kt).
@@ -96,7 +101,6 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                 Item("All Notebooks", "library", "drawerAllNotebooks", onClick = go(actions.onAllNotebooks))
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Item("Quick Capture", "zap", "homeCapture", onClick = go(actions.onCapture))
             Item("Trash", "trash", "openTrash", onClick = go(actions.onTrash))
             Item("Settings", "settings", "drawerSettings", onClick = go(actions.onSettings))
             actions.onFeedback?.let { Item("Send Feedback", "message-square", "homeFeedback", onClick = go(it)) }

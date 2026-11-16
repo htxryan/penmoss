@@ -349,7 +349,7 @@ class OrganiseScreensTest {
                 if (screen == "home") {
                     HomeScreen(
                         HomeUi(
-                            recent = listOf(NoteItem("n1", "Groceries", "", "")),
+                            notes = listOf(NoteItem("n1", "Groceries", "", "")),
                             folders = emptyList(),
                             status = "",
                             syncing = false,

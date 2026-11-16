@@ -124,9 +124,18 @@ class DeepLinkActivityTest {
     }
 
     @Test
-    fun withAGitNotebookTheAppListsItToOpen() {
+    fun withAGitNotebookTheAppOpensItsNotesListAndAllNotebooksListsIt() {
         val work = TestGraphs.addNotebook(app, graph, "Work")
+        // A plain launch opens the primary notebook's notes list (A1608).
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        val opened = started()!!
+        assertEquals(GitNotebookActivity::class.java.name, opened.component?.className)
+        assertEquals(work, opened.getStringExtra(GitNotebookActivity.EXTRA_LOCAL_ID))
+        scenario?.close()
+        // The drawer's All Notebooks lists them instead.
+        scenario = ActivityScenario.launch(
+            Intent(app, MainActivity::class.java).putExtra(MainActivity.EXTRA_ALL_NOTEBOOKS, true),
+        )
         settle()
         compose.waitUntil(5_000) {
             shadowOf(Looper.getMainLooper()).idle()

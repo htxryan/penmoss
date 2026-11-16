@@ -41,6 +41,11 @@ import kotlinx.coroutines.launch
  * launcher shortcut's New note, Today, This week and Search open the Journal notebook (A827).
  */
 class MainActivity : ComponentActivity() {
+    companion object {
+        /** Show every notebook on this phone, not the primary's notes list (the drawer's All Notebooks, A1608). */
+        const val EXTRA_ALL_NOTEBOOKS = "app.penmoss.ALL_NOTEBOOKS"
+    }
+
     /** A hardware keyboard's app shortcuts, with the synced bindings (T40 P9, PL9, A494). */
     private val commands = AppCommands()
 
@@ -52,6 +57,11 @@ class MainActivity : ComponentActivity() {
         }
         // Launcher shortcuts (A496): the fixed four, and the notes opened here last.
         LauncherShortcuts.publish(applicationContext)
+        // A plain launch lands on the primary notebook's notes list (A1608): no list of notebooks
+        // first. All Notebooks (the drawer's), a launcher shortcut, a link, or coming back keep this screen.
+        val land = savedInstanceState == null && !intent.getBooleanExtra(EXTRA_ALL_NOTEBOOKS, false) &&
+            intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0 &&
+            LauncherShortcuts.actionOf(intent) == null && deepLinkOf(intent) == null
         setContent {
             // The theme chosen in Settings → Appearance (A305), and system bars to match it.
             val appearance by graph.appearance.collectAsStateWithLifecycle()
@@ -59,7 +69,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(dark) { followShownVariant(dark) }
             PenmossTheme(appearance, dark) {
                 CompositionLocalProvider(LocalAppCommands provides commands) {
-                    NotebooksHome(graph, onBack = { finish() })
+                    NotebooksHome(graph, onBack = { finish() }, land = land, onLanded = { finish() })
                 }
             }
         }

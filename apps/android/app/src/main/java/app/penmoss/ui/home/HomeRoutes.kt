@@ -2,6 +2,7 @@ package app.penmoss.ui.home
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
@@ -56,9 +57,11 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
     composable("home") {
         val home by remember {
             // Recent: opened here or edited anywhere, whichever is later (T40 P6, FD7).
-            combine(graph.store.observeRecent(RECENT), graph.store.observeFolders(), graph.store.observeRootSortMode()) { notes, folders, mode ->
+            combine(graph.store.observeRecent(RECENT), graph.store.observeList(), graph.store.observeFolders(), graph.store.observeRootSortMode()) { recent, notes, folders, mode ->
                 val now = System.currentTimeMillis()
-                HomeView(Items.notes(notes, now), Items.home(mode, folders, now))
+                // The notes list (A1608): the top level's folders, then its notes.
+                val (top, filed) = Items.folder(null, mode, folders, notes, now)
+                HomeView(Items.notes(recent, now), top, filed)
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
         }.collectAsStateWithLifecycle(HomeView())
         val rootSort by remember { graph.store.observeRootSortMode().distinctUntilChanged() }.collectAsStateWithLifecycle("manual")
@@ -81,8 +84,12 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
         // The drawer's Notebooks (A1604): every notebook on this phone, with its badge.
         val notebookViews by graph.device.git.list.collectAsStateWithLifecycle()
         val badges by graph.device.git.badges.collectAsStateWithLifecycle(emptyMap())
+        // The page shown (A1608): a notebook opens on its notes list; the drawer picks the others.
+        var page by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(HomePage.NOTES) }
         HomeScreen(
             HomeUi(
+                page = page,
+                notes = home.notes,
                 notebookId = graph.localId,
                 notebooks = notebookViews.map { DrawerNotebook(it.localId, it.name, badges[it.localId]) },
                 title = graph.name,
@@ -108,14 +115,6 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 stopped = sync.stopped,
             ),
             HomeActions(
-                onSectionHidden = { section, hide ->
-                    val hidden = graph.device.settings.value.settings.hiddenSections
-                    changeLayout(SettingKeys.HIDDEN_SECTIONS, app.penmoss.engine.settings.SidebarLayout.toJson(app.penmoss.engine.settings.SidebarLayout.withHidden(hidden, section, hide)))
-                },
-                onSectionMove = { section, index ->
-                    val order = graph.device.settings.value.settings.sectionOrder
-                    changeLayout(SettingKeys.SECTION_ORDER, app.penmoss.engine.settings.SidebarLayout.toJson(app.penmoss.engine.settings.SidebarLayout.moved(order, section, index)))
-                },
                 onQuickAccessRemove = { id ->
                     val pins = graph.device.settings.value.settings.quickAccess
                     QuickAccess.toggled(pins, id)?.let { changeLayout(SettingKeys.QUICK_ACCESS, QuickAccess.toJson(it)) }
@@ -159,9 +158,11 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 onStatus = { nav.open(SettingsRoutes.notebook(graph.localId, app.penmoss.git.NotebookTab.SYNC)) },
                 onFeedback = { root.openFeedback("Home's menu", null, null, null, 0) },
                 onNotebook = { app.penmoss.git.GitNotebookActivity.open(root.context, it) },
+                onPage = { page = it },
                 onAllNotebooks = {
                     root.context.startActivity(
                         android.content.Intent(root.context, app.penmoss.ui.MainActivity::class.java)
+                            .putExtra(app.penmoss.ui.MainActivity.EXTRA_ALL_NOTEBOOKS, true)
                             .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP),
                     )
                 },
@@ -190,10 +191,11 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
     }
 }
 
-/** Home's lists: Recent and the top-level folders. */
+/** The notebook screen's lists: Recent, and the top level's folders and notes. */
 private data class HomeView(
     val recent: List<NoteItem> = emptyList(),
     val folders: List<FolderItem> = emptyList(),
+    val notes: List<NoteItem> = emptyList(),
 )
 
 /** Why captures still wait, when worth saying (A345): their age. */

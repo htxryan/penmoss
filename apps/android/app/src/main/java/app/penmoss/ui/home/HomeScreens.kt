@@ -117,9 +117,25 @@ private fun BackButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
 }
 
+/**
+ * The notebook screen's pages (Ryan's Android feedback, 15 Nov 2026, item 11; A1608): the Mac
+ * sidebar's sections, each a page of its own that the drawer picks, instead of one long Home.
+ * A notebook opens on its notes list.
+ */
+enum class HomePage(val title: String?) {
+    /** The notebook's folders and its top-level notes, under its heading; titled by the notebook. */
+    NOTES(null),
+    QUICK_ACCESS("Quick Access"),
+    RECENT("Recent Notes"),
+}
+
 /** What Home shows (A6): its lists, the sync state and the person's layout. */
 @Immutable
 data class HomeUi(
+    /** The page shown (A1608). */
+    val page: HomePage = HomePage.NOTES,
+    /** The notebook's top-level notes, under its folders on the notes list (A1608). */
+    val notes: List<NoteItem> = emptyList(),
     val recent: List<NoteItem> = emptyList(),
     val folders: List<FolderItem> = emptyList(),
     val status: String = "",
@@ -208,10 +224,6 @@ class HomeActions(
     val onStatus: () -> Unit = {},
     /** Send feedback (T49, D41), last in the overflow menu; none when null. */
     val onFeedback: (() -> Unit)? = null,
-    /** Hides or shows a section (its title's long press, or the ⋮ menu). */
-    val onSectionHidden: (section: String, hide: Boolean) -> Unit = { _, _ -> },
-    /** Moves a section to an index among every section (its title's Move Up and Move Down). */
-    val onSectionMove: (section: String, index: Int) -> Unit = { _, _ -> },
     /** A Quick Access note's long press: Remove from Quick Access (T53 item 10). */
     val onQuickAccessRemove: (String) -> Unit = {},
     /** Moves a pinned note to an index in Quick Access (its Move Up and Move Down). */
@@ -222,6 +234,8 @@ class HomeActions(
     val onNotebook: (localId: String) -> Unit = {},
     /** The app's first screen, every notebook on this phone (A1604). */
     val onAllNotebooks: () -> Unit = {},
+    /** Shows one of the notebook screen's pages, from the drawer, or the notes list on Back (A1608). */
+    val onPage: (HomePage) -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -249,8 +263,11 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
         refresh()
         pulled = false
     }
-    // A chosen note Home stops listing is no longer chosen (A652, review S2).
-    if (actions.onNoteLongPress != null) KeepSelectionShown(ui.recent)
+    // A chosen note the page stops listing is no longer chosen (A652, review S2).
+    if (actions.onNoteLongPress != null) KeepSelectionShown(if (ui.page == HomePage.RECENT) ui.recent else ui.notes)
+    // Back from Quick Access or Recent Notes goes to the notes list, the notebook's first page (A1608).
+    BackHandler(enabled = ui.page != HomePage.NOTES && !ui.reordering) { actions.onPage(HomePage.NOTES) }
+    val notesPage = ui.page == HomePage.NOTES
     // The notebook's sync state as a dot (T51, A933), with the status line's words.
     val personalDot = when {
         ui.stopped -> SyncDot(DotState.STOPPED, ui.status, actions.onStatus)
@@ -273,7 +290,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             TopAppBar(
                 // Under the selection bar while notes are chosen: out of TalkBack's reach (review S4).
                 modifier = Modifier.underSelectionBar(),
-                title = { Text(if (ui.reordering) "Reorder Folders" else ui.title) },
+                title = { Text(if (ui.reordering) "Reorder Folders" else ui.page.title ?: ui.title, Modifier.testTag("homeTitle")) },
                 navigationIcon = {
                     if (ui.reordering) {
                         BackButton { actions.onReorder(false) }
@@ -291,7 +308,8 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         // The gear, as the sidebar's footer has it (T51, A935).
                         TipIconButton(SettingsIcons.Gear, "Settings", onClick = actions.onSettings, modifier = Modifier.testTag("homeSettings"))
                         var more by remember { mutableStateOf(false) }
-                        Box {
+                        // New Folder and Reorder Folders act on the notes list; the other pages have no ⋮.
+                        if (notesPage) Box {
                             TipIconButton(Icons.Default.MoreVert, "More Options", onClick = { more = true }, modifier = Modifier.testTag("homeMore"))
                             DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
                                 DropdownMenuItem(
@@ -310,19 +328,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                             actions.onReorder(true)
                                         },
                                         modifier = Modifier.testTag("homeReorder"),
-                                    )
-                                }
-                                HorizontalDivider()
-                                // Show or Hide each of Home's sections, by name A to Z (T53 item 8),
-                                // after the actions, as the web's ⋯ menu holds them.
-                                for ((section, label) in SidebarLayout.toggles(ui.layout.hidden, HomeLayout.HOME_SECTIONS)) {
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            more = false
-                                            actions.onSectionHidden(section, section !in ui.layout.hidden)
-                                        },
-                                        modifier = Modifier.testTag("homeSection-$section"),
                                     )
                                 }
                             }
@@ -345,7 +350,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             Column(Modifier.fillMaxSize()) {
                 if (slowSync && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("syncProgress"))
                 // The sidebar's shortcuts as one row of icons (T51, A932); Display hides any but Search.
-                if (!ui.reordering) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags)
+                if (!ui.reordering && notesPage) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags)
                 // The status line became a dot on the section titles (T51, A933). Going offline or
                 // stopping is still announced, from above the list, which a dot in it scrolled
                 // away would not be (A530).
@@ -367,16 +372,20 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                // The sections in the person's order (T53 item 8, A983), a line between each two
-                // running the screen's width; each title's long press moves or hides it.
                 val choosing = actions.onNoteLongPress != null && LocalNoteSelection.current?.active == true
-                val homeList = rememberLazyListState()
-                val shown = ui.layout.shown
-                // A section shown again or moved first while Home is at its top stays in view (T53
-                // pass): the list keeps its first item in place by key, so the section would land
-                // above the screen and Home would look unchanged. Asked before the next measure,
-                // while the scroll position is still the one before the change. So does a notice
-                // at the top coming or going (kept-apart edits, captures waiting).
+                // Each page starts at its top (A1608).
+                val homeList = remember(ui.page) { androidx.compose.foundation.lazy.LazyListState() }
+                // Each page is one of the sidebar's sections (A1608), so no section titles.
+                val shown = listOf(
+                    when (ui.page) {
+                        HomePage.NOTES -> SidebarLayout.NOTEBOOKS
+                        HomePage.QUICK_ACCESS -> SidebarLayout.QUICK_ACCESS
+                        HomePage.RECENT -> SidebarLayout.RECENT
+                    },
+                )
+                // A notice at the top coming or going (kept-apart edits, captures waiting) while the
+                // list is at its top stays in view (T53 pass): the list keeps its first item in place
+                // by key, so it would land above the screen. Asked before the next measure.
                 val top = Pair(shown, listOf(ui.keptApart > 0, ui.capturesWaiting > 0 || ui.capturesRefused > 0))
                 val topBefore = remember { arrayOf(top) }
                 SideEffect {
@@ -385,37 +394,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         if (atTop) homeList.requestScrollToItem(0)
                         topBefore[0] = top
                     }
-                }
-                val sectionAt = { section: String -> shown.indexOf(section) }
-                // A moved section stays in view (T53 pass): its title's place in the list, counted
-                // as the list is built, and scrolled to once the move lands if it isn't on screen.
-                val titleAt = remember { mutableMapOf<String, Int>() }
-                var following by remember { mutableStateOf<String?>(null) }
-                LaunchedEffect(shown) {
-                    val section = following ?: return@LaunchedEffect
-                    following = null
-                    // A frame on, the list has measured the new order (and counted its titles).
-                    withFrameNanos {}
-                    val key = SECTION_TITLE_KEYS.getValue(section)
-                    val info = homeList.layoutInfo
-                    val seen = info.visibleItemsInfo.any { it.key == key && it.offset >= 0 && it.offset + it.size <= info.viewportEndOffset }
-                    if (!seen) titleAt[section]?.let { homeList.animateScrollToItem(it) }
-                }
-                fun moveSection(section: String, by: Int) {
-                    val target = shown.getOrNull(sectionAt(section) + by) ?: return
-                    val rest = ui.layout.order - section
-                    following = section
-                    actions.onSectionMove(section, rest.indexOf(target) + if (by > 0) 1 else 0)
-                }
-                val sectionTitle: @Composable (String, Modifier) -> Unit = { section, modifier ->
-                    HomeSectionTitle(
-                        name = SidebarLayout.NAMES.getValue(section),
-                        canMoveUp = sectionAt(section) > 0,
-                        canMoveDown = sectionAt(section) < shown.size - 1,
-                        onMove = { moveSection(section, it) },
-                        onHide = { actions.onSectionHidden(section, true) },
-                        modifier = modifier,
-                    )
                 }
                 NoteList(
                     notes = emptyList(),
@@ -429,26 +407,11 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                 CapturesNotice(ui.capturesWaiting, ui.capturesRefused, ui.capturesWaitingWhy, actions.onRefusedCaptures)
                             }
                         }
-                        var first = true
-                        var count = 1
                         for (section in shown) {
-                            val has = when (section) {
-                                SidebarLayout.RECENT -> ui.recent.isNotEmpty()
-                                else -> true
-                            }
-                            if (!has) continue
-                            if (!first) {
-                                item(key = "divider:$section", contentType = "divider") { SectionDivider() }
-                                count += 1
-                            }
-                            first = false
-                            titleAt[section] = count
                             when (section) {
                                 // Quick Access (T51, A946): the pinned notes. With none it still shows, as
                                 // on the web (T53 pass).
                                 SidebarLayout.QUICK_ACCESS -> {
-                                    item(key = "quickAccessTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeQuickAccessTitle")) }
-                                    count += 1 + maxOf(ui.quickAccess.size, 1)
                                     if (ui.quickAccess.isEmpty()) {
                                         item(key = "quickAccessEmpty", contentType = "hint") {
                                             Text(
@@ -474,8 +437,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     }
                                 }
                                 SidebarLayout.NOTEBOOKS -> {
-                                    item(key = "notebooksTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeNotebooksTitle")) }
-                                    count += 1 + 1 + ui.folders.size
                                     // The notebook's heading with its sync dot (T51, A933), as the web's
                                     // notebook heading: its actions on a long press (T53 item 4).
                                     item(key = "foldersTitle", contentType = "title") {
@@ -484,17 +445,24 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     items(ui.folders, key = { "folder:${it.id}" }, contentType = { "folder" }) { folder ->
                                         FolderRowView(folder, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)
                                     }
+                                    // Then its top-level notes, as a folder's page lists its own (A1608).
+                                    items(ui.notes, key = { "note:${it.id}" }, contentType = { "note" }) { note ->
+                                        NoteRowView(note, actions.onOpen, onLongPress = actions.onNoteLongPress, selectable = true)
+                                    }
                                 }
                                 SidebarLayout.RECENT -> {
-                                    item(key = "notesTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeRecentTitle")) }
-                                    count += 1 + ui.recent.take(ui.layout.recentCount).size
                                     items(ui.recent.take(ui.layout.recentCount), key = { it.id }, contentType = { "note" }) { note ->
                                         NoteRowView(note, actions.onOpen, onLongPress = actions.onNoteLongPress, selectable = true)
                                     }
                                 }
                             }
                         }
-                        if (ui.folders.isEmpty() && ui.recent.isEmpty()) {
+                        val empty = when (ui.page) {
+                            HomePage.NOTES -> ui.folders.isEmpty() && ui.notes.isEmpty()
+                            HomePage.RECENT -> ui.recent.isEmpty()
+                            HomePage.QUICK_ACCESS -> false
+                        }
+                        if (empty) {
                             item(key = "empty") { EmptyMessage("No notes yet. They appear here once the phone has synced.") }
                         }
                     },
@@ -503,54 +471,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             }
         }
     }
-    }
-}
-
-/** Each of Home's sections' title, by its key in the list. */
-private val SECTION_TITLE_KEYS = mapOf(
-    SidebarLayout.QUICK_ACCESS to "quickAccessTitle",
-    SidebarLayout.NOTEBOOKS to "notebooksTitle",
-    SidebarLayout.RECENT to "notesTitle",
-)
-
-/** The line between two of Home's sections (T53 item 8): the screen's full width, a little stronger. */
-@Composable
-private fun SectionDivider() {
-    HorizontalDivider(Modifier.padding(top = 8.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f))
-}
-
-/**
- * A section's title on Home (T53 item 8): a long press offers Move Up, Move Down and Hide, the
- * web's drag handle and ✕; the ⋮ menu shows a hidden one again.
- */
-@Composable
-private fun HomeSectionTitle(
-    name: String,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onMove: (Int) -> Unit,
-    onHide: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var menu by remember { mutableStateOf(false) }
-    val haptics = LocalHapticFeedback.current
-    Box {
-        SectionTitle(
-            name,
-            modifier.fillMaxWidth().combinedClickable(
-                onClickLabel = null,
-                onLongClickLabel = "$name Actions",
-                onLongClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    menu = true
-                },
-            ) {},
-        )
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            if (canMoveUp) DropdownMenuItem(text = { Text("Move Up") }, onClick = { menu = false; onMove(-1) }, modifier = Modifier.testTag("sectionMoveUp"))
-            if (canMoveDown) DropdownMenuItem(text = { Text("Move Down") }, onClick = { menu = false; onMove(1) }, modifier = Modifier.testTag("sectionMoveDown"))
-            DropdownMenuItem(text = { Text("Hide $name") }, onClick = { menu = false; onHide() }, modifier = Modifier.testTag("sectionHide"))
-        }
     }
 }
 

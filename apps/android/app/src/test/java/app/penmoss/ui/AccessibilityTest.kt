@@ -46,7 +46,7 @@ class AccessibilityTest {
             PenmossTheme {
                 HomeScreen(
                     HomeUi(
-                        recent = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
+                        notes = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
                         folders = listOf(FolderItem("f1", "Projects")),
                         status = "Synced at 3:42 PM",
                         syncing = false,
