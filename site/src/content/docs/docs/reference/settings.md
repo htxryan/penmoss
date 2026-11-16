@@ -9,7 +9,7 @@ Open Settings with ⌘, on the Mac, or from the gear on the first screen on Andr
 
 ### Kept apart for your Macs and your phones
 
-Appearance (the mode, the theme, the fonts and the note text size), the sidebar's layout (its shortcuts, which sections show and in what order, Notes in Recent Notes and Show Notebook Names in Quick Access; Home's on Android) and the keyboard shortcuts are kept once for your Macs and once for your Android phones, so you can have a different theme or sidebar on each. Every Mac shares the Macs' choices and every phone the phones'. On the Mac they are marked with a laptop, its tooltip saying they are kept for your Macs; on Android, with a phone.
+Appearance (the mode, the theme, the fonts and the note text size), the sidebar's layout (its shortcuts, which sections show and in what order, Notes in Recent Notes and Show Notebook Names in Quick Access; Home's on Android) and the keyboard shortcuts are kept once for your Macs and once for your Android phones, so you can have a different theme or sidebar on each. Every Mac shares the Macs' choices and every phone the phones'. On the Mac they are marked with a monitor, its tooltip saying they are kept for your Macs; on Android, with a phone.
 
 Until you change one of these on a platform, it shows what you had chosen before they were kept apart. Your first change there is that platform's own, and the other platform keeps what it had. Your custom themes, Quick Access pins, symbols, Daily Notes and Quick Capture stay the same everywhere.
 

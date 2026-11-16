@@ -17,8 +17,8 @@ import './look-settings.css';
 export type SettingScope = boolean | 'device' | 'platform';
 
 /**
- * A setting (or, with `many`, a group of them) kept on this device alone (A1559), or for this
- * platform's devices alone (`kind="platform"`, A1605): a laptop, its sentence the app's tooltip on
+ * A setting (or, with `many`, a group of them) kept on this device alone (A1559): a laptop; or for
+ * this platform's devices alone (`kind="platform"`, A1605): a monitor. Its sentence is the app's tooltip on
  * hover and on keyboard focus, and its accessible name. Never inside a `<label>`, whose control
  * would take the sentence into its own name; a click on it does nothing, so it never toggles a
  * control beside it.
@@ -42,7 +42,7 @@ export function ScopeMarker({
       data-testid="scope-marker"
       onClick={(event: MouseEvent) => event.preventDefault()}
     >
-      <Icon name="laptop" size={14} />
+      <Icon name={kind === 'platform' ? 'monitor' : 'laptop'} size={14} />
     </span>
   );
 }

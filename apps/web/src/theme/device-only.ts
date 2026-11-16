@@ -14,7 +14,7 @@ export function deviceOnlyTip(many = false): string {
 export const thesePlatforms = (): string => (desktop() ? 'your Macs' : 'your computers');
 
 /**
- * What the laptop says on a setting kept for the Macs apart from the phones (PEN-156, A1605): on
+ * What the monitor says on a setting kept for the Macs apart from the phones (PEN-156, A1605): on
  * hover, on focus and to a screen reader.
  */
 export function platformTip(many = false): string {

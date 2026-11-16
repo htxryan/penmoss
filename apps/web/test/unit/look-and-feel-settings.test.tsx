@@ -136,7 +136,7 @@ describe('Settings → Sidebar (PEN-146)', () => {
     expect(marks).toHaveLength(2);
     for (const mark of marks) {
       expect(mark.dataset['scope']).toBe('platform');
-      expect(mark.querySelector('[data-icon="laptop"]')).not.toBeNull();
+      expect(mark.querySelector('[data-icon="monitor"]')).not.toBeNull();
       expect(mark.getAttribute('aria-label')).toBe(
         'These settings are kept for your computers only. Your Android phones keep their own.',
       );

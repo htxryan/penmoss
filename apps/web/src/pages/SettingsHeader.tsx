@@ -162,7 +162,7 @@ export function SettingsHomeProvider({ children }: { readonly children: ReactNod
 
 /**
  * The (i) after "Settings": where settings are kept, the primary notebook's name a link to its
- * page, and what the laptop marks (A1559). It shows on hover (after the tooltip delay) and on
+ * page, and what the laptop (A1559) and the monitor (A1605) mark. It shows on hover (after the tooltip delay) and on
  * keyboard focus, and stays while the pointer or focus is on it or on its words, so the link can
  * be reached; a click keeps it open until Escape, a click elsewhere or focus leaving it. Its
  * words are also the button's description.
@@ -273,8 +273,11 @@ export function SettingsInfo() {
         <span className="settings-info-laptop" role="img" aria-label="with a laptop">
           <Icon name="laptop" size={14} />
         </span>{' '}
-        stay on {thisDevice()} only, or are kept for {thesePlatforms()} apart from your phones, as
-        each one says.
+        stay on {thisDevice()} only, and those marked{' '}
+        <span className="settings-info-laptop" role="img" aria-label="with a monitor">
+          <Icon name="monitor" size={14} />
+        </span>{' '}
+        are kept for {thesePlatforms()}, apart from your phones.
       </div>
     </span>
   );
