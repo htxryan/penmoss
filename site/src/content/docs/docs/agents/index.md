@@ -14,7 +14,7 @@ Both run on your Mac, from the Penmoss app itself, and need no account, token or
 
 ## One server, every notebook
 
-Agents reach your notes through one MCP server, `penmoss mcp`, which serves every notebook on your Mac ([Connect an agent](/docs/agents/connect/)). It works on the copy (a clone) of each notebook that Penmoss makes for agents in `~/.penmoss`, so agents' edits are never mistaken for yours. Each edit names the app and the session that made it, such as **Claude Code · 7736c5e9**. So:
+Agents reach your notes through one MCP server, `penmoss mcp`, which serves every notebook on your Mac ([Connect an agent](/docs/agents/connect/)). It works on the copy (a clone) of each notebook that Penmoss makes for agents in `~/.penmoss`, one per notebook, so agents' edits are never mistaken for yours. Each edit names the app and the session that made it, such as **Claude Code · 7736c5e9**. So:
 
 - [History](/docs/history/) shows which agent session made each edit, marked with a star, and **Revert This Edit** undoes one without losing later edits.
 - [Agent activity](/docs/agents/activity/) lists what each agent moved, made or renamed, with **Undo**.

@@ -197,16 +197,16 @@ async function onlyNotebook(notebooks: NotebookIo): Promise<string> {
 /**
  * The notebook a note command runs on without `--notebook` when it names a note by its short
  * reference (PEN-69): the notebook the reference's first 4 characters name, among this machine's
- * (a device's clone before an agent's). Null when no argument is a short reference.
+ * (a device's clone before an agent's). Or by its full id (PEN-158): the notebook whose clones
+ * hold it, as `penmoss mcp` finds it. Null when no argument is either, or no clone holds the id.
  */
 async function notebookOfRefs(
   notebooks: NotebookIo,
   positionals: readonly string[],
 ): Promise<string | null> {
-  const wanted = positionals
-    .map(parseNoteRef)
-    .flatMap((ref) => (ref.kind === 'short' ? [ref.notebook] : []))[0];
-  if (wanted === undefined) return null;
+  const refs = positionals.map(parseNoteRef);
+  const wanted = refs.flatMap((ref) => (ref.kind === 'short' ? [ref.notebook] : []))[0];
+  if (wanted === undefined) return notebookOfIds(notebooks, refs);
   const clones = (await notebooks.list()).filter(
     (entry) => entry.notebookId !== undefined && notebookTag(entry.notebookId) === wanted,
   );
@@ -220,6 +220,31 @@ async function notebookOfRefs(
     ['List them with penmoss notebook ls, or add one with penmoss notebook add <remote>.'],
   );
 }
+
+/**
+ * The notebook whose clones hold the first full note id among the arguments (PEN-158): its
+ * device's clone first, as a short id's. Two notebooks holding one id (a copy) need
+ * `--notebook`. Null when no argument is a full id, or none of this machine's clones holds it.
+ */
+async function notebookOfIds(
+  notebooks: NotebookIo,
+  refs: readonly ReturnType<typeof parseNoteRef>[],
+): Promise<string | null> {
+  if (!notebooks.holding) return null;
+  const id = refs.flatMap((ref) => (ref.kind === 'id' && ULID.test(ref.id) ? [ref.id] : []))[0];
+  if (id === undefined) return null;
+  const clones = await notebooks.holding(id);
+  const ids = new Set(clones.map((entry) => entry.notebookId ?? entry.localId));
+  if (ids.size > 1) {
+    throw new UsageError(
+      `${ids.size} git notebooks on this machine hold the note ${id} (${clones.map((entry) => entry.name).join(', ')}): pass --notebook <name>`,
+    );
+  }
+  const best = clones.find((entry) => entry.writer.kind === 'device') ?? clones[0];
+  return best?.name ?? null;
+}
+
+const ULID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 
 /** A command on a git notebook (T50): its notes API, under the clone's lock, and one sync. */
 async function onNotebook(
@@ -353,8 +378,8 @@ function mainHelp(): string {
     ]),
     '',
     'Note commands run on a git notebook: the one --notebook names, or, without it, the',
-    'one a short id names, else the only one on this machine (`penmoss notebook ls`). Add',
-    'one with `penmoss notebook add`.',
+    'one a note’s id or short id names, else the only one on this machine (`penmoss',
+    'notebook ls`). Add one with `penmoss notebook add`.',
     '',
     'Notes are named by id, by short id (K7QD-9HTF2CXA, from Copy Agent Reference) or by',
     'exact title, ignoring the case of A–Z only. Content',

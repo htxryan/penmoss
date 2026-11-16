@@ -452,6 +452,62 @@ describe.concurrent(
   },
 );
 
+describe(
+  'one automatic clone per notebook, however its remote is written (PEN-159)',
+  {
+    timeout: 60_000,
+  },
+  () => {
+    // Ryan's Mac, 16 Nov: Personal's automatic clone had the https remote; the app's entry had
+    // since been written as git@github.com:…, so a second automatic clone of it was made.
+    it('keeps the clone it has when the app writes the remote another way', async ({ dir }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      let entry = appEntry(remote, { name: 'Personal' });
+      const { service, home } = agents(dir, { entry, all: () => [{ entry, token: null }] });
+      await service.ensureAll();
+      const cli = cliNotebooks(join(home, '.penmoss'));
+      const [first] = await cli.list();
+      expect(first).toMatchObject({ name: 'personal-agent', automatic: true });
+      // The same repository, written with a trailing slash: another spelling, the same notebook id.
+      entry = appEntry(`${remote}/`, { name: 'Personal', notebookId: first!.notebookId! });
+      await service.ensureAll();
+      const after = await cli.list();
+      expect(after.map((each) => [each.name, each.localId])).toEqual([
+        ['personal-agent', first!.localId],
+      ]);
+      // Settings → Agents still shows it under the notebook.
+      const view = await service.list(entry.localId);
+      expect(view.ok && view.value.map((each) => each.name)).toEqual(['personal-agent']);
+    });
+
+    it('removes a later automatic copy of the same notebook and keeps the first', async ({
+      dir,
+    }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      let entry = appEntry(remote, { name: 'Personal' });
+      const { service, home } = agents(dir, { entry, all: () => [{ entry, token: null }] });
+      await service.ensureAll();
+      const cli = cliNotebooks(join(home, '.penmoss'));
+      const [first] = await cli.list();
+      // The duplicate an older app made: the other spelling, added after the first.
+      await cli.add({
+        remote: `${remote}/`,
+        branch: 'main',
+        dir: '',
+        name: 'personal-agent-2',
+        agent: 'Agent',
+        existing: true,
+        automatic: true,
+      });
+      entry = appEntry(`${remote}/`, { name: 'Personal', notebookId: first!.notebookId! });
+      await service.ensureAll();
+      expect((await cli.list()).map((each) => each.name)).toEqual(['personal-agent']);
+    });
+  },
+);
+
 describe('the one MCP server (PEN-155)', () => {
   it('gives every agent penmoss mcp for every notebook, named penmoss', async ({ dir }) => {
     const { service } = agents(dir);

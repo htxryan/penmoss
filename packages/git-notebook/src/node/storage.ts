@@ -93,6 +93,18 @@ export class FileStorage implements NotebookStorage {
     );
   }
 
+  /**
+   * Whether the clone's state has the note (in Trash or not), read without opening it or taking
+   * its lock: the CLI finds a full id's notebook this way (PEN-158).
+   */
+  async holdsNote(id: string): Promise<boolean> {
+    if (!/^[0-9A-Z]{26}$/.test(id)) return false;
+    return ifMissing(
+      stat(join(this.state, 'notes', `${id}.yjs`)).then((s) => s.isFile()),
+      false,
+    );
+  }
+
   /** How many saves the files hold: another process changed them when it moves. */
   async generation(): Promise<number> {
     const text = await ifMissing(readFile(join(this.state, 'meta.json'), 'utf8'), null);
