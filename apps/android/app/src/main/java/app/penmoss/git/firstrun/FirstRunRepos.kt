@@ -200,9 +200,9 @@ internal fun RepoTree(
             step = 2,
             back = back,
             actions = { if (onCreate != null) Primary("Create New Repo", "first-run-create-instead", "plus", onClick = onCreate) },
+            below = { Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl) },
         ) {
             Lead("GitHub lists no repository ${hub.login?.let { "for $it" } ?: "for this sign-in"}.", Modifier.testTag("first-run-no-repos"))
-            Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl)
             signedIn()
         }
         return
@@ -306,10 +306,8 @@ internal fun RepoPicked(
                 step = 2,
                 back = back,
                 actions = { Primary("Try Again", "first-run-retry", "refresh-cw") { read(repo, true) } },
-            ) {
-                Problem("Couldn’t read ${repo.fullName}: ${loaded.message}", "first-run-repo-problem")
-                Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl)
-            }
+                below = { Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl) },
+            ) { Problem("Couldn’t read ${repo.fullName}: ${loaded.message}", "first-run-repo-problem") }
             return
         }
         is RepoRead.Ready -> Unit

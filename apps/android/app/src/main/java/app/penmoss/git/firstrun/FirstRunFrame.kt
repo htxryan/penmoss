@@ -69,6 +69,8 @@ internal fun Frame(
     centered: Boolean = false,
     above: (@Composable () -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
+    /** The screen's other ways on (Use a Token Instead, Paste a URL Instead): centred just above the footer. */
+    below: (@Composable ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
@@ -95,6 +97,13 @@ internal fun Frame(
                 textAlign = if (centered) TextAlign.Center else TextAlign.Start,
             )
             content()
+        }
+        if (below != null) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("first-run-below"),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                content = below,
+            )
         }
         if (back != null || cancel != null || actions != null || start != null) {
             HorizontalDivider()

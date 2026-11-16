@@ -182,10 +182,12 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
                     step = 2,
                     back = back,
                     actions = { signInButton("Sign In Again") },
+                    below = {
+                        Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
+                        urlInstead()
+                    },
                 ) {
                     Problem(words, "github-signin-ended")
-                    Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
-                    urlInstead()
                 }
                 return
             }
@@ -204,11 +206,13 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
             step = 2,
             back = back,
             actions = { signInButton("Sign In with GitHub") },
+            below = {
+                Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
+                urlInstead()
+            },
         ) {
             Lead("Penmoss lists your repositories and syncs with this sign-in.")
             Lead("GitHub shows a short code to enter in your browser; nothing is typed here. The sign-in is kept with the Android Keystore.", small = true)
-            Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
-            urlInstead()
         }
         is Check.Failed -> {
             val error = now.error
@@ -220,12 +224,14 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
                     step = 2,
                     back = back,
                     actions = { signInButton("Sign In with GitHub") },
+                    below = {
+                        Link("Try Again", "first-run-retry", "refresh-cw", ::again)
+                        Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
+                        urlInstead()
+                    },
                 ) {
                     Problem(error.message, "first-run-github-problem")
                     Lead("Repositories in an organisation with single sign-on need Penmoss authorised for it on GitHub.")
-                    Link("Try Again", "first-run-retry", "refresh-cw", ::again)
-                    Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
-                    urlInstead()
                 }
             } else {
                 // 2.9: offline, rate-limited, or anything else GitHub answered.
@@ -235,8 +241,8 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
                     step = 2,
                     back = back,
                     actions = { Primary("Try Again", "first-run-retry", "refresh-cw", onClick = ::again) },
+                    below = { urlInstead() },
                 ) {
-                    urlInstead()
                     Problem(if (error.reason == BrowseReason.OFFLINE) "Check the connection, then try again." else error.message, "first-run-github-problem")
                     if (error.reason == BrowseReason.OFFLINE || error.reason == BrowseReason.RATE_LIMITED) {
                         Lead("If GitHub is limiting requests, wait a few minutes.", small = true)
