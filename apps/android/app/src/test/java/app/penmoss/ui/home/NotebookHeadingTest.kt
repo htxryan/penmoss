@@ -22,6 +22,9 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onNodeWithContentDescription
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -37,8 +40,8 @@ import app.penmoss.ui.common.SyncStateDot
 import app.penmoss.ui.common.mark
 
 /**
- * Home's notebook heading as the sidebar's notebook bar (T52 items 10, 11): the name with its sync
- * dot, then icon-only Sort, New Folder and Trash; and a dot whose state reads from its shape too.
+ * The notebook as the notes list's title, with its sync dot (A1613), its Sort Order and New Folder
+ * in the ⋮ menu; and a dot whose state reads from its shape too.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -69,39 +72,34 @@ class NotebookHeadingTest {
         }
     }
 
-    private val inBar = hasAnyAncestor(hasTestTag("homeNotebookBar"))
-
-    /** A long press on the heading (T53 item 4): New Note, Sort Order…, New Folder and Trash; the dot stays at its end. */
+    /**
+     * The notebook is the bar's title, once (item 16, A1613): its name and its sync dot, with no
+     * heading of its own under the bar; the heading's Sort Order and New Folder are in the ⋮ menu
+     * (New Note is the button, Trash the drawer's).
+     */
     @Test
-    fun theHeadingsLongPressCarriesNewNoteSortNewFolderAndTrash() {
+    fun theTitleIsTheNotebookWithItsDotAndTheMenuCarriesSortAndNewFolder() {
         val events = mutableListOf<String>()
         home(events)
-        // Nothing on the row itself but the name and the dot.
-        compose.onNodeWithTag("homeSort").assertDoesNotExist()
-        val heading = compose.onNodeWithTag("homeFoldersTitle")
-        // The dot at the row's far right, as on the web (A979).
-        val row = heading.fetchSemanticsNode().boundsInRoot
+        compose.onNodeWithTag("homeTitle", useUnmergedTree = true).assertTextEquals("Garden")
+        compose.onAllNodesWithText("Garden").assertCountEquals(1)
+        compose.onNodeWithTag("homeFoldersTitle").assertDoesNotExist()
+        // No gear in the bar: Settings is the drawer's (item 17, A1614).
+        compose.onNodeWithTag("homeSettings").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Settings").assertDoesNotExist()
+        // The dot just after the name.
+        val title = compose.onNodeWithTag("homeTitle", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val dot = compose.onNodeWithTag("syncDot", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        assertTrue("dot $dot at the end of $row", row.right - dot.right < row.width / 10)
-        heading.performTouchInput { longClick() }
-        compose.onNodeWithTag("homeSort").performClick()
+        assertTrue("dot $dot after $title", dot.left >= title.right - 1f && dot.left - title.right < 40f * compose.density.density)
+        compose.onNodeWithTag("homeMore").performClick()
+        compose.onNodeWithTag("homeSort").assertTextEquals("Sort Order…").performClick()
         // The order in use is marked in the menu.
         compose.onNodeWithTag("sort-alpha").assertIsSelected()
         compose.onNodeWithTag("sort-manual").assertIsNotSelected()
         compose.onNodeWithTag("sort-modified").performClick()
-        heading.performTouchInput { longClick() }
-        compose.onNodeWithTag("homeNotebookNewNote").assertTextEquals("New Note in This Notebook").performClick()
-        heading.performTouchInput { longClick() }
-        compose.onNodeWithTag("homeNotebookNewFolder").performClick()
-        heading.performTouchInput { longClick() }
-        compose.onNodeWithTag("homeNotebookTrash").performClick()
-        assertEquals(listOf("sort:modified", "note", "folder", "trash"), events)
-    }
-
-    @Test
-    fun theTopBarNoLongerHoldsSort() {
-        home(mutableListOf())
-        compose.onNode(hasTestTag("homeSort") and hasAnyAncestor(hasTestTag("homeNotebookBar")).not()).assertDoesNotExist()
+        compose.onNodeWithTag("homeMore").performClick()
+        compose.onNodeWithTag("homeNewFolder").performClick()
+        assertEquals(listOf("sort:modified", "folder"), events)
     }
 
     @Test

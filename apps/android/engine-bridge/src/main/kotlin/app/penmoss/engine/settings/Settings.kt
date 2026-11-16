@@ -66,6 +66,12 @@ object DisplayKeys {
     const val COMMANDS = "sidebar.commands"
 
     val ALL = listOf(TAGS, TODAY, THIS_WEEK, GRAPH, COMMANDS)
+
+    /** The phone's own shortcuts on Home's row (A1613), core's `PHONE_SHORTCUT_SETTING_KEYS`. */
+    const val JOURNAL = "sidebar.journal"
+    const val CAPTURE = "sidebar.capture"
+
+    val PHONE = listOf(JOURNAL, CAPTURE)
 }
 
 /** What each setting is when it is not set, as the web reads it. */

@@ -114,9 +114,28 @@ class HistoryModelTest {
     @Test
     fun theRowSaysWhatEachVersionChanged() {
         val saved = app.penmoss.engine.api.NoteVersion(2, reason = "manual", summary = "")
-        assertEquals("Saved by hand", versionLine(saved))
+        assertEquals("Saved by hand", rowWords(saved))
         val edit = app.penmoss.engine.api.NoteVersion(3, reason = "edit", summary = "Appended")
-        assertEquals("Appended", versionLine(edit))
+        assertEquals("Appended", rowWords(edit))
+        // Line counts are the row's end, not its words; both minus signs read.
+        val auto = app.penmoss.engine.api.NoteVersion(4, reason = "auto", summary = "+101 −0 lines")
+        assertEquals("", rowWords(auto))
+        assertEquals(101 to 0, lineCounts(auto.summary))
+        assertEquals(1 to 2, lineCounts("+1 -2 lines"))
+        assertNull(lineCounts("Title changed"))
+    }
+
+    /** The list's days, as the Mac's (finding 13): Today, Yesterday, then the date. */
+    @Test
+    fun versionsAreGroupedByDay() {
+        val zone = java.time.ZoneId.of("UTC")
+        val now = java.time.ZonedDateTime.of(2026, 11, 15, 12, 0, 0, 0, zone).toInstant().toEpochMilli()
+        val hour = 3_600_000L
+        fun at(id: Long, ms: Long) = app.penmoss.engine.api.NoteVersion(id, createdAt = ms)
+        val days = versionDays(listOf(at(5, now - hour), at(4, now - 2 * hour), at(3, now - 24 * hour), at(2, now - 72 * hour), at(1, now - 400 * 24 * hour)), now, zone, java.util.Locale.UK)
+        assertEquals(listOf("Today", "Yesterday, 14 Nov", "12 Nov", "11 Oct 2025"), days.map { it.label })
+        assertEquals(listOf(5L, 4L), days[0].versions.map { it.id })
+        assertEquals("---\ntitle: x\n---\n\nbody".let(::bodyOf), "body")
     }
 
     @Test
@@ -137,13 +156,13 @@ class HistoryModelTest {
         // CONTEXT keeps two lines each side of the change; the rest folds.
         assertEquals(
             listOf(
-                DiffRow.Fold(3),
-                DiffRow.Line("same", "d"),
-                DiffRow.Line("same", "e"),
-                DiffRow.Line("add", "new"),
-                DiffRow.Line("same", "f"),
-                DiffRow.Line("same", "g"),
-                DiffRow.Fold(3),
+                DiffRow.Fold(3, from = 1, to = 3),
+                DiffRow.Line("same", "d", n = 4),
+                DiffRow.Line("same", "e", n = 5),
+                DiffRow.Line("add", "new", n = 6),
+                DiffRow.Line("same", "f", n = 7),
+                DiffRow.Line("same", "g", n = 8),
+                DiffRow.Fold(3, from = 9, to = 11),
             ),
             diffRows(diff),
         )

@@ -29,6 +29,7 @@ const SAMPLES = [
   'font.interface',
   'font.noteSize',
   'sidebar.graph',
+  'sidebar.capture',
   'sidebar.sectionOrder',
   'sidebar.hiddenSections',
   'sidebar.recentCount',

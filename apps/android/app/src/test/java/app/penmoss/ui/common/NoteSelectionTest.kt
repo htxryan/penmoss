@@ -31,7 +31,9 @@ import app.penmoss.engine.api.TreeFolder
 import app.penmoss.engine.api.TreeNote
 import app.penmoss.engine.api.ChangedNote
 import app.penmoss.engine.api.ChangesPage
-import app.penmoss.ui.home.AllNotesScreen
+import app.penmoss.ui.home.HomeActions
+import app.penmoss.ui.home.HomeScreen
+import app.penmoss.ui.home.HomeUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -214,7 +216,7 @@ class NoteSelectionTest {
         compose.setContent {
             PenmossTheme {
                 CompositionLocalProvider(LocalNoteSelection provides selection) {
-                    AllNotesScreen(notes, onBack = {}, onOpen = {}, onNoteLongPress = { selection.start(it) })
+                    HomeScreen(HomeUi(notes = notes, folders = emptyList(), status = "", syncing = false), HomeActions(onNoteLongPress = { selection.start(it) }))
                 }
             }
         }

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.data.NoteStore
@@ -169,8 +170,8 @@ class TrashScreensTest {
                 )
             }
         }
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithTag("openTrash").performClick()
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("openTrash").performScrollTo().performClick()
         assertEquals(listOf("trash"), events)
     }
 

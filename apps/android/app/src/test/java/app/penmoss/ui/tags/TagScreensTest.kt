@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -237,8 +238,8 @@ class TagScreensTest {
                 )
             }
         }
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithTag("homeTags").performClick()
+        // Tags is on the notes list's row of shortcuts (A1438, A1613).
+        compose.onNodeWithTag("homeTagsShortcut").performScrollTo().performClick()
         assertEquals(1, tags)
     }
 

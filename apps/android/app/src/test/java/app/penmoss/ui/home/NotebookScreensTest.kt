@@ -65,13 +65,11 @@ class NotebookScreensTest {
                 )
             }
         }
-        compose.onNodeWithText("Notebooks").assertIsDisplayed()
-        compose.onNodeWithTag("homeFoldersTitle").assertIsDisplayed()
+        // The notes list is a page of its own (A1608), titled by the notebook with its sync dot
+        // (A1613): no heading under the bar, no Notebooks section title.
+        compose.onNodeWithTag("homeNotebooksTitle").assertDoesNotExist()
+        compose.onNodeWithTag("homeFoldersTitle").assertDoesNotExist()
         compose.onNodeWithText("Garden").assertIsDisplayed()
-        // The notes' sync dot is on their heading, as the web's notebook heading (T51, A933), never on Notebooks.
-        compose.onAllNodes(hasTestTag("syncDot") and hasAnyAncestor(hasTestTag("homeFoldersTitle")), useUnmergedTree = true).assertCountEquals(1)
-        compose.onNodeWithTag("homeNotebooksTitle").assertTextEquals("Notebooks")
-        compose.onAllNodes(hasTestTag("syncDot") and hasAnyAncestor(hasTestTag("homeNotebooksTitle")), useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodesWithTag("syncDot", useUnmergedTree = true).assertCountEquals(1)
         compose.onNodeWithText("Work").performClick()
         assertEquals("w", opened)

@@ -15,6 +15,20 @@ export type SidebarItem = (typeof SIDEBAR_ITEMS)[number];
 /** The setting that holds whether `item` shows. */
 export const sidebarSetting = (item: SidebarItem): string => `sidebar.${item}`;
 
+/**
+ * Home's shortcuts on the phone beyond the sidebar's (Ryan's Android feedback, 16 Nov 2026,
+ * item 16; A1613): Journal and Capture, which the phone's drawer held before its row of
+ * shortcuts took them (All Notes went with its screen, A1615). The Mac's sidebar reaches these its own ways, so only the phone shows
+ * them; each is a per-platform `sidebar.<item>` setting (A1605), true or false, unset shown.
+ */
+export const PHONE_SHORTCUT_ITEMS = ['journal', 'capture'] as const;
+export type PhoneShortcutItem = (typeof PHONE_SHORTCUT_ITEMS)[number];
+
+/** The phone's own shortcuts' settings, in their order on the phone's row. */
+export const PHONE_SHORTCUT_SETTING_KEYS: readonly string[] = PHONE_SHORTCUT_ITEMS.map(
+  (item) => `sidebar.${item}`,
+);
+
 /** Every Display setting's key, in the sidebar's order. */
 export const DISPLAY_SETTING_KEYS = SIDEBAR_ITEMS.map(sidebarSetting) as readonly string[];
 

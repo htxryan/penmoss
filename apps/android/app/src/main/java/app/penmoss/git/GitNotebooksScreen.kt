@@ -15,7 +15,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.ui.common.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
@@ -228,7 +228,14 @@ class GitNotebooksActions(
  * notebook: with no notebook yet, the first run asks to add or create one.
  */
 @Composable
-fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack: () -> Unit, onSettings: (() -> Unit)? = null) {
+fun GitNotebooksScreen(
+    ui: GitNotebooksUi,
+    actions: GitNotebooksActions,
+    onBack: () -> Unit,
+    onSettings: (() -> Unit)? = null,
+    /** Add Notebook's flow, the first run's own screens (A1562); null: the form here. */
+    onAddNotebook: (() -> Unit)? = null,
+) {
     var adding by rememberSaveable { mutableStateOf(false) }
     var picking by rememberSaveable { mutableStateOf(false) }
     // A notebook added: the form closes.
@@ -259,7 +266,7 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
             )
             TextButton(onClick = actions.onDismissMessage, Modifier.padding(horizontal = 8.dp)) { Text("OK") }
         }
-        if (ui.rows.isEmpty()) {
+        if (ui.rows.isEmpty() && onAddNotebook == null) {
             // The first run (A1040): nothing to open yet, so the screen says how to start.
             Text(
                 FIRST_RUN,
@@ -270,10 +277,13 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
         for ((at, row) in ui.rows.withIndex()) NotebookRow(row, primary = ui.journal == row.view.localId, if (at == 0) Modifier.settingRow("all-notebooks") else Modifier) {
             if (ui.home) actions.onOpen(row.view.localId) else actions.onPage(row.view.localId)
         }
-        if (adding || ui.rows.isEmpty()) {
+        if (onAddNotebook == null && (adding || ui.rows.isEmpty())) {
             AddForm(ui, actions, onCancel = if (ui.rows.isEmpty()) null else ({ adding = false }))
         } else {
-            Button(onClick = { adding = true }, Modifier.settingRow("add-notebook").padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitAddOpen")) { Text("+ Add Notebook") }
+            Button(
+                onClick = { if (onAddNotebook != null) onAddNotebook() else adding = true },
+                Modifier.settingRow("add-notebook").padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitAddOpen"),
+            ) { Text("+ Add Notebook") }
         }
         if (ui.home) return@SectionScreen
         BetweenNotebooks(ui, actions, onPickPrimary = { picking = true })
@@ -955,9 +965,10 @@ fun GitNotebooksRoute(
     onPage: (String) -> Unit = {},
     copyTags: Boolean? = null,
     onCopyTags: (Boolean) -> Unit = {},
+    onAddNotebook: (() -> Unit)? = null,
 ) {
     val (ui, actions) = rememberGitNotebooks(hub, onOpen, home, onPage, copyTags, onCopyTags)
-    GitNotebooksScreen(ui, actions, onBack, onSettings)
+    GitNotebooksScreen(ui, actions, onBack, onSettings, onAddNotebook)
 }
 
 /** A notebook's page in Settings (PEN-146), over the hub: [tab] is overview, sync or git. */

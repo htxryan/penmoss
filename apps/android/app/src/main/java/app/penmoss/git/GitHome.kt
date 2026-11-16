@@ -1,6 +1,8 @@
 package app.penmoss.git
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,7 +51,16 @@ import kotlinx.coroutines.launch
  * personal notes.
  */
 @Composable
-fun NotebooksHome(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
+fun NotebooksHome(
+    graph: app.penmoss.DeviceGraph,
+    onBack: () -> Unit,
+    /**
+     * Opened from the launcher (A1608): go straight to the primary notebook's notes list, then
+     * [onLanded] (the activity finishes). All Notebooks in the drawer opens this screen without it.
+     */
+    land: Boolean = false,
+    onLanded: () -> Unit = {},
+) {
     val context = LocalContext.current
     val nav = rememberNavController()
     // Settings' (i) names the primary notebook on every Settings screen (A1560).
@@ -58,13 +69,41 @@ fun NotebooksHome(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     ) {
         app.penmoss.ui.PenmossNavHost(nav, startDestination = HOME_ROUTE) {
             composable(HOME_ROUTE) {
-                GitNotebooksRoute(
-                    graph.git,
-                    onOpen = { GitNotebookActivity.open(context, it) },
-                    onBack = onBack,
-                    home = true,
-                    onSettings = { nav.open(app.penmoss.ui.settings.SettingsRoutes.HOME) },
-                )
+                val views by graph.git.list.collectAsStateWithLifecycle()
+                val loaded by graph.git.loaded.collectAsStateWithLifecycle()
+                // A notebook being set up keeps the first run on screen until its first sync (A1406).
+                var held by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+                when {
+                    // Until the list is read, an empty one says nothing: no first run flashes past.
+                    !loaded -> androidx.compose.foundation.layout.Box(
+                        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                    )
+                    views.isEmpty() || held -> app.penmoss.git.firstrun.NotebookSteps(
+                        app.penmoss.git.firstrun.rememberFirstRunDeps(graph),
+                        firstRun = true,
+                        onHold = { held = it },
+                        onDone = { localId ->
+                            held = false
+                            if (localId != null) GitNotebookActivity.open(context, localId)
+                        },
+                    )
+                    land -> {
+                        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                        androidx.compose.runtime.LaunchedEffect(Unit) {
+                            val primary = graph.git.journal()?.takeIf { id -> views.any { it.localId == id } } ?: views.first().localId
+                            GitNotebookActivity.open(context, primary)
+                            onLanded()
+                        }
+                    }
+                    else -> GitNotebooksRoute(
+                        graph.git,
+                        onOpen = { GitNotebookActivity.open(context, it) },
+                        onBack = onBack,
+                        home = true,
+                        onSettings = { nav.open(app.penmoss.ui.settings.SettingsRoutes.HOME) },
+                        onAddNotebook = { nav.open(app.penmoss.ui.settings.SettingsRoutes.addNotebook(home = true)) },
+                    )
+                }
             }
             settingsRoutes(SettingsHost(graph, nav, context))
         }

@@ -18,6 +18,9 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.assertIsSelected
+import androidx.test.espresso.Espresso
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -96,6 +99,7 @@ class ScreensTest {
             PenmossTheme {
                 HomeScreen(
                     HomeUi(
+                        page = HomePage.RECENT,
                         recent = (1..60).map { note("n$it", "Note $it") },
                         folders = listOf(FolderItem("f1", "Projects")),
                         // Recent Notes at its longest (T53 item 8): 50 of them.
@@ -118,14 +122,16 @@ class ScreensTest {
     }
 
     @Test
-    fun homeListsFoldersAndRecentNotesAndOpensThem() {
+    fun theNotesListShowsFoldersThenNotesAndOpensThem() {
         val opened = mutableListOf<String>()
         val events = mutableListOf<String>()
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
                     HomeUi(
-                        recent = listOf(note("n1", "Groceries", "eggs, milk"), note("n2", "Untitled")),
+                        // The notes list (A1608): the top level's folders, then its notes.
+                        notes = listOf(note("n1", "Groceries", "eggs, milk"), note("n2", "Untitled")),
+                        recent = listOf(note("r1", "Not on this page")),
                         folders = listOf(FolderItem("f1", "Projects")),
                         status = "Synced at 3:42 PM",
                         syncing = false,
@@ -134,7 +140,6 @@ class ScreensTest {
                     HomeActions(
                         onSearch = { events += "search" },
                         onSettings = { events += "settings" },
-                        onAllNotes = { events += "all" },
                         onFolder = { events += "folder:$it" },
                         onOpen = { opened += it },
                         onToday = { events += "today" },
@@ -147,42 +152,41 @@ class ScreensTest {
                 )
             }
         }
-        // The status line is a dot on the notebook's heading, its words its name (T51, A933),
-        // which is named as the web's: the notebook's name (A1538).
+        // The status line is a dot beside the title, the notebook's name (A1538, A1613), its
+        // words its name (T51, A933).
         compose.onNodeWithTag("syncDot").assertIsDisplayed().assertContentDescriptionEquals("Synced at 3:42 PM")
-        compose.onNodeWithTag("homeFoldersTitle", useUnmergedTree = true).onChildren().filter(hasText("Garden")).assertCountEquals(1)
+        compose.onNodeWithTag("homeTitle", useUnmergedTree = true).assertTextEquals("Garden")
         compose.onNodeWithText("eggs, milk").assertIsDisplayed()
+        compose.onNodeWithText("Not on this page").assertDoesNotExist()
+        assertTrue(compose.onNodeWithText("Projects").getBoundsInRoot().top < compose.onNodeWithText("Groceries").getBoundsInRoot().top)
         compose.onNodeWithText("Groceries").performClick()
         compose.onNodeWithText("Projects").performClick()
         // Today and This Week are icons in Home's row, named and with tooltips (T51, A932).
         compose.onNodeWithContentDescription("Today").performClick()
         compose.onNodeWithContentDescription("This Week").performClick()
-        // All notes moved to the overflow menu (T40 P5, JR2).
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithText("All Notes").performClick()
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithText("Journal").performClick()
-        // Quick capture inside the app (T40 P9, PL1), first in the menu.
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithText("Quick Capture").performClick()
-        // Send feedback (T49, D41), last in the menu.
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithTag("homeFeedback").performClick()
-        compose.onNodeWithContentDescription("Search").performClick()
+        // Journal and Capture are on the row too (A1613); the drawer has no places, and there is no All Notes (A1615).
+        compose.onNodeWithTag("homeAllNotes").assertDoesNotExist()
+        compose.onNodeWithTag("homeJournal").performScrollTo().performClick()
+        compose.onNodeWithTag("homeCapture").performScrollTo().performClick()
+        // Send Feedback is in the hamburger's drawer (A1604).
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("homeFeedback").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Search").performScrollTo().performClick()
         compose.onNodeWithContentDescription("New Note").performClick()
         assertEquals(listOf("n1"), opened)
-        assertEquals(listOf("folder:f1", "today", "week", "all", "journal", "capture", "feedback", "search", "new"), events)
+        assertEquals(listOf("folder:f1", "today", "week", "journal", "capture", "feedback", "search", "new"), events)
     }
 
-    /** Quick Access (T51, A946): the pinned notes first on Home; with none, the section says No Notes. */
+    /** Quick Access (T51, A946): a page of its own (A1608); with none, it says No Notes. */
     @Test
-    fun homeListsQuickAccessFirstAndShowsItEmpty() {
+    fun quickAccessIsAPageThatListsThePinsAndShowsItEmpty() {
         var pinned by mutableStateOf(listOf(note("p1", "Garden plan"), note("p2", "Reading list")))
         val opened = mutableListOf<String>()
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
                     HomeUi(
+                        page = HomePage.QUICK_ACCESS,
                         recent = listOf(note("n1", "Groceries")),
                         folders = emptyList(),
                         status = "Synced at 3:42 PM",
@@ -195,16 +199,13 @@ class ScreensTest {
                 )
             }
         }
-        compose.onNodeWithTag("homeQuickAccessTitle").assertTextEquals("Quick Access")
+        compose.onNodeWithTag("homeTitle").assertTextEquals("Quick Access")
+        compose.onNodeWithText("Groceries").assertDoesNotExist()
         compose.onNodeWithTag("homeQuickAccess-p2").performClick()
         assertEquals(listOf("p2"), opened)
         compose.onNodeWithTag("homeQuickAccessEmpty").assertDoesNotExist()
         pinned = emptyList()
-        compose.onNodeWithTag("homeQuickAccessTitle").assertTextEquals("Quick Access")
         compose.onNodeWithTag("homeQuickAccessEmpty").assertTextEquals("No Notes")
-        // With no folders, the personal heading still carries the dot (A933); Recent notes has none.
-        compose.onAllNodes(hasTestTag("syncDot") and hasAnyAncestor(hasTestTag("homeFoldersTitle")), useUnmergedTree = true).assertCountEquals(1)
-        compose.onNodeWithTag("syncDot").assertContentDescriptionEquals("Synced at 3:42 PM")
     }
 
     @Test
@@ -475,51 +476,56 @@ class ScreensTest {
     }
 
     /**
-     * Home's sections (T53 item 8, A983): in the person's order, each title's long press moving or
-     * hiding it, and the ⋮ menu's Show or Hide for each, by name A to Z, after its actions.
+     * Each of the sidebar's sections is a page of its own (Ryan's Android feedback, item 11, A1608):
+     * the drawer picks Quick Access, Recent Notes or this notebook's notes list, marks the one shown,
+     * and Back from the others returns to the notes list.
      */
     @Test
-    fun homesSectionsFollowTheLayoutAndMoveOrHideFromTheirTitles() {
-        val events = mutableListOf<String>()
-        var layout by mutableStateOf(HomeLayout(order = listOf("recent", "notebooks", "quickAccess", "calendar", "tags")))
+    fun theDrawerPicksEachSectionsPageAndBackReturnsToTheNotesList() {
+        var page by mutableStateOf(HomePage.RECENT)
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
                     HomeUi(
+                        page = page,
+                        notebookId = "nb",
+                        notebooks = listOf(DrawerNotebook("nb", "Garden")),
+                        notebook = "Garden",
+                        title = "Garden",
                         recent = listOf(note("n1", "Groceries")),
                         folders = listOf(FolderItem("f1", "Projects")),
-                        status = "Synced",
-                        syncing = false,
                         quickAccess = listOf(note("p1", "Garden plan")),
-                        layout = layout,
+                        status = "Synced",
                     ),
-                    HomeActions(
-                        onSectionHidden = { section, hide -> events += "${if (hide) "hide" else "show"} $section" },
-                        onSectionMove = { section, index -> events += "move $section $index" },
-                    ),
+                    HomeActions(onPage = { page = it }),
                 )
             }
         }
-        // Recent Notes first, as stored: above the notebook's heading.
-        val recentTop = compose.onNodeWithTag("homeRecentTitle").fetchSemanticsNode().boundsInRoot.top
-        val notebookTop = compose.onNodeWithTag("homeFoldersTitle").fetchSemanticsNode().boundsInRoot.top
-        assertTrue(recentTop < notebookTop)
-        // The first one moves down only; Move Down puts it after the next shown one.
-        compose.onNodeWithTag("homeRecentTitle").performTouchInput { longClick() }
-        compose.onNodeWithTag("sectionMoveUp").assertDoesNotExist()
-        compose.onNodeWithTag("sectionMoveDown").performClick()
-        compose.onNodeWithTag("homeRecentTitle").performTouchInput { longClick() }
-        compose.onNodeWithTag("sectionHide").assertTextEquals("Hide Recent Notes").performClick()
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithTag("homeSection-quickAccess").assertTextEquals("Hide Quick Access")
-        compose.onNodeWithTag("homeSection-recent").assertTextEquals("Hide Recent Notes").performClick()
-        // Hidden: gone from Home, and Show in the menu.
-        layout = layout.copy(hidden = setOf("recent"))
+        compose.onNodeWithTag("homeTitle").assertTextEquals("Recent Notes")
+        compose.onNodeWithText("Groceries").assertIsDisplayed()
+        compose.onNodeWithText("Projects").assertDoesNotExist()
+        // No New Folder on a page that is not the notes list.
+        compose.onNodeWithTag("homeMore").assertDoesNotExist()
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("drawerRecent").assertIsSelected()
+        compose.onNodeWithTag("drawerQuickAccess").performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag("homeRecentTitle").assertDoesNotExist()
-        compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithTag("homeSection-recent").assertTextEquals("Show Recent Notes").performClick()
-        assertEquals(listOf("move recent 1", "hide recent", "hide recent", "show recent"), events)
+        compose.onNodeWithTag("homeTitle").assertTextEquals("Quick Access")
+        compose.onNodeWithText("Garden plan").assertIsDisplayed()
+        compose.onNodeWithTag("homeMenu").performClick()
+        // The notebooks on this phone, and no All Notebooks: that is Settings' (item 17, A1614).
+        compose.onNodeWithTag("drawerAllNotebooks").assertDoesNotExist()
+        compose.onNodeWithText("All Notebooks").assertDoesNotExist()
+        compose.onNodeWithTag("drawerNotebook-nb").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("homeTitle").assertTextEquals("Garden")
+        compose.onNodeWithText("Projects").assertIsDisplayed()
+        compose.onNodeWithTag("homeMore").assertIsDisplayed()
+        page = HomePage.RECENT
+        compose.waitForIdle()
+        Espresso.pressBack()
+        compose.waitForIdle()
+        assertEquals(HomePage.NOTES, page)
     }
 
     /** Quick Access on Home (T53 item 10): a long press removes or moves a pin; its notebook under it when asked. */
@@ -531,6 +537,7 @@ class ScreensTest {
             PenmossTheme {
                 HomeScreen(
                     HomeUi(
+                        page = HomePage.QUICK_ACCESS,
                         recent = emptyList(),
                         folders = emptyList(),
                         status = "Synced",
@@ -558,69 +565,5 @@ class ScreensTest {
         compose.waitForIdle()
         compose.onAllNodesWithTag("quickAccessNotebook", useUnmergedTree = true).assertCountEquals(2)
         compose.onNodeWithText("Work", useUnmergedTree = true).assertExists()
-    }
-
-    /**
-     * A section shown again or moved first while Home is at its top stays in view (T53 pass, B3).
-     * The list keeps its first item in place by key, so without this the section came back above
-     * the screen and Home looked unchanged: ⋮ → Show Quick Access, or Notebooks' Move Up.
-     */
-    @Test
-    fun aSectionShownOrMovedFirstAtTheTopStaysInView() {
-        var layout by mutableStateOf(HomeLayout(order = listOf("quickAccess", "notebooks", "recent", "calendar", "tags"), hidden = setOf("quickAccess")))
-        compose.setContent {
-            PenmossTheme {
-                HomeScreen(
-                    HomeUi(
-                        recent = listOf(note("n1", "Groceries")),
-                        folders = (1..40).map { FolderItem("f$it", "Folder $it") },
-                        status = "Synced",
-                        syncing = false,
-                        quickAccess = listOf(note("p1", "Garden plan")),
-                        layout = layout,
-                    ),
-                    HomeActions(),
-                )
-            }
-        }
-        compose.onNodeWithTag("homeFoldersTitle").assertIsDisplayed()
-        layout = layout.copy(hidden = emptySet())
-        compose.waitForIdle()
-        compose.onNodeWithTag("homeQuickAccessTitle").assertIsDisplayed()
-        layout = layout.copy(order = listOf("notebooks", "quickAccess", "recent", "calendar", "tags"))
-        compose.waitForIdle()
-        compose.onNodeWithTag("homeFoldersTitle").assertIsDisplayed()
-    }
-
-    /** A section moved from far down Home is scrolled to, so it doesn't leave the screen (T53 pass). */
-    @Test
-    fun aSectionMovedFromFarDownIsFollowed() {
-        var layout by mutableStateOf(HomeLayout(order = listOf("quickAccess", "notebooks", "recent", "calendar", "tags")))
-        compose.setContent {
-            PenmossTheme {
-                HomeScreen(
-                    HomeUi(
-                        recent = listOf(note("n1", "Groceries")),
-                        folders = (1..40).map { FolderItem("f$it", "Folder $it") },
-                        status = "Synced",
-                        syncing = false,
-                        quickAccess = listOf(note("p1", "Garden plan")),
-                        layout = layout,
-                    ),
-                    HomeActions(
-                        onSectionMove = { section, index ->
-                            layout = layout.copy(order = (layout.order - section).toMutableList().apply { add(index, section) })
-                        },
-                    ),
-                )
-            }
-        }
-        // Recent Notes, under forty folders: scrolled to, then moved above Notebooks.
-        compose.onNodeWithTag("noteList").performScrollToNode(hasTestTag("homeRecentTitle"))
-        compose.onNodeWithTag("homeRecentTitle").performTouchInput { longClick() }
-        compose.onNodeWithTag("sectionMoveUp").performClick()
-        compose.waitForIdle()
-        assertEquals(listOf("quickAccess", "recent", "notebooks", "calendar", "tags"), layout.order)
-        compose.onNodeWithTag("homeRecentTitle").assertIsDisplayed()
     }
 }

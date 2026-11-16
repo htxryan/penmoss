@@ -132,6 +132,11 @@ class GitNotebookHub(
     /** The notebooks on this phone, as Settings and Home list them. */
     val list: StateFlow<List<GitNotebookView>> = listed.asStateFlow()
 
+    private val listRead = MutableStateFlow(false)
+
+    /** Whether [list] has been read once: until then an empty list says nothing (the first run waits). */
+    val loaded: StateFlow<Boolean> = listRead.asStateFlow()
+
     /**
      * Each notebook's badge (A1579), by local id: from its own settings as its store holds them
      * (the last pass's, with changes made here laid over them) and its name, as the Mac's. Reading
@@ -299,6 +304,7 @@ class GitNotebookHub(
 
     private fun refresh() {
         listed.value = runCatching { notebooks.list() }.getOrDefault(emptyList())
+        listRead.value = true
     }
 
     // --- this phone's choices ---

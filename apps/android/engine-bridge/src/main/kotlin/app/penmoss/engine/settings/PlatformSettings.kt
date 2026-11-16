@@ -15,7 +15,7 @@ object PlatformSettings {
         SettingKeys.INTERFACE_FONT,
         SettingKeys.NOTE_FONT,
         SettingKeys.NOTE_FONT_SIZE,
-    ) + DisplayKeys.ALL + listOf(
+    ) + DisplayKeys.ALL + DisplayKeys.PHONE + listOf(
         SettingKeys.SECTION_ORDER,
         SettingKeys.HIDDEN_SECTIONS,
         SettingKeys.RECENT_COUNT,

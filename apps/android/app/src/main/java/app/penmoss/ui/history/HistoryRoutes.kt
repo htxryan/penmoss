@@ -42,10 +42,6 @@ private val REASONS = mapOf(
     "edit" to "",
 )
 
-/** A version's reason and summary as one line, as the web shows it. */
-fun versionLine(version: NoteVersion): String =
-    listOf(REASONS[version.reason] ?: version.reason, version.summary).filter { it.isNotBlank() }.joinToString(" · ")
-
 /** The versions a move to Trash or its restore cut (#113): no edit of the text to take back. */
 private val TRASH_MOVES = setOf("Moved to Trash", "Restored from Trash")
 
@@ -56,21 +52,27 @@ private val TRASH_MOVES = setOf("Moved to Trash", "Restored from Trash")
  */
 fun revertible(version: NoteVersion): Boolean = version.summary.trim() !in TRASH_MOVES
 
-/** What History says under its title (A574, A79): versions are automatic. */
+/** What History's ⓘ says (A574, A79): versions are a git notebook's commits, as the Mac's `GIT_VERSIONS` (A858). */
 const val VERSIONS_EXPLAINED =
-    "Versions are saved automatically: after 5 minutes without changes, every 30 minutes while you keep editing, and after every agent edit."
+    "Each sync with git is a version: this phone commits its changes when it pushes, and every agent’s commit is a version of its own."
 
 /** Unchanged lines kept around each change in the diff, as the web's CONTEXT. */
 private const val DIFF_CONTEXT = 2
 
 /** One row of a version's diff as shown: a line, or folded unchanged lines. */
 sealed interface DiffRow {
-    data class Line(val op: String, val line: String) : DiffRow
+    /** A line and its number: this version's, or the version before's on a removed line (R2-13). */
+    data class Line(val op: String, val line: String, val n: Int) : DiffRow
 
-    data class Fold(val count: Int) : DiffRow
+    /** Unchanged lines folded away: how many, and this version's numbers for them. */
+    data class Fold(val count: Int, val from: Int, val to: Int) : DiffRow
 }
 
-/** The diff with long unchanged runs folded, as the web's `diffRows`. */
+/**
+ * The diff with long unchanged runs folded, each line numbered, as the web's `diffRows`: this
+ * version's number on an unchanged or added line, the version before's on a removed one; folded
+ * lines are counted, so the numbers run on across a fold.
+ */
 fun diffRows(diff: List<DiffOp>): List<DiffRow> {
     val rows = mutableListOf<DiffRow>()
     val changed = diff.map { it.op != "same" }
@@ -80,19 +82,77 @@ fun diffRows(diff: List<DiffOp>): List<DiffRow> {
         }
         return false
     }
+    var now = 0
+    var before = 0
     var folded = 0
-    diff.forEachIndexed { i, op ->
-        if (op.op == "same" && !near(i)) {
-            folded++
-            return@forEachIndexed
-        }
-        if (folded > 0) rows += DiffRow.Fold(folded)
+    fun close() {
+        if (folded > 0) rows += DiffRow.Fold(folded, now - folded + 1, now)
         folded = 0
-        rows += DiffRow.Line(op.op, op.line)
     }
-    if (folded > 0) rows += DiffRow.Fold(folded)
+    diff.forEachIndexed { i, op ->
+        val folds = op.op == "same" && !near(i)
+        if (!folds) close()
+        if (op.op != "del") now++
+        if (op.op != "add") before++
+        if (folds) folded++ else rows += DiffRow.Line(op.op, op.line, if (op.op == "del") before else now)
+    }
+    close()
     return rows
 }
+
+/** `+3 −1 lines` as its two numbers, as the web's `lineCounts`; null for any other summary. */
+fun lineCounts(summary: String): Pair<Int, Int>? =
+    Regex("""^\+(\d+) [−-](\d+) lines?$""").find(summary.trim())?.let { it.groupValues[1].toInt() to it.groupValues[2].toInt() }
+
+/**
+ * A version's words in its one-line row (Ryan's review of #192, finding 13): its reason, and its
+ * summary unless that is only the line counts, which the row shows at its end.
+ */
+fun rowWords(version: NoteVersion): String =
+    listOf(REASONS[version.reason] ?: version.reason, version.summary.takeIf { lineCounts(it) == null }.orEmpty())
+        .filter { it.isNotBlank() }.joinToString(" · ")
+
+/** A writer's name as the Mac's History says it: `Agent · Claude Code`, `Pixel 9`. */
+fun authorName(author: app.penmoss.engine.api.HistoryAuthor): String {
+    val label = author.label.ifBlank { if (author.kind == "agent") "Agent" else "Device" }
+    return if (author.kind == "agent" && !label.equals("Agent", ignoreCase = true)) "Agent · $label" else label
+}
+
+/** A version's markdown without its frontmatter (the title and tags): what Copy copies, as the web's `bodyOf`. */
+fun bodyOf(markdown: String): String {
+    if (!markdown.startsWith("---\n")) return markdown
+    val end = markdown.indexOf("\n---", 4)
+    return if (end < 0) markdown else markdown.substring(end + 4).trimStart('\n')
+}
+
+/** One day's versions, newest first, under its heading. */
+data class VersionDay(val key: java.time.LocalDate, val label: String, val versions: List<NoteVersion>)
+
+/**
+ * The versions by day (finding 13): Today, Yesterday, 13 Nov, or 13 Nov 2025 in another year, as
+ * the web's `dayLabel`, in the phone's date style (`shortWhen`).
+ */
+fun versionDays(
+    versions: List<NoteVersion>,
+    now: Long = System.currentTimeMillis(),
+    zone: java.time.ZoneId = java.time.ZoneId.systemDefault(),
+    locale: java.util.Locale = java.util.Locale.getDefault(),
+): List<VersionDay> {
+    val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    return versions.groupBy { java.time.Instant.ofEpochMilli(it.createdAt).atZone(zone).toLocalDate() }.map { (day, inDay) ->
+        val date = java.time.format.DateTimeFormatter.ofPattern(if (day.year == today.year) "d MMM" else "d MMM yyyy", locale).format(day)
+        val label = when (day) {
+            today -> "Today"
+            today.minusDays(1) -> "Yesterday, $date"
+            else -> date
+        }
+        VersionDay(day, label, inDay)
+    }
+}
+
+/** A row's time: its day is its group's heading. */
+fun clock(time: Long, zone: java.time.ZoneId = java.time.ZoneId.systemDefault(), locale: java.util.Locale = java.util.Locale.getDefault()): String =
+    java.time.format.DateTimeFormatter.ofPattern("h:mm a", locale).format(java.time.Instant.ofEpochMilli(time).atZone(zone))
 
 data class HistoryUi(
     val loading: Boolean = false,

@@ -17,6 +17,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import app.penmoss.ui.settings.HomeShortcuts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
@@ -37,6 +40,12 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.material.icons.Icons
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
@@ -100,7 +109,11 @@ import app.penmoss.ui.common.SectionTitle
 import app.penmoss.ui.folders.SortMenu
 import app.penmoss.ui.common.DotState
 import app.penmoss.ui.common.SectionTitleWithDot
+import app.penmoss.ui.common.LucideAssets
+import app.penmoss.ui.common.NotebookBadgeView
 import app.penmoss.ui.common.SyncDot
+import app.penmoss.ui.common.SyncStateDot
+import app.penmoss.ui.common.rememberLucideIcons
 import app.penmoss.ui.common.TipIconButton
 import app.penmoss.ui.settings.SettingsIcons
 import androidx.compose.foundation.layout.size
@@ -111,9 +124,25 @@ private fun BackButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
 }
 
+/**
+ * The notebook screen's pages (Ryan's Android feedback, 15 Nov 2026, item 11; A1608): the Mac
+ * sidebar's sections, each a page of its own that the drawer picks, instead of one long Home.
+ * A notebook opens on its notes list.
+ */
+enum class HomePage(val title: String?) {
+    /** The notebook's folders and its top-level notes, under its heading; titled by the notebook. */
+    NOTES(null),
+    QUICK_ACCESS("Quick Access"),
+    RECENT("Recent Notes"),
+}
+
 /** What Home shows (A6): its lists, the sync state and the person's layout. */
 @Immutable
 data class HomeUi(
+    /** The page shown (A1608). */
+    val page: HomePage = HomePage.NOTES,
+    /** The notebook's top-level notes, under its folders on the notes list (A1608). */
+    val notes: List<NoteItem> = emptyList(),
     val recent: List<NoteItem> = emptyList(),
     val folders: List<FolderItem> = emptyList(),
     val status: String = "",
@@ -153,13 +182,16 @@ data class HomeUi(
     val layout: HomeLayout = HomeLayout(),
     /** Each Quick Access note's notebook, by note id, when Settings shows it (T53 item 10). */
     val quickAccessNotebooks: Map<String, String> = emptyMap(),
+    /** This notebook's local id, which the drawer marks among [notebooks] (A1604). */
+    val notebookId: String = "",
+    /** The notebooks on this phone, the drawer's Notebooks (A1604). */
+    val notebooks: List<DrawerNotebook> = emptyList(),
 )
 
 /** What Home's taps, presses and pulls do (A6). */
 class HomeActions(
     val onSearch: () -> Unit = {},
     val onSettings: () -> Unit = {},
-    val onAllNotes: () -> Unit = {},
     val onFolder: (String) -> Unit = {},
     val onOpen: (String) -> Unit = {},
     val onToday: () -> Unit = {},
@@ -198,16 +230,18 @@ class HomeActions(
     val onStatus: () -> Unit = {},
     /** Send feedback (T49, D41), last in the overflow menu; none when null. */
     val onFeedback: (() -> Unit)? = null,
-    /** Hides or shows a section (its title's long press, or the ⋮ menu). */
-    val onSectionHidden: (section: String, hide: Boolean) -> Unit = { _, _ -> },
-    /** Moves a section to an index among every section (its title's Move Up and Move Down). */
-    val onSectionMove: (section: String, index: Int) -> Unit = { _, _ -> },
     /** A Quick Access note's long press: Remove from Quick Access (T53 item 10). */
     val onQuickAccessRemove: (String) -> Unit = {},
     /** Moves a pinned note to an index in Quick Access (its Move Up and Move Down). */
     val onQuickAccessMove: (id: String, index: Int) -> Unit = { _, _ -> },
     /** A new note at the notebook's top level, from its heading's long press (T53 item 4). */
     val onNotebookNewNote: () -> Unit = onNewNote,
+    /** Opens another notebook on this phone, from the drawer (A1604). */
+    val onNotebook: (localId: String) -> Unit = {},
+    /** The app's first screen, every notebook on this phone (A1604). */
+    val onAllNotebooks: () -> Unit = {},
+    /** Shows one of the notebook screen's pages, from the drawer, or the notes list on Back (A1608). */
+    val onPage: (HomePage) -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -235,8 +269,11 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
         refresh()
         pulled = false
     }
-    // A chosen note Home stops listing is no longer chosen (A652, review S2).
-    if (actions.onNoteLongPress != null) KeepSelectionShown(ui.recent)
+    // A chosen note the page stops listing is no longer chosen (A652, review S2).
+    if (actions.onNoteLongPress != null) KeepSelectionShown(if (ui.page == HomePage.RECENT) ui.recent else ui.notes)
+    // Back from Quick Access or Recent Notes goes to the notes list, the notebook's first page (A1608).
+    BackHandler(enabled = ui.page != HomePage.NOTES && !ui.reordering) { actions.onPage(HomePage.NOTES) }
+    val notesPage = ui.page == HomePage.NOTES
     // The notebook's sync state as a dot (T51, A933), with the status line's words.
     val personalDot = when {
         ui.stopped -> SyncDot(DotState.STOPPED, ui.status, actions.onStatus)
@@ -245,14 +282,43 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
         ui.status.isEmpty() -> SyncDot(DotState.IDLE, "Not synced yet")
         else -> SyncDot(DotState.SYNCED, ui.status)
     }
+    // The hamburger's drawer, with the Mac sidebar's areas (A1604).
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
+    BackHandler(enabled = drawer.isOpen) { drawerScope.launch { drawer.close() } }
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        gesturesEnabled = !ui.reordering,
+        drawerContent = { HomeDrawerSheet(ui, actions) { drawerScope.launch { drawer.close() } } },
+    ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 // Under the selection bar while notes are chosen: out of TalkBack's reach (review S4).
                 modifier = Modifier.underSelectionBar(),
-                title = { Text(if (ui.reordering) "Reorder Folders" else ui.title) },
+                // The notes list is titled by its notebook: its badge, its name and its sync dot
+                // (A1613), once, where the list had a heading of its own under the bar (A933).
+                title = {
+                    val name = if (ui.reordering) "Reorder Folders" else ui.page.title ?: ui.notebook.ifEmpty { ui.title }
+                    if (notesPage && !ui.reordering) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ui.badge?.let {
+                                NotebookBadgeView(it, ui.notebook, size = 24.dp, decorative = true)
+                                Spacer(Modifier.width(12.dp))
+                            }
+                            Text(name, Modifier.weight(1f, fill = false).testTag("homeTitle"), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            SyncStateDot(personalDot, Modifier.testTag("syncDot"))
+                        }
+                    } else {
+                        Text(name, Modifier.testTag("homeTitle"))
+                    }
+                },
                 navigationIcon = {
-                    if (ui.reordering) BackButton { actions.onReorder(false) }
+                    if (ui.reordering) {
+                        BackButton { actions.onReorder(false) }
+                    } else {
+                        TipIconButton(Icons.Default.Menu, "Open Menu", onClick = { drawerScope.launch { drawer.open() } }, modifier = Modifier.testTag("homeMenu"))
+                    }
                 },
                 actions = {
                     if (ui.reordering) {
@@ -261,44 +327,13 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         // Pull to refresh as a button, for TalkBack, Switch Access and anyone who doesn't pull.
                         TipIconButton(Icons.Default.Refresh, "Sync Now", onClick = pull, enabled = !pulled, modifier = Modifier.testTag("homeSyncNow"))
                         // Sort moved to the notebook's heading, beside New Folder and Trash (T52 item 10).
-                        // The gear, as the sidebar's footer has it (T51, A935).
-                        TipIconButton(SettingsIcons.Gear, "Settings", onClick = actions.onSettings, modifier = Modifier.testTag("homeSettings"))
+                        // No gear: Settings is the drawer's (item 17, A1614).
                         var more by remember { mutableStateOf(false) }
-                        Box {
+                        var sorting by remember { mutableStateOf(false) }
+                        // New Folder and Reorder Folders act on the notes list; the other pages have no ⋮.
+                        if (notesPage) Box {
                             TipIconButton(Icons.Default.MoreVert, "More Options", onClick = { more = true }, modifier = Modifier.testTag("homeMore"))
                             DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("Quick Capture") },
-                                    onClick = {
-                                        more = false
-                                        actions.onCapture()
-                                    },
-                                    modifier = Modifier.testTag("homeCapture"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("All Notes") },
-                                    onClick = {
-                                        more = false
-                                        actions.onAllNotes()
-                                    },
-                                    modifier = Modifier.testTag("homeAllNotes"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Journal") },
-                                    onClick = {
-                                        more = false
-                                        actions.onJournal()
-                                    },
-                                    modifier = Modifier.testTag("homeJournal"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Tags") },
-                                    onClick = {
-                                        more = false
-                                        actions.onTags()
-                                    },
-                                    modifier = Modifier.testTag("homeTags"),
-                                )
                                 DropdownMenuItem(
                                     text = { Text("New Folder") },
                                     onClick = {
@@ -306,6 +341,15 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                         actions.onNewFolder()
                                     },
                                     modifier = Modifier.testTag("homeNewFolder"),
+                                )
+                                // The notebook heading's actions (T52 item 10), now the heading is the title (A1613).
+                                DropdownMenuItem(
+                                    text = { Text("Sort Order…") },
+                                    onClick = {
+                                        more = false
+                                        sorting = true
+                                    },
+                                    modifier = Modifier.testTag("homeSort"),
                                 )
                                 if (ui.sortMode == "manual") {
                                     DropdownMenuItem(
@@ -317,38 +361,8 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                         modifier = Modifier.testTag("homeReorder"),
                                     )
                                 }
-                                DropdownMenuItem(
-                                    text = { Text("Trash") },
-                                    onClick = {
-                                        more = false
-                                        actions.onTrash()
-                                    },
-                                    modifier = Modifier.testTag("openTrash"),
-                                )
-                                if (actions.onFeedback != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Send Feedback") },
-                                        onClick = {
-                                            more = false
-                                            actions.onFeedback()
-                                        },
-                                        modifier = Modifier.testTag("homeFeedback"),
-                                    )
-                                }
-                                HorizontalDivider()
-                                // Show or Hide each of Home's sections, by name A to Z (T53 item 8),
-                                // after the actions, as the web's ⋯ menu holds them.
-                                for ((section, label) in SidebarLayout.toggles(ui.layout.hidden, HomeLayout.HOME_SECTIONS)) {
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            more = false
-                                            actions.onSectionHidden(section, section !in ui.layout.hidden)
-                                        },
-                                        modifier = Modifier.testTag("homeSection-$section"),
-                                    )
-                                }
                             }
+                            SortMenu(expanded = sorting, current = ui.sortMode, onPick = { sorting = false; actions.onSort(it) }, onDismiss = { sorting = false })
                         }
                     }
                 },
@@ -368,7 +382,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             Column(Modifier.fillMaxSize()) {
                 if (slowSync && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("syncProgress"))
                 // The sidebar's shortcuts as one row of icons (T51, A932); Display hides any but Search.
-                if (!ui.reordering) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags)
+                if (!ui.reordering && notesPage) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags, actions.onJournal, actions.onCapture)
                 // The status line became a dot on the section titles (T51, A933). Going offline or
                 // stopping is still announced, from above the list, which a dot in it scrolled
                 // away would not be (A530).
@@ -390,16 +404,20 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                // The sections in the person's order (T53 item 8, A983), a line between each two
-                // running the screen's width; each title's long press moves or hides it.
                 val choosing = actions.onNoteLongPress != null && LocalNoteSelection.current?.active == true
-                val homeList = rememberLazyListState()
-                val shown = ui.layout.shown
-                // A section shown again or moved first while Home is at its top stays in view (T53
-                // pass): the list keeps its first item in place by key, so the section would land
-                // above the screen and Home would look unchanged. Asked before the next measure,
-                // while the scroll position is still the one before the change. So does a notice
-                // at the top coming or going (kept-apart edits, captures waiting).
+                // Each page starts at its top (A1608).
+                val homeList = remember(ui.page) { androidx.compose.foundation.lazy.LazyListState() }
+                // Each page is one of the sidebar's sections (A1608), so no section titles.
+                val shown = listOf(
+                    when (ui.page) {
+                        HomePage.NOTES -> SidebarLayout.NOTEBOOKS
+                        HomePage.QUICK_ACCESS -> SidebarLayout.QUICK_ACCESS
+                        HomePage.RECENT -> SidebarLayout.RECENT
+                    },
+                )
+                // A notice at the top coming or going (kept-apart edits, captures waiting) while the
+                // list is at its top stays in view (T53 pass): the list keeps its first item in place
+                // by key, so it would land above the screen. Asked before the next measure.
                 val top = Pair(shown, listOf(ui.keptApart > 0, ui.capturesWaiting > 0 || ui.capturesRefused > 0))
                 val topBefore = remember { arrayOf(top) }
                 SideEffect {
@@ -408,37 +426,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         if (atTop) homeList.requestScrollToItem(0)
                         topBefore[0] = top
                     }
-                }
-                val sectionAt = { section: String -> shown.indexOf(section) }
-                // A moved section stays in view (T53 pass): its title's place in the list, counted
-                // as the list is built, and scrolled to once the move lands if it isn't on screen.
-                val titleAt = remember { mutableMapOf<String, Int>() }
-                var following by remember { mutableStateOf<String?>(null) }
-                LaunchedEffect(shown) {
-                    val section = following ?: return@LaunchedEffect
-                    following = null
-                    // A frame on, the list has measured the new order (and counted its titles).
-                    withFrameNanos {}
-                    val key = SECTION_TITLE_KEYS.getValue(section)
-                    val info = homeList.layoutInfo
-                    val seen = info.visibleItemsInfo.any { it.key == key && it.offset >= 0 && it.offset + it.size <= info.viewportEndOffset }
-                    if (!seen) titleAt[section]?.let { homeList.animateScrollToItem(it) }
-                }
-                fun moveSection(section: String, by: Int) {
-                    val target = shown.getOrNull(sectionAt(section) + by) ?: return
-                    val rest = ui.layout.order - section
-                    following = section
-                    actions.onSectionMove(section, rest.indexOf(target) + if (by > 0) 1 else 0)
-                }
-                val sectionTitle: @Composable (String, Modifier) -> Unit = { section, modifier ->
-                    HomeSectionTitle(
-                        name = SidebarLayout.NAMES.getValue(section),
-                        canMoveUp = sectionAt(section) > 0,
-                        canMoveDown = sectionAt(section) < shown.size - 1,
-                        onMove = { moveSection(section, it) },
-                        onHide = { actions.onSectionHidden(section, true) },
-                        modifier = modifier,
-                    )
                 }
                 NoteList(
                     notes = emptyList(),
@@ -452,26 +439,11 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                 CapturesNotice(ui.capturesWaiting, ui.capturesRefused, ui.capturesWaitingWhy, actions.onRefusedCaptures)
                             }
                         }
-                        var first = true
-                        var count = 1
                         for (section in shown) {
-                            val has = when (section) {
-                                SidebarLayout.RECENT -> ui.recent.isNotEmpty()
-                                else -> true
-                            }
-                            if (!has) continue
-                            if (!first) {
-                                item(key = "divider:$section", contentType = "divider") { SectionDivider() }
-                                count += 1
-                            }
-                            first = false
-                            titleAt[section] = count
                             when (section) {
                                 // Quick Access (T51, A946): the pinned notes. With none it still shows, as
                                 // on the web (T53 pass).
                                 SidebarLayout.QUICK_ACCESS -> {
-                                    item(key = "quickAccessTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeQuickAccessTitle")) }
-                                    count += 1 + maxOf(ui.quickAccess.size, 1)
                                     if (ui.quickAccess.isEmpty()) {
                                         item(key = "quickAccessEmpty", contentType = "hint") {
                                             Text(
@@ -497,27 +469,28 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     }
                                 }
                                 SidebarLayout.NOTEBOOKS -> {
-                                    item(key = "notebooksTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeNotebooksTitle")) }
-                                    count += 1 + 1 + ui.folders.size
-                                    // The notebook's heading with its sync dot (T51, A933), as the web's
-                                    // notebook heading: its actions on a long press (T53 item 4).
-                                    item(key = "foldersTitle", contentType = "title") {
-                                        NotebookHeading(ui.notebook, personalDot, ui.sortMode, actions.onSort, actions.onNotebookNewNote, actions.onNewFolder, actions.onTrash, ui.badge)
-                                    }
+                                    // No heading: the bar's title is the notebook, with its badge and dot (A1613).
                                     items(ui.folders, key = { "folder:${it.id}" }, contentType = { "folder" }) { folder ->
                                         FolderRowView(folder, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)
                                     }
+                                    // Then its top-level notes, as a folder's page lists its own (A1608).
+                                    items(ui.notes, key = { "note:${it.id}" }, contentType = { "note" }) { note ->
+                                        NoteRowView(note, actions.onOpen, onLongPress = actions.onNoteLongPress, selectable = true)
+                                    }
                                 }
                                 SidebarLayout.RECENT -> {
-                                    item(key = "notesTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeRecentTitle")) }
-                                    count += 1 + ui.recent.take(ui.layout.recentCount).size
                                     items(ui.recent.take(ui.layout.recentCount), key = { it.id }, contentType = { "note" }) { note ->
                                         NoteRowView(note, actions.onOpen, onLongPress = actions.onNoteLongPress, selectable = true)
                                     }
                                 }
                             }
                         }
-                        if (ui.folders.isEmpty() && ui.recent.isEmpty()) {
+                        val empty = when (ui.page) {
+                            HomePage.NOTES -> ui.folders.isEmpty() && ui.notes.isEmpty()
+                            HomePage.RECENT -> ui.recent.isEmpty()
+                            HomePage.QUICK_ACCESS -> false
+                        }
+                        if (empty) {
                             item(key = "empty") { EmptyMessage("No notes yet. They appear here once the phone has synced.") }
                         }
                     },
@@ -526,53 +499,6 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             }
         }
     }
-}
-
-/** Each of Home's sections' title, by its key in the list. */
-private val SECTION_TITLE_KEYS = mapOf(
-    SidebarLayout.QUICK_ACCESS to "quickAccessTitle",
-    SidebarLayout.NOTEBOOKS to "notebooksTitle",
-    SidebarLayout.RECENT to "notesTitle",
-)
-
-/** The line between two of Home's sections (T53 item 8): the screen's full width, a little stronger. */
-@Composable
-private fun SectionDivider() {
-    HorizontalDivider(Modifier.padding(top = 8.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f))
-}
-
-/**
- * A section's title on Home (T53 item 8): a long press offers Move Up, Move Down and Hide, the
- * web's drag handle and ✕; the ⋮ menu shows a hidden one again.
- */
-@Composable
-private fun HomeSectionTitle(
-    name: String,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onMove: (Int) -> Unit,
-    onHide: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var menu by remember { mutableStateOf(false) }
-    val haptics = LocalHapticFeedback.current
-    Box {
-        SectionTitle(
-            name,
-            modifier.fillMaxWidth().combinedClickable(
-                onClickLabel = null,
-                onLongClickLabel = "$name Actions",
-                onLongClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    menu = true
-                },
-            ) {},
-        )
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            if (canMoveUp) DropdownMenuItem(text = { Text("Move Up") }, onClick = { menu = false; onMove(-1) }, modifier = Modifier.testTag("sectionMoveUp"))
-            if (canMoveDown) DropdownMenuItem(text = { Text("Move Down") }, onClick = { menu = false; onMove(1) }, modifier = Modifier.testTag("sectionMoveDown"))
-            DropdownMenuItem(text = { Text("Hide $name") }, onClick = { menu = false; onHide() }, modifier = Modifier.testTag("sectionHide"))
-        }
     }
 }
 
@@ -846,23 +772,6 @@ fun FolderScreen(
     }
 }
 
-/** Every note, newest first: the 5,000-row list the 60 fps criterion is about (A285). */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AllNotesScreen(
-    notes: List<NoteItem>,
-    onBack: () -> Unit,
-    onOpen: (String) -> Unit,
-    onNoteLongPress: ((NoteItem) -> Unit)? = null,
-) {
-    if (onNoteLongPress != null) KeepSelectionShown(notes)
-    Scaffold(topBar = { TopAppBar(title = { Text("All Notes") }, modifier = Modifier.underSelectionBar(), navigationIcon = { BackButton(onBack) }) }) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            if (notes.isEmpty()) EmptyMessage("No notes yet.") else NoteList(notes = notes, onOpen = onOpen, onLongPress = onNoteLongPress, selectable = true)
-        }
-    }
-}
-
 /** A full-screen wait or message, with an action when there is something to do ([action]: its label and what it does). */
 @Composable
 fun CenteredMessage(text: String?, busy: Boolean = false, action: Pair<String, () -> Unit>? = null) {
@@ -882,52 +791,6 @@ fun CenteredMessage(text: String?, busy: Boolean = false, action: Pair<String, (
     }
 }
 
-/**
- * The notebook's heading (T51, A933): its name in the accent with its sync dot at
- * the far right. Its actions are on a long press (T53 item 4; the web shows them on hover): New
- * Note in it, Sort Order (its menu marks the order in use), New Folder and Trash.
- */
-@Composable
-private fun NotebookHeading(
-    name: String,
-    dot: SyncDot,
-    sortMode: String,
-    onSort: (String) -> Unit,
-    onNewNote: () -> Unit,
-    onNewFolder: () -> Unit,
-    onTrash: () -> Unit,
-    badge: app.penmoss.engine.settings.NotebookBadge? = null,
-) {
-    var menu by remember { mutableStateOf(false) }
-    var sorting by remember { mutableStateOf(false) }
-    val haptics = LocalHapticFeedback.current
-    Box(Modifier.fillMaxWidth().testTag("homeNotebookBar")) {
-        SectionTitleWithDot(
-            name,
-            dot,
-            Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClickLabel = null,
-                    onLongClickLabel = "Notebook Actions",
-                    onLongClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menu = true
-                    },
-                ) {}
-                .testTag("homeFoldersTitle"),
-            lead = badge?.let { { app.penmoss.ui.common.NotebookBadgeView(it, name, decorative = true) } },
-        )
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text("New Note in This Notebook") }, onClick = { menu = false; onNewNote() }, modifier = Modifier.testTag("homeNotebookNewNote"))
-            DropdownMenuItem(text = { Text("Sort Order…") }, onClick = { menu = false; sorting = true }, modifier = Modifier.testTag("homeSort"))
-            DropdownMenuItem(text = { Text("New Folder") }, onClick = { menu = false; onNewFolder() }, modifier = Modifier.testTag("homeNotebookNewFolder"))
-            DropdownMenuItem(text = { Text("Trash") }, onClick = { menu = false; onTrash() }, modifier = Modifier.testTag("homeNotebookTrash"))
-        }
-        SortMenu(expanded = sorting, current = sortMode, onPick = { sorting = false; onSort(it) }, onDismiss = { sorting = false })
-    }
-}
-
 /** A pass shorter than this shows no progress bar on Home (T39). */
 internal const val SLOW_SYNC_MS = 1_000L
 
@@ -936,8 +799,10 @@ internal val FAB_CLEARANCE = 88.dp
 
 /**
  * Home's shortcuts as one row of icons (T51, A932), the sidebar's: Search, Tags (A1438), Today,
- * This Week, Graph and Commands, each with its name as a tooltip and content description.
- * Settings → Home hides any but Search; hidden, they still run from their keys and Search's actions (A576).
+ * This Week, then the phone's own Journal (A1613), Graph, Commands and the phone's
+ * Capture, each with its name as a tooltip and content description. They are the drawer's
+ * places no longer (A1613): this row is where they are. Settings → Home hides any but Search;
+ * hidden, they still run from their keys and Search's actions (A576). More than fit scroll sideways.
  */
 @Composable
 internal fun HomeShortcutRow(
@@ -948,14 +813,25 @@ internal fun HomeShortcutRow(
     onGraph: () -> Unit,
     onCommands: () -> Unit,
     onTags: () -> Unit = {},
+    onJournal: () -> Unit = {},
+    onCapture: () -> Unit = {},
 ) {
-    // Six 48dp targets fit a 320dp phone with no gap between them (each icon is 24dp in its 48).
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).testTag("homeShortcuts")) {
+    val lucide = rememberLucideIcons()
+    @Composable
+    fun Lucide(name: String, label: String, tag: String, onClick: () -> Unit) {
+        val glyph = lucide?.icon(name) ?: return
+        TipIconButton(LucideAssets.vector(glyph), label, onClick = onClick, modifier = Modifier.testTag(tag))
+    }
+    // Six 48dp targets fit a 320dp phone with no gap between them (each icon is 24dp in its 48);
+    // with more shown, the row scrolls sideways rather than squeeze them.
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp).testTag("homeShortcuts")) {
         TipIconButton(SettingsIcons.Search, "Search", onClick = onSearch, modifier = Modifier.testTag("homeSearch"))
         if (shortcuts.tags) TipIconButton(SettingsIcons.Tag, "Tags", onClick = onTags, modifier = Modifier.testTag("homeTagsShortcut"))
         if (shortcuts.today) TipIconButton(SettingsIcons.Today, "Today", onClick = onToday, modifier = Modifier.testTag("homeToday"))
         if (shortcuts.thisWeek) TipIconButton(SettingsIcons.Week, "This Week", onClick = onThisWeek, modifier = Modifier.testTag("homeThisWeek"))
+        if (shortcuts.journal) Lucide("book-open", "Journal", "homeJournal", onJournal)
         if (shortcuts.graph) TipIconButton(SettingsIcons.Graph, "Graph", onClick = onGraph, modifier = Modifier.testTag("homeGraph"))
         if (shortcuts.commands) TipIconButton(SettingsIcons.Command, "Commands", onClick = onCommands, modifier = Modifier.testTag("homeCommands"))
+        if (shortcuts.capture) Lucide("zap", "Capture", "homeCapture", onCapture)
     }
 }

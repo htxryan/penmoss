@@ -113,6 +113,9 @@ class DeviceGraph(
         },
     )
 
+    /** GitHub's API for the first run and Add Notebook (A1404, A1405): repositories, folders, Create New Repo. */
+    val githubBrowse: app.penmoss.git.firstrun.GitHubBrowse = app.penmoss.git.firstrun.GitHubBrowse(app.penmoss.git.firstrun.okHttpBrowse(http))
+
     /** Whether the network in use is metered (mobile data); true when unknown. */
     val metered: () -> Boolean = {
         context.getSystemService(android.net.ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true

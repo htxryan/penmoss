@@ -46,7 +46,7 @@ class AccessibilityTest {
             PenmossTheme {
                 HomeScreen(
                     HomeUi(
-                        recent = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
+                        notes = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
                         folders = listOf(FolderItem("f1", "Projects")),
                         status = "Synced at 3:42 PM",
                         syncing = false,
@@ -85,7 +85,7 @@ class AccessibilityTest {
     fun homesButtonsAreTouchTargets() {
         home()
         // Home's row of icons too (T51, A932): Search, Today, This Week, Graph and Commands.
-        for (label in listOf("Search", "Today", "This Week", "Graph", "Commands", "New Note", "Settings", "Sync Now", "More Options")) {
+        for (label in listOf("Search", "Today", "This Week", "Graph", "Commands", "New Note", "Sync Now", "More Options", "Open Menu")) {
             assertTouchTarget(compose, compose.onNodeWithContentDescription(label), label)
         }
     }

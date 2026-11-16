@@ -8,7 +8,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -42,7 +48,6 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -101,6 +106,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLimits
+import app.penmoss.feedback.MarkdownPreviewView
+import app.penmoss.ui.common.LucideAssets
+import app.penmoss.ui.common.rememberLucideIcons
+import app.penmoss.ui.common.OutlinedTextField
 import app.penmoss.ui.common.DotState
 import app.penmoss.ui.common.DotMark
 import app.penmoss.ui.common.FilledTonalButton
@@ -283,7 +292,12 @@ internal fun SectionScreen(
     actions: @Composable RowScope.() -> Unit = {},
     /** Before the title: a notebook's page has its badge there (A1579). */
     titleLead: (@Composable () -> Unit)? = null,
-    content: @Composable () -> Unit,
+    /**
+     * The page holds still and its content fills it: a child with `weight` takes the height
+     * the rest leave, as Daily Notes' editor does (A1612). Otherwise the page scrolls.
+     */
+    fill: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     Scaffold(
@@ -311,20 +325,29 @@ internal fun SectionScreen(
             )
         },
     ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
-        ) {
-            if (notice != null) {
-                Text(
-                    notice,
-                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("settingsNotice"),
-                    color = MaterialTheme.colorScheme.error,
-                )
+        // Filling, the page is at least FILL_MIN tall: on a phone it is the screen and holds
+        // still; on a short screen, or over the keyboard, it scrolls rather than crush the editor.
+        BoxWithConstraints(Modifier.fillMaxSize().padding(padding).imePadding()) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                    .then(if (fill) Modifier.heightIn(min = maxOf(maxHeight, FILL_MIN)) else Modifier)
+                    .padding(vertical = 8.dp),
+            ) {
+                if (notice != null) {
+                    Text(
+                        notice,
+                        Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("settingsNotice"),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                content()
             }
-            content()
         }
     }
 }
+
+/** The least height a filling [SectionScreen] gives its content before it scrolls (A1612). */
+private val FILL_MIN = 560.dp
 
 /** A group's title; the full width, so Search Settings' mark (settingRow) spans the row as it does a ListItem's. */
 @Composable
@@ -734,7 +757,7 @@ fun DailyNotesScreen(
     // A search for the weekly template opens on its tab (PEN-148).
     val asked = LocalSettingMark.current.target
     var tab by rememberSaveable { mutableStateOf(templates.indexOfFirst { settingId(it.label) == asked }.coerceAtLeast(0)) }
-    SectionScreen("Daily Notes", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
+    SectionScreen("Daily Notes", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }, fill = templates.isNotEmpty()) {
         ListItem(
             headlineContent = { Text("Time Zone") },
             supportingContent = { Text("$timeZone · today is ${app.penmoss.ui.journal.journalLongDate(today).substringBeforeLast(' ')}") },
@@ -756,15 +779,24 @@ fun DailyNotesScreen(
             val field = templates[shown]
             key(field.key) { TemplateEditor(field, enabled, today, onSave) }
         }
-        Help(
-            (notebook?.let { "These belong to $it, your primary notebook. " } ?: "") +
-                "Changes apply to notes made afterwards and sync to your other devices.",
-        )
+        // Out of the way while typing, so the editor keeps the height the keyboard leaves.
+        @OptIn(ExperimentalLayoutApi::class)
+        if (!WindowInsets.isImeVisible) {
+            Help(
+                (notebook?.let { "These belong to $it, your primary notebook. " } ?: "") +
+                    "Changes apply to notes made afterwards and sync to your other devices.",
+            )
+        }
     }
 }
 
+/**
+ * A template's editor (A1612): Write and Preview over one frame that takes the page's spare
+ * height, as GitHub's comment box. Write is the template's markdown; Preview is today's note
+ * (this week's for the weekly one) as the template makes it, drawn.
+ */
 @Composable
-private fun TemplateEditor(field: TemplateField, enabled: Boolean, today: LocalDate, onSave: (String, String?) -> Unit) {
+private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, today: LocalDate, onSave: (String, String?) -> Unit) {
     var draft by remember(field.key) { mutableStateOf(TextFieldValue(field.saved)) }
     // The saved text changed elsewhere (a sync, Use the Default) while nothing is being typed.
     var typed by remember(field.key) { mutableStateOf(false) }
@@ -787,6 +819,35 @@ private fun TemplateEditor(field: TemplateField, enabled: Boolean, today: LocalD
         save()
     }
     DisposableEffect(field.key) { onDispose { if (typed) save() } }
+    var previewing by rememberSaveable(field.key) { mutableStateOf(false) }
+    val weekly = field.key == SettingKeys.WEEKLY_TEMPLATE
+    val icons = rememberLucideIcons()
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp).testTag("templateMode")) {
+        listOf(Triple("Write", false, "pencil"), Triple("Preview", true, "eye")).forEachIndexed { index, (label, preview, glyph) ->
+            SegmentedButton(
+                selected = previewing == preview,
+                onClick = { previewing = preview },
+                shape = SegmentedButtonDefaults.itemShape(index, 2, SQUARE),
+                icon = { icons?.icon(glyph)?.let { Icon(LucideAssets.vector(it), contentDescription = null, Modifier.size(18.dp)) } },
+                modifier = Modifier.testTag(if (preview) "templatePreviewTab" else "templateWriteTab"),
+            ) { Text(label, maxLines = 1, softWrap = false) }
+        }
+    }
+    if (previewing) {
+        // Today's note as the template makes it, drawn, in the frame the field has.
+        Column(
+            Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                .background(MaterialTheme.colorScheme.surfaceBright)
+                .verticalScroll(rememberScrollState()).padding(16.dp)
+                .testTag("templatePreview"),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(if (weekly) "This Week’s Note" else "Today’s Note", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            MarkdownPreviewView(fillTemplate(text, weekly, today), Modifier.fillMaxWidth().testTag("templatePreviewText"), framed = false)
+        }
+        return
+    }
     OutlinedTextField(
         value = draft,
         onValueChange = {
@@ -796,7 +857,7 @@ private fun TemplateEditor(field: TemplateField, enabled: Boolean, today: LocalD
             }
             draft = it
         },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("template-${field.key}"),
+        modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("template-${field.key}"),
         enabled = enabled,
         label = { Text(field.label) },
         // The notebook's limit (A410), counted here so a template too long is never "Saved".
@@ -809,8 +870,6 @@ private fun TemplateEditor(field: TemplateField, enabled: Boolean, today: LocalD
             )
         },
         textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-        minLines = 4,
-        maxLines = 12,
     )
     Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box {
@@ -851,19 +910,6 @@ private fun TemplateEditor(field: TemplateField, enabled: Boolean, today: LocalD
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-    }
-    // Today's note (this week's for the weekly one) as the template makes it, under the editor.
-    val weekly = field.key == SettingKeys.WEEKLY_TEMPLATE
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant).padding(12.dp).testTag("templatePreview"),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(if (weekly) "This Week’s Note" else "Today’s Note", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            fillTemplate(text, weekly, today).ifBlank { "(empty)" },
-            Modifier.testTag("templatePreviewText"),
-            style = MaterialTheme.typography.bodyMedium,
-        )
     }
 }
 

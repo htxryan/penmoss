@@ -14,7 +14,7 @@ Penmoss runs on Android 17 or later. It is not in Google Play yet: you install t
 3. Google Play Protect may warn that it does not know the developer. Choose **Install anyway**.
 4. Open **Penmoss** from the app drawer.
 
-The app opens on a screen that says Penmoss keeps your notes in git notebooks, with a form to add one. See [Add a notebook on Android](/docs/more-devices/#android).
+The app opens on **Welcome to Penmoss**. **Get Started** walks you through three short steps: start a new notebook or open one, pick its repository (Penmoss can create a private one on GitHub for you), and name it. See [Add a notebook on Android](/docs/more-devices/#android).
 
 You can also put the APK where the phone can reach it (a cloud drive, or an email to yourself) and open it there, or install it from a computer with `adb install Penmoss.apk`.
 
@@ -46,7 +46,7 @@ Builds from the Alpha channel use the same app and certificate, so an Alpha buil
 
 ## Notebooks
 
-The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. The gear at the top opens **Settings**, which has a **Search Settings** field (a match opens its screen scrolled to the setting, marked for a moment) and five groups: **Look and Feel** (Appearance, Home, Symbols), **Writing** (Daily Notes, Quick Capture, Keyboard Shortcuts), **Notebooks**, **Agents** (Agent Activity) and **This Phone** (Storage, GitHub, What’s New).
+Penmoss opens on your primary notebook's notes list: its folders, then the notes at its top level. The bar at the top names the notebook, with its badge and its sync dot. Under it is a row of shortcuts: **Search**, **Tags**, **Today**, **This Week**, **Journal**, **Graph**, **Commands** and **Capture** (it scrolls sideways when they don't all fit); **Settings → Home → Shortcuts on Home** hides any but Search, for your phones alone. Each notebook opens in a screen of its own. **☰** (or a swipe from the left edge) opens the menu: the sidebar's sections as pages of their own, **Quick Access** and **Recent Notes**; the **Notebooks** on the phone, each opening its notes list; then **Trash**, **Settings** and **Send Feedback**. Back from Quick Access or Recent Notes returns to the notes list. On the notes list, the **⋮** menu has **New Folder**, **Sort Order…** and **Reorder Folders**. **Settings**, in the menu, has a **Search Settings** field (a match opens its screen scrolled to the setting, marked for a moment) and five groups: **Look and Feel** (Appearance, Home, Symbols), **Writing** (Daily Notes, Quick Capture, Keyboard Shortcuts), **Notebooks**, **Agents** (Agent Activity) and **This Phone** (Storage, GitHub, What’s New).
 
 Under **Notebooks**, each notebook has a row with its sync state; tap it for the notebook's page, which has three tabs:
 
@@ -54,7 +54,7 @@ Under **Notebooks**, each notebook has a row with its sync state; tap it for the
 - **Sync:** what the last sync said, **Wi-Fi Only**, how soon it pushes (**Push After**, 12 seconds by default) and how often it pulls (**Pull Every**, 1 minute by default).
 - **Git:** the **Personal Access Token** (**Save Token**, **Forget Token**), **Sign Commits**, and a **Commit Name** and **Commit Email** for this notebook.
 
-**All Notebooks** lists them all, with **+ Add Notebook**, and:
+**All Notebooks** lists them all, with **+ Add Notebook** (the first run's steps, from **Create or Open Notebook**), and:
 
 - **Between Notebooks:** **Primary Notebook** first (where Today, This Week and captures go on this phone, and where your app settings are kept), then **Keep Settings in Step** (each change to the Primary Notebook's settings goes to your other notebooks a moment later; this phone's choice), **Copy Tags When Copying Notes**, and **Copy Settings…**: pick **From** and **To** and choose **Copy Settings** to replace the other notebook's settings, once. Quick Access stays as it is. Keep Settings in Step and Copy Settings… show with two notebooks or more.
 - **Commits From This Phone:** the name and email the phone commits as, and its signing key.
@@ -103,7 +103,7 @@ Removing a notebook, Delete for Good and restoring a version first ask for your 
 
 ## GitHub
 
-**Settings → GitHub** shows the GitHub account the phone is signed in to, with **Sign Out**. **Sign In with GitHub** shows a code to enter at github.com/login/device; **Use a Token Instead…** takes a personal access token. The account is used for **Send Feedback**. A notebook's own repository uses the token on its **Git** tab.
+**Settings → GitHub** shows the GitHub account the phone is signed in to, with **Sign Out**. **Sign In with GitHub** shows a code to enter at github.com/login/device; **Use a Token Instead…** takes a personal access token. The account is used for **Send Feedback**, and to list and create repositories when you add a notebook; a notebook added that way syncs with its token. A notebook's own token is on its **Git** tab.
 
 ## What's new
 
@@ -113,7 +113,7 @@ After you install a newer version, a message at the foot of the screen says **Up
 
 ## What the phone does not have
 
-Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, the repository picker (Sign In with GitHub on the phone is for Send Feedback), SSH remotes, semantic search, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
+Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, SSH remotes, semantic search, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
 
 ## Uninstall
 

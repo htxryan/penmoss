@@ -81,11 +81,12 @@ class HomeNotebookNameTest {
         graph = main.git.graph(notebook)
         scenario = ActivityScenario.launch(TestGraphs.opening(app, notebook))
 
-        val inHeading = hasAnyAncestor(hasTestTag("homeFoldersTitle"))
+        // The notes list's title is the notebook (A1613).
+        val title = hasTestTag("homeTitle")
         compose.waitUntil(5_000) {
             shadowOf(Looper.getMainLooper()).idle()
-            exists(hasText("Garden Notes") and inHeading)
+            exists(hasText("Garden Notes") and title)
         }
-        check(!exists(hasText("Personal") and inHeading)) { "the heading still says Personal" }
+        check(!exists(hasText("Personal") and title)) { "the title still says Personal" }
     }
 }

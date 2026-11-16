@@ -5,7 +5,7 @@ description: Every section of Settings in the Mac and Android apps, what each se
 
 This page lists every setting, page by page, so you can find one and see what it does.
 
-Open Settings with ⌘, on the Mac, or from the gear on the first screen on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked with a laptop stay on the device where you set them (hover over the laptop, or focus it, to read why). Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
+Open Settings with ⌘, on the Mac, or from the **☰** menu on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked with a laptop stay on the device where you set them (hover over the laptop, or focus it, to read why). Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
 
 ### Kept apart for your Macs and your phones
 
@@ -138,7 +138,7 @@ A card with the version you're running, whether it's up to date, the channel and
 
 ## On Android
 
-Open Settings from the gear on the first screen. Each screen's title is large at the top and shrinks into the bar as you scroll; the ⓘ in the bar says which notebook your settings are synced through. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
+Open Settings from the **☰** menu. Each screen's title is large at the top and shrinks into the bar as you scroll; the ⓘ in the bar says which notebook your settings are synced through. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
 
 | Group         | Screen             | What it holds                                                                                                                      |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
