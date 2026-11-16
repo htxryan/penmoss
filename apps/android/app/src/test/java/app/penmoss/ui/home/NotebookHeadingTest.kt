@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onNodeWithContentDescription
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -83,6 +84,9 @@ class NotebookHeadingTest {
         compose.onNodeWithTag("homeTitle", useUnmergedTree = true).assertTextEquals("Garden")
         compose.onAllNodesWithText("Garden").assertCountEquals(1)
         compose.onNodeWithTag("homeFoldersTitle").assertDoesNotExist()
+        // No gear in the bar: Settings is the drawer's (item 17, A1614).
+        compose.onNodeWithTag("homeSettings").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Settings").assertDoesNotExist()
         // The dot just after the name.
         val title = compose.onNodeWithTag("homeTitle", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val dot = compose.onNodeWithTag("syncDot", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot

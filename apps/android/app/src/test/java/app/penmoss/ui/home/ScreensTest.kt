@@ -514,6 +514,9 @@ class ScreensTest {
         compose.onNodeWithTag("homeTitle").assertTextEquals("Quick Access")
         compose.onNodeWithText("Garden plan").assertIsDisplayed()
         compose.onNodeWithTag("homeMenu").performClick()
+        // The notebooks on this phone, and no All Notebooks: that is Settings' (item 17, A1614).
+        compose.onNodeWithTag("drawerAllNotebooks").assertDoesNotExist()
+        compose.onNodeWithText("All Notebooks").assertDoesNotExist()
         compose.onNodeWithTag("drawerNotebook-nb").performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithTag("homeTitle").assertTextEquals("Garden")

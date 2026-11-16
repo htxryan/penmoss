@@ -328,8 +328,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         // Pull to refresh as a button, for TalkBack, Switch Access and anyone who doesn't pull.
                         TipIconButton(Icons.Default.Refresh, "Sync Now", onClick = pull, enabled = !pulled, modifier = Modifier.testTag("homeSyncNow"))
                         // Sort moved to the notebook's heading, beside New Folder and Trash (T52 item 10).
-                        // The gear, as the sidebar's footer has it (T51, A935).
-                        TipIconButton(SettingsIcons.Gear, "Settings", onClick = actions.onSettings, modifier = Modifier.testTag("homeSettings"))
+                        // No gear: Settings is the drawer's (item 17, A1614).
                         var more by remember { mutableStateOf(false) }
                         var sorting by remember { mutableStateOf(false) }
                         // New Folder and Reorder Folders act on the notes list; the other pages have no ⋮.

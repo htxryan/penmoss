@@ -42,9 +42,10 @@ data class DrawerNotebook(val localId: String, val name: String, val badge: app.
  * The notebook screen's drawer (Ryan's Android feedback, 15 Nov 2026; A1604, A1607, A1608):
  * Android's hamburger menu with the Mac sidebar's areas. Its places (Search, Today, Journal,
  * Capture…) left it for the notes list's row of shortcuts, which shows them already (item 16,
- * A1613), so it starts with the sidebar's sections as pages: Quick Access, Recent Notes, and Notebooks (each one's notes list,
- * this one's marked while it shows, and All Notebooks), then Trash, Settings and Send Feedback. A
- * pick closes the drawer, then goes.
+ * A1613), so it starts with the sidebar's sections as pages: Quick Access, Recent Notes, and
+ * Notebooks, the ones on this phone, each opening its notes list and this one marked while it
+ * shows (All Notebooks is Settings', A1614); then Trash, Settings (the bar has no gear) and Send
+ * Feedback. A pick closes the drawer, then goes.
  */
 @Composable
 internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit) {
@@ -78,7 +79,6 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                         shape = RectangleShape,
                     )
                 }
-                Item("All Notebooks", "library", "drawerAllNotebooks", onClick = go(actions.onAllNotebooks))
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Item("Trash", "trash", "openTrash", onClick = go(actions.onTrash))
