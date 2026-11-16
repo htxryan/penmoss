@@ -192,7 +192,6 @@ data class HomeUi(
 class HomeActions(
     val onSearch: () -> Unit = {},
     val onSettings: () -> Unit = {},
-    val onAllNotes: () -> Unit = {},
     val onFolder: (String) -> Unit = {},
     val onOpen: (String) -> Unit = {},
     val onToday: () -> Unit = {},
@@ -383,7 +382,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             Column(Modifier.fillMaxSize()) {
                 if (slowSync && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("syncProgress"))
                 // The sidebar's shortcuts as one row of icons (T51, A932); Display hides any but Search.
-                if (!ui.reordering && notesPage) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags, actions.onJournal, actions.onAllNotes, actions.onCapture)
+                if (!ui.reordering && notesPage) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags, actions.onJournal, actions.onCapture)
                 // The status line became a dot on the section titles (T51, A933). Going offline or
                 // stopping is still announced, from above the list, which a dot in it scrolled
                 // away would not be (A530).
@@ -773,23 +772,6 @@ fun FolderScreen(
     }
 }
 
-/** Every note, newest first: the 5,000-row list the 60 fps criterion is about (A285). */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AllNotesScreen(
-    notes: List<NoteItem>,
-    onBack: () -> Unit,
-    onOpen: (String) -> Unit,
-    onNoteLongPress: ((NoteItem) -> Unit)? = null,
-) {
-    if (onNoteLongPress != null) KeepSelectionShown(notes)
-    Scaffold(topBar = { TopAppBar(title = { Text("All Notes") }, modifier = Modifier.underSelectionBar(), navigationIcon = { BackButton(onBack) }) }) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            if (notes.isEmpty()) EmptyMessage("No notes yet.") else NoteList(notes = notes, onOpen = onOpen, onLongPress = onNoteLongPress, selectable = true)
-        }
-    }
-}
-
 /** A full-screen wait or message, with an action when there is something to do ([action]: its label and what it does). */
 @Composable
 fun CenteredMessage(text: String?, busy: Boolean = false, action: Pair<String, () -> Unit>? = null) {
@@ -817,7 +799,7 @@ internal val FAB_CLEARANCE = 88.dp
 
 /**
  * Home's shortcuts as one row of icons (T51, A932), the sidebar's: Search, Tags (A1438), Today,
- * This Week, then the phone's own Journal and All Notes (A1613), Graph, Commands and the phone's
+ * This Week, then the phone's own Journal (A1613), Graph, Commands and the phone's
  * Capture, each with its name as a tooltip and content description. They are the drawer's
  * places no longer (A1613): this row is where they are. Settings → Home hides any but Search;
  * hidden, they still run from their keys and Search's actions (A576). More than fit scroll sideways.
@@ -832,7 +814,6 @@ internal fun HomeShortcutRow(
     onCommands: () -> Unit,
     onTags: () -> Unit = {},
     onJournal: () -> Unit = {},
-    onAllNotes: () -> Unit = {},
     onCapture: () -> Unit = {},
 ) {
     val lucide = rememberLucideIcons()
@@ -849,7 +830,6 @@ internal fun HomeShortcutRow(
         if (shortcuts.today) TipIconButton(SettingsIcons.Today, "Today", onClick = onToday, modifier = Modifier.testTag("homeToday"))
         if (shortcuts.thisWeek) TipIconButton(SettingsIcons.Week, "This Week", onClick = onThisWeek, modifier = Modifier.testTag("homeThisWeek"))
         if (shortcuts.journal) Lucide("book-open", "Journal", "homeJournal", onJournal)
-        if (shortcuts.allNotes) Lucide("files", "All Notes", "homeAllNotes", onAllNotes)
         if (shortcuts.graph) TipIconButton(SettingsIcons.Graph, "Graph", onClick = onGraph, modifier = Modifier.testTag("homeGraph"))
         if (shortcuts.commands) TipIconButton(SettingsIcons.Command, "Commands", onClick = onCommands, modifier = Modifier.testTag("homeCommands"))
         if (shortcuts.capture) Lucide("zap", "Capture", "homeCapture", onCapture)

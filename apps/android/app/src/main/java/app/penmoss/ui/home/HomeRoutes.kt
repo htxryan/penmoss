@@ -50,7 +50,7 @@ internal data class SyncLine(
     val stopped: Boolean = false,
 )
 
-/** Home (T32; T51, T53), All Notes, and the captures Penmoss refused (A345). */
+/** Home (T32; T51, T53) and the captures Penmoss refused (A345); All Notes went (A1615). */
 internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
     val graph = root.graph
     val nav = root.nav
@@ -133,7 +133,6 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 onNotebookNewNote = { root.newNote(null) },
                 onSearch = { nav.open("search") },
                 onSettings = { nav.open("settings") },
-                onAllNotes = { nav.open("notes") },
                 onFolder = { nav.open("folder/$it") },
                 onOpen = root::openNote,
                 onToday = { root.openPeriodic(ToEditor.PeriodKind.DAILY, null) },
@@ -168,12 +167,6 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 },
             ),
         )
-    }
-    composable("notes") { entry ->
-        val notes by remember {
-            graph.store.observeList().map { Items.notes(it, System.currentTimeMillis()) }.distinctUntilChanged().flowOn(Dispatchers.Default)
-        }.collectAsStateWithLifecycle(emptyList())
-        AllNotesScreen(notes, onBack = { nav.leave(entry) }, onOpen = root::openNote, onNoteLongPress = root::startSelection)
     }
     composable("captures") { entry ->
         val refused by remember { graph.captures.observeRefusedList() }.collectAsStateWithLifecycle(emptyList())

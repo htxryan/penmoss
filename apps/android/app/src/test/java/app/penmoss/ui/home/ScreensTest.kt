@@ -140,7 +140,6 @@ class ScreensTest {
                     HomeActions(
                         onSearch = { events += "search" },
                         onSettings = { events += "settings" },
-                        onAllNotes = { events += "all" },
                         onFolder = { events += "folder:$it" },
                         onOpen = { opened += it },
                         onToday = { events += "today" },
@@ -165,8 +164,8 @@ class ScreensTest {
         // Today and This Week are icons in Home's row, named and with tooltips (T51, A932).
         compose.onNodeWithContentDescription("Today").performClick()
         compose.onNodeWithContentDescription("This Week").performClick()
-        // All Notes, Journal and Capture are on the row too (A1613); the drawer has no places.
-        compose.onNodeWithTag("homeAllNotes").performScrollTo().performClick()
+        // Journal and Capture are on the row too (A1613); the drawer has no places, and there is no All Notes (A1615).
+        compose.onNodeWithTag("homeAllNotes").assertDoesNotExist()
         compose.onNodeWithTag("homeJournal").performScrollTo().performClick()
         compose.onNodeWithTag("homeCapture").performScrollTo().performClick()
         // Send Feedback is in the hamburger's drawer (A1604).
@@ -175,7 +174,7 @@ class ScreensTest {
         compose.onNodeWithContentDescription("Search").performScrollTo().performClick()
         compose.onNodeWithContentDescription("New Note").performClick()
         assertEquals(listOf("n1"), opened)
-        assertEquals(listOf("folder:f1", "today", "week", "all", "journal", "capture", "feedback", "search", "new"), events)
+        assertEquals(listOf("folder:f1", "today", "week", "journal", "capture", "feedback", "search", "new"), events)
     }
 
     /** Quick Access (T51, A946): a page of its own (A1608); with none, it says No Notes. */

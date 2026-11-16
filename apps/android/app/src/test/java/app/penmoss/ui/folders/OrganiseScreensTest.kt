@@ -37,7 +37,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.data.FolderEntity
 import app.penmoss.editor.NewNoteRequest
 import app.penmoss.engine.notes.Tags
-import app.penmoss.ui.home.AllNotesScreen
 import app.penmoss.ui.home.FolderScreen
 import app.penmoss.ui.home.HomeScreen
 import org.junit.Assert.assertEquals
@@ -360,7 +359,11 @@ class OrganiseScreensTest {
                         ),
                     )
                 } else {
-                    AllNotesScreen(listOf(NoteItem("n2", "Taxes", "", "")), onBack = {}, onOpen = { opened += it }, onNoteLongPress = { moved += it.id })
+                    // Recent Notes, a list of its own (A1608).
+                    HomeScreen(
+                        HomeUi(page = app.penmoss.ui.home.HomePage.RECENT, recent = listOf(NoteItem("n2", "Taxes", "", "")), folders = emptyList(), status = "", syncing = false),
+                        HomeActions(onOpen = { opened += it }, onNoteLongPress = { moved += it.id }),
+                    )
                 }
             }
         }

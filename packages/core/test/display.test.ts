@@ -25,12 +25,8 @@ describe('Display settings (T42, A576)', () => {
   });
 
   it("keeps the phone's own shortcuts per platform, apart from the Mac's sidebar (A1613)", () => {
-    expect(PHONE_SHORTCUT_ITEMS).toEqual(['journal', 'allNotes', 'capture']);
-    expect(PHONE_SHORTCUT_SETTING_KEYS).toEqual([
-      'sidebar.journal',
-      'sidebar.allNotes',
-      'sidebar.capture',
-    ]);
+    expect(PHONE_SHORTCUT_ITEMS).toEqual(['journal', 'capture']);
+    expect(PHONE_SHORTCUT_SETTING_KEYS).toEqual(['sidebar.journal', 'sidebar.capture']);
     for (const key of PHONE_SHORTCUT_SETTING_KEYS) {
       expect(isPlatformSetting(key)).toBe(true);
       expect(isDisplaySetting(key)).toBe(false);
