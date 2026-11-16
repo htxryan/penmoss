@@ -19,7 +19,7 @@ internal const val NAV_MS = 300
 /**
  * The app's NavHost (A351): screens slide sideways like the rest of Android, and Back (including
  * predictive back) slides the screen off to the end. Navigation's default fade and scale read as
- * a shrink. Shared with the tests, so they drive the real transitions (T40 P5 review B1).
+ * a shrink, and so does its predictive back unless given the slide too. Shared with the tests, so they drive the real transitions (T40 P5 review B1).
  */
 @Composable
 internal fun PenmossNavHost(nav: NavHostController, startDestination: String, builder: NavGraphBuilder.() -> Unit) {
@@ -44,6 +44,10 @@ internal fun PenmossNavHost(nav: NavHostController, startDestination: String, bu
         exitTransition = { slideOutOfContainer(SlideDirection.Start, tween(NAV_MS)) { it / 4 } },
         popEnterTransition = { slideIntoContainer(SlideDirection.End, tween(NAV_MS)) { it / 4 } },
         popExitTransition = { slideOutOfContainer(SlideDirection.End, tween(NAV_MS)) },
+        // The back gesture follows the finger with the same slide (Ryan, on his phone): left alone,
+        // Navigation's predictive back shrinks the page towards the centre instead.
+        predictivePopEnterTransition = { _ -> slideIntoContainer(SlideDirection.End, tween(NAV_MS)) { it / 4 } },
+        predictivePopExitTransition = { _ -> slideOutOfContainer(SlideDirection.End, tween(NAV_MS)) },
         builder = builder,
     )
 }
