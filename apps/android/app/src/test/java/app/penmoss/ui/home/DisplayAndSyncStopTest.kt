@@ -167,8 +167,9 @@ class DisplayAndSyncStopTest {
                 DisplayScreen(displayChoices(Settings()), enabled = true, onChange = { _, _ -> }, onBack = {})
             }
         }
-        compose.onAllNodesWithTag("platformOnly").assertCountEquals(2)
-        compose.onAllNodesWithTag("platformOnly").onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
+        // Unmerged, as BetweenNotebooksScreenTest finds the laptop: the mark is inside its row's semantics.
+        compose.onAllNodesWithTag("platformOnly", useUnmergedTree = true).assertCountEquals(2)
+        compose.onAllNodesWithTag("platformOnly", useUnmergedTree = true).onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
     }
 
     @Test

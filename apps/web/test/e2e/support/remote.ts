@@ -13,7 +13,12 @@ import {
   NotebookOps,
 } from '@penmoss/git-notebook';
 import { NodeGitTransport } from '@penmoss/git-notebook/node';
-import { readSettings, readWorkspace, type WorkspaceSnapshot } from '@penmoss/model/workspace';
+import {
+  mergedSettings,
+  readSettings,
+  readWorkspace,
+  type WorkspaceSnapshot,
+} from '@penmoss/model/workspace';
 import { readTitle } from '@penmoss/model/note';
 import type { GitHost } from './git-host';
 
@@ -26,8 +31,11 @@ export interface RemoteNotebook {
   readonly workspace: WorkspaceSnapshot;
   /** A note's title, or null when the remote has no such note. */
   title(id: string): string | null;
-  /** A setting of the notebook's (`notebook`) or this device kind's (`device`) map (A827). */
-  setting(key: string, map?: 'notebook' | 'device'): unknown;
+  /**
+   * A setting as the Mac app reads it (the notebook's own, the device's, and the Macs' own copy of
+   * the look and layout over them, A827, A1605), or one map's alone when `map` names it.
+   */
+  setting(key: string, map?: 'notebook' | 'device' | 'desktop' | 'mobile'): unknown;
 }
 
 /** Reads the notebook at `remote` as another device would after a pull. */
@@ -68,12 +76,8 @@ export async function readRemote(host: GitHost, remote: string): Promise<RemoteN
         const doc = ops.note(id);
         return doc ? readTitle(doc) : null;
       },
-      setting: (
-        key,
-        map = key === 'timeZone' || key.startsWith('template.') || key.startsWith('badge.')
-          ? 'notebook'
-          : 'device',
-      ) => readSettings(ops.workspace, map)[key],
+      setting: (key, map) =>
+        map ? readSettings(ops.workspace, map)[key] : mergedSettings(ops.workspace, 'desktop')[key],
     };
   } finally {
     rmSync(dir, { recursive: true, force: true });

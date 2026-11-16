@@ -209,9 +209,10 @@ class SettingsScreensTest {
                 AppearanceScreen("system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52, enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {})
             }
         }
-        compose.onAllNodesWithTag("platformOnly").onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
+        // Unmerged, as BetweenNotebooksScreenTest finds the laptop: the mark is inside its row's semantics.
+        compose.onAllNodesWithTag("platformOnly", useUnmergedTree = true).onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
         // The laptop (this phone alone, A1559) marks nothing here.
-        compose.onAllNodesWithTag("deviceOnly").assertCountEquals(0)
+        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).assertCountEquals(0)
     }
 
     /** A1582: beside the preview, the interface's text at its real size, labelled, and the note's font and size. */
