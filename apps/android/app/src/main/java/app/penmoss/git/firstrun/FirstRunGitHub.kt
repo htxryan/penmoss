@@ -75,7 +75,9 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
     }
     fun signIn() {
         signing = true
-        deps.signIn?.start(scope, deps.openUrl)
+        // GitHub's page opens only once the code is on screen (Ryan's Android feedback, 15 Nov 2026):
+        // opened at once, a phone shows the browser over the code, with nothing saying to come back.
+        deps.signIn?.start(scope) {}
     }
     // In the screen, not the footer: a phone's footer holds Back and one button (A1404 on Android).
     val urlInstead = @Composable { Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl) }
@@ -149,22 +151,34 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
                         deps.signIn?.cancel()
                         back()
                     },
-                    actions = { Plain("Cancel", "github-signin-cancel", "x") { deps.signIn?.cancel() } },
+                    actions = {
+                        Primary("Copy Code and Open GitHub", "github-signin-open", "external-link") {
+                            deps.copy(state.userCode)
+                            deps.openUrl(state.verificationUri)
+                        }
+                    },
+                    below = {
+                        Lead(
+                            "Or, on any device signed in to GitHub, such as your computer, open ${state.verificationUri.removePrefix("https://")} and enter the code.",
+                            Modifier.testTag("github-signin-elsewhere"),
+                            small = true,
+                            centered = true,
+                        )
+                        Link("Cancel", "github-signin-cancel", "x") { deps.signIn?.cancel() }
+                    },
                 ) {
-                    Lead("GitHub’s sign-in page opened in your browser. Enter this code there, then come back.")
+                    Lead("GitHub asks for this code. Copy it and open GitHub, enter it there and approve Penmoss, then come back: this screen goes on by itself.")
                     Text(
                         state.userCode,
                         Modifier
+                            .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
                             .testTag("github-signin-code")
                             .semantics { contentDescription = "Code ${state.userCode}" },
                         style = MaterialTheme.roles.pageTitle,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Plain("Copy Code", "github-signin-copy", "copy") { deps.copy(state.userCode) }
-                        Plain("Open GitHub", "github-signin-open", "external-link") { deps.openUrl(state.verificationUri) }
-                    }
                     Working("Waiting for you to approve…", "github-signin-waiting")
                 }
                 return
