@@ -29,6 +29,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -73,51 +75,55 @@ internal fun Frame(
     below: (@Composable ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
-            .imePadding()
-            .testTag("first-run-$name"),
-    ) {
+    // The screen draws its own background, so its text takes the colour on it: without this,
+    // words with no colour of their own were black on dark (Ryan, on his phone).
+    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .systemBarsPadding()
+                .imePadding()
+                .testTag("first-run-$name"),
         ) {
-            // The welcome's words sit a third of the way down.
-            if (centered) Spacer(Modifier.height(96.dp))
-            if (step != null) StepBar(step)
-            above?.invoke()
-            Text(
-                title,
-                Modifier.semantics { heading() }.testTag("first-run-title"),
-                style = MaterialTheme.roles.pageTitle,
-                textAlign = if (centered) TextAlign.Center else TextAlign.Start,
-            )
-            content()
-        }
-        if (below != null) {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("first-run-below"),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                content = below,
-            )
-        }
-        if (back != null || cancel != null || actions != null || start != null) {
-            HorizontalDivider()
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
             ) {
-                when {
-                    cancel != null && back == null -> Link("Cancel", "first-run-cancel", "x", cancel)
-                    back != null -> Link("Back", "first-run-back", "chevron-left", back)
-                    start != null -> start()
+                // The welcome's words sit a third of the way down.
+                if (centered) Spacer(Modifier.height(96.dp))
+                if (step != null) StepBar(step)
+                above?.invoke()
+                Text(
+                    title,
+                    Modifier.semantics { heading() }.testTag("first-run-title"),
+                    style = MaterialTheme.roles.pageTitle,
+                    textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+                )
+                content()
+            }
+            if (below != null) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("first-run-below"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    content = below,
+                )
+            }
+            if (back != null || cancel != null || actions != null || start != null) {
+                HorizontalDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    when {
+                        cancel != null && back == null -> Link("Cancel", "first-run-cancel", "x", cancel)
+                        back != null -> Link("Back", "first-run-back", "chevron-left", back)
+                        start != null -> start()
+                    }
+                    Spacer(Modifier.weight(1f))
+                    if (actions != null) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
                 }
-                Spacer(Modifier.weight(1f))
-                if (actions != null) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
             }
         }
     }

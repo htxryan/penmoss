@@ -191,4 +191,21 @@ class FirstRunScreenTest {
         tap("first-run-cancel")
         assertEquals("cancelled", done)
     }
+
+    /** On a dark theme the words are light (Ryan, on his phone): the frame gives its text the colour on its background. */
+    @Test
+    fun theFramesWordsTakeTheColourOnItsBackgroundInDark() {
+        var words: androidx.compose.ui.graphics.Color? = null
+        var on: androidx.compose.ui.graphics.Color? = null
+        compose.setContent {
+            PenmossTheme(dark = true) {
+                on = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
+                Frame("test", "Create or Open Notebook") {
+                    words = androidx.compose.material3.LocalContentColor.current
+                }
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(on, words)
+    }
 }
