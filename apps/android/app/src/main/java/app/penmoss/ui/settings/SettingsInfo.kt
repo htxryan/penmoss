@@ -48,11 +48,16 @@ internal fun rememberPrimaryName(device: DeviceGraph): String? {
     }
 }
 
-/** What the (i) says, as the Mac's does (A1560); the laptop is drawn where [LAPTOP] stands. */
+/**
+ * What the (i) says, as the Mac's does (A1560); the laptop is drawn where [LAPTOP] stands, and the
+ * phone (PEN-156, A1605) where [PHONE] does.
+ */
 internal fun settingsInfoText(name: String?): String =
-    "Settings are synced through your primary notebook${name?.let { ", $it" } ?: ""}. Those marked $LAPTOP stay on this phone only."
+    "Settings are synced through your primary notebook${name?.let { ", $it" } ?: ""}. Those marked $LAPTOP stay on this phone only, " +
+        "and those marked $PHONE are kept for your Android phones, apart from your Macs."
 
 private const val LAPTOP = "⁠laptop⁠"
+private const val PHONE = "⁠phone⁠"
 
 /**
  * Settings' (i) in a screen's top app bar (A1560): where settings are kept and what the laptop
@@ -73,15 +78,21 @@ internal fun SettingsInfoButton() {
         }
     }
     if (open) {
-        val (before, after) = settingsInfoText(name).split(LAPTOP)
+        val (before, rest) = settingsInfoText(name).split(LAPTOP)
+        val (between, after) = rest.split(PHONE)
         val words = buildAnnotatedString {
             append(before)
             appendInlineContent("laptop", "[laptop]")
+            append(between)
+            appendInlineContent("phone", "[phone]")
             append(after)
         }
-        val laptop = mapOf(
+        val marks = mapOf(
             "laptop" to InlineTextContent(Placeholder(1.2.em, 1.em, PlaceholderVerticalAlign.TextCenter)) {
                 Icon(SettingsIcons.Laptop, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
+            "phone" to InlineTextContent(Placeholder(1.2.em, 1.em, PlaceholderVerticalAlign.TextCenter)) {
+                Icon(SettingsIcons.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             },
         )
         AlertDialog(
@@ -90,11 +101,11 @@ internal fun SettingsInfoButton() {
             text = {
                 Text(
                     words,
-                    inlineContent = laptop,
+                    inlineContent = marks,
                     style = MaterialTheme.roles.body,
-                    // Read aloud with the laptop named, as the Mac's says "with a laptop".
+                    // Read aloud with the marks named, as the Mac's says "with a laptop".
                     modifier = Modifier.testTag("settingsInfoText").semantics {
-                        contentDescription = "$before with a laptop$after".replace("  ", " ")
+                        contentDescription = "$before with a laptop$between with a phone$after".replace("  ", " ")
                     },
                 )
             },

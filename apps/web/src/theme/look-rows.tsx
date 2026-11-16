@@ -7,17 +7,30 @@
  */
 import { Icon } from '@penmoss/ui/icons';
 import type { InputHTMLAttributes, MouseEvent, ReactNode } from 'react';
-import { deviceOnlyTip } from './device-only';
+import { deviceOnlyTip, platformTip } from './device-only';
 import './look-settings.css';
 
 /**
- * A setting (or, with `many`, a group of them) kept on this device alone (A1559): a laptop, its
- * sentence the app's tooltip on hover and on keyboard focus, and its accessible name. Never inside
- * a `<label>`, whose control would take the sentence into its own name; a click on it does
- * nothing, so it never toggles a control beside it.
+ * Where a setting is kept, when not with every device's: `true` (or `'device'`), on this device
+ * alone (A1559); `'platform'`, for the Macs apart from the phones (PEN-156, A1605).
  */
-export function ScopeMarker({ many = false }: { readonly many?: boolean }) {
-  const tip = deviceOnlyTip(many);
+export type SettingScope = boolean | 'device' | 'platform';
+
+/**
+ * A setting (or, with `many`, a group of them) kept on this device alone (A1559): a laptop; or for
+ * this platform's devices alone (`kind="platform"`, A1605): a monitor. Its sentence is the app's tooltip on
+ * hover and on keyboard focus, and its accessible name. Never inside a `<label>`, whose control
+ * would take the sentence into its own name; a click on it does nothing, so it never toggles a
+ * control beside it.
+ */
+export function ScopeMarker({
+  many = false,
+  kind = 'device',
+}: {
+  readonly many?: boolean;
+  readonly kind?: 'device' | 'platform';
+}) {
+  const tip = kind === 'platform' ? platformTip(many) : deviceOnlyTip(many);
   return (
     <span
       className="lf-scope"
@@ -25,10 +38,11 @@ export function ScopeMarker({ many = false }: { readonly many?: boolean }) {
       tabIndex={0}
       aria-label={tip}
       data-tip={tip}
+      data-scope={kind}
       data-testid="scope-marker"
       onClick={(event: MouseEvent) => event.preventDefault()}
     >
-      <Icon name="laptop" size={14} />
+      <Icon name={kind === 'platform' ? 'monitor' : 'laptop'} size={14} />
     </span>
   );
 }
@@ -44,8 +58,8 @@ export function GroupHead({
   id,
 }: {
   readonly children: ReactNode;
-  /** The group is this device's own. */
-  readonly scope?: boolean | undefined;
+  /** The group is this device's own, or this platform's (`'platform'`, A1605). */
+  readonly scope?: SettingScope | undefined;
   /** A short note after the name, e.g. how to reorder the group's rows. */
   readonly hint?: ReactNode | undefined;
   readonly id?: string | undefined;
@@ -55,7 +69,7 @@ export function GroupHead({
       <h3 className="lf-sub-name" id={id}>
         {children}
       </h3>
-      {scope ? <ScopeMarker many /> : null}
+      {scope ? <ScopeMarker many kind={scope === 'platform' ? 'platform' : 'device'} /> : null}
       {hint ? <span className="lf-sub-hint">{hint}</span> : null}
     </div>
   );
@@ -86,8 +100,8 @@ export function SettingRow({
   /** Before the label: a drag handle. */
   readonly lead?: ReactNode | undefined;
   readonly testId?: string | undefined;
-  /** The row alone is this device's own. */
-  readonly scope?: boolean | undefined;
+  /** The row alone is this device's own, or this platform's (`'platform'`, A1605). */
+  readonly scope?: SettingScope | undefined;
   /** Under the help: a status line or an alert about the row (`lf-row-note`). */
   readonly extra?: ReactNode | undefined;
   readonly children?: ReactNode | undefined;
@@ -109,7 +123,7 @@ export function SettingRow({
         {scope ? (
           <span className="lf-row-name">
             {name}
-            <ScopeMarker />
+            <ScopeMarker kind={scope === 'platform' ? 'platform' : 'device'} />
           </span>
         ) : (
           name

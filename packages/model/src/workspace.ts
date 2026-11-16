@@ -32,7 +32,11 @@ import {
   type GoneFolder,
   type SortMode,
 } from '@penmoss/core/workspace';
-import { isNotebookSetting } from '@penmoss/core/settings';
+import {
+  isNotebookSetting,
+  isPlatformSetting,
+  type SettingsPlatform,
+} from '@penmoss/core/settings';
 import { cleanTagDescription, normaliseTag } from '@penmoss/core/tags';
 import * as Y from '@y/y';
 
@@ -700,27 +704,54 @@ export const NOTEBOOK_MAP = 'notebook';
 /** Where a git notebook keeps the settings of the devices that use it (A827, A1014). */
 export const DEVICE_MAP = 'device';
 
-/** The device map, without the notebook's own keys (a client may once have put one there). */
-export function deviceSettings(doc: Y.Doc): Record<string, unknown> {
+/**
+ * Where a platform keeps its own copy of the look and layout (PEN-156, A1605): `desktop/<key>` for
+ * the Macs and browsers, `mobile/<key>` for the phones, beside the shared `device/<key>`. A null
+ * there is that platform's "back to the default", which the shared value doesn't override.
+ */
+export const platformMap = (platform: SettingsPlatform): string => platform;
+
+/**
+ * The device map, without the notebook's own keys (a client may once have put one there). With a
+ * platform, its own copy of each per-platform key lies over the shared one (A1605): its value, or
+ * nothing for its null; a key it has no copy of shows the shared value.
+ */
+export function deviceSettings(doc: Y.Doc, platform?: SettingsPlatform): Record<string, unknown> {
   const device = readSettings(doc, DEVICE_MAP);
   for (const key of Object.keys(device)) if (isNotebookSetting(key)) delete device[key];
+  if (platform === undefined) return device;
+  for (const [key, value] of Object.entries(readSettings(doc, platformMap(platform)))) {
+    if (!isPlatformSetting(key)) continue;
+    if (value === null) delete device[key];
+    else device[key] = value;
+  }
   return device;
 }
 
 /** The settings as every client reads them: the device's, with the notebook's own over them. */
-export function mergedSettings(doc: Y.Doc): Record<string, unknown> {
+export function mergedSettings(doc: Y.Doc, platform?: SettingsPlatform): Record<string, unknown> {
   const notebook = readSettings(doc, NOTEBOOK_MAP);
   for (const key of Object.keys(notebook)) if (!isNotebookSetting(key)) delete notebook[key];
-  return { ...deviceSettings(doc), ...notebook };
+  return { ...deviceSettings(doc, platform), ...notebook };
 }
 
-/** Sets one setting in the map it belongs to (undefined removes it). */
+/**
+ * Sets one setting in the map it belongs to (undefined removes it). With a platform, a
+ * per-platform key goes to that platform's own copy and the shared value stays as it is (A1605);
+ * undefined there is kept as null, so the default shows on this platform whatever the shared
+ * value is.
+ */
 export function writeSetting(
   doc: Y.Doc,
   key: string,
   value: unknown,
   origin: unknown = null,
+  platform?: SettingsPlatform,
 ): void {
+  if (platform !== undefined && isPlatformSetting(key)) {
+    setSetting(doc, platformMap(platform), key, value === undefined ? null : value, origin);
+    return;
+  }
   setSetting(doc, isNotebookSetting(key) ? NOTEBOOK_MAP : DEVICE_MAP, key, value, origin);
 }
 

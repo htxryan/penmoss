@@ -73,13 +73,14 @@ test('the (i) says where settings are kept, on hover and on focus, with a link',
   await expect(words).toBeHidden();
   // Its words are its description, so a screen reader hears them with its name.
   await expect(info).toHaveAccessibleDescription(
-    /^Settings are synced through your primary notebook, .+\. Those marked with a laptop stay on this Mac only\.$/,
+    /^Settings are synced through your primary notebook, .+\. Those marked with a laptop stay on this Mac only, and those marked with a monitor are kept for your Macs, apart from your phones\.$/,
   );
 
   // Hover shows it; it stays while the pointer crosses to its words.
   await info.hover();
   await expect(words).toBeVisible();
   await expect(words.getByRole('img', { name: 'with a laptop' })).toBeVisible();
+  await expect(words.getByRole('img', { name: 'with a monitor' })).toBeVisible();
   await words.hover();
   await expect(words).toBeVisible();
   await page.mouse.move(1200, 700);

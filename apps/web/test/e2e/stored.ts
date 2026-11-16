@@ -1,4 +1,4 @@
-import { readSettings, readWorkspace, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
+import { mergedSettings, readWorkspace, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 import { createYjs14Replica } from '@penmoss/model/yjs14';
 import type { Page } from '@playwright/test';
 
@@ -99,17 +99,18 @@ export async function storedFolders(page: Page, notebookId?: string): Promise<st
 }
 
 /**
- * Setting `key` in the notebook this browser stored: the notebook's own (`timeZone`,
- * `template.*`) or this device's, which a git notebook keeps under `device` (A827).
+ * Setting `key` in the notebook this browser stored, as the Mac app reads it: the notebook's own
+ * (`timeZone`, `template.*`) or this device's, which a git notebook keeps under `device` (A827),
+ * with the Macs' own copy of the look and layout over it (`desktop`, the web's `SETTINGS_PLATFORM`, A1605).
  */
 export async function storedSetting(
   page: Page,
   key: string,
   notebookId?: string,
 ): Promise<unknown> {
-  const map =
-    key === 'timeZone' || key.startsWith('template.') || key.startsWith('badge.')
-      ? 'notebook'
-      : 'device';
-  return storedWorkspace(page, (replica) => readSettings(replica.doc, map)[key], notebookId);
+  return storedWorkspace(
+    page,
+    (replica) => mergedSettings(replica.doc, 'desktop')[key],
+    notebookId,
+  );
 }

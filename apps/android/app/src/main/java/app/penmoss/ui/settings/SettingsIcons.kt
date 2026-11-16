@@ -57,6 +57,8 @@ object SettingsIcons {
     val Info = icon("Info", "M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM12 11v5.2M12 7.8h.01")
     /** A setting kept on this phone alone (A1559): the web's `laptop`, the same mark on every platform. */
     val Laptop = icon("Kept on this phone", rect(5f, 5.5f, 14f, 9.5f, 1.5f) + "M2.5 18.5h19")
+    /** A setting kept for the phones apart from the Macs (PEN-156, A1605): the web's `phone`. */
+    val Phone = icon("Kept for your phones", rect(7f, 2.8f, 10f, 18.4f, 2.2f) + "M11 18h2")
 
     /** Keyboard shortcuts (T40 P9, ST8): the web's keyboard icon. */
     val Keyboard = icon("Keyboard", rect(2.5f, 6f, 19f, 12f, 2f) + "M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M18 10h.01M7 14h10")

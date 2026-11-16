@@ -7,6 +7,7 @@ import {
   deleteFolder,
   readSettings,
   readWorkspace,
+  setSetting,
   DEVICE_MAP,
   NOTEBOOK_MAP,
   WORKSPACE_RECORD_KEY,
@@ -178,6 +179,38 @@ describe('Workspace', () => {
     expect(readSettings(workspace.doc, DEVICE_MAP)).toEqual({ theme: 'dark' });
     workspace.setSetting('timeZone', undefined);
     expect(workspace.settings()).toEqual({ theme: 'dark' });
+  });
+
+  it('keeps the Macs’ own look and layout, the shared value showing until there is one (PEN-156, A1605)', async () => {
+    const { workspace } = setup();
+    await workspace.start();
+    // What every device shared before: an older app, or the phone before A1605.
+    setSetting(workspace.doc, DEVICE_MAP, 'theme.id', 'nord');
+    setSetting(workspace.doc, DEVICE_MAP, 'sidebar.hiddenSections', ['tags']);
+    expect(workspace.settings()['theme.id']).toBe('nord');
+
+    // A change here is the Macs' own copy; the shared value and the phones' stay as they were.
+    workspace.setSetting('theme.id', 'paper');
+    workspace.setSetting('keys.app.search', ['Mod+J']);
+    expect(workspace.settings()['theme.id']).toBe('paper');
+    expect(readSettings(workspace.doc, DEVICE_MAP)['theme.id']).toBe('nord');
+    expect(readSettings(workspace.doc, 'desktop')).toEqual({
+      'theme.id': 'paper',
+      'keys.app.search': ['Mod+J'],
+    });
+
+    // A phone's change to its own copy doesn't show here.
+    setSetting(workspace.doc, 'mobile', 'sidebar.hiddenSections', ['calendar']);
+    setSetting(workspace.doc, 'mobile', 'theme.id', 'slate');
+    expect(workspace.settings()['sidebar.hiddenSections']).toEqual(['tags']);
+    expect(workspace.settings()['theme.id']).toBe('paper');
+
+    // Shared settings are still shared, and back to the default stays on the Macs.
+    workspace.setSetting('quickAccess.notes', ['01A']);
+    expect(readSettings(workspace.doc, DEVICE_MAP)['quickAccess.notes']).toEqual(['01A']);
+    workspace.setSetting('sidebar.hiddenSections', undefined);
+    expect(workspace.settings()).not.toHaveProperty('sidebar.hiddenSections');
+    expect(readSettings(workspace.doc, DEVICE_MAP)['sidebar.hiddenSections']).toEqual(['tags']);
   });
 
   it('files a journal note under Journal/<year>/<month> or Weekly, in folders every device names alike (T19)', async () => {

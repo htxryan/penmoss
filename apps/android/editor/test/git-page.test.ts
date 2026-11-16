@@ -15,7 +15,13 @@ import {
   type GitTransport,
 } from '@penmoss/git-notebook';
 import { readTitle, initNote, setTitle } from '@penmoss/model/note';
-import { readSettings, readWorkspace, setSetting } from '@penmoss/model/workspace';
+import {
+  mergedSettings,
+  readSettings,
+  readWorkspace,
+  setSetting,
+  writeSetting,
+} from '@penmoss/model/workspace';
 import { recordAgentSession, sessionKey } from '@penmoss/model/agent-sessions';
 import { fromBase64, toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
@@ -1312,11 +1318,11 @@ describe('the device settings in the Journal notebook (A1014)', () => {
     // The phone's Settings and Quick Access, with no account: the JSON values as they are.
     const pins = [NOTE, SECOND];
     const changed = await phone.http('PUT', '/android/device-settings', {
-      set: { 'theme.mode': 'dark', 'quickAccess.notes': pins, 'editor.fontSize': 17 },
+      set: { 'capture.destination': 'inbox', 'quickAccess.notes': pins, 'editor.fontSize': 17 },
     });
     expect(changed.status).toBe(200);
     expect(changed.json?.['device']).toEqual({
-      'theme.mode': 'dark',
+      'capture.destination': 'inbox',
       'quickAccess.notes': pins,
       'editor.fontSize': 17,
     });
@@ -1336,7 +1342,7 @@ describe('the device settings in the Journal notebook (A1014)', () => {
     });
     await mac.sync();
     expect(readSettings(mac.replica.workspace, 'device')).toEqual({
-      'theme.mode': 'dark',
+      'capture.destination': 'inbox',
       'quickAccess.notes': pins,
       'editor.fontSize': 17,
     });
@@ -1350,15 +1356,102 @@ describe('the device settings in the Journal notebook (A1014)', () => {
     await settle(phone.app);
     const tree = await phone.http('GET', '/sync/tree');
     expect(tree.json?.['device']).toEqual({
-      'theme.mode': 'dark',
+      'capture.destination': 'inbox',
       'quickAccess.notes': [SECOND],
       'editor.fontSize': 17,
       'theme.id': 'nord',
     });
-    // A null removes one (its default shows), and the read route says the same.
+    // The Mac's shared theme shows while the phones have no copy of their own (A1605); a null
+    // puts the phones back to the default, and the read route says the same.
     await phone.http('PUT', '/android/device-settings', { set: { 'theme.id': null } });
     const read = await phone.http('GET', '/android/device-settings');
     expect(read.json?.['device']).not.toHaveProperty('theme.id');
+  });
+
+  it('keeps the phones’ look and layout apart from the Macs’, the shared value showing until either has its own (PEN-156, A1605)', async () => {
+    const remote = new MemoryRemote();
+    const phone = fakeApp({ remote });
+    await phone.app.call('open', {
+      notebookId: NOTEBOOK,
+      name: 'Journal',
+      create: true,
+      host: 'github.com',
+      label: 'Penmoss for Android (Pixel)',
+      front: true,
+    });
+    await settle(phone.app);
+    const mac = await GitNotebookEngine.open({
+      transport: new MemoryTransport({
+        remote,
+        branch: 'main',
+        root: '',
+        author: { name: 'Mac', email: 'mac@example.invalid' },
+      }),
+      storage: new MemoryStorage(),
+      secrets: new MemorySecrets(),
+      writer: { kind: 'device', label: 'Penmoss for Mac' },
+    });
+    await mac.sync();
+    // What every device shared before A1605: the theme and the hidden sections.
+    setSetting(mac.replica.workspace, 'device', 'theme.id', 'nord');
+    setSetting(mac.replica.workspace, 'device', 'sidebar.hiddenSections', ['tags']);
+    await mac.sync();
+    await settle(phone.app);
+
+    // The phone has no copy of its own: the shared values show.
+    const before = await phone.http('GET', '/android/device-settings');
+    expect(before.json?.['device']).toEqual({
+      'theme.id': 'nord',
+      'sidebar.hiddenSections': ['tags'],
+    });
+
+    // The phone changes its theme, its sections and a shortcut: its own copy, `mobile/<key>`.
+    const changed = await phone.http('PUT', '/android/device-settings', {
+      set: {
+        'theme.id': 'paper',
+        'sidebar.hiddenSections': ['calendar'],
+        'keys.app.search': ['Mod+J'],
+        'quickAccess.notes': [NOTE],
+      },
+    });
+    expect(changed.json?.['device']).toEqual({
+      'theme.id': 'paper',
+      'sidebar.hiddenSections': ['calendar'],
+      'keys.app.search': ['Mod+J'],
+      'quickAccess.notes': [NOTE],
+    });
+    await settle(phone.app);
+
+    // The Mac reads the shared values for its look, and the phone's pins, which stay shared.
+    await mac.sync();
+    const onMac = mergedSettings(mac.replica.workspace, 'desktop');
+    expect(onMac['theme.id']).toBe('nord');
+    expect(onMac['sidebar.hiddenSections']).toEqual(['tags']);
+    expect(onMac).not.toHaveProperty('keys.app.search');
+    expect(onMac['quickAccess.notes']).toEqual([NOTE]);
+    expect(readSettings(mac.replica.workspace, 'mobile')).toEqual({
+      'theme.id': 'paper',
+      'sidebar.hiddenSections': ['calendar'],
+      'keys.app.search': ['Mod+J'],
+    });
+
+    // The Mac picks a theme of its own; the phone keeps its, and the shared value is untouched.
+    writeSetting(mac.replica.workspace, 'theme.id', 'slate', null, 'desktop');
+    await mac.sync();
+    await settle(phone.app);
+    const tree = await phone.http('GET', '/sync/tree');
+    expect((tree.json?.['device'] as Record<string, unknown>)['theme.id']).toBe('paper');
+    expect(readSettings(mac.replica.workspace, 'device')['theme.id']).toBe('nord');
+
+    // Back to the default on the phone hides the shared value there, not on the Mac.
+    await phone.http('PUT', '/android/device-settings', {
+      set: { 'sidebar.hiddenSections': null },
+    });
+    const read = await phone.http('GET', '/android/device-settings');
+    expect(read.json?.['device']).not.toHaveProperty('sidebar.hiddenSections');
+    expect(mergedSettings(mac.replica.workspace, 'desktop')['sidebar.hiddenSections']).toEqual([
+      'tags',
+    ]);
   });
 
   /**

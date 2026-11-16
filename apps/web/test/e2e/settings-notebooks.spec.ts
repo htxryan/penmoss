@@ -278,7 +278,7 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     const home = page.getByTestId('settings-home');
     await page.getByTestId('settings-info').click();
     await expect(home).toHaveText(
-      'Settings are synced through your primary notebook, Quanta. Those marked stay on this Mac only.',
+      'Settings are synced through your primary notebook, Quanta. Those marked stay on this Mac only, and those marked are kept for your Macs, apart from your phones.',
     );
     if (SHOTS)
       await page.locator('.settings-head-bar').screenshot({ path: `${SHOTS}/settings-home.png` });

@@ -89,7 +89,7 @@ internal fun FontsGroup(fonts: FontsUi, enabled: Boolean) {
             }
         },
     )
-    Help("The interface font is this app’s; the note font and size are your notes’. Headings scale with the size. They sync to your other devices.")
+    Help("The interface font is this app’s; the note font and size are your notes’. Headings scale with the size. They reach your other Android phones; your Macs keep their own.")
     choosing?.let { which ->
         FontDialog(
             title = if (which == INTERFACE) "Interface Font" else "Note Font",

@@ -26,7 +26,7 @@ Open **Settings → Keyboard Shortcuts** (or **Customise** on the shortcut sheet
 
 A shortcut you changed says what it was, such as "Changed from ⌘⌥N", and has **Reset** to bring the original back. **Remove** (when you point at a row) takes a shortcut away. **Reset to Defaults…**, at the top of the page and at the end of the list, asks first, then puts every shortcut you changed back to its default.
 
-A shortcut needs ⌘, Ctrl or ⌥ (on a Mac, not ⌥ alone with a letter, which types a character). A few keys are kept for the system and text editing, such as ⌘C, ⌘V, ⌘Z, ⌘F, ⌘W and ⌘Q. Your shortcuts sync to your other devices.
+A shortcut needs ⌘, Ctrl or ⌥ (on a Mac, not ⌥ alone with a letter, which types a character). A few keys are kept for the system and text editing, such as ⌘C, ⌘V, ⌘Z, ⌘F, ⌘W and ⌘Q. Your shortcuts sync to your other Macs; your Android phones keep shortcuts of their own, for a hardware keyboard ([Kept apart for your Macs and your phones](/docs/reference/settings/#kept-apart-for-your-macs-and-your-phones)).
 
 ### Find a shortcut
 
