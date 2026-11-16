@@ -70,6 +70,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onRoot
+import org.robolectric.annotation.Config
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.common.PenmossTheme
@@ -342,13 +347,18 @@ class SettingsScreensTest {
         compose.waitForIdle()
         assertEquals(listOf(SettingKeys.DAILY_TEMPLATE to "# {{longDate}}\n## Plan\n"), saved)
         compose.onNodeWithTag("templateStatus", useUnmergedTree = true).assertTextEquals("✓ Saved")
-        // Today's note, as the template makes it, under the editor.
-        compose.onNodeWithTag("templatePreviewText", useUnmergedTree = true).performScrollTo().assertTextEquals("# Sunday 15 November 2026\n## Plan\n")
+        // Preview: today's note, as the template makes it, drawn (A1612), in place of the field.
+        compose.onNodeWithTag("templatePreviewTab").performScrollTo().performClick()
+        compose.onNodeWithTag("template-template.daily").assertDoesNotExist()
+        compose.onNodeWithText("Sunday 15 November 2026").assertIsDisplayed()
+        compose.onNodeWithText("Plan").assertIsDisplayed()
+        compose.onNodeWithText("# Sunday 15 November 2026", substring = true).assertDoesNotExist()
+        compose.onNodeWithTag("templateWriteTab").performScrollTo().performClick()
         compose.onNodeWithTag("reset-template.daily").performScrollTo().assertIsEnabled().performClick()
         assertEquals(SettingKeys.DAILY_TEMPLATE to null, saved.last())
         compose.onNodeWithText("Back to the default").assertIsDisplayed()
         // The weekly template is the other tab, over the same editor.
-        compose.onNodeWithTag("tab-template.weekly").performScrollTo().performClick()
+        compose.onNodeWithTag("tab-template.weekly").performClick()
         compose.onNodeWithTag("template-template.weekly").assertExists()
         compose.onNodeWithTag("template-template.daily").assertDoesNotExist()
     }
@@ -373,7 +383,38 @@ class SettingsScreensTest {
         compose.onNodeWithTag("insert-{{weekday}}").performClick()
         compose.waitUntil(3_000) { saved.isNotEmpty() }
         assertEquals(SettingKeys.DAILY_TEMPLATE to "{{weekday}}", saved.last())
-        compose.onNodeWithTag("templatePreviewText", useUnmergedTree = true).performScrollTo().assertTextEquals("Wednesday")
+        compose.onNodeWithTag("templatePreviewTab").performScrollTo().performClick()
+        compose.onNodeWithText("Wednesday").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h914dp")
+    fun theTemplateFillsThePagesSpareHeightAndThePageHoldsStill() {
+        compose.setContent {
+            PenmossTheme {
+                DailyNotesScreen(
+                    timeZone = "UTC",
+                    today = java.time.LocalDate.of(2026, 10, 21),
+                    templates = listOf(TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily Template", "## Plan\n", custom = false)),
+                    enabled = true,
+                    onTimeZone = {},
+                    onSave = { _, _ -> },
+                    onBack = {},
+                    notebook = "Personal",
+                )
+            }
+        }
+        val root = compose.onRoot().getUnclippedBoundsInRoot()
+        val field = compose.onNodeWithTag("template-template.daily").getUnclippedBoundsInRoot()
+        val help = compose.onNodeWithText("These belong to Personal", substring = true).assertIsDisplayed().getUnclippedBoundsInRoot()
+        // The field takes what the rest leave: tall, and the help still on the page under it.
+        assertTrue("field ${field.height}", field.height > 300.dp)
+        assertTrue(help.bottom <= root.bottom)
+        assertTrue(help.top > field.bottom)
+        // Preview takes the same frame.
+        compose.onNodeWithTag("templatePreviewTab").performScrollTo().performClick()
+        val preview = compose.onNodeWithTag("templatePreview").getUnclippedBoundsInRoot()
+        assertTrue("preview ${preview.height}", preview.height > 300.dp)
     }
 
     @Test

@@ -386,12 +386,17 @@ private fun Description(description: String, editing: Boolean, problem: String?,
     )
 }
 
-/** The description as GitHub will show it, drawn natively ([MarkdownPreview]). */
+/**
+ * Markdown drawn natively ([MarkdownPreview]): the description as GitHub will show it, and a
+ * Daily Notes template's note (A1612). [framed] draws its outline; a caller that frames it
+ * itself (to scroll inside the frame) passes false.
+ */
 @Composable
-internal fun MarkdownPreviewView(markdown: String, modifier: Modifier = Modifier) {
+internal fun MarkdownPreviewView(markdown: String, modifier: Modifier = Modifier, framed: Boolean = true) {
     val blocks = remember(markdown) { MarkdownPreview.blocks(markdown) }
     val outline = MaterialTheme.colorScheme.outlineVariant
-    Column(modifier.border(BorderStroke(1.dp, outline), RectangleShape).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val frame = if (framed) Modifier.border(BorderStroke(1.dp, outline), RectangleShape).padding(12.dp) else Modifier
+    Column(modifier.then(frame), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (blocks.isEmpty()) Text("Nothing to preview", color = MaterialTheme.colorScheme.onSurfaceVariant)
         val codeBackground = MaterialTheme.colorScheme.surfaceVariant
         val link = MaterialTheme.colorScheme.primary
@@ -418,7 +423,11 @@ internal fun MarkdownPreviewView(markdown: String, modifier: Modifier = Modifier
                 is MarkdownPreview.Block.Heading -> Text(
                     text(block.runs),
                     Modifier.semantics { heading() },
-                    style = if (block.level <= 2) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
+                    style = when (block.level) {
+                        1 -> MaterialTheme.typography.titleLarge
+                        2 -> MaterialTheme.typography.titleMedium
+                        else -> MaterialTheme.typography.titleSmall
+                    },
                 )
                 is MarkdownPreview.Block.Item -> Row(Modifier.padding(start = (16 * block.depth).dp)) {
                     Text(block.marker, Modifier.width(24.dp), style = MaterialTheme.typography.bodyMedium)

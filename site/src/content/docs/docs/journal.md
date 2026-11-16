@@ -34,7 +34,7 @@ A new notebook starts on the America/Chicago time zone. Set your own in **Settin
 
 ## Templates
 
-**Settings → Daily Notes** has a **Daily Template** and a **Weekly Template** tab: the markdown a new note starts with. Beside the template is a preview of today's note, or this week's, with the placeholders filled in, so you can see what the next note will look like.
+**Settings → Daily Notes** has a **Daily Template** and a **Weekly Template** tab: the markdown a new note starts with. Beside the template is a preview of today's note, or this week's, with the placeholders filled in, so you can see what the next note will look like. On Android the preview has its own tab: **Write** edits the template and **Preview** shows today's note as it will read, with its headings and lists drawn. The editor fills the screen.
 
 Changes save as you type, and **Saved** shows under the template. **Reset to Default** goes back to the default (`## Plan` and `## Notes` for a day, `## Goals` and `## Review` for a week). A change applies to the notes made after it; notes that exist already keep what they have.
 
