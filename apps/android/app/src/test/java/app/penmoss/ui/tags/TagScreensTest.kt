@@ -238,8 +238,8 @@ class TagScreensTest {
                 )
             }
         }
-        compose.onNodeWithTag("homeMenu").performClick()
-        compose.onNodeWithTag("homeTags").performScrollTo().performClick()
+        // Tags is on the notes list's row of shortcuts (A1438, A1613).
+        compose.onNodeWithTag("homeTagsShortcut").performScrollTo().performClick()
         assertEquals(1, tags)
     }
 

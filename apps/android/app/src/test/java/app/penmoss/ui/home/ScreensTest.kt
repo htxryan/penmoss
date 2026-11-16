@@ -153,10 +153,10 @@ class ScreensTest {
                 )
             }
         }
-        // The status line is a dot on the notebook's heading, its words its name (T51, A933),
-        // which is named as the web's: the notebook's name (A1538).
+        // The status line is a dot beside the title, the notebook's name (A1538, A1613), its
+        // words its name (T51, A933).
         compose.onNodeWithTag("syncDot").assertIsDisplayed().assertContentDescriptionEquals("Synced at 3:42 PM")
-        compose.onNodeWithTag("homeFoldersTitle", useUnmergedTree = true).onChildren().filter(hasText("Garden")).assertCountEquals(1)
+        compose.onNodeWithTag("homeTitle", useUnmergedTree = true).assertTextEquals("Garden")
         compose.onNodeWithText("eggs, milk").assertIsDisplayed()
         compose.onNodeWithText("Not on this page").assertDoesNotExist()
         assertTrue(compose.onNodeWithText("Projects").getBoundsInRoot().top < compose.onNodeWithText("Groceries").getBoundsInRoot().top)
@@ -165,22 +165,14 @@ class ScreensTest {
         // Today and This Week are icons in Home's row, named and with tooltips (T51, A932).
         compose.onNodeWithContentDescription("Today").performClick()
         compose.onNodeWithContentDescription("This Week").performClick()
-        // All Notes, Journal, Quick Capture and Send Feedback are in the hamburger's drawer (A1604).
-        compose.onNodeWithTag("homeMenu").performClick()
-        // Its places are a 4×2 grid of tiles (item 10, A1607; no Home since A1608): Search and
-        // Journal share a row, All Notes starts the next.
-        val search = compose.onNodeWithTag("drawerSearch").getBoundsInRoot()
-        assertEquals(search.top, compose.onNodeWithTag("homeJournal").getBoundsInRoot().top)
-        assertTrue(compose.onNodeWithTag("homeAllNotes").getBoundsInRoot().top >= search.bottom)
-        compose.onNodeWithTag("drawerHome").assertDoesNotExist()
+        // All Notes, Journal and Capture are on the row too (A1613); the drawer has no places.
         compose.onNodeWithTag("homeAllNotes").performScrollTo().performClick()
-        compose.onNodeWithTag("homeMenu").performClick()
         compose.onNodeWithTag("homeJournal").performScrollTo().performClick()
-        compose.onNodeWithTag("homeMenu").performClick()
         compose.onNodeWithTag("homeCapture").performScrollTo().performClick()
+        // Send Feedback is in the hamburger's drawer (A1604).
         compose.onNodeWithTag("homeMenu").performClick()
         compose.onNodeWithTag("homeFeedback").performScrollTo().performClick()
-        compose.onNodeWithContentDescription("Search").performClick()
+        compose.onNodeWithContentDescription("Search").performScrollTo().performClick()
         compose.onNodeWithContentDescription("New Note").performClick()
         assertEquals(listOf("n1"), opened)
         assertEquals(listOf("folder:f1", "today", "week", "all", "journal", "capture", "feedback", "search", "new"), events)

@@ -303,8 +303,8 @@ class FolderScreensTest {
                 )
             }
         }
-        // Sort Order is on the notebook heading's long press (T53 item 4).
-        compose.onNodeWithTag("homeFoldersTitle").performTouchInput { longClick() }
+        // Sort Order is in the ⋮ menu, the notebook being the title (A1613).
+        compose.onNodeWithTag("homeMore").performClick()
         compose.onNodeWithTag("homeSort").performClick()
         compose.onNodeWithTag("sort-alpha").performClick()
         compose.onNodeWithTag("homeMore").performClick()

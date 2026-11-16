@@ -81,24 +81,33 @@ class DisplayAndSyncStopTest {
                         onGraph = { ran += "graph" },
                         onCommands = { ran += "commands" },
                         onTags = { ran += "tags" },
+                        onJournal = { ran += "journal" },
+                        onAllNotes = { ran += "all" },
+                        onCapture = { ran += "capture" },
                     ),
                 )
             }
         }
-        // One row of icons (T51, A932), each named: Search, Tags (A1438), Today, This Week, Graph, Commands.
-        compose.onNodeWithTag("homeTagsShortcut").assertContentDescriptionEquals("Tags").performClick()
-        compose.onNodeWithTag("homeToday").assertContentDescriptionEquals("Today").performClick()
-        compose.onNodeWithTag("homeThisWeek").assertContentDescriptionEquals("This Week").performClick()
-        compose.onNodeWithTag("homeGraph").assertContentDescriptionEquals("Graph").performClick()
+        // One row of icons (T51, A932), each named: Search, Tags (A1438), Today, This Week, then the
+        // phone's Journal and All Notes, Graph, Commands and the phone's Capture (A1613). More than
+        // fit scroll sideways.
+        compose.onNodeWithTag("homeTagsShortcut").performScrollTo().assertContentDescriptionEquals("Tags").performClick()
+        compose.onNodeWithTag("homeToday").performScrollTo().assertContentDescriptionEquals("Today").performClick()
+        compose.onNodeWithTag("homeThisWeek").performScrollTo().assertContentDescriptionEquals("This Week").performClick()
+        compose.onNodeWithTag("homeJournal").performScrollTo().assertContentDescriptionEquals("Journal").performClick()
+        compose.onNodeWithTag("homeAllNotes").performScrollTo().assertContentDescriptionEquals("All Notes").performClick()
+        compose.onNodeWithTag("homeGraph").performScrollTo().assertContentDescriptionEquals("Graph").performClick()
         // Commands is the web's palette: Search with every action listed (FD6).
-        compose.onNodeWithTag("homeCommands").assertContentDescriptionEquals("Commands").performClick()
-        compose.onNodeWithTag("homeSearch").performClick()
-        assertEquals(listOf("tags", "today", "week", "graph", "commands", "search"), ran)
-        // Graph and Commands left Home's ⋮ menu for the row; the drawer has Graph among the sidebar's areas (A1604).
-        compose.onAllNodes(hasText("Graph") and !hasTestTag("drawerGraph")).assertCountEquals(0)
-        compose.onNodeWithText("Commands").assertDoesNotExist()
+        compose.onNodeWithTag("homeCommands").performScrollTo().assertContentDescriptionEquals("Commands").performClick()
+        compose.onNodeWithTag("homeCapture").performScrollTo().assertContentDescriptionEquals("Capture").performClick()
+        compose.onNodeWithTag("homeSearch").performScrollTo().performClick()
+        assertEquals(listOf("tags", "today", "week", "journal", "all", "graph", "commands", "capture", "search"), ran)
+        // The row is where they are: the drawer has none of them (A1613).
         compose.onNodeWithTag("homeMenu").performClick()
-        compose.onNodeWithTag("homeJournal").performScrollTo().performClick()
+        compose.onNodeWithTag("homeDrawer").assertExists()
+        for (tag in listOf("drawerSearch", "drawerToday", "drawerThisWeek", "drawerGraph")) compose.onNodeWithTag(tag).assertDoesNotExist()
+        compose.onAllNodesWithTag("homeJournal").assertCountEquals(1)
+        compose.onAllNodesWithTag("homeCapture").assertCountEquals(1)
 
         shortcuts = HomeShortcuts.of(settings(DisplayKeys.TODAY to false, DisplayKeys.GRAPH to false, DisplayKeys.COMMANDS to false, DisplayKeys.TAGS to false))
         compose.onNodeWithTag("homeTagsShortcut").assertDoesNotExist()
@@ -106,6 +115,10 @@ class DisplayAndSyncStopTest {
         compose.onNodeWithTag("homeThisWeek").assertIsDisplayed()
         compose.onNodeWithTag("homeGraph").assertDoesNotExist()
         compose.onNodeWithTag("homeCommands").assertDoesNotExist()
+        shortcuts = HomeShortcuts.of(settings(DisplayKeys.JOURNAL to false, DisplayKeys.ALL_NOTES to false, DisplayKeys.CAPTURE to false))
+        compose.onNodeWithTag("homeJournal").assertDoesNotExist()
+        compose.onNodeWithTag("homeAllNotes").assertDoesNotExist()
+        compose.onNodeWithTag("homeCapture").assertDoesNotExist()
         // Search has no switch: it always shows.
         shortcuts = HomeShortcuts.of(settings(DisplayKeys.TODAY to false, DisplayKeys.THIS_WEEK to false))
         compose.onNodeWithTag("homeThisWeek").assertDoesNotExist()
@@ -137,7 +150,9 @@ class DisplayAndSyncStopTest {
         // Under the large top app bar (A1560), below the screen's fold.
         compose.onNodeWithTag("display-${DisplayKeys.COMMANDS}").performScrollTo().performClick()
         assertEquals(listOf(DisplayKeys.TODAY to false, DisplayKeys.TODAY to true, DisplayKeys.COMMANDS to false), changes)
-        assertEquals(listOf("Tags", "Today", "This Week", "Graph", "Commands"), displayChoices(Settings()).map { it.label })
+        assertEquals(listOf("Tags", "Today", "This Week", "Journal", "All Notes", "Graph", "Commands", "Capture"), displayChoices(Settings()).map { it.label })
+        // The phone's own are kept for the phones (A1613, A1605), as the rest are.
+        assertTrue(DisplayKeys.PHONE.all(app.penmoss.engine.settings.PlatformSettings::isPlatform))
         // Android's Home has only what Home has (PEN-146): no "on the web and the Mac" words or rows.
         compose.onNodeWithText("on the web and the Mac", substring = true).assertDoesNotExist()
         compose.onNodeWithTag("display-section-calendar").assertDoesNotExist()

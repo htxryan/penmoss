@@ -15,7 +15,8 @@ import kotlinx.serialization.json.JsonPrimitive
 /*
  * Settings → Home on the phone (T42, A576; T40 ST12, A650; PEN-146): the Mac's Sidebar page, the
  * synced `sidebar.*` settings Home reads. The phone's shortcuts are Home's row of icons (T51,
- * A932): Search, which always shows, then Tags (A1438), Today, This Week, Graph and Commands. A
+ * A932): Search, which always shows, then Tags (A1438), Today, This Week, Journal, All Notes,
+ * Graph, Commands and Capture (the last three of those the phone's own, A1613). A
  * hidden shortcut still runs from its keys, Search's actions and the launcher, as on the Mac.
  */
 
@@ -26,6 +27,10 @@ data class HomeShortcuts(
     val thisWeek: Boolean = true,
     val graph: Boolean = true,
     val commands: Boolean = true,
+    /** The phone's own (A1613): Journal, All Notes and Capture, which the drawer held before. */
+    val journal: Boolean = true,
+    val allNotes: Boolean = true,
+    val capture: Boolean = true,
 ) {
     companion object {
         fun of(settings: Settings) = HomeShortcuts(
@@ -34,6 +39,9 @@ data class HomeShortcuts(
             thisWeek = settings.shows(DisplayKeys.THIS_WEEK),
             graph = settings.shows(DisplayKeys.GRAPH),
             commands = settings.shows(DisplayKeys.COMMANDS),
+            journal = settings.shows(DisplayKeys.JOURNAL),
+            allNotes = settings.shows(DisplayKeys.ALL_NOTES),
+            capture = settings.shows(DisplayKeys.CAPTURE),
         )
     }
 }
@@ -41,13 +49,19 @@ data class HomeShortcuts(
 /** One of Home's shortcut switches: its setting, its name, and whether it shows. */
 data class DisplayChoice(val key: String, val label: String, val shown: Boolean)
 
-/** Home's shortcut switches, in the Mac's sidebar order (core's `SIDEBAR_ITEMS`). */
+/**
+ * Home's shortcut switches, in their order on Home's row: the Mac's sidebar order (core's
+ * `SIDEBAR_ITEMS`), with the phone's own (A1613) beside their kin, Capture last.
+ */
 fun displayChoices(settings: Settings): List<DisplayChoice> = listOf(
     DisplayChoice(DisplayKeys.TAGS, "Tags", settings.shows(DisplayKeys.TAGS)),
     DisplayChoice(DisplayKeys.TODAY, "Today", settings.shows(DisplayKeys.TODAY)),
     DisplayChoice(DisplayKeys.THIS_WEEK, "This Week", settings.shows(DisplayKeys.THIS_WEEK)),
+    DisplayChoice(DisplayKeys.JOURNAL, "Journal", settings.shows(DisplayKeys.JOURNAL)),
+    DisplayChoice(DisplayKeys.ALL_NOTES, "All Notes", settings.shows(DisplayKeys.ALL_NOTES)),
     DisplayChoice(DisplayKeys.GRAPH, "Graph", settings.shows(DisplayKeys.GRAPH)),
     DisplayChoice(DisplayKeys.COMMANDS, "Commands", settings.shows(DisplayKeys.COMMANDS)),
+    DisplayChoice(DisplayKeys.CAPTURE, "Capture", settings.shows(DisplayKeys.CAPTURE)),
 )
 
 /** What the Settings list says of Home: which shortcuts are hidden. */

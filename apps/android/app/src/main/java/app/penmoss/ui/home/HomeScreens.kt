@@ -17,6 +17,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import app.penmoss.ui.settings.HomeShortcuts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
@@ -106,7 +109,11 @@ import app.penmoss.ui.common.SectionTitle
 import app.penmoss.ui.folders.SortMenu
 import app.penmoss.ui.common.DotState
 import app.penmoss.ui.common.SectionTitleWithDot
+import app.penmoss.ui.common.LucideAssets
+import app.penmoss.ui.common.NotebookBadgeView
 import app.penmoss.ui.common.SyncDot
+import app.penmoss.ui.common.SyncStateDot
+import app.penmoss.ui.common.rememberLucideIcons
 import app.penmoss.ui.common.TipIconButton
 import app.penmoss.ui.settings.SettingsIcons
 import androidx.compose.foundation.layout.size
@@ -290,7 +297,23 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             TopAppBar(
                 // Under the selection bar while notes are chosen: out of TalkBack's reach (review S4).
                 modifier = Modifier.underSelectionBar(),
-                title = { Text(if (ui.reordering) "Reorder Folders" else ui.page.title ?: ui.title, Modifier.testTag("homeTitle")) },
+                // The notes list is titled by its notebook: its badge, its name and its sync dot
+                // (A1613), once, where the list had a heading of its own under the bar (A933).
+                title = {
+                    val name = if (ui.reordering) "Reorder Folders" else ui.page.title ?: ui.notebook.ifEmpty { ui.title }
+                    if (notesPage && !ui.reordering) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ui.badge?.let {
+                                NotebookBadgeView(it, ui.notebook, size = 24.dp, decorative = true)
+                                Spacer(Modifier.width(12.dp))
+                            }
+                            Text(name, Modifier.weight(1f, fill = false).testTag("homeTitle"), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            SyncStateDot(personalDot, Modifier.testTag("syncDot"))
+                        }
+                    } else {
+                        Text(name, Modifier.testTag("homeTitle"))
+                    }
+                },
                 navigationIcon = {
                     if (ui.reordering) {
                         BackButton { actions.onReorder(false) }
@@ -308,6 +331,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                         // The gear, as the sidebar's footer has it (T51, A935).
                         TipIconButton(SettingsIcons.Gear, "Settings", onClick = actions.onSettings, modifier = Modifier.testTag("homeSettings"))
                         var more by remember { mutableStateOf(false) }
+                        var sorting by remember { mutableStateOf(false) }
                         // New Folder and Reorder Folders act on the notes list; the other pages have no ⋮.
                         if (notesPage) Box {
                             TipIconButton(Icons.Default.MoreVert, "More Options", onClick = { more = true }, modifier = Modifier.testTag("homeMore"))
@@ -320,6 +344,15 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     },
                                     modifier = Modifier.testTag("homeNewFolder"),
                                 )
+                                // The notebook heading's actions (T52 item 10), now the heading is the title (A1613).
+                                DropdownMenuItem(
+                                    text = { Text("Sort Order…") },
+                                    onClick = {
+                                        more = false
+                                        sorting = true
+                                    },
+                                    modifier = Modifier.testTag("homeSort"),
+                                )
                                 if (ui.sortMode == "manual") {
                                     DropdownMenuItem(
                                         text = { Text("Reorder Folders") },
@@ -331,6 +364,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     )
                                 }
                             }
+                            SortMenu(expanded = sorting, current = ui.sortMode, onPick = { sorting = false; actions.onSort(it) }, onDismiss = { sorting = false })
                         }
                     }
                 },
@@ -350,7 +384,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             Column(Modifier.fillMaxSize()) {
                 if (slowSync && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("syncProgress"))
                 // The sidebar's shortcuts as one row of icons (T51, A932); Display hides any but Search.
-                if (!ui.reordering && notesPage) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags)
+                if (!ui.reordering && notesPage) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags, actions.onJournal, actions.onAllNotes, actions.onCapture)
                 // The status line became a dot on the section titles (T51, A933). Going offline or
                 // stopping is still announced, from above the list, which a dot in it scrolled
                 // away would not be (A530).
@@ -437,11 +471,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     }
                                 }
                                 SidebarLayout.NOTEBOOKS -> {
-                                    // The notebook's heading with its sync dot (T51, A933), as the web's
-                                    // notebook heading: its actions on a long press (T53 item 4).
-                                    item(key = "foldersTitle", contentType = "title") {
-                                        NotebookHeading(ui.notebook, personalDot, ui.sortMode, actions.onSort, actions.onNotebookNewNote, actions.onNewFolder, actions.onTrash, ui.badge)
-                                    }
+                                    // No heading: the bar's title is the notebook, with its badge and dot (A1613).
                                     items(ui.folders, key = { "folder:${it.id}" }, contentType = { "folder" }) { folder ->
                                         FolderRowView(folder, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)
                                     }
@@ -780,52 +810,6 @@ fun CenteredMessage(text: String?, busy: Boolean = false, action: Pair<String, (
     }
 }
 
-/**
- * The notebook's heading (T51, A933): its name in the accent with its sync dot at
- * the far right. Its actions are on a long press (T53 item 4; the web shows them on hover): New
- * Note in it, Sort Order (its menu marks the order in use), New Folder and Trash.
- */
-@Composable
-private fun NotebookHeading(
-    name: String,
-    dot: SyncDot,
-    sortMode: String,
-    onSort: (String) -> Unit,
-    onNewNote: () -> Unit,
-    onNewFolder: () -> Unit,
-    onTrash: () -> Unit,
-    badge: app.penmoss.engine.settings.NotebookBadge? = null,
-) {
-    var menu by remember { mutableStateOf(false) }
-    var sorting by remember { mutableStateOf(false) }
-    val haptics = LocalHapticFeedback.current
-    Box(Modifier.fillMaxWidth().testTag("homeNotebookBar")) {
-        SectionTitleWithDot(
-            name,
-            dot,
-            Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClickLabel = null,
-                    onLongClickLabel = "Notebook Actions",
-                    onLongClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menu = true
-                    },
-                ) {}
-                .testTag("homeFoldersTitle"),
-            lead = badge?.let { { app.penmoss.ui.common.NotebookBadgeView(it, name, decorative = true) } },
-        )
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text("New Note in This Notebook") }, onClick = { menu = false; onNewNote() }, modifier = Modifier.testTag("homeNotebookNewNote"))
-            DropdownMenuItem(text = { Text("Sort Order…") }, onClick = { menu = false; sorting = true }, modifier = Modifier.testTag("homeSort"))
-            DropdownMenuItem(text = { Text("New Folder") }, onClick = { menu = false; onNewFolder() }, modifier = Modifier.testTag("homeNotebookNewFolder"))
-            DropdownMenuItem(text = { Text("Trash") }, onClick = { menu = false; onTrash() }, modifier = Modifier.testTag("homeNotebookTrash"))
-        }
-        SortMenu(expanded = sorting, current = sortMode, onPick = { sorting = false; onSort(it) }, onDismiss = { sorting = false })
-    }
-}
-
 /** A pass shorter than this shows no progress bar on Home (T39). */
 internal const val SLOW_SYNC_MS = 1_000L
 
@@ -834,8 +818,10 @@ internal val FAB_CLEARANCE = 88.dp
 
 /**
  * Home's shortcuts as one row of icons (T51, A932), the sidebar's: Search, Tags (A1438), Today,
- * This Week, Graph and Commands, each with its name as a tooltip and content description.
- * Settings → Home hides any but Search; hidden, they still run from their keys and Search's actions (A576).
+ * This Week, then the phone's own Journal and All Notes (A1613), Graph, Commands and the phone's
+ * Capture, each with its name as a tooltip and content description. They are the drawer's
+ * places no longer (A1613): this row is where they are. Settings → Home hides any but Search;
+ * hidden, they still run from their keys and Search's actions (A576). More than fit scroll sideways.
  */
 @Composable
 internal fun HomeShortcutRow(
@@ -846,14 +832,27 @@ internal fun HomeShortcutRow(
     onGraph: () -> Unit,
     onCommands: () -> Unit,
     onTags: () -> Unit = {},
+    onJournal: () -> Unit = {},
+    onAllNotes: () -> Unit = {},
+    onCapture: () -> Unit = {},
 ) {
-    // Six 48dp targets fit a 320dp phone with no gap between them (each icon is 24dp in its 48).
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).testTag("homeShortcuts")) {
+    val lucide = rememberLucideIcons()
+    @Composable
+    fun Lucide(name: String, label: String, tag: String, onClick: () -> Unit) {
+        val glyph = lucide?.icon(name) ?: return
+        TipIconButton(LucideAssets.vector(glyph), label, onClick = onClick, modifier = Modifier.testTag(tag))
+    }
+    // Six 48dp targets fit a 320dp phone with no gap between them (each icon is 24dp in its 48);
+    // with more shown, the row scrolls sideways rather than squeeze them.
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp).testTag("homeShortcuts")) {
         TipIconButton(SettingsIcons.Search, "Search", onClick = onSearch, modifier = Modifier.testTag("homeSearch"))
         if (shortcuts.tags) TipIconButton(SettingsIcons.Tag, "Tags", onClick = onTags, modifier = Modifier.testTag("homeTagsShortcut"))
         if (shortcuts.today) TipIconButton(SettingsIcons.Today, "Today", onClick = onToday, modifier = Modifier.testTag("homeToday"))
         if (shortcuts.thisWeek) TipIconButton(SettingsIcons.Week, "This Week", onClick = onThisWeek, modifier = Modifier.testTag("homeThisWeek"))
+        if (shortcuts.journal) Lucide("book-open", "Journal", "homeJournal", onJournal)
+        if (shortcuts.allNotes) Lucide("files", "All Notes", "homeAllNotes", onAllNotes)
         if (shortcuts.graph) TipIconButton(SettingsIcons.Graph, "Graph", onClick = onGraph, modifier = Modifier.testTag("homeGraph"))
         if (shortcuts.commands) TipIconButton(SettingsIcons.Command, "Commands", onClick = onCommands, modifier = Modifier.testTag("homeCommands"))
+        if (shortcuts.capture) Lucide("zap", "Capture", "homeCapture", onCapture)
     }
 }

@@ -10,7 +10,7 @@
  * Which settings are the notebook's own and which a device's is `isNotebookSetting`, here; where
  * each is kept is `@penmoss/model`'s (`NOTEBOOK_MAP`, `DEVICE_MAP`, `mergedSettings`).
  */
-import { DISPLAY_SETTING_KEYS } from './display';
+import { DISPLAY_SETTING_KEYS, PHONE_SHORTCUT_SETTING_KEYS } from './display';
 import { FONT_SETTING_KEYS } from './fonts';
 import {
   DEFAULT_DAILY_TEMPLATE,
@@ -60,7 +60,7 @@ export type SettingsPlatform = (typeof SETTINGS_PLATFORMS)[number];
 /**
  * The per-platform keys with no prefix (PEN-156, A1605): the theme and its mode (`@penmoss/ui/theme`'s
  * `THEME_SETTING` and `MODE_SETTING`), the fonts and the note text's size, the sidebar's (Home's)
- * shortcut buttons, its sections' order and visibility, Recent Notes' length and Quick Access's
+ * shortcut buttons (and the phone's own, A1613), its sections' order and visibility, Recent Notes' length and Quick Access's
  * notebook names. Custom themes (`theme.custom.*`) stay shared, so a theme made on one is there
  * to pick on the other.
  */
@@ -69,6 +69,7 @@ export const PLATFORM_SETTING_KEYS: readonly string[] = [
   'theme.mode',
   ...FONT_SETTING_KEYS,
   ...DISPLAY_SETTING_KEYS,
+  ...PHONE_SHORTCUT_SETTING_KEYS,
   SECTION_ORDER_SETTING,
   HIDDEN_SECTIONS_SETTING,
   RECENT_COUNT_SETTING,

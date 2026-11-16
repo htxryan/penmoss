@@ -40,9 +40,9 @@ data class DrawerNotebook(val localId: String, val name: String, val badge: app.
 
 /**
  * The notebook screen's drawer (Ryan's Android feedback, 15 Nov 2026; A1604, A1607, A1608):
- * Android's hamburger menu with the Mac sidebar's areas. First its places as a 4×2 grid of tiles
- * (Search, Today, This Week, Journal for its Calendar; All Notes, Tags, Graph, Quick Capture), then
- * the sidebar's sections as pages: Quick Access, Recent Notes, and Notebooks (each one's notes list,
+ * Android's hamburger menu with the Mac sidebar's areas. Its places (Search, Today, Journal,
+ * Capture…) left it for the notes list's row of shortcuts, which shows them already (item 16,
+ * A1613), so it starts with the sidebar's sections as pages: Quick Access, Recent Notes, and Notebooks (each one's notes list,
  * this one's marked while it shows, and All Notebooks), then Trash, Settings and Send Feedback. A
  * pick closes the drawer, then goes.
  */
@@ -55,26 +55,6 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
     ModalDrawerSheet(Modifier.testTag("homeDrawer"), drawerShape = RectangleShape) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
             Spacer(Modifier.height(16.dp))
-            // The places, as a grid of tiles (item 10, A1607): the notebook's name is the
-            // selected row under Notebooks, so the drawer has no title of its own. Home went (item
-            // 11, A1608): its sections are pages below, and Quick Capture fills the grid.
-            val places = listOf(
-                Place("Search", "search", "drawerSearch", onClick = actions.onSearch),
-                Place("Today", "calendar", "drawerToday", onClick = actions.onToday),
-                Place("This Week", "calendar-range", "drawerThisWeek", onClick = actions.onThisWeek),
-                Place("Journal", "book-open", "homeJournal", onClick = actions.onJournal),
-                Place("All Notes", "files", "homeAllNotes", onClick = actions.onAllNotes),
-                Place("Tags", "tag", "homeTags", onClick = actions.onTags),
-                Place("Graph", "waypoints", "drawerGraph", onClick = actions.onGraph),
-                Place("Capture", "zap", "homeCapture", onClick = actions.onCapture),
-            )
-            for (row in places.chunked(4)) {
-                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                    for (place in row) Tile(place, Modifier.weight(1f), go(place.onClick))
-                }
-            }
-            Spacer(Modifier.height(6.dp))
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             // The sidebar's sections as pages (item 11, A1608): Quick Access and Recent Notes here,
             // and each notebook's notes list under Notebooks.
             Item("Quick Access", "star", "drawerQuickAccess", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
@@ -109,42 +89,6 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
     }
 }
 
-/** One of the drawer's places: a tile in its grid. */
-private class Place(val label: String, val icon: String, val tag: String, val selected: Boolean = false, val onClick: () -> Unit)
-
-/**
- * A place's tile, as a navigation bar's item draws one: the icon in a 56×32 indicator, shaded
- * when it is where you are, and its name under it on one line.
- */
-@Composable
-private fun Tile(place: Place, modifier: Modifier, onClick: () -> Unit) {
-    val glyph = rememberLucideIcons()?.icon(place.icon)
-    val colours = MaterialTheme.colorScheme
-    Column(
-        modifier
-            .selectable(selected = place.selected, role = Role.Button, onClick = onClick)
-            .padding(vertical = 6.dp)
-            .testTag(place.tag),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Box(
-            Modifier.size(width = 56.dp, height = 32.dp).background(if (place.selected) colours.secondaryContainer else Color.Transparent),
-            contentAlignment = Alignment.Center,
-        ) {
-            val tint = if (place.selected) colours.onSecondaryContainer else colours.onSurfaceVariant
-            if (glyph != null) Icon(LucideAssets.vector(glyph), contentDescription = null, Modifier.size(22.dp), tint = tint)
-        }
-        Text(
-            place.label,
-            style = MaterialTheme.roles.meta,
-            color = colours.onSurface,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
 
 @Composable
 private fun Item(label: String, icon: String, tag: String, selected: Boolean = false, onClick: () -> Unit) {
