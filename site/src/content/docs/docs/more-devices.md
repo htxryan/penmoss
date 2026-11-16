@@ -19,18 +19,16 @@ The second Mac needs its own git sign-in for the repository, as the first did: s
 
 ## Android
 
-The phone syncs over HTTPS with a personal access token. SSH is not supported on Android.
+The phone syncs over HTTPS; SSH is not supported on Android.
 
-1. Make a token for the notebook's repository. On GitHub: a fine-grained token for that repository only, with **Contents: Read and write** and **Metadata: Read**. Give it an expiry date you will remember.
-2. [Install Penmoss](/docs/install/android/) and open it.
-3. Under **Add a git notebook**, fill in:
-   - **Repository**: its HTTPS address, such as `https://github.com/you/notes`.
-   - **Branch**: the notebook's branch, `main` unless you chose another.
-   - **Directory**: the folder that holds the notebook, if it is not at the top of the repository.
-   - **Personal access token**: the token from step 1.
-4. Tap **Add**.
+1. [Install Penmoss](/docs/install/android/) and open it.
+2. Tap **Get Started**, choose **Open an Existing Notebook** and tap **Continue**.
+3. Sign in to GitHub: **Sign In with GitHub** shows a short code to enter at github.com/login/device, or **Use a Token Instead** takes a personal access token (a classic token with the **repo** scope lists every repository; a fine-grained one, only those it names, with **Contents: Read and write**).
+4. Pick the notebook under its repository and tap **Open**. Penmoss clones it and stays on **Opening …** until the first sync, then opens the notebook.
 
-The notebook is listed on the first screen; tap it to open it. To make a new notebook from the phone, point **Add** at an empty private repository: the app then asks for a **Notebook name**.
+For a repository on another host, choose **Paste a URL** instead: its HTTPS address, a token for it, and under **More Options** the **Branch** and **Folder**.
+
+To make a new notebook from the phone, choose **Start a New Notebook**: **Create New Repo** makes a private repository on GitHub for it. Later, **+ Add Notebook** on the first screen or in **Settings → All Notebooks** shows the same steps.
 
 When the token expires, the notebook stops syncing and says why. Save a new one on the notebook's **Git** tab in Settings (**Save Token**).
 

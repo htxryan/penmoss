@@ -74,6 +74,11 @@ internal object SettingsRoutes {
 
     fun theme(id: String) = "settings/appearance/theme/$id"
 
+    /** Add Notebook (A1562): the first run's screens; from the home it ends in the notebook, else on its page. */
+    const val ADD_NOTEBOOK = "settings/add-notebook?home={home}"
+
+    fun addNotebook(home: Boolean = false) = "settings/add-notebook?home=$home"
+
     fun notebook(localId: String, tab: String? = null) = "settings/git/$localId" + (tab?.let { "?tab=$it" } ?: "")
 }
 
@@ -525,6 +530,25 @@ internal fun NavGraphBuilder.settingsRoutes(host: SettingsHost) {
             onPage = { nav.open(SettingsRoutes.notebook(it)) },
             copyTags = settings.settings.values[app.penmoss.git.COPY_TAGS_SETTING] != JsonPrimitive(false),
             onCopyTags = { device.changeSetting(app.penmoss.git.COPY_TAGS_SETTING, JsonPrimitive(it)) },
+            onAddNotebook = { nav.open(SettingsRoutes.addNotebook()) },
+        )
+    }
+    // Add Notebook (A1562): the first run's own screens, starting at Create or Open Notebook.
+    composable(
+        SettingsRoutes.ADD_NOTEBOOK,
+        arguments = listOf(navArgument("home") { type = NavType.BoolType; defaultValue = false }),
+    ) { entry ->
+        val home = entry.arguments?.getBoolean("home") == true
+        app.penmoss.git.firstrun.NotebookSteps(
+            app.penmoss.git.firstrun.rememberFirstRunDeps(device),
+            firstRun = false,
+            onCancel = { nav.popBackStack() },
+            onDone = { localId ->
+                nav.popBackStack()
+                if (localId != null) {
+                    if (home) host.openNotebook(localId) else nav.open(SettingsRoutes.notebook(localId))
+                }
+            },
         )
     }
     composable(

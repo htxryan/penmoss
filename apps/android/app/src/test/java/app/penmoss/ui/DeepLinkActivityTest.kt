@@ -9,6 +9,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -22,7 +23,6 @@ import app.penmoss.PenmossApp
 import app.penmoss.TestGraphs
 import app.penmoss.data.NoteEntity
 import app.penmoss.git.GitNotebookActivity
-import app.penmoss.git.FIRST_RUN
 import app.penmoss.stopMainScope
 import app.penmoss.ui.keys.LauncherAction
 import app.penmoss.ui.keys.LauncherShortcuts
@@ -105,12 +105,18 @@ class DeepLinkActivityTest {
     fun theFirstRunAsksToAddOrCreateAGitNotebookAndNeverToSignIn() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         settle()
-        compose.onNodeWithTag("gitFirstRun").assertExists()
-        assertEquals(1, shown(FIRST_RUN))
-        compose.onNode(hasTestTag("gitAdd")).performScrollTo().assertExists()
+        // The first run's welcome (A1404 on Android), then Create or Open Notebook.
+        compose.waitUntil(5_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.onAllNodes(hasTestTag("first-run-welcome")).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertEquals(1, shown("Welcome to Penmoss"))
+        compose.onNode(hasTestTag("first-run-start")).performClick()
+        settle()
+        compose.onNodeWithTag("first-run-goal").assertExists()
         // No sign-in and no personal notes, anywhere on it.
         assertEquals(0, shown("Sign In", substring = true))
-        // (Add's "Personal access token" is GitHub's; no notebook or notes are named Personal.)
+        // (No notebook or notes are named Personal.)
         assertEquals(0, shown("Personal"))
         assertEquals(0, shown("Personal notes", substring = true))
         compose.onNodeWithTag("gitSignIn").assertDoesNotExist()
@@ -126,7 +132,7 @@ class DeepLinkActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             compose.onAllNodes(hasTestTag("gitNotebook-$work")).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("gitFirstRun").assertDoesNotExist()
+        compose.onNodeWithTag("first-run-welcome").assertDoesNotExist()
         // The row itself opens the notebook (PEN-146); its page is under Settings.
         compose.onNode(hasTestTag("gitNotebook-$work")).performScrollTo().assert(hasClickAction())
         assertEquals(0, shown("Sign In", substring = true))
