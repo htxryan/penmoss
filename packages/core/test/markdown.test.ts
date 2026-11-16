@@ -339,6 +339,34 @@ describe('serializeMarkdown', () => {
     expect(parseMarkdown(markdown).doc.textContent).toBe('x');
   });
 
+  // Found by the markdown property test (seed -163026838): after bold, italic is written with
+  // `_`; `~~` after a letter cannot open, so the letter before it is written as a reference, and
+  // the intraword `_` beside it then closed the italic early, moving the `_` to its end.
+  it('keeps an underscore beside a letter written as a reference next to a delimiter run', () => {
+    const italic = schema.marks.italic.create();
+    const strike = schema.marks.strike.create();
+    const code = schema.marks.code.create();
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('Q—', [schema.marks.bold.create()]),
+        schema.text('ab_N', [italic]),
+        schema.text('G', [italic, strike, code]),
+        schema.text('] x'),
+      ]),
+      schema.node('paragraph', null, [
+        schema.text('Q—', [schema.marks.bold.create()]),
+        schema.text('ab_N', [italic]),
+        schema.text('G', [italic, strike]),
+      ]),
+    ]);
+    const markdown = serializeMarkdown({ frontmatter: null, doc });
+    const parsed = parseMarkdown(markdown).doc;
+
+    expect(parsed.child(0).textContent).toBe('Q—ab_NG] x');
+    expect(parsed.eq(doc)).toBe(true);
+    expect(roundTrip(markdown)).toBe(markdown);
+  });
+
   it('escapes pipes in inline math in a table cell, so the cell keeps its formula', () => {
     const cell = (latex: string) =>
       schema.node('tableHeader', null, [schema.node('inlineMath', { latex })]);

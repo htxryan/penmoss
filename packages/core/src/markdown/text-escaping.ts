@@ -110,7 +110,41 @@ function escapeText(text: string, node: Text, state: State, info: Info): string 
     while (start > 0 && value[start - 1] === '=' && !isEscaped(value, start - 1)) start--;
     value = value.slice(0, start) + '\\='.repeat(value.length - start);
   }
-  return escapeOpenAutolink(escapeAsWritten(value, before, after), node);
+  return escapeOpenAutolink(
+    guardEncodedEdges(escapeAsWritten(value, before, after), before, after),
+    node,
+  );
+}
+
+/** The first characters of a delimiter run beside text: emphasis, strong, strikethrough, highlight. */
+const ATTENTION_MARKER = /^[*_~=]$/;
+
+/**
+ * to-markdown leaves an intraword `_` unescaped (`a_b` cannot open or close), but beside a
+ * delimiter run it may then write the text's first or last character as a reference so the run
+ * can open or close (`ab_N` + `~~` becomes `ab_&#x4E;~~`). The `_` then sits beside `&`, which
+ * is punctuation, and closes an enclosing `_` emphasis early (`_ab_&#x4E;~~…~~_`). So a `_` run
+ * next to an edge character that touches a delimiter run is escaped (A1600).
+ */
+function guardEncodedEdges(value: string, before: string, after: string): string {
+  // Each bare `_` in value[from, to) is escaped; one escaped by the backslash before it stays.
+  const escapeRun = (from: number, to: number) => {
+    let run = '';
+    for (let index = from; index < to; index++) run += isEscaped(value, index) ? '_' : '\\_';
+    return value.slice(0, from) + run + value.slice(to);
+  };
+  if (ATTENTION_MARKER.test(after)) {
+    const match = /(_+)(?:\p{L}|\p{N})$/u.exec(value);
+    if (match) value = escapeRun(match.index, match.index + match[1]!.length);
+  }
+  if (ATTENTION_MARKER.test(before)) {
+    const match = /^(?:\p{L}|\p{N})(_+)/u.exec(value);
+    if (match) {
+      const from = match[0].length - match[1]!.length;
+      value = escapeRun(from, match[0].length);
+    }
+  }
+  return value;
 }
 
 const EMAIL_LOCAL_PART = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@/;
