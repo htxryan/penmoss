@@ -28,7 +28,7 @@ The phone syncs over HTTPS; SSH is not supported on Android.
 
 For a repository on another host, choose **Paste a URL** instead: its HTTPS address, a token for it, and under **More Options** the **Branch** and **Folder**.
 
-To make a new notebook from the phone, choose **Start a New Notebook**: **Create New Repo** makes a private repository on GitHub for it. Later, **+ Add Notebook** on the first screen or in **Settings → All Notebooks** shows the same steps.
+To make a new notebook from the phone, choose **Start a New Notebook**: **Create New Repo** makes a private repository on GitHub for it. Later, **+ Add Notebook** on the first screen or in **Settings → All Notebooks** shows the same steps. To add a notebook from another GitHub account, such as a work one, choose **Add Another Account** when it asks which account (or **Switch GitHub Account** on the list of repositories); each notebook syncs as the account you added it with. See [GitHub on Android](/docs/install/android/#github).
 
 When the token expires, the notebook stops syncing and says why. Save a new one on the notebook's **Git** tab in Settings (**Save Token**).
 

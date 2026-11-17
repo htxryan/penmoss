@@ -103,7 +103,9 @@ Removing a notebook, Delete for Good and restoring a version first ask for your 
 
 ## GitHub
 
-**Settings → GitHub** shows the GitHub account the phone is signed in to, with **Sign Out**. **Sign In with GitHub** shows a code to enter at github.com/login/device; **Use a Token Instead…** takes a personal access token. The account is used for **Send Feedback**, and to list and create repositories when you add a notebook; a notebook added that way syncs with its token. A notebook's own token is on its **Git** tab.
+**Settings → GitHub** lists the GitHub accounts the phone is signed in to. The phone can keep several, such as a personal account and a work one. **Sign In with GitHub** (or **Add Account**, once there is one) shows a code: **Copy Code and Open GitHub** copies it and opens github.com/login/device, where you paste it. GitHub signs in whichever account its page shows at the top right, so to add a work account, switch to it there first. **Use a Token Instead…** takes a personal access token. Each account's **⋮** has **Sign Out** and, but for the first, **Use for Send Feedback**.
+
+The first account files **Send Feedback**. Adding a notebook lists an account's repositories: with two accounts or more, **Pick GitHub Account** asks which (or **Add Another Account**), and **Switch GitHub Account** on the list of repositories goes back to it. A notebook keeps a copy of the token of the account you added it with and syncs as that account, so signing out of an account doesn't stop its notebooks. A notebook's own token is on its **Git** tab.
 
 ## What's new
 

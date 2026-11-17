@@ -52,6 +52,10 @@ class FirstRunDeps(
     val login: () -> String?,
     /** Keeps a token typed here as the phone's GitHub sign-in. */
     val saveToken: (token: String, login: String?) -> Unit,
+    /** Every GitHub account on the phone, the primary first (A1616). */
+    val accounts: () -> List<app.penmoss.feedback.GitHubAccount> = { if (token() != null) listOf(app.penmoss.feedback.GitHubAccount(login(), primary = true)) else emptyList() },
+    /** One account's token, by its login. */
+    val tokenFor: (login: String?) -> String? = { token() },
     /** Sign In with GitHub (the device code); null where this build can't. */
     val signIn: GitHubDeviceSignIn?,
     /** Adds the notebook at [Place] (made when [name] is given and the place holds none). */
@@ -71,6 +75,8 @@ class FirstRunDeps(
                 token = graph.githubToken::token,
                 login = graph.githubToken::login,
                 saveToken = graph.githubToken::save,
+                accounts = graph.githubToken::accounts,
+                tokenFor = graph.githubToken::tokenFor,
                 signIn = graph.githubSignIn.takeIf { it.available },
                 add = { place, name -> hub.add(place.remote, place.branch, place.dir, name, place.token) },
                 added = { hub.list.value.map { it.notebookId }.toSet() },
@@ -221,8 +227,10 @@ fun NotebookSteps(
                 deps,
                 onReady = { answer ->
                     hub = answer
+                    reads.clear()
                     replace(if (screen.then == AfterGitHub.CREATE) Screen.Create else Screen.List)
                 },
+                choose = screen.choose,
                 onUrl = { replace(Screen.Url) },
                 back = ::back,
             )
@@ -251,6 +259,8 @@ fun NotebookSteps(
                         hub = null
                         replace(Screen.GitHub(AfterGitHub.LIST))
                     },
+                    // Another GitHub account's repositories (A1616): pick one, or add one.
+                    onSwitch = { replace(Screen.GitHub(AfterGitHub.LIST, choose = true)) },
                     back = ::back,
                 )
             }

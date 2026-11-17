@@ -151,7 +151,7 @@ private fun StepBar(step: Int) {
  * button here has one, and none wraps: its words stay on one line.
  */
 @Composable
-private fun ButtonIcon(name: String) {
+internal fun ButtonIcon(name: String) {
     val icon = rememberLucideIcons()?.icon(name)
     if (icon != null) {
         Icon(LucideAssets.vector(icon), contentDescription = null, Modifier.size(18.dp))

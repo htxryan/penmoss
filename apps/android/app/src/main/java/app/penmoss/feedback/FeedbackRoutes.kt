@@ -10,6 +10,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -61,11 +63,10 @@ object FeedbackRoutes {
     /** Settings → GitHub → Use a Token Instead… (A1012). */
     const val GITHUB_TOKEN = "settings/github/token"
 
-    /** What Settings' GitHub row says (PEN-146): the account, or how to add one. */
-    fun tokenSummary(saved: Boolean, login: String?): String = when {
-        !saved -> "Not signed in"
-        login != null -> login
-        else -> "Signed in"
+    /** What Settings' GitHub row says (PEN-146): the accounts (A1616), or that there are none. */
+    fun tokenSummary(logins: List<String?>): String = when {
+        logins.isEmpty() -> "Not signed in"
+        else -> logins.joinToString(", ") { it ?: "Signed in" }
     }
 }
 
@@ -134,22 +135,22 @@ private fun sizeOf(context: Context, uri: Uri): Long? = runCatching {
 }.getOrNull()
 
 /**
- * Settings → GitHub (PEN-146; replaces About, A1012): the GitHub account this phone uses, with Sign
- * Out; Sign In with GitHub (GitHub's device flow, [signIn]) or Use a Token Instead…; what the
- * account is used for, Send Feedback opening the form; and the feedback still on the phone
- * ([outbox], A1046). The version is on What's New alone.
+ * Settings → GitHub (PEN-146; replaces About, A1012): the GitHub accounts this phone uses (several
+ * since A1616: a work account beside a personal one), each with Sign Out and, beside the first,
+ * Use for Send Feedback; Add Account (GitHub's device flow, [signIn], its code shown before GitHub's
+ * page opens) or Use a Token Instead…; what the accounts are used for, Send Feedback opening the
+ * form; and the feedback still on the phone ([outbox], A1046). The version is on What's New alone.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GitHubScreen(
-    /** The account's login, or null; [signedIn] without a login is a token GitHub did not name. */
-    login: String?,
-    signedIn: Boolean,
+    /** The accounts, the primary (Send Feedback's) first. */
+    accounts: List<GitHubAccount>,
     signIn: SignInState,
     canSignIn: Boolean,
     onSignIn: () -> Unit,
     onCancelSignIn: () -> Unit,
-    onSignOut: () -> Unit,
+    onSignOut: (login: String?) -> Unit,
     onToken: () -> Unit,
     onBack: () -> Unit,
     repo: String = "htxryan/penmoss",
@@ -157,30 +158,73 @@ fun GitHubScreen(
     onSendFeedback: (() -> Unit)? = null,
     /** The feedback outbox ([FeedbackOutboxRoute]): nothing while it is empty. */
     outbox: @Composable () -> Unit = {},
+    /** Makes an account the primary one: Send Feedback files with it. */
+    onMakePrimary: (login: String?) -> Unit = {},
+    /** Copies the waiting code and opens GitHub's page for it. */
+    onOpenGitHub: (code: String, uri: String) -> Unit = { _, _ -> },
 ) {
-    var signingOut by rememberSaveable { mutableStateOf(false) }
+    var signingOut by rememberSaveable { mutableStateOf<String?>(null) }
+    val named = { login: String? -> login?.let { "@$it" } ?: "Token (Account Not Named)" }
     Scaffold(topBar = { TopAppBar(title = { Text("GitHub") }, navigationIcon = { BackButton(onBack) }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
-            if (signedIn) {
-                ListItem(
-                    modifier = Modifier.settingRow("github"),
-                    headlineContent = { Text(login ?: "Signed in", Modifier.testTag("githubLogin")) },
-                    supportingContent = { Text("Signed in with GitHub · kept on this phone, encrypted by the Android Keystore") },
-                    trailingContent = { TextButton(onClick = { signingOut = true }, Modifier.testTag("githubSignOut")) { Text("Sign Out") } },
-                )
-            } else {
+            if (accounts.isEmpty()) {
                 ListItem(
                     modifier = Modifier.settingRow("github"),
                     headlineContent = { Text("Not signed in", Modifier.testTag("githubLogin")) },
-                    supportingContent = { Text("Sign in so Send Feedback can file issues in $repo.") },
+                    supportingContent = { Text("Sign in so Send Feedback can file issues in $repo, and to pick repositories when adding a notebook.") },
+                )
+            }
+            for ((at, account) in accounts.withIndex()) {
+                var menu by remember { mutableStateOf(false) }
+                val key = account.login.orEmpty()
+                ListItem(
+                    modifier = (if (at == 0) Modifier.settingRow("github") else Modifier).testTag("githubAccount-$key"),
+                    headlineContent = { Text(account.login ?: "Signed in", Modifier.testTag(if (account.primary) "githubLogin" else "githubLogin-$key")) },
+                    supportingContent = {
+                        Text(if (account.primary) "Send Feedback uses it · kept on this phone, encrypted by the Android Keystore" else "Kept on this phone, encrypted by the Android Keystore")
+                    },
+                    trailingContent = {
+                        Box {
+                            app.penmoss.ui.common.TipIconButton(
+                                androidx.compose.material.icons.Icons.Default.MoreVert,
+                                "Options for ${named(account.login)}",
+                                onClick = { menu = true },
+                                modifier = Modifier.testTag("githubAccountMenu-$key"),
+                            )
+                            androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                if (!account.primary) {
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text("Use for Send Feedback") },
+                                        onClick = { menu = false; onMakePrimary(account.login) },
+                                        modifier = Modifier.testTag("githubMakePrimary"),
+                                    )
+                                }
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Sign Out") },
+                                    onClick = { menu = false; signingOut = key },
+                                    modifier = Modifier.testTag("githubSignOut"),
+                                )
+                            }
+                        }
+                    },
                 )
             }
             when (signIn) {
                 is SignInState.Waiting -> Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("githubSignInWaiting")) {
                     Text("Enter this code on GitHub:", style = MaterialTheme.typography.bodyMedium)
                     Text(signIn.userCode, Modifier.testTag("githubUserCode"), style = MaterialTheme.typography.headlineSmall)
-                    Text("at ${signIn.verificationUri}. Penmoss waits here until you approve it.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = onCancelSignIn, Modifier.testTag("githubSignInCancel")) { Text("Cancel") }
+                    Text(
+                        "at ${signIn.verificationUri}. Penmoss waits here until you approve it." +
+                            if (accounts.isNotEmpty()) " To add another account, check the one GitHub’s page shows at the top right, and switch there if it isn’t it." else "",
+                        Modifier.testTag("githubSignInHint"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // The code first, then GitHub's page (Ryan's Android feedback, 15 Nov 2026).
+                        app.penmoss.ui.common.Button(onClick = { onOpenGitHub(signIn.userCode, signIn.verificationUri) }, Modifier.testTag("githubSignInOpen")) { Labelled("external-link", "Copy Code and Open GitHub") }
+                        TextButton(onClick = onCancelSignIn, Modifier.testTag("githubSignInCancel")) { Labelled("x", "Cancel") }
+                    }
                 }
                 else -> {
                     signInWords(signIn)?.let {
@@ -193,9 +237,19 @@ fun GitHubScreen(
                     }
                     Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (canSignIn) {
-                            app.penmoss.ui.common.Button(onClick = onSignIn, Modifier.testTag("githubSignIn")) { Text(if (signedIn) "Sign In Again" else "Sign In with GitHub") }
+                            app.penmoss.ui.common.Button(onClick = onSignIn, Modifier.testTag("githubSignIn")) {
+                                if (accounts.isEmpty()) Labelled("log-in", "Sign In with GitHub") else Labelled("user-plus", "Add Account")
+                            }
                         }
-                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.settingRow("github-token").testTag("githubUseToken")) { Text("Use a Token Instead…") }
+                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.settingRow("github-token").testTag("githubUseToken")) { Labelled("key-round", "Use a Token Instead…") }
+                    }
+                    if (accounts.isNotEmpty()) {
+                        Text(
+                            "Add Account signs in to another GitHub account, such as a work one, beside these. Signing in as one already here renews it.",
+                            Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("githubAddHelp"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -206,10 +260,14 @@ fun GitHubScreen(
                 color = MaterialTheme.colorScheme.primary,
             )
             ListItem(
+                headlineContent = { Text("Add Notebook") },
+                supportingContent = { Text("Lists each account’s repositories. A notebook keeps a copy of the token of the account it was added with, so it syncs as that account.") },
+            )
+            ListItem(
                 headlineContent = { Text("Send Feedback") },
                 supportingContent = {
                     Text(
-                        "Opens issues in $repo: a bug report or a feature request, with where you are in the app and the note’s details, never its text." +
+                        "Opens issues in $repo with the first account: a bug report or a feature request, with where you are in the app and the note’s details, never its text." +
                             if (onSendFeedback == null) " Send it from a notebook’s ⋮ menu." else "",
                     )
                 },
@@ -217,7 +275,7 @@ fun GitHubScreen(
                 modifier = (if (onSendFeedback != null) Modifier.clickable(role = Role.Button, onClick = onSendFeedback) else Modifier).settingRow("send-feedback").testTag("githubSendFeedback"),
             )
             Text(
-                "A notebook’s own repository uses the token typed on its Git tab.",
+                "A notebook’s own repository uses the token typed on its Git tab, or the account it was added with.",
                 Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -225,20 +283,35 @@ fun GitHubScreen(
             outbox()
         }
     }
-    if (signingOut) {
+    signingOut?.let { key ->
+        val account = accounts.firstOrNull { it.login.orEmpty() == key }
         AlertDialog(
-            onDismissRequest = { signingOut = false },
-            title = { Text("Sign Out of GitHub?") },
-            text = { Text("This phone forgets the account. Feedback waits on the phone until you sign in again; your notebooks keep their own tokens.") },
+            onDismissRequest = { signingOut = null },
+            title = { Text("Sign Out of ${named(account?.login)}?") },
+            text = {
+                Text(
+                    "This phone forgets the account; notebooks added with it keep their own copy and keep syncing." +
+                        if (account?.primary == true) {
+                            if (accounts.size > 1) " Send Feedback moves to ${named(accounts[1].login)}." else " Feedback waits on the phone until you sign in again."
+                        } else "",
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    signingOut = false
-                    onSignOut()
+                    signingOut = null
+                    onSignOut(account?.login)
                 }, Modifier.testTag("githubSignOutConfirm")) { Text("Sign Out") }
             },
-            dismissButton = { TextButton(onClick = { signingOut = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { signingOut = null }) { Text("Cancel") } },
         )
     }
+}
+
+/** A button's icon and words on one line (every button has an icon, and never wraps). */
+@Composable
+private fun Labelled(icon: String, words: String) {
+    app.penmoss.git.firstrun.ButtonIcon(icon)
+    Text(words, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
 }
 
 /** What the screen says of a sign-in that has ended, in plain words; null with nothing to say. */

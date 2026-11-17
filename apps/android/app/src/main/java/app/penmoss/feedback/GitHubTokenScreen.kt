@@ -39,8 +39,8 @@ class GitHubTokenModel(
     private val check: suspend (String) -> TokenCheck,
     private val repo: String,
 ) {
-    /** What Save came to: the words said, and whether the token was kept. */
-    data class Saved(val kept: Boolean, val message: String)
+    /** What Save came to: the words said, whether the token was kept, and as whose account. */
+    data class Saved(val kept: Boolean, val message: String, val login: String? = null)
 
     suspend fun save(candidate: String): Saved {
         val token = candidate.trim()
@@ -48,7 +48,9 @@ class GitHubTokenModel(
         return when (val found = check(token)) {
             is TokenCheck.Ok -> {
                 store.save(token, found.login)
-                Saved(true, "Saved. ${found.login?.let { "GitHub knows it as @$it, and it" } ?: "It"} can open issues in $repo. Feedback waiting on this phone is sent now.")
+                // Another account beside the primary (A1616) files no feedback: say only whose it is.
+                if (!isPrimary(found.login)) Saved(true, addedAccount(found.login), found.login)
+                else Saved(true, "Saved. ${found.login?.let { "GitHub knows it as @$it, and it" } ?: "It"} can open issues in $repo. Feedback waiting on this phone is sent now.", found.login)
             }
             is TokenCheck.Problem -> when (found.problem) {
                 // Not kept: it would never file anything.
@@ -56,7 +58,7 @@ class GitHubTokenModel(
                 // Kept: its permissions can be changed on GitHub without a new token.
                 TokenCheck.CANNOT_FILE -> {
                     store.save(token, found.login)
-                    Saved(true, "Saved${found.login?.let { " (@$it)" }.orEmpty()}, but: ${found.message}")
+                    Saved(true, savedButCannotFile(found.login, found.message), found.login)
                 }
                 else -> {
                     store.save(token, found.login)
@@ -65,6 +67,14 @@ class GitHubTokenModel(
             }
         }
     }
+
+    private fun isPrimary(login: String?) = store.login() == login
+
+    private fun addedAccount(login: String?) = "Added ${login?.let { "@$it" } ?: "the account"} beside your other GitHub account."
+
+    /** A token that can't file feedback: that matters only for the primary account (A1616). */
+    private fun savedButCannotFile(login: String?, message: String) =
+        if (!isPrimary(login)) addedAccount(login) else "Saved${login?.let { " (@$it)" }.orEmpty()}, but: $message"
 
     fun remove(): String {
         store.clear()

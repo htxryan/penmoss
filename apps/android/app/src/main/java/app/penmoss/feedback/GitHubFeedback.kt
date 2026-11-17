@@ -82,43 +82,133 @@ object GitHubTokenMessages {
         "This GitHub token cannot open issues in $repo. Use a classic token with the public_repo scope or, as a collaborator, a fine-grained token with Issues and Contents (read and write) on $repo."
 }
 
+/** One GitHub account the phone is signed in to (A1616): its login, when GitHub named it. */
+data class GitHubAccount(val login: String?, val primary: Boolean)
+
 /**
- * The person's GitHub token (A1012): sealed by the Keystore, in preferences of its own that
- * signing out never clears, with the account it belongs to (not a secret) once checked.
+ * The person's GitHub accounts (A1012; several since A1616): each token sealed by the Keystore, in
+ * preferences of their own that signing out never clears, with the account it belongs to (not a
+ * secret) once checked. The primary account is the one Send Feedback files with and Add Notebook
+ * offers first; others (a work account beside a personal one) are kept beside it, by login. A
+ * notebook added with an account keeps its own copy of that account's token, so forgetting an
+ * account here never stops a notebook syncing.
  */
 class GitHubTokenStore(private val prefs: SharedPreferences, private val box: SecretBox) {
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
-    fun token(): String? {
-        val sealed = prefs.getString(TOKEN, null) ?: return null
-        // A key lost with a restore or a keystore reset: the token is gone, enter it again.
-        return runCatching { String(box.open(fromHex(sealed)), Charsets.UTF_8) }.getOrNull()?.takeIf { it.isNotEmpty() }
-    }
+    /** The primary account's token: Send Feedback's. */
+    fun token(): String? = prefs.getString(TOKEN, null)?.let(::open)
 
     val hasToken: Boolean get() = prefs.contains(TOKEN)
 
-    /** The GitHub account the saved token signs in as, when the check could say. */
+    /** The GitHub account the primary token signs in as, when the check could say. */
     fun login(): String? = prefs.getString(LOGIN, null)
 
-    fun save(token: String, login: String?) {
-        prefs.edit {
-            putString(TOKEN, toHex(box.seal(token.toByteArray(Charsets.UTF_8))))
-            if (login != null) putString(LOGIN, login) else remove(LOGIN)
-        }
-        listeners.forEach { runCatching { it() } }
+    /** Every account, the primary first. */
+    fun accounts(): List<GitHubAccount> =
+        (if (hasToken) listOf(GitHubAccount(login(), primary = true)) else emptyList()) + othersSealed().map { GitHubAccount(it.first, primary = false) }
+
+    /** The token of the account named [login] (null: the one GitHub did not name), or null. */
+    fun tokenFor(login: String?): String? {
+        if (hasToken && login() == login) return token()
+        return othersSealed().firstOrNull { it.first == login }?.second?.let(::open)
     }
 
+    /**
+     * Keeps [token] as [login]'s: the primary's when there is none or it is the same account (a
+     * sign-in again replaces it), else beside the others, replacing that account's own.
+     */
+    fun save(token: String, login: String?) {
+        val sealed = toHex(box.seal(token.toByteArray(Charsets.UTF_8)))
+        if (!hasToken || login() == login) {
+            prefs.edit {
+                putString(TOKEN, sealed)
+                if (login != null) putString(LOGIN, login) else remove(LOGIN)
+            }
+        } else {
+            writeOthers(othersSealed().filterNot { it.first == login } + (login to sealed))
+        }
+        changed()
+    }
+
+    /** Forgets [login]'s account; the next one becomes primary when it was the primary. */
+    fun remove(login: String?) {
+        if (hasToken && login() == login) {
+            val rest = othersSealed()
+            val next = rest.firstOrNull()
+            prefs.edit {
+                if (next == null) {
+                    remove(TOKEN)
+                    remove(LOGIN)
+                } else {
+                    putString(TOKEN, next.second)
+                    if (next.first != null) putString(LOGIN, next.first) else remove(LOGIN)
+                }
+            }
+            writeOthers(rest.drop(1))
+        } else {
+            writeOthers(othersSealed().filterNot { it.first == login })
+        }
+        changed()
+    }
+
+    /** Makes [login]'s account the primary, the old primary kept among the others. */
+    fun makePrimary(login: String?) {
+        if (!hasToken || login() == login) return
+        val chosen = othersSealed().firstOrNull { it.first == login } ?: return
+        val old = login() to prefs.getString(TOKEN, null)!!
+        prefs.edit {
+            putString(TOKEN, chosen.second)
+            if (chosen.first != null) putString(LOGIN, chosen.first) else remove(LOGIN)
+        }
+        writeOthers(listOf(old) + othersSealed().filterNot { it.first == login })
+        changed()
+    }
+
+    /** Forgets every account. */
     fun clear() {
         prefs.edit {
             remove(TOKEN)
             remove(LOGIN)
+            remove(OTHERS)
         }
-        listeners.forEach { runCatching { it() } }
+        changed()
     }
 
-    /** Told when the token is saved or removed. */
+    /** Told when an account is saved or removed. */
     fun onChange(listener: () -> Unit) {
         listeners += listener
+    }
+
+    private fun changed() = listeners.forEach { runCatching { it() } }
+
+    // A key lost with a restore or a keystore reset: the token is gone, enter it again.
+    private fun open(sealed: String): String? =
+        runCatching { String(box.open(fromHex(sealed)), Charsets.UTF_8) }.getOrNull()?.takeIf { it.isNotEmpty() }
+
+    /** The other accounts, login to sealed token, in the order they were added. */
+    private fun othersSealed(): List<Pair<String?, String>> {
+        val text = prefs.getString(OTHERS, null) ?: return emptyList()
+        return runCatching {
+            Json.parseToJsonElement(text).let { it as JsonArray }.mapNotNull { item ->
+                val entry = item as? JsonObject ?: return@mapNotNull null
+                val token = (entry["token"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+                (entry["login"] as? JsonPrimitive)?.takeIf { it.isString }?.content to token
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun writeOthers(list: List<Pair<String?, String>>) {
+        prefs.edit {
+            if (list.isEmpty()) {
+                remove(OTHERS)
+            } else {
+                putString(
+                    OTHERS,
+                    JsonArray(list.map { (login, token) -> buildJsonObject { put("login", login?.let(::JsonPrimitive) ?: JsonNull); put("token", token) } }).toString(),
+                )
+            }
+        }
     }
 
     companion object {
@@ -126,6 +216,9 @@ class GitHubTokenStore(private val prefs: SharedPreferences, private val box: Se
         const val PREFS = "penmoss.github-token"
         private const val TOKEN = "token"
         private const val LOGIN = "login"
+
+        /** The accounts beside the primary (A1616): a JSON list of login and sealed token. */
+        private const val OTHERS = "others"
 
         private fun toHex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it) }
 

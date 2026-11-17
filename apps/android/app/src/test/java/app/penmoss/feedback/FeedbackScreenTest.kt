@@ -307,24 +307,28 @@ class FeedbackScreenTest {
     @Test
     fun gitHubShowsTheAccountSignsOutOnceConfirmedAndSendsFeedback() {
         var opened = 0
-        var signedOut = 0
+        val signedOut = mutableListOf<String?>()
         var token = 0
         compose.setContent {
             PenmossTheme {
                 GitHubScreen(
-                    login = "htxryan", signedIn = true, signIn = SignInState.Idle, canSignIn = true,
-                    onSignIn = {}, onCancelSignIn = {}, onSignOut = { signedOut++ }, onToken = { token++ }, onBack = {},
+                    accounts = listOf(GitHubAccount("htxryan", primary = true)), signIn = SignInState.Idle, canSignIn = true,
+                    onSignIn = {}, onCancelSignIn = {}, onSignOut = { signedOut += it }, onToken = { token++ }, onBack = {},
                     onSendFeedback = { opened++ },
                 )
             }
         }
         compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("htxryan")
         compose.onNodeWithText("Used For").assertIsDisplayed()
-        compose.onNodeWithTag("githubSignIn").assertTextEquals("Sign In Again")
+        compose.onNodeWithTag("githubSignIn").assertTextEquals("Add Account")
+        // The only account has no Use for Send Feedback: it is already the one.
+        compose.onNodeWithTag("githubAccountMenu-htxryan").performClick()
+        compose.onNodeWithTag("githubMakePrimary").assertDoesNotExist()
         compose.onNodeWithTag("githubSignOut").performClick()
-        assertEquals(0, signedOut)
+        assertEquals(emptyList<String?>(), signedOut)
+        compose.onNodeWithText("Feedback waits on the phone until you sign in again.", substring = true).assertIsDisplayed()
         compose.onNodeWithTag("githubSignOutConfirm").performClick()
-        assertEquals(1, signedOut)
+        assertEquals(listOf<String?>("htxryan"), signedOut)
         compose.onNodeWithTag("githubUseToken").performClick()
         assertEquals(1, token)
         compose.onNodeWithTag("githubSendFeedback").performScrollTo()
@@ -334,22 +338,57 @@ class FeedbackScreenTest {
         compose.onNodeWithText("Version", substring = true).assertDoesNotExist()
     }
 
+    /** Several accounts (A1616): a work one beside a personal one, either for Send Feedback, each signed out alone. */
+    @Test
+    fun gitHubListsEachAccountAndMovesSendFeedbackBetweenThem() {
+        var accounts by mutableStateOf(listOf(GitHubAccount("htxryan", primary = true), GitHubAccount("ryan-work", primary = false)))
+        val signedOut = mutableListOf<String?>()
+        val primaries = mutableListOf<String?>()
+        compose.setContent {
+            PenmossTheme {
+                GitHubScreen(
+                    accounts = accounts, signIn = SignInState.Idle, canSignIn = true,
+                    onSignIn = {}, onCancelSignIn = {}, onSignOut = { signedOut += it }, onToken = {}, onBack = {},
+                    onMakePrimary = { primaries += it },
+                )
+            }
+        }
+        compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("htxryan")
+        compose.onNodeWithTag("githubLogin-ryan-work", useUnmergedTree = true).assertTextEquals("ryan-work")
+        compose.onNodeWithTag("githubAddHelp").assertIsDisplayed()
+        compose.onNodeWithTag("githubAccountMenu-ryan-work").performClick()
+        compose.onNodeWithTag("githubMakePrimary").performClick()
+        assertEquals(listOf<String?>("ryan-work"), primaries)
+        // Signing out of the first says where Send Feedback goes.
+        compose.onNodeWithTag("githubAccountMenu-htxryan").performClick()
+        compose.onNodeWithTag("githubSignOut").performClick()
+        compose.onNodeWithText("Send Feedback moves to @ryan-work.", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag("githubSignOutConfirm").performClick()
+        assertEquals(listOf<String?>("htxryan"), signedOut)
+    }
+
     /** Sign In with GitHub (PEN-146): the code to enter while it waits, with Cancel; how it ended, after. */
     @Test
     fun signInShowsTheCodeWhileItWaitsAndHowItEnded() {
         var state by mutableStateOf<SignInState>(SignInState.Waiting("WDJB-MJHT", "https://github.com/login/device", expiresAt = 0))
         var cancelled = 0
+        val opened = mutableListOf<Pair<String, String>>()
         compose.setContent {
             PenmossTheme {
                 GitHubScreen(
-                    login = null, signedIn = false, signIn = state, canSignIn = true,
+                    accounts = emptyList(), signIn = state, canSignIn = true,
                     onSignIn = {}, onCancelSignIn = { cancelled++ }, onSignOut = {}, onToken = {}, onBack = {},
+                    onOpenGitHub = { code, uri -> opened += code to uri },
                 )
             }
         }
         compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("Not signed in")
         compose.onNodeWithTag("githubUserCode").assertTextEquals("WDJB-MJHT")
         compose.onNodeWithTag("githubSignIn").assertDoesNotExist()
+        // The code shows first; GitHub's page opens only on the button (17 Nov 2026).
+        assertEquals(emptyList<Pair<String, String>>(), opened)
+        compose.onNodeWithTag("githubSignInOpen").performClick()
+        assertEquals(listOf("WDJB-MJHT" to "https://github.com/login/device"), opened)
         compose.onNodeWithTag("githubSignInCancel").performClick()
         assertEquals(1, cancelled)
         state = SignInState.Denied

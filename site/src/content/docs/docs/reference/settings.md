@@ -152,7 +152,7 @@ Open Settings from the **☰** menu. Each screen's title is large at the top and
 | Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits From This Phone**, the signing key and background sync |
 | Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                              |
 | This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                       |
-| This Phone    | GitHub             | **Sign In with GitHub** (or a token), and what the account is used for, such as **Send Feedback**                                  |
+| This Phone    | GitHub             | Your GitHub accounts (**Add Account**, or a token), and what they are used for, such as **Send Feedback**                          |
 | This Phone    | What’s New         | The version, open source notices, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))    |
 
 ## For a notebook, from the CLI or an agent

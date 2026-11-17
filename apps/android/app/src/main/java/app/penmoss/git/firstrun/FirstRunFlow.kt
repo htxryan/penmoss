@@ -52,7 +52,8 @@ sealed interface Screen {
     data object Welcome : Screen
     data object Goal : Screen
     data object Way : Screen
-    data class GitHub(val then: AfterGitHub) : Screen
+    /** GitHub Access; [choose] asks which account even with one (Switch Account, A1616). */
+    data class GitHub(val then: AfterGitHub, val choose: Boolean = false) : Screen
     data object Create : Screen
     data object List : Screen
     data class Repo(val repo: GitHubRepo) : Screen

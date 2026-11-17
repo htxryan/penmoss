@@ -176,6 +176,7 @@ internal fun RepoTree(
     onCreate: (() -> Unit)?,
     onRefresh: () -> Unit,
     back: () -> Unit,
+    onSwitch: () -> Unit = {},
 ) {
     val repos = hub.list.repos
     var filter by remember { mutableStateOf("") }
@@ -192,6 +193,8 @@ internal fun RepoTree(
             )
             Link("Refresh", "first-run-refresh", "refresh-cw", onRefresh)
         }
+        // A work account's repositories beside a personal one's (A1616).
+        Link("Switch GitHub Account", "first-run-switch-account", "users", onSwitch)
     }
     if (repos.isEmpty()) {
         Frame(

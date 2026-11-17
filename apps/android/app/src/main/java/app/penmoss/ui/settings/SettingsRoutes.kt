@@ -243,7 +243,7 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
     val daily = primary?.settings?.collectAsStateWithLifecycle()?.value
     var storage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(views.size) { storage = formatBytes(storageUse(device).total) }
-    val github = FeedbackRoutes.tokenSummary(device.githubToken.hasToken, device.githubToken.login())
+    val github = FeedbackRoutes.tokenSummary(device.githubToken.accounts().map { it.login })
     SettingsHome(
         settingsGroups(
             state.settings,
@@ -460,38 +460,43 @@ internal fun WhatsNewRoute(onBack: () -> Unit) {
     )
 }
 
-/** Settings → GitHub (PEN-146): the account, Sign In with GitHub, a token instead, and the outbox. */
+/**
+ * Settings → GitHub (PEN-146): the accounts (several since A1616), Add Account with GitHub's code
+ * shown before its page opens, a token instead, and the outbox.
+ */
 @Composable
 internal fun GitHubRoute(host: SettingsHost, onToken: () -> Unit, onFeedbackForm: () -> Unit, onBack: () -> Unit) {
     val device = host.device
     val store = device.githubToken
     val signIn by device.githubSignIn.state.collectAsStateWithLifecycle()
-    var saved by remember { mutableStateOf(store.hasToken) }
-    var login by remember { mutableStateOf(store.login()) }
+    var accounts by remember { mutableStateOf(store.accounts()) }
     // Read again as a sign-in ends, and back from the token's screen.
-    LaunchedEffect(signIn) {
-        saved = store.hasToken
-        login = store.login()
-    }
+    LaunchedEffect(signIn) { accounts = store.accounts() }
     val scope = rememberCoroutineScope()
     app.penmoss.feedback.GitHubScreen(
-        login = login,
-        signedIn = saved,
+        accounts = accounts,
         signIn = signIn,
         canSignIn = device.githubSignIn.available,
-        onSignIn = {
-            device.githubSignIn.start(device.scope) { uri ->
+        // The code shows first; Copy Code and Open GitHub opens the page (Ryan's feedback, 17 Nov 2026).
+        onSignIn = { device.githubSignIn.start(device.scope) },
+        onOpenGitHub = { code, uri ->
+            host.context.getSystemService(android.content.ClipboardManager::class.java)
+                ?.setPrimaryClip(android.content.ClipData.newPlainText("GitHub code", code))
+            runCatching {
                 host.context.startActivity(
                     android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }
         },
         onCancelSignIn = device.githubSignIn::cancel,
-        onSignOut = {
-            store.clear()
+        onSignOut = { login ->
+            store.remove(login)
             device.githubSignIn.reset()
-            saved = store.hasToken
-            login = store.login()
+            accounts = store.accounts()
+        },
+        onMakePrimary = { login ->
+            store.makePrimary(login)
+            accounts = store.accounts()
         },
         onToken = onToken,
         onBack = {
