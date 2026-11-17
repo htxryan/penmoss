@@ -129,7 +129,7 @@ class GitHubDeviceSignIn(
                 val token = answer.text("access_token")
                 if (!token.isNullOrEmpty()) {
                     val kept = keep(token)
-                    _state.value = if (kept.kept) SignInState.SignedIn(null, kept.message) else SignInState.Failed(kept.message)
+                    _state.value = if (kept.kept) SignInState.SignedIn(kept.login, kept.message) else SignInState.Failed(kept.message)
                     return@launch
                 }
                 when (answer.text("error")) {

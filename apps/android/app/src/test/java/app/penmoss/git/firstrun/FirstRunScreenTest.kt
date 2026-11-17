@@ -71,10 +71,17 @@ class FirstRunScreenTest {
         }
     })
 
-    private fun deps(token: String?, answer: (Place, String?) -> AddResult) = FirstRunDeps(
+    private fun deps(
+        token: String?,
+        accounts: List<app.penmoss.feedback.GitHubAccount>? = null,
+        tokens: Map<String?, String> = emptyMap(),
+        answer: (Place, String?) -> AddResult,
+    ) = FirstRunDeps(
         browse = github,
         token = { token },
         login = { "ryan" },
+        accounts = { accounts ?: if (token != null) listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true)) else emptyList() },
+        tokenFor = { login -> tokens[login] ?: token },
         saveToken = { _, _ -> },
         signIn = null,
         add = { place, name ->
@@ -180,6 +187,43 @@ class FirstRunScreenTest {
         compose.onNodeWithText("Couldn’t Finish Setting Up").assertExists()
         tap("first-run-open-anyway")
         assertEquals(localId, done)
+    }
+
+    /** Two GitHub accounts (A1616): Add Notebook asks which, reads that one's repositories, and can switch or add another. */
+    @Test
+    fun withTwoAccountsAddNotebookAsksWhichAndCanSwitchOrAddAnother() {
+        val accounts = listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true), app.penmoss.feedback.GitHubAccount("ryan-work", primary = false))
+        show(deps("tok", accounts, mapOf("ryan" to "tok", "ryan-work" to "tok-work")) { _, name -> if (name == null) AddResult.NeedsName else AddResult.Added(view(name), created = true) }, firstRun = false)
+        tap("first-run-continue") // Start a New Notebook
+        tap("first-run-way-existing")
+        tap("first-run-continue")
+        waitFor("first-run-account-ryan-work")
+        compose.onNodeWithText("Pick GitHub Account").assertExists()
+        compose.onNodeWithTag("first-run-account-ryan").assertExists()
+        // Add Another Account: the sign-in, with a word on GitHub's own account switcher; Back returns here.
+        tap("first-run-account-add")
+        tap("first-run-continue")
+        waitFor("first-run-add-account-hint")
+        compose.onNodeWithText("Add GitHub Account").assertExists()
+        tap("first-run-back")
+        waitFor("first-run-account-ryan-work")
+        // The work account: its token reads the repositories and goes with the notebook.
+        tap("first-run-account-ryan-work")
+        tap("first-run-continue")
+        waitFor("first-run-repo-ryan/notes")
+        // Switch GitHub Account goes back to the accounts.
+        tap("first-run-switch-account")
+        waitFor("first-run-account-ryan-work")
+        tap("first-run-account-ryan-work")
+        tap("first-run-continue")
+        waitFor("first-run-repo-ryan/notes")
+        tap("first-run-repo-ryan/notes")
+        waitFor("first-run-repo-empty")
+        tap("first-run-continue")
+        compose.onNodeWithTag("first-run-name-input").performTextInput("Work")
+        tap("first-run-make")
+        compose.waitUntil(5_000) { adds.isNotEmpty() }
+        assertEquals("tok-work", adds.last().place.token)
     }
 
     @Test

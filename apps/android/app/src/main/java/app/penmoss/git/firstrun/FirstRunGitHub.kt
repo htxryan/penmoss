@@ -36,6 +36,9 @@ import kotlinx.coroutines.launch
 private sealed interface Check {
     data object Checking : Check
     data object NoSignIn : Check
+
+    /** More than one account (or Switch Account): which one lists the repositories (A1616). */
+    data class Choose(val accounts: List<app.penmoss.feedback.GitHubAccount>) : Check
     data class Failed(val error: BrowseError) : Check
 }
 
@@ -43,10 +46,12 @@ private sealed interface Check {
  * GitHub Access (A1404; the Mac's FirstRunGitHub.tsx, 2.1–2.9): with the phone's GitHub sign-in
  * (Settings → GitHub) it reads the repositories and goes straight on. With none, Sign In with
  * GitHub (the device code, PEN-146) or a personal access token typed here; refused, offline or
- * rate-limited, it says so with Try Again, and Paste a URL Instead goes on without GitHub.
+ * rate-limited, it says so with Try Again, and Paste a URL Instead goes on without GitHub. With
+ * more than one account on the phone, or [choose] (Switch GitHub Account), it first asks which,
+ * with Add Another Account, which signs in beside the others (A1616).
  */
 @Composable
-internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () -> Unit, back: () -> Unit) {
+internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () -> Unit, back: () -> Unit, choose: Boolean = false) {
     var check by remember { mutableStateOf<Check>(Check.Checking) }
     var asked by remember { mutableIntStateOf(0) }
     var typing by remember { mutableStateOf(false) }
@@ -58,22 +63,37 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
     val device by (deps.signIn?.state ?: idle).collectAsState()
     /** This screen started a sign-in: only then do its outcomes show here. */
     var signing by remember { mutableStateOf(false) }
+    /** The account picked, or just signed in to: its repositories are read (A1616). */
+    var picked by remember { mutableStateOf<app.penmoss.feedback.GitHubAccount?>(null) }
+    /** Add Another Account: the sign-in screen, with the other accounts kept. */
+    var adding by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { deps.signIn?.reset() }
     LaunchedEffect(asked) {
-        val saved = deps.token()
+        val accounts = deps.accounts()
+        val account = picked ?: accounts.singleOrNull()?.takeIf { !choose }
+        if (account == null && accounts.isNotEmpty() && !adding) {
+            check = Check.Choose(accounts)
+            return@LaunchedEffect
+        }
+        val saved = account?.let { deps.tokenFor(it.login) }
         if (saved == null) {
             check = Check.NoSignIn
             return@LaunchedEffect
         }
         check = Check.Checking
-        val (hub, error) = readHub(deps.browse, saved, deps.login())
+        val (hub, error) = readHub(deps.browse, saved, account.login)
         if (hub != null) onReady(hub) else check = Check.Failed(error!!)
     }
     fun again() {
         signing = false
         deps.signIn?.reset()
         asked++
+    }
+    fun withAccount(account: app.penmoss.feedback.GitHubAccount?) {
+        picked = account
+        adding = account == null
+        again()
     }
     fun signIn() {
         signing = true
@@ -137,7 +157,7 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
                     "Signed In to GitHub",
                     step = 2,
                     back = back,
-                    actions = { Primary("Continue", "first-run-continue", "arrow-right", onClick = ::again) },
+                    actions = { Primary("Continue", "first-run-continue", "arrow-right") { withAccount(app.penmoss.feedback.GitHubAccount(state.login, primary = false)) } },
                 ) {
                     Text("Signed in", Modifier.testTag("first-run-signed-in"), style = MaterialTheme.roles.rowLabel, color = MaterialTheme.colorScheme.primary)
                     Lead("Kept with the Android Keystore. Sign out in Settings → GitHub.", small = true)
@@ -219,20 +239,56 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
         Check.Checking -> Frame("github", "Checking GitHub", step = 2, back = back) {
             Working("Reading your repositories…")
         }
-        // 2.3: no GitHub sign-in on this phone yet.
+        is Check.Choose -> {
+            val add = "add"
+            fun keyOf(account: app.penmoss.feedback.GitHubAccount) = "account:${account.login.orEmpty()}"
+            var choice by remember(now) { mutableStateOf(keyOf(now.accounts.first())) }
+            Frame(
+                "github-account",
+                "Pick GitHub Account",
+                step = 2,
+                back = back,
+                actions = {
+                    Primary("Continue", "first-run-continue", "arrow-right") {
+                        withAccount(now.accounts.firstOrNull { keyOf(it) == choice })
+                    }
+                },
+                below = { urlInstead() },
+            ) {
+                Lead("Which account’s repositories? A notebook syncs as the account you add it with.")
+                Options(
+                    choice,
+                    now.accounts.map { account ->
+                        Option(
+                            keyOf(account),
+                            account.login?.let { "@$it" } ?: "Token (Account Not Named)",
+                            if (account.primary) "Your first account; Send Feedback uses it" else "Signed in on this phone",
+                            "first-run-account-${account.login.orEmpty()}",
+                        )
+                    } + Option(add, "Add Another Account", "Sign in to GitHub as someone else, such as your work account", "first-run-account-add"),
+                ) { choice = it }
+            }
+        }
+        // 2.3: no GitHub sign-in on this phone yet, or Add Another Account (A1616).
         Check.NoSignIn -> Frame(
             "github",
-            "Sign In to GitHub",
+            if (adding) "Add GitHub Account" else "Sign In to GitHub",
             step = 2,
-            back = back,
+            // Back from Add Another Account goes back to the accounts.
+            back = if (adding) ({ adding = false; picked = null; again() }) else back,
             actions = { signInButton("Sign In with GitHub") },
             below = {
                 Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
                 urlInstead()
             },
         ) {
-            Lead("Penmoss lists your repositories and syncs with this sign-in.")
-            Lead("GitHub shows a short code to enter in your browser; nothing is typed here. The sign-in is kept with the Android Keystore.", small = true)
+            if (adding) {
+                Lead("Sign in as your other GitHub account. Your other accounts, and the notebooks added with them, stay as they are.")
+                Lead("On GitHub’s page, check the account shown at the top right is the one you want; switch accounts there if it isn’t.", Modifier.testTag("first-run-add-account-hint"), small = true)
+            } else {
+                Lead("Penmoss lists your repositories and syncs with this sign-in.")
+                Lead("GitHub shows a short code to enter in your browser; nothing is typed here. The sign-in is kept with the Android Keystore.", small = true)
+            }
         }
         is Check.Failed -> {
             val error = now.error

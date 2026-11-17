@@ -404,7 +404,46 @@ class GitHubFeedbackTest {
 
         assertEquals("Removed. Feedback waits on this phone until you add a token again.", model.remove())
         assertNull(store.token())
-        assertEquals(FeedbackRoutes.tokenSummary(false, null), "Not signed in")
+        assertEquals(FeedbackRoutes.tokenSummary(emptyList()), "Not signed in")
+    }
+
+    /** A work account beside a personal one (A1616): each kept sealed, either first, removing one keeps the other. */
+    @Test
+    fun theStoreKeepsSeveralAccountsWithTheFirstForSendFeedback() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = context.getSharedPreferences(GitHubTokenStore.PREFS, Context.MODE_PRIVATE).apply { edit().clear().commit() }
+        val store = GitHubTokenStore(prefs, XorBox)
+        val model = GitHubTokenModel(store, api::checkToken, "htxryan/penmoss")
+        assertTrue(model.save("ghp_personal").kept)
+
+        github.login = "ryan-work"
+        val work = model.save("ghp_work")
+        assertTrue(work.kept)
+        assertEquals("Added @ryan-work beside your other GitHub account.", work.message)
+        // The first stays Send Feedback's.
+        assertEquals("ghp_personal", store.token())
+        assertEquals(listOf(GitHubAccount("htxryan", true), GitHubAccount("ryan-work", false)), store.accounts())
+        assertEquals("ghp_work", store.tokenFor("ryan-work"))
+        assertEquals("ghp_personal", store.tokenFor("htxryan"))
+        assertEquals("htxryan, ryan-work", FeedbackRoutes.tokenSummary(store.accounts().map { it.login }))
+        assertTrue(prefs.all.values.none { it.toString().contains("ghp_work") })
+
+        // Signing in as the work account again renews it, still second.
+        model.save("ghp_work2")
+        assertEquals("ghp_work2", GitHubTokenStore(prefs, XorBox).tokenFor("ryan-work"))
+        assertEquals(2, store.accounts().size)
+
+        store.makePrimary("ryan-work")
+        assertEquals("ghp_work2", store.token())
+        assertEquals(listOf(GitHubAccount("ryan-work", true), GitHubAccount("htxryan", false)), GitHubTokenStore(prefs, XorBox).accounts())
+
+        // Removing the first moves Send Feedback to the next.
+        store.remove("ryan-work")
+        assertEquals(listOf(GitHubAccount("htxryan", true)), store.accounts())
+        assertEquals("ghp_personal", store.token())
+        store.remove("htxryan")
+        assertFalse(store.hasToken)
+        assertEquals(emptyList<GitHubAccount>(), store.accounts())
     }
 
     @Test
