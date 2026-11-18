@@ -998,3 +998,19 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
     expect(phoneTitle).toBe(webTitle);
   });
 });
+
+describe('a picture on the phone (A1627)', () => {
+  // happy-dom lays nothing out, so the rule is read from the sheet; the headless check is in the PR.
+  const sheet = '../src/android.css';
+  const phone = readFileSync(fileURLToPath(new URL(sheet, import.meta.url)), 'utf8');
+
+  it('is as wide as the note allows, whatever width the Mac saved', () => {
+    expect(phone).toMatch(/\.note-body \.pm-image img \{\s*width: auto !important;\s*\}/);
+  });
+
+  it('has no handle or Width field, so the phone never changes a width it does not use', () => {
+    expect(phone).toMatch(
+      /\.note-body \.pm-image-resize,\s*\.note-body \.pm-image-tools label:has\(> \.pm-image-width\) \{\s*display: none;\s*\}/,
+    );
+  });
+});

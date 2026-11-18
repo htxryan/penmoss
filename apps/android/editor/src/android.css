@@ -129,3 +129,18 @@ body {
 .pm-lightbox-stage {
   touch-action: none;
 }
+
+/*
+ * A picture on a phone is as wide as the note allows, up to its own size (A1627, Ryan's Android
+ * feedback item 37). A width set on the Mac (`![|48](…)`) is in the Mac's pixels, and on a phone's
+ * narrow note it left screenshots unreadable. The width stays in the note for the Mac; the phone
+ * neither uses nor changes it, so the handle and the Width field go.
+ */
+.note-body .pm-image img {
+  width: auto !important;
+}
+
+.note-body .pm-image-resize,
+.note-body .pm-image-tools label:has(> .pm-image-width) {
+  display: none;
+}
