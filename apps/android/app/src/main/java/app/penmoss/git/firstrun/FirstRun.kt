@@ -71,6 +71,10 @@ class FirstRunDeps(
      * add or sign out of accounts without leaving Add Notebook. Null hides the link.
      */
     val accountsPage: (@Composable (onBack: () -> Unit) -> Unit)? = null,
+    /** Settings → GitHub's token page's Save (one page, not two; Ryan, 18 Nov 2026); null: kept once it lists repositories. */
+    val addToken: (suspend (String) -> app.penmoss.feedback.GitHubTokenModel.Saved)? = null,
+    /** Send Feedback's repository, named on the token page. */
+    val feedbackRepo: String? = null,
 ) {
     companion object {
         fun of(graph: app.penmoss.DeviceGraph, context: android.content.Context): FirstRunDeps {
@@ -82,6 +86,8 @@ class FirstRunDeps(
                 saveToken = graph.githubToken::save,
                 accounts = graph.githubToken::accounts,
                 tokenFor = graph.githubToken::tokenFor,
+                addToken = app.penmoss.feedback.GitHubTokenModel(graph.githubToken, graph.githubFeedback::checkToken, graph.githubFeedback.repo)::save,
+                feedbackRepo = graph.githubFeedback.repo,
                 signIn = graph.githubSignIn.takeIf { it.available },
                 add = { place, name -> hub.add(place.remote, place.branch, place.dir, name, place.token) },
                 added = { hub.list.value.map { it.notebookId }.toSet() },
@@ -331,7 +337,7 @@ fun NotebookSteps(
                 val now = hub
                 val loaded = reads[screen.repo.fullName]
                 if (now != null && loaded is RepoRead.Ready) {
-                    FolderPick(screen.repo, now.token, loaded.folders, beside = true, onName = { go(Screen.Name(it)) }, back = ::back)
+                    FolderPick(screen.repo, now.token, loaded.folders, beside = true, onName = { go(Screen.Name(it)) }, back = ::back, added = added, onOpen = { place, name -> go(Screen.SetUp(Setup.Open(place, name))) })
                 }
             }
             Screen.Url -> PasteUrl(

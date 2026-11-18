@@ -458,11 +458,12 @@ private val MODES = listOf("light" to "Light", "dark" to "Dark", "system" to "Sy
 private val MODE_ICONS = mapOf("light" to SettingsIcons.Sun, "dark" to SettingsIcons.Moon, "system" to SettingsIcons.Monitor)
 
 /**
- * Appearance (ST3, ST4, ST11; PEN-146 option C): a live preview at the top (Home's own shortcut
- * row and the note's own editor page, inert, redrawn as each choice changes, A1564), then Theme
- * (the mode, the theme cards and Customize…),
- * Text (the fonts and size) and Note (its width, here since Android has no Note page). A choice
- * applies at once, to the native screens, the system bars, the editor and every other device.
+ * Appearance (ST3, ST4, ST11): two tabs (Ryan's pick, option 3, 18 Nov 2026; A1619). Settings
+ * holds only the controls: Theme (the mode, the theme cards and Customize…), Text (the fonts and
+ * size) and Note (its width, here since Android has no Note page). Preview holds the app as it
+ * will look (Home's own shortcut row and the note's own editor page, inert, A1564) and the fonts
+ * at their real size (A1582). A choice applies at once, to the native screens, the system bars,
+ * the editor and every other device.
  */
 @Composable
 fun AppearanceScreen(
@@ -487,10 +488,29 @@ fun AppearanceScreen(
     /** Which of Home's shortcuts the preview's row shows, as Settings → Home leaves them. */
     homeShortcuts: HomeShortcuts = HomeShortcuts(),
 ) {
+    var previewing by rememberSaveable { mutableStateOf(false) }
     SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
-        AppearancePreview(homeShortcuts, notePreview)
-        // The interface's text at its real size, beside the preview (A1582).
-        if (fonts != null) FontsAtSize(fonts)
+        AppearanceTabs(previewing) { previewing = it }
+        if (previewing) {
+            val theme = themes.firstOrNull { it.id == chosen }?.name ?: "This theme"
+            val dark = mode == "dark" || (mode == "system" && systemDark)
+            Text(
+                "$theme, ${if (dark) "dark" else "light"}, as the app draws it. Change it on Settings.",
+                Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("appearancePreviewCaption"),
+                style = MaterialTheme.roles.help,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PreviewApp(
+                homeShortcuts,
+                notePreview,
+                Modifier.padding(horizontal = 16.dp).testTag("appearancePreviewApp").fillMaxWidth(),
+                noteHeight = 360.dp,
+                noteArea = notePreview != null,
+            )
+            // The interface's text at its real size, with the preview (A1582).
+            if (fonts != null) FontsAtSize(fonts, Modifier.padding(top = 8.dp))
+            return@SectionScreen
+        }
         GroupTitle("Theme", Modifier.settingRow("theme"), platform = true)
         Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
         Help(
@@ -524,64 +544,19 @@ fun AppearanceScreen(
     }
 }
 
-/**
- * Appearance's preview (PEN-146 option C, A1564): the app itself, not a drawing of it. Home's own
- * shortcut row ([HomeShortcutRow], the shortcuts Settings → Home shows) above the note's own editor
- * page when [note] is given (the theme editor's preview, A418), in the theme shown now, so a change
- * of mode, theme or font shows as the app will show it. It is inert: no touch, focus or semantics
- * reach it, so TalkBack reads the caption and never the buttons in it.
- */
+/** Appearance's two tabs (A1619): the settings, or the app as they draw it. */
 @Composable
-private fun AppearancePreview(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -> Unit)?) {
-    val colours = MaterialTheme.colorScheme
-    // Tapped, it opens full screen (A1589). Only one editor page lives at a time (A418), so the
-    // page's own note waits while the dialog shows it.
-    var enlarged by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("appearancePreview")) {
-        Box(Modifier.fillMaxWidth()) {
-            PreviewApp(shortcuts, note.takeIf { !enlarged }, Modifier.testTag("appearancePreviewApp").fillMaxWidth(), noteHeight = 168.dp, noteArea = note != null)
-            // One button over it: the whole preview opens larger, with a magnifying glass to say so.
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .clickable(role = Role.Button, onClickLabel = "Enlarge") { enlarged = true }
-                    .semantics { contentDescription = "Enlarge Appearance Preview" }
-                    .testTag("appearancePreviewEnlarge"),
-                contentAlignment = Alignment.BottomEnd,
-            ) {
-                Icon(
-                    SettingsIcons.Search,
-                    contentDescription = null,
-                    Modifier.padding(8.dp).background(colours.surfaceContainerHigh).border(1.dp, colours.outlineVariant).padding(6.dp).size(20.dp),
-                    tint = colours.onSurface,
-                )
-            }
-        }
-        Text(
-            "Preview: redraws as you change these. Tap to see it larger.",
-            Modifier.padding(top = 4.dp),
-            style = MaterialTheme.roles.help,
-            color = colours.onSurfaceVariant,
-        )
-    }
-    if (enlarged) {
-        Dialog(onDismissRequest = { enlarged = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize().testTag("appearancePreviewDialog"), color = colours.surface) {
-                Column(Modifier.fillMaxSize().systemBarsPadding()) {
-                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Appearance Preview",
-                            Modifier.weight(1f).semantics { heading() },
-                            style = MaterialTheme.roles.barTitle,
-                        )
-                        IconButton(onClick = { enlarged = false }, modifier = Modifier.testTag("appearancePreviewClose")) {
-                            Icon(Icons.Default.Close, contentDescription = "Close")
-                        }
-                    }
-                    HorizontalDivider(color = colours.outlineVariant)
-                    PreviewApp(shortcuts, note, Modifier.testTag("appearancePreviewLarge").fillMaxWidth().weight(1f), noteHeight = null, noteArea = true)
-                }
-            }
+private fun AppearanceTabs(previewing: Boolean, onPreview: (Boolean) -> Unit) {
+    val icons = rememberLucideIcons()
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("appearanceTabs")) {
+        listOf(Triple("Settings", false, "sliders-horizontal"), Triple("Preview", true, "eye")).forEachIndexed { index, (label, preview, glyph) ->
+            SegmentedButton(
+                selected = previewing == preview,
+                onClick = { onPreview(preview) },
+                shape = SegmentedButtonDefaults.itemShape(index, 2, SQUARE),
+                icon = { icons?.icon(glyph)?.let { Icon(LucideAssets.vector(it), contentDescription = null, Modifier.size(18.dp)) } },
+                modifier = Modifier.testTag(if (preview) "appearancePreviewTab" else "appearanceSettingsTab"),
+            ) { Text(label, maxLines = 1, softWrap = false) }
         }
     }
 }

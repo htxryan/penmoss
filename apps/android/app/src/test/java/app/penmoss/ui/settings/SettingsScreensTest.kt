@@ -220,7 +220,7 @@ class SettingsScreensTest {
         compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).assertCountEquals(0)
     }
 
-    /** A1582: beside the preview, the interface's text at its real size, labelled, and the note's font and size. */
+    /** A1582, A1619: on the Preview tab, the interface's text at its real size, labelled, and the note's font and size. */
     @Test
     fun appearanceShowsTheFontsAtTheirRealSizeAndFollowsAChange() {
         var fonts by mutableStateOf(FontsUi("theme", "theme", 16, {}, {}, {}))
@@ -232,6 +232,9 @@ class SettingsScreensTest {
                 )
             }
         }
+        // On the Preview tab, under the preview (A1619).
+        compose.onNodeWithTag("fontsAtSize").assertDoesNotExist()
+        compose.onNodeWithTag("appearancePreviewTab").performClick()
         compose.onNodeWithTag("fontsAtSize").assertIsDisplayed()
         compose.onNodeWithText("Setting · Theme Default · 16 sp").assertExists()
         compose.onNodeWithText("Page Title · Theme Default · 24 sp").assertExists()
@@ -243,7 +246,7 @@ class SettingsScreensTest {
 
     /** A1564: the preview is the app itself (Home's own shortcut row and the note page), inert. */
     @Test
-    fun thePreviewIsTheAppItselfAndTakesNoTouchOrFocus() {
+    fun thePreviewIsItsOwnTabTheAppItselfAndTakesNoTouchOrFocus() {
         var touched = false
         compose.setContent {
             PenmossTheme {
@@ -255,23 +258,23 @@ class SettingsScreensTest {
                 )
             }
         }
+        // A1619 (option 3): Settings first, with only the controls; the preview is on its own tab.
+        compose.onNodeWithTag("appearanceSettingsTab").assertIsSelected()
+        compose.onNodeWithTag("appearancePreviewApp").assertDoesNotExist()
+        compose.onNodeWithTag("themeGrid").assertExists()
+        compose.onNodeWithTag("appearancePreviewTab").performClick()
         compose.onNodeWithTag("appearancePreviewApp").assertIsDisplayed()
+        compose.onNodeWithTag("themeGrid").assertDoesNotExist()
+        compose.onNodeWithTag("appearancePreviewCaption").assertTextEquals("Penmoss, light, as the app draws it. Change it on Settings.")
         // Its buttons and its note are drawn but out of reach: TalkBack and a test find none.
         compose.onNodeWithTag("homeShortcuts").assertDoesNotExist()
         compose.onNodeWithTag("homeSearch").assertDoesNotExist()
         compose.onNodeWithTag("previewNote").assertDoesNotExist()
-        compose.onNodeWithText("Preview: redraws as you change these. Tap to see it larger.").assertIsDisplayed()
-        // A1589: the whole preview is one button that opens it full screen, the note inert there too.
-        compose.onNodeWithContentDescription("Enlarge Appearance Preview").assertHasClickAction()
         compose.onNodeWithTag("appearancePreviewApp").performTouchInput { click(center) }
-        compose.onNodeWithText("Appearance Preview").assertIsDisplayed()
-        compose.onNodeWithTag("appearancePreviewLarge").assertIsDisplayed().performTouchInput { click(center) }
         compose.waitForIdle()
         assertFalse(touched)
-        compose.onNodeWithTag("previewNote").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Close").performClick()
-        compose.onNodeWithText("Appearance Preview").assertDoesNotExist()
-        compose.onNodeWithTag("appearancePreviewApp").assertIsDisplayed()
+        compose.onNodeWithTag("appearanceSettingsTab").performClick()
+        compose.onNodeWithTag("themeGrid").assertExists()
     }
 
     @Test
@@ -293,7 +296,7 @@ class SettingsScreensTest {
         compose.onNodeWithTag("theme-penmoss").assertIsNotSelected()
         // Note width: the theme's, or the whole screen (ST11).
         compose.onNodeWithText("The Theme’s Width").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("appearancePreview").assertExists()
+        compose.onNodeWithTag("appearanceTabs").assertExists()
         compose.onNodeWithTag("width-full").performScrollTo().performClick()
         assertTrue(full)
         compose.onNodeWithTag("width-full").assertIsSelected()
