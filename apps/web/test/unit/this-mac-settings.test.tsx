@@ -111,8 +111,10 @@ describe('Settings → GitHub (PEN-146)', () => {
     expect(byTestId('github-token-saved')?.textContent).toBe(
       'Signed in with GitHub · kept in this Mac’s Keychain',
     );
-    expect(byTestId('github-signin-start')).toBeNull();
-    expect(byTestId('github-token-open')).toBeNull();
+    // Another account beside it (A1617): Add Account, or a token.
+    expect(byTestId('github-signin-start')?.textContent).toBe('Add Account');
+    expect(byTestId('github-token-open')?.textContent).toBe('Use a Token Instead…');
+    expect(byTestId('github-make-primary')).toBeNull();
     expect(byTestId('github-token-remove')?.textContent).toBe('Sign Out');
     await act(async () => {
       byTestId('github-token-remove')!.click();
@@ -120,6 +122,53 @@ describe('Settings → GitHub (PEN-146)', () => {
     });
     expect(removed).toBe(1);
     expect(byTestId('github-account')?.textContent).toContain('Not Signed In');
+  });
+
+  it('lists each account, with Use for Send Feedback and Sign Out for each (A1617)', async () => {
+    const primaries: string[] = [];
+    const signedOut: Array<string | null | undefined> = [];
+    status = {
+      ...NONE,
+      saved: true,
+      login: 'htxryan',
+      signedIn: true,
+      accounts: [
+        { login: 'htxryan', primary: true, signedIn: true, problem: null },
+        { login: 'ryan-work', primary: false, signedIn: true, problem: null },
+      ],
+    };
+    const many: DesktopGitHubToken = {
+      ...token,
+      remove: (login) => {
+        signedOut.push(login);
+        return Promise.resolve({ ok: true, status });
+      },
+      makePrimary: (login) => {
+        primaries.push(login);
+        return Promise.resolve({ ok: true, status });
+      },
+    };
+    (window as { penmossDesktop?: Partial<PenmossDesktop> }).penmossDesktop = {
+      githubToken: many,
+      git: { github: { signIn: signIn(true) } } as unknown as PenmossDesktop['git'],
+    };
+    await shown();
+    expect(byTestId('github-account')?.textContent).toContain('htxryan');
+    expect(byTestId('github-token-saved')?.textContent).toBe(
+      'Send Feedback uses it · Signed in with GitHub · kept in this Mac’s Keychain',
+    );
+    expect(byTestId('github-account-ryan-work')?.textContent).toContain('ryan-work');
+    expect(byTestId('github-signin-start')?.textContent).toBe('Add Account');
+    await act(async () => {
+      byTestId('github-make-primary')!.click();
+      await Promise.resolve();
+    });
+    expect(primaries).toEqual(['ryan-work']);
+    await act(async () => {
+      byTestId('github-account-remove')!.click();
+      await Promise.resolve();
+    });
+    expect(signedOut).toEqual(['ryan-work']);
   });
 
   it('is not there outside the Mac app', () => {

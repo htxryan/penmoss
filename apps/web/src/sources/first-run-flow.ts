@@ -8,6 +8,7 @@ import type {
   DesktopGitHubBrowse,
   GitAddResult,
   GitAnswer,
+  GitHubAccountChoice,
   GitHubOwner,
   GitHubRepo,
   GitHubVia,
@@ -51,7 +52,14 @@ export type Screen =
   | { readonly at: 'welcome' }
   | { readonly at: 'goal' }
   | { readonly at: 'way' }
-  | { readonly at: 'github'; readonly then: 'create' | 'list' }
+  | {
+      readonly at: 'github';
+      readonly then: 'create' | 'list';
+      /** Refresh: read the same account again rather than asking which (A1617). */
+      readonly keep?: { readonly account: GitHubAccountChoice | undefined };
+    }
+  /** Settings → GitHub's accounts inside the flow: Use a Different GitHub Account (A1617). */
+  | { readonly at: 'accounts'; readonly then: 'create' | 'list' }
   | { readonly at: 'create' }
   | { readonly at: 'list' }
   | { readonly at: 'repo'; readonly repo: GitHubRepo }
@@ -69,6 +77,11 @@ export interface Hub {
   readonly login: string | null;
   /** Where Create New Repo can make one; null when GitHub would not say. */
   readonly owners: readonly GitHubOwner[] | null;
+  /**
+   * The account picked in Pick GitHub Account (A1617): one of Penmoss's, by login; undefined for
+   * no choice (git's sign-in, else the first account).
+   */
+  readonly account?: GitHubAccountChoice;
 }
 
 /** One repository's folders, as the tree and its screens read them (4.2, 4.5–4.8). */
@@ -84,24 +97,56 @@ export type AddNotebook = (input: {
   readonly dir: string;
   readonly name?: string;
   readonly githubSignIn?: boolean;
+  readonly githubAccount?: GitHubAccountChoice;
 }) => Promise<GitAnswer<GitAddResult> | null>;
 
-/** Asks GitHub for the repositories and owners, with whatever sign-in main finds (2.1). */
+/**
+ * GitHub's browsing as one account (A1617): each call names it, so main uses that account's
+ * token. `account` undefined is no choice: `github` as it is.
+ */
+export function asAccount(
+  github: DesktopGitHubBrowse,
+  account: GitHubAccountChoice | undefined,
+): DesktopGitHubBrowse {
+  if (account === undefined) return github;
+  return {
+    ...github,
+    repos: () => github.repos(account),
+    folders: (fullName, branch) => github.folders(fullName, branch, account),
+    owners: () => github.owners(account),
+    create: (owner, name) => github.create(owner, name, account),
+  };
+}
+
+/**
+ * Asks GitHub for the repositories and owners, with whatever sign-in main finds (2.1), or as
+ * `account`, one of Penmoss's (A1617).
+ */
 export async function readHub(
   github: DesktopGitHubBrowse,
+  account?: GitHubAccountChoice,
 ): Promise<{ ok: true; hub: Hub } | { ok: false; error: BrowseError }> {
-  const answer = await github.repos().catch(() => null);
+  const answer = await github.repos(...(account === undefined ? [] : [account])).catch(() => null);
   if (!answer) {
     return { ok: false, error: { reason: 'github', message: 'This window cannot browse GitHub.' } };
   }
   if (!answer.ok) return { ok: false, error: answer.error };
-  const owners = await github.owners().catch(() => null);
+  const owners = await github.owners(...(account === undefined ? [] : [account])).catch(() => null);
   const list = owners?.ok ? owners.value : null;
   let login = list?.find((each) => each.kind === 'user')?.login ?? null;
   if (!login && answer.via === 'penmoss') {
-    login = (await github.signIn.status().catch(() => null))?.login ?? null;
+    login = account ?? (await github.signIn.status().catch(() => null))?.login ?? null;
   }
-  return { ok: true, hub: { list: answer.value, via: answer.via, login, owners: list } };
+  return {
+    ok: true,
+    hub: {
+      list: answer.value,
+      via: answer.via,
+      login,
+      owners: list,
+      ...(account === undefined ? {} : { account }),
+    },
+  };
 }
 
 /** `field-notes` → `Field Notes`: a repository's name as a notebook's. */

@@ -57,6 +57,7 @@ describe('GitHubToken (A1012)', () => {
     const changed = vi.fn();
     const tokens = store({ onChange: changed });
     expect(await tokens.status()).toEqual({
+      accounts: [],
       saved: false,
       login: null,
       problem: null,
@@ -68,6 +69,7 @@ describe('GitHubToken (A1012)', () => {
     expect(changed).toHaveBeenCalledOnce();
     const status = await tokens.status();
     expect(status).toEqual({
+      accounts: [{ login: 'htxryan', primary: true, signedIn: false, problem: null }],
       saved: true,
       login: 'htxryan',
       problem: null,
@@ -97,6 +99,7 @@ describe('GitHubToken (A1012)', () => {
     // GitHub was not asked about the feedback repository.
     expect(fake.calls).toEqual([]);
     expect(await tokens.status()).toEqual({
+      accounts: [{ login: 'ryan', primary: true, signedIn: true, problem: null }],
       saved: true,
       login: 'ryan',
       problem: null,
@@ -124,6 +127,49 @@ describe('GitHubToken (A1012)', () => {
     await tokens.save(TOKEN);
     expect((await tokens.remove()).saved).toBe(false);
     expect(await store().token()).toBeNull();
+  });
+
+  it('keeps a work account beside a personal one, the first for Send Feedback (A1617)', async () => {
+    const tokens = store();
+    // A Mac signed in before A1617: one account, where it always was.
+    expect(await tokens.saveSignedIn('gho_personal', 'htxryan')).toBe(true);
+    expect(await tokens.saveSignedIn('gho_work', 'ryan-work')).toBe(true);
+    const status = await tokens.status();
+    expect(status.accounts).toEqual([
+      { login: 'htxryan', primary: true, signedIn: true, problem: null },
+      { login: 'ryan-work', primary: false, signedIn: true, problem: null },
+    ]);
+    expect(status.login).toBe('htxryan');
+    expect(await tokens.token()).toBe('gho_personal');
+    expect(await tokens.token('ryan-work')).toBe('gho_work');
+    const onDisk = await readFile(join(dir, 'github-token.json'), 'utf8');
+    expect(onDisk).not.toContain('gho_work');
+    // The first account stays where one account always was.
+    expect(JSON.parse(onDisk)).toMatchObject({
+      login: 'htxryan',
+      others: [{ login: 'ryan-work' }],
+    });
+
+    // Signing in again as the work account renews it, still second.
+    await tokens.saveSignedIn('gho_work2', 'ryan-work');
+    expect(await store().token('ryan-work')).toBe('gho_work2');
+    expect((await tokens.status()).accounts).toHaveLength(2);
+
+    // A refusal marks that account alone.
+    await tokens.refused('ryan-work');
+    const marked = (await tokens.status()).accounts;
+    expect(marked[0]!.problem).toBeNull();
+    expect(marked[1]!.problem).toMatch(/Sign in again/);
+
+    // Use for Send Feedback, then Sign Out of the first: Send Feedback moves to the next.
+    expect((await tokens.makePrimary('ryan-work')).login).toBe('ryan-work');
+    expect(await store().token()).toBe('gho_work2');
+    const left = await tokens.remove('ryan-work');
+    expect(left.accounts).toEqual([
+      { login: 'htxryan', primary: true, signedIn: true, problem: null },
+    ]);
+    expect(await store().token()).toBe('gho_personal');
+    expect(await tokens.token('ryan-work')).toBeNull();
   });
 });
 

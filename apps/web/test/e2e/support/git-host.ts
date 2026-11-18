@@ -75,7 +75,13 @@ export const HOST_CALLS = [
   'identity',
 ] as const satisfies ReadonlyArray<keyof DesktopGit>;
 /** Send feedback's calls (`feedback.file`, `githubToken.*`), which go to `GitHubToken`. */
-export const FEEDBACK_CALLS = ['feedbackFile', 'tokenStatus', 'tokenSave', 'tokenRemove'] as const;
+export const FEEDBACK_CALLS = [
+  'feedbackFile',
+  'tokenStatus',
+  'tokenSave',
+  'tokenRemove',
+  'tokenMakePrimary',
+] as const;
 /** Auto-Update's calls (A1112), which go to apps/desktop's `Updates` with a stand-in feed. */
 export const UPDATE_CALLS = [
   'updatesState',
@@ -94,6 +100,7 @@ export const GITHUB_CALLS = [
   'githubFolders',
   'githubOwners',
   'githubCreate',
+  'githubGitLogin',
   'githubSignInStatus',
   'githubSignInStart',
   'githubSignInCancel',
@@ -249,8 +256,8 @@ export class GitHost {
     fetch: this.githubRepos.fetch,
     api: this.githubRepos.base,
     credential: () => Promise.resolve(this.gitCredential),
-    penmossToken: () => this.githubToken.token(),
-    onPenmossRefused: () => this.githubToken.refused(),
+    penmossToken: (login) => this.githubToken.token(login),
+    onPenmossRefused: (login) => this.githubToken.refused(login),
   });
   /** Whether this build has Penmoss's OAuth app (T82): off, as release builds are until it does. */
   offerSignIn = false;
@@ -463,14 +470,17 @@ export class GitHost {
       };
     }
     switch (method) {
+      // `account` (A1617): one of Penmoss's accounts, as main takes it.
       case 'githubRepos':
-        return this.browse.repos();
+        return this.browse.repos(a);
       case 'githubFolders':
-        return this.browse.folders(a, b);
+        return this.browse.folders(a, b, c);
       case 'githubOwners':
-        return this.browse.owners();
+        return this.browse.owners(a);
       case 'githubCreate':
-        return this.browse.create(a, b);
+        return this.browse.create(a, b, c);
+      case 'githubGitLogin':
+        return this.browse.gitLogin();
       case 'githubSignInStatus':
         return {
           available: this.offerSignIn && this.signIn.available,
@@ -524,7 +534,14 @@ export class GitHost {
       case 'tokenSave':
         return this.githubToken.save(a);
       case 'tokenRemove':
-        return { ok: true, status: await this.githubToken.remove() };
+        return {
+          ok: true,
+          status: await this.githubToken.remove(
+            typeof a === 'string' || a === null ? a : undefined,
+          ),
+        };
+      case 'tokenMakePrimary':
+        return { ok: true, status: await this.githubToken.makePrimary(a) };
       // The page's gesture is checked by main (the preload sends it); the suite's clicks are real.
       case 'meaningStatus':
         return this.meaning?.status() ?? null;

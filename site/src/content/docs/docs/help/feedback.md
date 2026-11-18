@@ -16,7 +16,7 @@ This page shows you how to send a bug report or a feature request from Penmoss, 
 
 Feedback is filed with your own GitHub account:
 
-- **On the Mac:** **Settings → GitHub** (**GitHub Settings** in the command palette). Choose **Sign In with GitHub**, or **Use a Token Instead…** to paste a token. If you used [Sign in with GitHub](/docs/first-notebook/#sign-in-with-github) to add a notebook, you're already signed in. The page also says how many reports are waiting, and **Open** opens Send Feedback. **Sign Out** forgets the sign-in.
+- **On the Mac:** **Settings → GitHub** (**GitHub Settings** in the command palette). Choose **Sign In with GitHub**, or **Use a Token Instead…** to paste a token. If you used [Sign in with GitHub](/docs/first-notebook/#sign-in-with-github) to add a notebook, you're already signed in. The page also says how many reports are waiting, and **Open** opens Send Feedback. **Sign Out** forgets the sign-in. With several accounts, the first files feedback; **Use for Send Feedback** on another makes it the first.
 - **On Android:** **Settings → GitHub**: **Sign In with GitHub**, or **Use a Token Instead…**. With several accounts on the phone, the first files feedback; **Use for Send Feedback** in another account's **⋮** makes it the first.
 
 A classic token with the `public_repo` scope works. Penmoss checks a token when you save it, and keeps it encrypted on the device. Without a sign-in, a report waits until you sign in.

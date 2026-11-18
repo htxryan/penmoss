@@ -130,7 +130,7 @@ What agents changed, in every notebook, with Undo ([Agent activity](/docs/agents
 
 ### GitHub
 
-The GitHub account Penmoss uses, kept in this Mac's Keychain: **Sign In with GitHub**, or **Use a Token Instead…** to paste a token, and **Sign Out**. Under **Used For**: adding notebooks from your repositories, and **Send Feedback**, with how many reports are waiting and **Open**. See [Send feedback](/docs/help/feedback/).
+The GitHub accounts Penmoss uses, kept in this Mac's Keychain, each with **Sign Out**, and **Use for Send Feedback** on all but the first. **Sign In with GitHub** (**Add Account** once there is one) or **Use a Token Instead…** adds another, such as a work account. Under **Used For**: adding notebooks from your repositories, and **Send Feedback**, with how many reports are waiting and **Open**. See [More than one GitHub account](/docs/first-notebook/#more-than-one-github-account) and [Send feedback](/docs/help/feedback/).
 
 ### Updates
 

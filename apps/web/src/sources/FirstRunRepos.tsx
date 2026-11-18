@@ -89,12 +89,15 @@ export function CreateRepo({
   onCreated,
   onUseExisting,
   back,
+  onAccounts,
 }: {
   github: DesktopGitHubBrowse;
   hub: Hub;
   onCreated: (place: Place, name: string) => void;
   onUseExisting: () => void;
   back: () => void;
+  /** Use a Different GitHub Account: Settings → GitHub's accounts in the flow (A1617). */
+  onAccounts?: () => void;
 }) {
   const formId = useId();
   const owners = hub.owners ?? [];
@@ -258,7 +261,26 @@ export function CreateRepo({
           Use Existing Repo
         </LinkButton>
       ) : null}
+      {onAccounts ? <OtherAccount onClick={onAccounts} /> : null}
     </Frame>
+  );
+}
+
+/**
+ * Use a Different GitHub Account (Ryan's feedback, 17 Nov 2026; A1617): a notebook in a work
+ * account's repository is added from that account, which Settings → GitHub's accounts add.
+ */
+function OtherAccount({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="fr-link"
+      data-ui="item"
+      data-testid="first-run-other-account"
+      onClick={onClick}
+    >
+      <Icon name="users" size={14} /> Use a Different GitHub Account
+    </button>
   );
 }
 
@@ -308,6 +330,7 @@ export function RepoTree({
   onCreate,
   onRefresh,
   back,
+  onAccounts,
 }: {
   hub: Hub;
   goal: Goal;
@@ -321,6 +344,8 @@ export function RepoTree({
   onCreate: (() => void) | null;
   onRefresh: () => void;
   back: () => void;
+  /** Use a Different GitHub Account (A1617). */
+  onAccounts?: () => void;
 }) {
   const repos = useMemo(() => {
     const all = [...hub.list.repos];
@@ -464,6 +489,13 @@ export function RepoTree({
       </LinkButton>
     </p>
   );
+  // Whose repositories these are, and another account's, above the list (A1617).
+  const accountLines = (
+    <>
+      {signedInLine}
+      {onAccounts ? <OtherAccount onClick={onAccounts} /> : null}
+    </>
+  );
 
   // 4.4: nothing to pick.
   if (repos.length === 0) {
@@ -490,7 +522,7 @@ export function RepoTree({
         <p className="fr-empty" data-testid="first-run-no-repos">
           GitHub lists no repository{hub.login ? ` for ${hub.login}` : ' for this sign-in'}.
         </p>
-        {signedInLine}
+        {accountLines}
       </Frame>
     );
   }
@@ -505,6 +537,7 @@ export function RepoTree({
 
   return (
     <Frame name="list" state="ready" step={2} title="Pick Repository" back={back}>
+      {accountLines}
       <label className="fr-filter">
         <span className="fr-hidden">Filter</span>
         <Icon name="search" size={14} />
@@ -664,7 +697,6 @@ export function RepoTree({
       <LinkButton testId="first-run-url-instead" onClick={onUrl}>
         Paste a URL Instead
       </LinkButton>
-      {signedInLine}
     </Frame>
   );
 }

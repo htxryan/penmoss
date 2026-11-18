@@ -124,7 +124,12 @@ export interface Invokes {
     | null
   >;
   githubTokenRemove: Call<
-    [],
+    // One account by its login (A1617); the first with none.
+    [login?: string | null],
+    TokenAnswer<{ readonly status: DesktopGitHubTokenStatus }> | TokenRefusal | null
+  >;
+  githubTokenMakePrimary: Call<
+    [login: string],
     TokenAnswer<{ readonly status: DesktopGitHubTokenStatus }> | TokenRefusal | null
   >;
   githubSignInStatus: Call<
@@ -190,14 +195,23 @@ export interface Invokes {
   gitOp: Call<[localId: string, op: string, args: readonly unknown[]], GitAnswer<unknown> | null>;
   gitCancel: Call<[localId: string], null>;
   gitIdentity: Call<[], { readonly name: string; readonly email: string } | null>;
-  gitGithubRepos: Call<[], GitHubAnswer<RepoList> | null>;
-  gitGithubFolders: Call<[fullName: string, branch: string], GitHubAnswer<RepoFolders> | null>;
-  gitGithubOwners: Call<[], GitHubAnswer<readonly GitHubOwner[]> | null>;
+  // `account`: one of Penmoss's accounts, by login (A1617); none for git's sign-in, else the first.
+  gitGithubRepos: Call<[account?: string | null], GitHubAnswer<RepoList> | null>;
+  gitGithubFolders: Call<
+    [fullName: string, branch: string, account?: string | null],
+    GitHubAnswer<RepoFolders> | null
+  >;
+  gitGithubOwners: Call<[account?: string | null], GitHubAnswer<readonly GitHubOwner[]> | null>;
   gitGithubCreate: Call<
     // Main checks the owner's kind (`user` or `org`) itself.
-    [owner: { readonly login: string; readonly kind: string }, name: string],
+    [
+      owner: { readonly login: string; readonly kind: string },
+      name: string,
+      account?: string | null,
+    ],
     GitHubAnswer<GitHubRepo> | null
   >;
+  gitGithubGitLogin: Call<[], string | null>;
   agentsList: Call<[localId: string], GitAnswer<readonly LocalAgentInfo[]> | null>;
   agentsConnect: Call<[localId: string, label: string], GitAnswer<LocalAgentInfo> | null>;
   agentsDisconnect: Call<[name: string, force: boolean], GitAnswer<null> | null>;
@@ -249,6 +263,11 @@ export const INVOKE = {
   },
   githubTokenRemove: {
     channel: 'penmoss:github-token:remove',
+    from: 'main',
+    gesture: { refused: TOKEN_NEEDS_A_PERSON },
+  },
+  githubTokenMakePrimary: {
+    channel: 'penmoss:github-token:make-primary',
     from: 'main',
     gesture: { refused: TOKEN_NEEDS_A_PERSON },
   },
@@ -332,6 +351,8 @@ export const INVOKE = {
   gitGithubRepos: { channel: 'penmoss:git:github-repos', from: 'main' },
   gitGithubFolders: { channel: 'penmoss:git:github-folders', from: 'main' },
   gitGithubOwners: { channel: 'penmoss:git:github-owners', from: 'main' },
+  // Whose git's own GitHub sign-in is, for Pick GitHub Account (A1617).
+  gitGithubGitLogin: { channel: 'penmoss:git:github-git-login', from: 'main' },
   gitGithubCreate: {
     channel: 'penmoss:git:github-create',
     from: 'main',

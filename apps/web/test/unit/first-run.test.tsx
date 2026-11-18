@@ -529,6 +529,72 @@ describe('the first run (A1030, First Run C)', () => {
     expect(add.mock.calls.at(-1)![0]).not.toHaveProperty('name');
   });
 
+  it('with two GitHub accounts asks which, and the work one’s token goes with the notebook (A1617)', async () => {
+    const { browse, calls } = github({
+      repos: { ok: true, via: 'penmoss', value: { more: false, repos: [repo('kept')] } },
+      folders: {
+        'ryan/kept': {
+          empty: false,
+          truncated: false,
+          folders: [{ path: '', notebook: { id: '01JBNOTEBOOK00000000000001', name: 'Work' } }],
+        },
+      },
+    });
+    const asWho: DesktopGitHubBrowse = {
+      ...browse,
+      repos: (account) => {
+        calls.push(['repos as', account]);
+        return browse.repos();
+      },
+      folders: (fullName, branch, account) => {
+        calls.push(['folders as', account]);
+        return browse.folders(fullName, branch);
+      },
+      // git's own sign-in is the first account's: listed once.
+      gitLogin: () => Promise.resolve('ryan'),
+    };
+    const { add } = await start(asWho);
+    Object.assign((window as { penmossDesktop?: object }).penmossDesktop!, {
+      githubToken: {
+        status: () =>
+          Promise.resolve({
+            saved: true,
+            login: 'ryan',
+            problem: null,
+            keychain: true,
+            signedIn: true,
+            accounts: [
+              { login: 'ryan', primary: true, signedIn: true, problem: null },
+              { login: 'ryan-work', primary: false, signedIn: true, problem: null },
+            ],
+          }),
+        save: () => Promise.resolve(null),
+        remove: () => Promise.resolve(null),
+        onChange: () => () => undefined,
+      },
+    });
+    await press('first-run-start');
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect($('first-run-account-ryan-work')).not.toBeNull());
+    expect(screen()).toBe('github-account');
+    expect($('first-run-account-git')).toBeNull();
+    expect($('first-run-account-add')).not.toBeNull();
+    await choose('first-run-account-ryan-work');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    expect(calls).toContainEqual(['repos as', 'ryan-work']);
+    expect(calls).toContainEqual(['folders as', 'ryan-work']);
+    // Another account is a click away, above the list.
+    expect($('first-run-other-account')?.textContent).toContain('Use a Different GitHub Account');
+    await press($$('first-run-notebook-open')[0]!);
+    await vi.waitFor(() => expect(add).toHaveBeenCalled());
+    expect(add.mock.calls.at(-1)![0]).toMatchObject({
+      githubSignIn: true,
+      githubAccount: 'ryan-work',
+    });
+  });
+
   it('reads repositories as they near the view, a few at a time, and opens those with a notebook', async () => {
     const names = ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9'];
     const holding = new Set(['ryan/r1', 'ryan/r4', 'ryan/r7', 'ryan/r8']);

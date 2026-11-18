@@ -1,5 +1,5 @@
 /**
- * Settings → GitHub, in the Mac app (PEN-146; was Status, T57, A1012): the one GitHub sign-in
+ * Settings → GitHub, in the Mac app (PEN-146; was Status, T57, A1012; several accounts, A1617): the GitHub sign-ins
  * Penmoss keeps in this Mac's Keychain, which Add a Git Notebook browses with and Send Feedback
  * files issues with (D63, A1010). Sign In with GitHub comes first, the device sign-in Add a Git
  * Notebook uses (T82, A1170); Use a Token Instead… opens a field for a pasted token, checked by
@@ -16,26 +16,36 @@ import {
   type DesktopGitHubToken,
   type DesktopGitHubTokenStatus,
 } from '../desktop/bridge';
+import { Icon } from '@penmoss/ui/icons';
 import { GitHubSignIn } from '../sources/GitHubSignIn';
+import { accountsOf } from './github-accounts';
 import { GroupHead, SettingRow } from '../theme/look-rows';
 import { useFeedback, useOutbox, type FeedbackService } from './service';
 import { SettingsHeader } from '../pages/SettingsHeader';
 
 const REPO = `${FEEDBACK_REPO.owner}/${FEEDBACK_REPO.repo}`;
 
-export function GitHubSettings() {
+/**
+ * `embedded`: Add Notebook's GitHub Accounts screen (A1617), the accounts alone, under the flow's
+ * own title.
+ */
+export function GitHubSettings({ embedded = false }: { embedded?: boolean } = {}) {
   const bridge = desktop();
   const token = bridge?.githubToken;
   if (!token) return null;
-  return <GitHubSection token={token} signIn={bridge.git?.github?.signIn ?? null} />;
+  return (
+    <GitHubSection token={token} signIn={bridge.git?.github?.signIn ?? null} embedded={embedded} />
+  );
 }
 
 function GitHubSection({
   token,
   signIn,
+  embedded,
 }: {
   token: DesktopGitHubToken;
   signIn: DesktopGitHubSignIn | null;
+  embedded: boolean;
 }) {
   const id = useId();
   const [status, setStatus] = useState<DesktopGitHubTokenStatus | null>(null);
@@ -65,11 +75,24 @@ function GitHubSection({
     };
   }, [signIn]);
 
-  const signOut = async () => {
+  const signOut = async (login: string | null) => {
     setBusy(true);
     setMessage(null);
     try {
-      const answer = await token.remove();
+      const answer = await token.remove(login);
+      if (answer?.ok) setStatus(answer.status);
+      else if (answer) setMessage({ text: answer.message, error: true });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const makePrimary = async (login: string) => {
+    if (!token.makePrimary) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const answer = await token.makePrimary(login);
       if (answer?.ok) setStatus(answer.status);
       else if (answer) setMessage({ text: answer.message, error: true });
     } finally {
@@ -78,54 +101,91 @@ function GitHubSection({
   };
 
   const keychain = status?.keychain !== false;
-  // Signing in (again) is offered with none kept, or one GitHub no longer takes.
-  const offerSignIn = status !== null && keychain && (!status.saved || status.problem !== null);
+  const accounts = status ? accountsOf(status) : [];
+  // Sign in with GitHub: again for an account GitHub no longer takes, or another beside the ones
+  // kept (A1617), which Add Account shows.
+  const refused = accounts.some((account) => account.problem !== null);
+  const offerSignIn = status !== null && keychain;
   // Without Penmoss's OAuth app the token is the only way, so its field shows at once.
   const showToken = status !== null && keychain && (tokenOpen || canSignIn === false);
-  // Signed in and working: Sign Out is the one action; a token replaces one only after it.
   // Drawn once the sign-in's availability is known, so the field does not swap in for the button.
-  const offerToken = canSignIn !== null && (showToken || offerSignIn);
+  const offerToken = canSignIn !== null && status !== null && keychain;
 
   return (
     <section className="settings-section" aria-labelledby={`${id}-h`} data-testid="github-token">
-      <SettingsHeader
-        id={`${id}-h`}
-        title="GitHub"
-        intro="One GitHub sign-in for adding notebooks and sending feedback, kept in this Mac’s Keychain."
-      />
+      {embedded ? (
+        <p className="fr-lead" id={`${id}-h`}>
+          Add another account, such as a work one, or sign out of one. Back lists the accounts to
+          pick from.
+        </p>
+      ) : (
+        <SettingsHeader
+          id={`${id}-h`}
+          title="GitHub"
+          intro="Your GitHub accounts for adding notebooks and sending feedback, kept in this Mac’s Keychain. Add a work account beside a personal one."
+        />
+      )}
       <div className="lf-group">
-        {status === null ? null : status.saved ? (
-          <SettingRow
-            setting="github-account"
-            label={status.login ?? 'GitHub'}
-            testId="github-account"
-            help={
-              <>
-                <span data-testid="github-token-saved">
-                  {status.signedIn
-                    ? 'Signed in with GitHub · kept in this Mac’s Keychain'
-                    : 'Token saved · kept in this Mac’s Keychain'}
-                </span>
-                {status.problem ? (
-                  <span role="alert" className="field-error" data-testid="github-token-problem">
-                    {' '}
-                    {status.problem}
+        {status === null ? null : accounts.length > 0 ? (
+          accounts.map((account, at) => (
+            <SettingRow
+              key={account.login ?? `account-${at}`}
+              setting={at === 0 ? 'github-account' : `github-account-${account.login ?? at}`}
+              label={account.login ?? 'GitHub'}
+              testId={at === 0 ? 'github-account' : `github-account-${account.login ?? at}`}
+              help={
+                <>
+                  <span data-testid={at === 0 ? 'github-token-saved' : undefined}>
+                    {[
+                      account.primary && accounts.length > 1 ? 'Send Feedback uses it' : null,
+                      account.signedIn ? 'Signed in with GitHub' : 'Token saved',
+                      'kept in this Mac’s Keychain',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
-                ) : null}
-              </>
-            }
-          >
-            <button
-              type="button"
-              className="btn quiet"
-              data-ui="dismiss"
-              disabled={busy}
-              onClick={() => void signOut()}
-              data-testid="github-token-remove"
+                  {account.problem ? (
+                    <span
+                      role="alert"
+                      className="field-error"
+                      data-testid={at === 0 ? 'github-token-problem' : undefined}
+                    >
+                      {' '}
+                      {account.problem}
+                    </span>
+                  ) : null}
+                </>
+              }
             >
-              Sign Out
-            </button>
-          </SettingRow>
+              {!account.primary && account.login && token.makePrimary ? (
+                <button
+                  type="button"
+                  className="btn quiet"
+                  data-ui="item"
+                  disabled={busy}
+                  onClick={() => void makePrimary(account.login!)}
+                  data-testid="github-make-primary"
+                >
+                  <Icon name="feedback" size={14} />
+                  Use for Send Feedback
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="btn quiet"
+                data-ui="dismiss"
+                disabled={busy}
+                onClick={() => void signOut(account.login)}
+                data-testid={at === 0 ? 'github-token-remove' : 'github-account-remove'}
+                aria-label={
+                  accounts.length > 1 ? `Sign Out of ${account.login ?? 'GitHub'}` : undefined
+                }
+              >
+                <Icon name="logOut" size={14} />
+                Sign Out
+              </button>
+            </SettingRow>
+          ))
         ) : (
           <SettingRow
             setting="github-account"
@@ -142,14 +202,19 @@ function GitHubSection({
         )}
       </div>
       {offerSignIn && signIn && canSignIn ? (
-        <GitHubSignIn signIn={signIn} again={status.saved} onSignedIn={refresh} />
+        <GitHubSignIn
+          signIn={signIn}
+          again={refused && accounts.length === 1}
+          adding={accounts.length > 0 && !(refused && accounts.length === 1)}
+          onSignedIn={refresh}
+        />
       ) : null}
       {offerToken ? (
         <div className="github-token" data-setting="github-token">
           {showToken ? (
             <TokenForm
               token={token}
-              saved={status?.saved === true}
+              saved={accounts.length > 0}
               focus={tokenOpen}
               busy={busy}
               setBusy={setBusy}
@@ -170,6 +235,7 @@ function GitHubSection({
               onClick={() => setTokenOpen(true)}
               data-testid="github-token-open"
             >
+              <Icon name="key" size={14} />
               Use a Token Instead…
             </button>
           )}
@@ -184,15 +250,19 @@ function GitHubSection({
           {message.text}
         </p>
       ) : null}
-      <GroupHead>Used For</GroupHead>
-      <div className="lf-group">
-        <SettingRow
-          setting="adding-notebooks"
-          label="Adding Notebooks"
-          help="Lists your repositories when git on this Mac has no sign-in"
-        />
-        <FeedbackUse />
-      </div>
+      {embedded ? null : (
+        <>
+          <GroupHead>Used For</GroupHead>
+          <div className="lf-group">
+            <SettingRow
+              setting="adding-notebooks"
+              label="Adding Notebooks"
+              help="Lists each account’s repositories. A notebook keeps a copy of its account’s token and syncs as that account."
+            />
+            <FeedbackUse />
+          </div>
+        </>
+      )}
     </section>
   );
 }

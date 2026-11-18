@@ -32,8 +32,19 @@ import {
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
+/** One GitHub account kept on this Mac (A1617): what the page may know of it. */
+export interface GitHubAccountStatus {
+  readonly login: string | null;
+  /** The first account: Send Feedback files with it. */
+  readonly primary: boolean;
+  readonly signedIn: boolean;
+  readonly problem: string | null;
+}
+
 /** What the page may know of the token. */
 export interface GitHubTokenStatus {
+  /** Every account kept, the first (Send Feedback's) first (A1617). */
+  readonly accounts: readonly GitHubAccountStatus[];
   readonly saved: boolean;
   /** The GitHub account it belongs to, when GitHub said. */
   readonly login: string | null;
@@ -50,11 +61,25 @@ export type SaveAnswer =
   | { readonly ok: true; readonly status: GitHubTokenStatus; readonly note: string | null }
   | { readonly ok: false; readonly message: string };
 
-interface Stored {
+interface Account {
   readonly sealed: string;
   readonly login: string | null;
   readonly problem: string | null;
   readonly signedIn?: boolean;
+}
+
+/**
+ * `github-token.json`: the first account where the one account always was, so a Mac signed in
+ * before A1617 reads the same; the others beside it, keyed by login.
+ */
+interface Stored extends Account {
+  readonly others?: readonly Account[];
+}
+
+/** An account and its token, unsealed for this process. */
+interface Kept {
+  readonly token: string;
+  readonly account: Account;
 }
 
 export interface GitHubTokenOptions {
@@ -76,7 +101,8 @@ const LEDGER_MAX = 200;
 const TOKEN_MAX = 255;
 
 export class GitHubToken {
-  private cache: { token: string | null; stored: Stored | null } | null = null;
+  /** The accounts, the first (Send Feedback's) first; tokens that would not unseal are left out. */
+  private cache: Kept[] | null = null;
   private ledgerLoaded: Map<string, FeedbackLedgerEntry> | null = null;
   private writing: Promise<void> = Promise.resolve();
 
@@ -105,25 +131,69 @@ export class GitHubToken {
     );
   }
 
-  private async load(): Promise<{ token: string | null; stored: Stored | null }> {
+  private async load(): Promise<Kept[]> {
     if (this.cache) return this.cache;
-    let stored: Stored | null = null;
+    const accountOf = (value: unknown): Account | null => {
+      const parsed = (value ?? {}) as Partial<Account>;
+      if (typeof parsed.sealed !== 'string') return null;
+      return {
+        sealed: parsed.sealed,
+        login: typeof parsed.login === 'string' ? parsed.login : null,
+        problem: typeof parsed.problem === 'string' ? parsed.problem : null,
+        signedIn: parsed.signedIn === true,
+      };
+    };
+    let accounts: Account[];
     try {
       const parsed = JSON.parse(await readFile(this.tokenFile, 'utf8')) as Partial<Stored>;
-      if (typeof parsed.sealed === 'string') {
-        stored = {
-          sealed: parsed.sealed,
-          login: typeof parsed.login === 'string' ? parsed.login : null,
-          problem: typeof parsed.problem === 'string' ? parsed.problem : null,
-          signedIn: parsed.signedIn === true,
-        };
-      }
+      const first = accountOf(parsed);
+      const others = Array.isArray(parsed.others) ? parsed.others.map(accountOf) : [];
+      accounts = [first, ...others].filter((each): each is Account => each !== null);
     } catch {
-      stored = null;
+      accounts = [];
     }
-    const token = stored ? await this.options.unseal(stored.sealed).catch(() => null) : null;
-    this.cache = { token: token || null, stored: token ? stored : null };
-    return this.cache;
+    const kept: Kept[] = [];
+    for (const account of accounts) {
+      const token = await this.options.unseal(account.sealed).catch(() => null);
+      if (token) kept.push({ token, account });
+    }
+    this.cache = kept;
+    return kept;
+  }
+
+  /** Writes the accounts, the first in the old place and the rest beside it. */
+  private async keepAll(kept: Kept[]): Promise<void> {
+    const [first, ...others] = kept;
+    const stored: Stored | Record<string, never> = first
+      ? {
+          ...first.account,
+          ...(others.length ? { others: others.map((each) => each.account) } : {}),
+        }
+      : {};
+    await this.write(this.tokenFile, stored);
+    this.cache = kept;
+  }
+
+  /** The kept account for `login`; the first with none given. */
+  private find(kept: readonly Kept[], login?: string | null): Kept | undefined {
+    if (login === undefined) return kept[0];
+    return kept.find((each) => (each.account.login ?? null) === login);
+  }
+
+  /**
+   * Keeps `token` for `account.login`: in its place when that account is kept already (signing in
+   * again renews it), else as the first when there is none, else beside the others (A1617).
+   */
+  private async keepAccount(token: string, account: Account): Promise<void> {
+    const kept = [...(await this.load())];
+    const at = kept.findIndex(
+      (each) => account.login !== null && each.account.login === account.login,
+    );
+    if (at >= 0) kept[at] = { token, account };
+    else if (kept.length === 0 || (account.login === null && kept[0]!.account.login === null)) {
+      kept[0] = { token, account };
+    } else kept.push({ token, account });
+    await this.keepAll(kept);
   }
 
   private async write(path: string, value: unknown): Promise<void> {
@@ -137,19 +207,29 @@ export class GitHubToken {
     return (await this.options.seal('check').catch(() => null)) !== null;
   }
 
-  /** The token, for this process only (feedback). */
-  async token(): Promise<string | null> {
-    return (await this.load()).token;
+  /**
+   * A token, for this process only: the first account's (Send Feedback's) with no `login`, else
+   * that account's (A1617).
+   */
+  async token(login?: string | null): Promise<string | null> {
+    return this.find(await this.load(), login)?.token ?? null;
   }
 
   async status(): Promise<GitHubTokenStatus> {
-    const { token, stored } = await this.load();
+    const kept = await this.load();
+    const first = kept[0]?.account ?? null;
     return {
-      saved: token !== null,
-      login: stored?.login ?? null,
-      problem: stored?.problem ?? null,
+      accounts: kept.map(({ account }, at) => ({
+        login: account.login,
+        primary: at === 0,
+        signedIn: account.signedIn === true,
+        problem: account.problem,
+      })),
+      saved: first !== null,
+      login: first?.login ?? null,
+      problem: first?.problem ?? null,
       keychain: await this.keychain(),
-      signedIn: token !== null && stored?.signedIn === true,
+      signedIn: first?.signedIn === true,
     };
   }
 
@@ -168,9 +248,7 @@ export class GitHubToken {
         message: 'Penmoss could not keep the token: the Keychain is not available.',
       };
     }
-    const stored: Stored = { sealed, login: check.login, problem: null };
-    await this.write(this.tokenFile, stored);
-    this.cache = { token, stored };
+    await this.keepAccount(token, { sealed, login: check.login, problem: null });
     this.options.log?.(`GitHub token saved${check.login ? ` for ${check.login}` : ''}`);
     this.options.onChange?.();
     return {
@@ -188,33 +266,52 @@ export class GitHubToken {
     if (!token || token.length > TOKEN_MAX || /\s/.test(token)) return false;
     const sealed = await this.options.seal(token).catch(() => null);
     if (sealed === null) return false;
-    const stored: Stored = { sealed, login, problem: null, signedIn: true };
-    await this.write(this.tokenFile, stored);
-    this.cache = { token, stored };
+    await this.keepAccount(token, { sealed, login, problem: null, signedIn: true });
     this.options.log?.(`GitHub sign-in saved${login ? ` for ${login}` : ''}`);
     this.options.onChange?.();
     return true;
   }
 
-  /** GitHub refused the token when browsing (401): Settings says so, and the step offers Sign in again. */
-  async refused(): Promise<void> {
-    await this.noteProblem('GitHub refused this token. Sign in again, or paste a new one.');
+  /**
+   * GitHub refused an account's token when browsing (401): Settings says so, and the step offers
+   * Sign in again. The first account's with no `login`.
+   */
+  async refused(login?: string | null): Promise<void> {
+    await this.noteProblem('GitHub refused this token. Sign in again, or paste a new one.', login);
   }
 
-  async remove(): Promise<GitHubTokenStatus> {
-    await this.write(this.tokenFile, {});
-    this.cache = { token: null, stored: null };
+  /**
+   * Forgets one account (the first with no `login`): removing the first makes the next one
+   * Send Feedback's (A1617). Notebooks added with it keep their own copy of its token (A1171).
+   */
+  async remove(login?: string | null): Promise<GitHubTokenStatus> {
+    const kept = await this.load();
+    const gone = this.find(kept, login);
+    if (gone) await this.keepAll(kept.filter((each) => each !== gone));
     this.options.onChange?.();
     return this.status();
   }
 
-  /** Remembers what GitHub last refused the token for, so Settings says it too. */
-  private async noteProblem(problem: string | null): Promise<void> {
-    const { token, stored } = await this.load();
-    if (!token || !stored || stored.problem === problem) return;
-    const next = { ...stored, problem };
-    await this.write(this.tokenFile, next).catch(() => undefined);
-    this.cache = { token, stored: next };
+  /** Makes `login`'s account the first: Send Feedback files with it (A1617). */
+  async makePrimary(login: unknown): Promise<GitHubTokenStatus> {
+    const kept = await this.load();
+    const chosen = typeof login === 'string' ? this.find(kept, login) : undefined;
+    if (chosen && chosen !== kept[0]) {
+      await this.keepAll([chosen, ...kept.filter((each) => each !== chosen)]);
+      this.options.onChange?.();
+    }
+    return this.status();
+  }
+
+  /** Remembers what GitHub last refused an account's token for, so Settings says it too. */
+  private async noteProblem(problem: string | null, login?: string | null): Promise<void> {
+    const kept = await this.load();
+    const was = this.find(kept, login);
+    if (!was || was.account.problem === problem) return;
+    const next = kept.map((each) =>
+      each === was ? { token: each.token, account: { ...each.account, problem } } : each,
+    );
+    await this.keepAll(next).catch(() => undefined);
     this.options.onChange?.();
   }
 

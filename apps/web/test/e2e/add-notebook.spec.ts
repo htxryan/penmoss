@@ -274,15 +274,17 @@ test('signs in with GitHub on the same screens, lists the repositories with it, 
   expect(host.addInputs.at(-1)).toMatchObject({ githubSignIn: true });
   expect(JSON.stringify(host.addInputs)).not.toContain(host.githubRepos.options.token);
 
-  // Settings → GitHub (PEN-146): whose it is, and Sign Out; no second sign-in on offer.
+  // Settings → GitHub (PEN-146): whose it is, and Sign Out; another account beside it (A1617).
   await page.goto('/settings/github');
   await expect(page.getByTestId('github-account')).toContainText('ryan');
   await expect(page.getByTestId('github-token-saved')).toHaveText(
     'Signed in with GitHub · kept in this Mac’s Keychain',
   );
   await expect(page.getByTestId('github-token-remove')).toHaveText('Sign Out');
-  await expect(page.getByTestId('github-token').getByTestId('github-signin')).toHaveCount(0);
-  await expect(page.getByTestId('github-token-open')).toHaveCount(0);
+  await expect(page.getByTestId('github-token').getByTestId('github-signin-start')).toHaveText(
+    'Add Account',
+  );
+  await expect(page.getByTestId('github-token-open')).toHaveText('Use a Token Instead…');
   expect(errors).toEqual([]);
 });
 
@@ -410,7 +412,8 @@ test('Settings → GitHub signs in with the same device sign-in, and Sign Out fo
   host.githubRepos.approve();
   await expect(github.getByTestId('github-account')).toContainText('ryan');
   await expect(github.getByTestId('github-token-saved')).toContainText('Signed in with GitHub');
-  await expect(github.getByTestId('github-signin-start')).toHaveCount(0);
+  // Another account, such as a work one, can be added beside it (A1617).
+  await expect(github.getByTestId('github-signin-start')).toHaveText('Add Account');
 
   await github.getByTestId('github-token-remove').click();
   await expect(github.getByTestId('github-account')).toContainText('Not Signed In');
