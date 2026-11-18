@@ -28,8 +28,8 @@ Penmoss can check for a newer build and offer it. It never installs one until yo
 **Settings → Updates** also shows what changed, under **What's New**. It is folded away until you click it (or press Return or Space on it), and says the version and how many changes it brought. It opens by itself when an update is offered, and when the notice after an update brings you there.
 
 - **What's new in …**, while a newer build is offered: what it brings, since the version you have.
-- **In this version**: what your version brought. On Alpha, that's everything since the last stable release, each change with its build.
-- **Earlier Versions**, folded away: each stable release's changes, newest first.
+- **In this version**: what your version brought. On Alpha, that's what changed since the build you updated from (or just this build, if Penmoss doesn't know which), each change with its build.
+- **Earlier Versions**, folded away: on Alpha, the earlier builds since the last stable release, then each stable release's changes, newest first.
 
 After Penmoss restarts into a newer version, a notice at the bottom of the sidebar says **Updated to …** once, if that version has notes. **What's New** opens them in Settings → Updates; it and ✕ put the notice away for good. On the rail the notice is an icon with a dot, which opens What's New.
 

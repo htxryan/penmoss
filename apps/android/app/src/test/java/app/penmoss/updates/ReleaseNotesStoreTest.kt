@@ -57,4 +57,16 @@ class ReleaseNotesStoreTest {
         store.acknowledge("0.2.1")
         assertNull(store.updatedFrom("0.2.1"))
     }
+
+    @Test
+    fun keepsTheVersionBeforeThisOneAfterTheSnackbarIsAnswered() {
+        val store = ReleaseNotesStore(tmp.newFolder(), MemoryPrefs(), fetch = { null })
+        assertNull(store.updatedFrom("0.2.2-alpha.1470"))
+        assertNull(store.previousVersion("0.2.2-alpha.1470"))
+        assertEquals("0.2.2-alpha.1470", store.previousVersion("0.2.2-alpha.1491"))
+        store.acknowledge("0.2.2-alpha.1491")
+        assertEquals("0.2.2-alpha.1470", store.previousVersion("0.2.2-alpha.1491"))
+        // The next update: the build answered is the one before it.
+        assertEquals("0.2.2-alpha.1491", store.previousVersion("0.2.2-alpha.1500"))
+    }
 }

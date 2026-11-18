@@ -109,7 +109,7 @@ The first account files **Send Feedback**. Adding a notebook lists the first acc
 
 ## What's new
 
-**Settings → What’s New** names the version you have and how it updates (by Google Play, or with a newer `Penmoss.apk`), with **Open Source Notices**, the licences of the open source software Penmoss includes, then shows what changed in it and, under **Earlier Versions**, in earlier ones, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
+**Settings → What’s New** names the version you have and how it updates (by Google Play, or with a newer `Penmoss.apk`), with **Open Source Notices**, the licences of the open source software Penmoss includes, then shows what changed in it and, under **Earlier Versions**, in earlier ones, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists what changed since the build you updated from, each with its build, and earlier builds under **Earlier Versions**. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
 
 After you install a newer version, a message at the foot of the screen says **Updated to …** once, with **What’s New**, if that version has notes for Android.
 

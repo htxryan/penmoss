@@ -97,11 +97,26 @@ class ReleaseNotesStore(
         return seen.takeIf { it != version }
     }
 
+    /**
+     * The version the phone ran before [version], kept after the snackbar is answered, so What's
+     * New on an Alpha build starts there; null when not known.
+     */
+    fun previousVersion(version: String): String? {
+        val seen = prefs.string(LAST_SEEN)
+        if (seen != null && seen != version) return seen
+        return prefs.string(PREVIOUS)?.takeIf { it != version }
+    }
+
     /** The snackbar after an update was answered: [version] is seen, so it doesn't come back. */
-    fun acknowledge(version: String) = prefs.put(LAST_SEEN, version)
+    fun acknowledge(version: String) {
+        val seen = prefs.string(LAST_SEEN)
+        if (seen != null && seen != version) prefs.put(PREVIOUS, seen)
+        prefs.put(LAST_SEEN, version)
+    }
 
     companion object {
         const val LAST_SEEN = "lastSeenVersion"
+        const val PREVIOUS = "previousVersion"
 
         @Volatile private var shared: ReleaseNotesStore? = null
 

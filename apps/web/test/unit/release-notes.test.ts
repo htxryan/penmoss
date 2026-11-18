@@ -73,16 +73,52 @@ describe('notesView', () => {
     expect(view.earlier).toEqual([]);
   });
 
-  it('shows an Alpha build its notes since the last stable release, with builds', () => {
-    const view = notesView(FILE, '0.2.2-alpha.1185', null);
+  it('shows an Alpha build its notes since the build it updated from, with builds', () => {
+    const view = notesView(FILE, '0.2.2-alpha.1185', null, 'mac', '0.2.2-alpha.1183');
+    if (view.status !== 'ok') throw new Error(view.status);
+    expect(view.current?.title).toBe('In this version (since build 1183)');
+    expect(view.current?.builds).toBe(true);
+    expect(read(view.current)).toEqual([['Fixed', ['Daily notes open on the right day.']]]);
+    expect(view.earlier.map((block) => block.title)).toEqual([
+      'Earlier builds (since 0.2.1)',
+      '0.2.1',
+      '0.2.0',
+    ]);
+    expect(read(view.earlier[0] ?? null)).toEqual([['New', ['After 0.2.1.']]]);
+  });
+
+  it('starts an Alpha build updated from before the last stable release at that release', () => {
+    const view = notesView(FILE, '0.2.2-alpha.1185', null, 'mac', '0.2.1-alpha.1175');
     if (view.status !== 'ok') throw new Error(view.status);
     expect(view.current?.title).toBe('In this version (since 0.2.1)');
-    expect(view.current?.builds).toBe(true);
     expect(read(view.current)).toEqual([
       ['New', ['After 0.2.1.']],
       ['Fixed', ['Daily notes open on the right day.']],
     ]);
     expect(view.earlier.map((block) => block.title)).toEqual(['0.2.1', '0.2.0']);
+  });
+
+  it('shows an Alpha build only its own notes when the version before it is not known', () => {
+    for (const since of [null, '0.1.9', '0.2.2-alpha.1190']) {
+      const view = notesView(FILE, '0.2.2-alpha.1185', null, 'mac', since);
+      if (view.status !== 'ok') throw new Error(view.status);
+      expect(view.current?.title).toBe('In this version');
+      expect(read(view.current)).toEqual([['Fixed', ['Daily notes open on the right day.']]]);
+      expect(view.earlier[0]?.title).toBe('Earlier builds (since 0.2.1)');
+    }
+  });
+
+  it('keeps every build before any stable release out of this version (the 119 changes)', () => {
+    const alphaOnly = { ...FILE, releases: [] };
+    const view = notesView(alphaOnly, '0.2.2-alpha.1185', null, 'mac', '0.2.2-alpha.1178');
+    if (view.status !== 'ok') throw new Error(view.status);
+    expect(view.current?.title).toBe('In this version (since build 1178)');
+    expect(read(view.current)).toEqual([
+      ['New', ['After 0.2.1.']],
+      ['Fixed', ['Daily notes open on the right day.']],
+    ]);
+    expect(view.earlier.map((block) => block.title)).toEqual(['Earlier builds']);
+    expect(view.earlier[0]?.groups.flatMap((g) => g.notes.map((n) => n.build))).not.toContain(1183);
   });
 
   it('shows what an Alpha update brings, build by build', () => {
