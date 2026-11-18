@@ -11,6 +11,8 @@
  * - `sidebar.hiddenSections`: the ids of the sections hidden.
  * - `sidebar.recentCount`: how many notes Recent Notes shows, 1 to 50 (10 unset).
  * - `quickAccess.showNotebook`: whether Quick Access names each note's notebook (false unset).
+ * - `quickAccess.inDrawer`: whether Android's drawer lists Quick Access's notes themselves, each
+ *   one tap away, in place of a Quick Access page (false unset; A1622). The phones' alone.
  *
  * The web writes them in its WorkspaceDoc; the Android app through `PUT /api/settings`, which
  * checks them with these same rules (`apps/android/contract/settings-v1.json`).
@@ -33,6 +35,7 @@ export const SECTION_ORDER_SETTING = 'sidebar.sectionOrder';
 export const HIDDEN_SECTIONS_SETTING = 'sidebar.hiddenSections';
 export const RECENT_COUNT_SETTING = 'sidebar.recentCount';
 export const QUICK_ACCESS_NOTEBOOK_SETTING = 'quickAccess.showNotebook';
+export const QUICK_ACCESS_IN_DRAWER_SETTING = 'quickAccess.inDrawer';
 
 /** Recent Notes' length: unset, and the least and most it may be. */
 export const RECENT_COUNT_DEFAULT = 10;
@@ -69,6 +72,7 @@ export function sidebarLayoutProblem(key: string, value: unknown): string | null
         ? null
         : `${key} must be a whole number from ${RECENT_COUNT_MIN} to ${RECENT_COUNT_MAX}`;
     case QUICK_ACCESS_NOTEBOOK_SETTING:
+    case QUICK_ACCESS_IN_DRAWER_SETTING:
       return typeof value === 'boolean' ? null : `${key} must be true or false`;
   }
   return `${key} is not a sidebar setting`;
@@ -113,6 +117,11 @@ export function recentCountOf(settings: Readonly<Record<string, unknown>>): numb
 /** Whether Quick Access names each note's notebook. */
 export function quickAccessShowsNotebook(settings: Readonly<Record<string, unknown>>): boolean {
   return settings[QUICK_ACCESS_NOTEBOOK_SETTING] === true;
+}
+
+/** Whether Android's drawer lists Quick Access's notes themselves (A1622). */
+export function quickAccessInDrawer(settings: Readonly<Record<string, unknown>>): boolean {
+  return settings[QUICK_ACCESS_IN_DRAWER_SETTING] === true;
 }
 
 /**

@@ -41,6 +41,9 @@ object SettingKeys {
     const val RECENT_COUNT = "sidebar.recentCount"
     const val QUICK_ACCESS_NOTEBOOK = "quickAccess.showNotebook"
 
+    /** Android's drawer lists Quick Access's notes themselves (A1622): the phones' alone. */
+    const val QUICK_ACCESS_IN_DRAWER = "quickAccess.inDrawer"
+
     /** A custom theme, validated by the server, is sent under this prefix and its id. */
     const val CUSTOM_THEME_PREFIX = "theme.custom."
 
@@ -48,7 +51,7 @@ object SettingKeys {
     val ALL = listOf(
         THEME, MODE, TIME_ZONE, DAILY_TEMPLATE, WEEKLY_TEMPLATE, CAPTURE, FULL_WIDTH, SYMBOLS,
         INTERFACE_FONT, NOTE_FONT, NOTE_FONT_SIZE, QUICK_ACCESS,
-        SECTION_ORDER, HIDDEN_SECTIONS, RECENT_COUNT, QUICK_ACCESS_NOTEBOOK,
+        SECTION_ORDER, HIDDEN_SECTIONS, RECENT_COUNT, QUICK_ACCESS_NOTEBOOK, QUICK_ACCESS_IN_DRAWER,
     )
 }
 
@@ -101,6 +104,7 @@ object SettingDefaults {
         SettingKeys.HIDDEN_SECTIONS to JsonArray(emptyList()),
         SettingKeys.RECENT_COUNT to JsonPrimitive(SidebarLayout.RECENT_DEFAULT),
         SettingKeys.QUICK_ACCESS_NOTEBOOK to JsonPrimitive(false),
+        SettingKeys.QUICK_ACCESS_IN_DRAWER to JsonPrimitive(false),
     )
 }
 
@@ -135,6 +139,7 @@ object SettingLabels {
         SettingKeys.HIDDEN_SECTIONS -> "Hidden sections"
         SettingKeys.RECENT_COUNT -> "Recent Notes"
         SettingKeys.QUICK_ACCESS_NOTEBOOK -> "Show Notebook Names in Quick Access"
+        SettingKeys.QUICK_ACCESS_IN_DRAWER -> "Quick Access Notes in the Sidebar"
         DisplayKeys.TAGS -> "Tags"
         DisplayKeys.TODAY -> "Today"
         DisplayKeys.THIS_WEEK -> "This week"
@@ -209,6 +214,10 @@ data class Settings(val values: JsonObject = JsonObject(emptyMap())) {
     /** Whether Quick Access names each note's notebook under its title (T53 item 10). */
     val quickAccessShowsNotebook: Boolean
         get() = (values[SettingKeys.QUICK_ACCESS_NOTEBOOK] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull == true
+
+    /** Whether Android's drawer lists Quick Access's notes themselves (A1622). */
+    val quickAccessInDrawer: Boolean
+        get() = (values[SettingKeys.QUICK_ACCESS_IN_DRAWER] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull == true
 
     /** Whether the Display shortcut [key] shows (A576): only `false` hides one, as core's `sidebarShows`. */
     fun shows(key: String): Boolean {

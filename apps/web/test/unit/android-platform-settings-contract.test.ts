@@ -34,6 +34,7 @@ const SAMPLES = [
   'sidebar.hiddenSections',
   'sidebar.recentCount',
   'quickAccess.showNotebook',
+  'quickAccess.inDrawer',
   'quickAccess.notes',
   'keys.app.search',
   'keysTyped',

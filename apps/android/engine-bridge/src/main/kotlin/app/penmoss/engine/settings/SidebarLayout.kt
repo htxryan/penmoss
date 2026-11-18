@@ -61,7 +61,7 @@ object SidebarLayout {
                 val number = primitive?.takeIf { !it.isString }?.content?.toIntOrNull()
                 if (number != null && number in RECENT_MIN..RECENT_MAX) null else "Must be a whole number from $RECENT_MIN to $RECENT_MAX"
             }
-            SettingKeys.QUICK_ACCESS_NOTEBOOK ->
+            SettingKeys.QUICK_ACCESS_NOTEBOOK, SettingKeys.QUICK_ACCESS_IN_DRAWER ->
                 if ((value as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull != null) null else "Must be true or false"
             else -> "Not a sidebar setting"
         }

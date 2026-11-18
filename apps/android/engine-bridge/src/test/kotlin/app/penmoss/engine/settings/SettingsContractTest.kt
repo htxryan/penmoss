@@ -58,13 +58,14 @@ class SettingsContractTest {
         assertEquals(emptySet<String>(), none.hiddenSections)
         assertEquals(SidebarLayout.RECENT_DEFAULT, none.recentCount)
         assertFalse(none.quickAccessShowsNotebook)
+        assertFalse(none.quickAccessInDrawer)
     }
 
     /** The sidebar's sections and Quick Access's notebook names (T53, A983), by core `sidebar-layout.ts`'s rules. */
     @Test
     fun readsAndChecksTheSidebarLayoutAsTheWebDoes() {
         val values = settings.getValue("values").jsonObject
-        for (key in listOf(SettingKeys.SECTION_ORDER, SettingKeys.HIDDEN_SECTIONS, SettingKeys.RECENT_COUNT, SettingKeys.QUICK_ACCESS_NOTEBOOK)) {
+        for (key in listOf(SettingKeys.SECTION_ORDER, SettingKeys.HIDDEN_SECTIONS, SettingKeys.RECENT_COUNT, SettingKeys.QUICK_ACCESS_NOTEBOOK, SettingKeys.QUICK_ACCESS_IN_DRAWER)) {
             val cases = values.getValue(key).jsonObject
             for (valid in cases.getValue("valid").jsonArray) assertNull("$key $valid", SidebarLayout.problem(key, valid))
             for (invalid in cases.getValue("invalid").jsonArray) assertTrue("$key $invalid", SidebarLayout.problem(key, invalid) != null)
@@ -77,6 +78,7 @@ class SettingsContractTest {
                     SettingKeys.HIDDEN_SECTIONS to SidebarLayout.toJson(listOf("recent")),
                     SettingKeys.RECENT_COUNT to JsonPrimitive(3),
                     SettingKeys.QUICK_ACCESS_NOTEBOOK to JsonPrimitive(true),
+                    SettingKeys.QUICK_ACCESS_IN_DRAWER to JsonPrimitive(true),
                 ),
             ),
         )
@@ -84,6 +86,7 @@ class SettingsContractTest {
         assertEquals(setOf("recent"), stored.hiddenSections)
         assertEquals(3, stored.recentCount)
         assertTrue(stored.quickAccessShowsNotebook)
+        assertTrue(stored.quickAccessInDrawer)
         assertEquals(listOf("tags", "quickAccess", "recent", "notebooks", "calendar"), SidebarLayout.moved(SidebarLayout.SECTIONS, "tags", 0))
         assertEquals(listOf("recent", "tags"), SidebarLayout.withHidden(setOf("tags"), "recent", true))
         assertEquals(

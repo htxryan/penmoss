@@ -21,6 +21,7 @@ import {
 } from './periodic';
 import {
   HIDDEN_SECTIONS_SETTING,
+  QUICK_ACCESS_IN_DRAWER_SETTING,
   QUICK_ACCESS_NOTEBOOK_SETTING,
   RECENT_COUNT_SETTING,
   SECTION_ORDER_SETTING,
@@ -74,6 +75,7 @@ export const PLATFORM_SETTING_KEYS: readonly string[] = [
   HIDDEN_SECTIONS_SETTING,
   RECENT_COUNT_SETTING,
   QUICK_ACCESS_NOTEBOOK_SETTING,
+  QUICK_ACCESS_IN_DRAWER_SETTING,
 ];
 
 /** The per-platform keys by prefix: the keyboard shortcuts (`@penmoss/editor/keys`' `keys.<command>`). */

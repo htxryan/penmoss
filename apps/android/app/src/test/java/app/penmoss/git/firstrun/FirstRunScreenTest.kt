@@ -27,6 +27,9 @@ import androidx.compose.ui.platform.testTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -443,6 +446,41 @@ class FirstRunScreenTest {
         tap("first-run-make")
         compose.waitUntil(5_000) { adds.isNotEmpty() }
         assertEquals("drafts" to "journal", adds.first().place.branch to adds.first().place.dir)
+    }
+
+    @Test
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h1400dp")
+    fun aRepositoryWithOneNotebookBrowsesItsFoldersToStartAnother() {
+        val repo = GitHubRepo("ryan/scratch", "ryan", "scratch", RepoVisibility.PRIVATE, "main", "https://github.com/ryan/scratch.git", null, canPush = true, empty = false)
+        val folders = RepoFolders(
+            empty = false,
+            truncated = false,
+            folders = listOf(RepoFolder("", null), RepoFolder("hooks", null), RepoFolder("penmoss", FolderNotebook("nb1", "Quanta"))),
+        )
+        var added by mutableStateOf(setOf("nb1"))
+        var named: Place? = null
+        var folderPage = 0
+        compose.setContent {
+            PenmossTheme {
+                RepoPicked(
+                    repo, "tok", added, RepoRead.Ready(folders), { _, _ -> }, branch = "dev",
+                    onOpen = { _, _ -> }, onName = { named = it }, onFolder = { folderPage++ }, onUrl = {}, back = {},
+                )
+            }
+        }
+        // On the phone already: no field to type a folder in, the folders themselves.
+        compose.onNodeWithTag("first-run-folder").assertExists()
+        compose.onNodeWithText("Quanta is already on this phone. Pick a folder for a new notebook.").assertExists()
+        compose.onNodeWithText("Notebook: Quanta · Already Added").assertExists()
+        compose.onNodeWithText("hooks").performClick()
+        tap("first-run-continue")
+        assertEquals("hooks" to "dev", named!!.dir to named!!.branch)
+        // Not on the phone yet: Open it, or browse the folders for another.
+        added = emptySet()
+        compose.onNodeWithTag("first-run-repo-one").assertExists()
+        compose.onNodeWithTag("first-run-open").assertExists()
+        tap("first-run-start-another")
+        assertEquals(1, folderPage)
     }
 
     @Test

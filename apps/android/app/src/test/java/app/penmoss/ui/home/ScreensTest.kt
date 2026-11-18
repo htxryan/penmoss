@@ -475,6 +475,42 @@ class ScreensTest {
         assertEquals(1, tried)
     }
 
+    /** Settings → Home → Notes in the Sidebar (A1622): each Quick Access note one tap away, no page. */
+    @Test
+    fun withNotesInTheSidebarTheDrawerListsQuickAccessNotesThatOpenInOneTap() {
+        var opened: String? = null
+        var inDrawer by mutableStateOf(true)
+        var pinned by mutableStateOf(listOf(note("p1", "Garden plan"), note("p2", "Seeds")))
+        compose.setContent {
+            PenmossTheme {
+                HomeScreen(
+                    HomeUi(
+                        notebookId = "nb",
+                        notebooks = listOf(DrawerNotebook("nb", "Garden")),
+                        notebook = "Garden",
+                        title = "Garden",
+                        quickAccess = pinned,
+                        layout = app.penmoss.ui.settings.HomeLayout(quickAccessInDrawer = inDrawer),
+                        status = "Synced",
+                    ),
+                    HomeActions(onOpen = { opened = it }),
+                )
+            }
+        }
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("drawerQuickAccess").assertDoesNotExist()
+        compose.onNodeWithTag("drawerQuickAccessNote-p2").performScrollTo().assertTextContains("Seeds").performClick()
+        assertEquals("p2", opened)
+        // None pinned: it says how to pin one.
+        pinned = emptyList()
+        compose.onNodeWithTag("homeMenu").performClick()
+        compose.onNodeWithTag("drawerQuickAccessNone").assertExists()
+        // Off: the Quick Access page, as before.
+        inDrawer = false
+        compose.onNodeWithTag("drawerQuickAccess").assertExists()
+        compose.onNodeWithTag("drawerQuickAccessNote-p1").assertDoesNotExist()
+    }
+
     /**
      * Each of the sidebar's sections is a page of its own (Ryan's Android feedback, item 11, A1608):
      * the drawer picks Quick Access, Recent Notes or this notebook's notes list, marks the one shown,

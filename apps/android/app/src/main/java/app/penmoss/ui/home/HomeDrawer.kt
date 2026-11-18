@@ -58,15 +58,27 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
             Spacer(Modifier.height(16.dp))
             // The sidebar's sections as pages (item 11, A1608): Quick Access and Recent Notes here,
             // and each notebook's notes list under Notebooks.
-            Item("Quick Access", "star", "drawerQuickAccess", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
+            if (ui.layout.quickAccessInDrawer) {
+                // Settings → Home → Notes in the Sidebar (Ryan, 18 Nov 2026; A1622): the notes
+                // themselves, each one tap away, in place of the Quick Access page.
+                Heading("Quick Access")
+                if (ui.quickAccess.isEmpty()) {
+                    Text(
+                        "No notes yet: a note’s ⋮ → Pin to Quick Access adds it.",
+                        Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("drawerQuickAccessNone"),
+                        style = MaterialTheme.roles.help,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                for (note in ui.quickAccess) {
+                    Item(note.title.ifEmpty { "Untitled" }, "file-text", "drawerQuickAccessNote-${note.id}", onClick = go { actions.onOpen(note.id) })
+                }
+            } else {
+                Item("Quick Access", "star", "drawerQuickAccess", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
+            }
             Item("Recent Notes", "clock", "drawerRecent", selected = ui.page == HomePage.RECENT, onClick = go { actions.onPage(HomePage.RECENT) })
             if (ui.notebooks.isNotEmpty()) {
-                Text(
-                    "Notebooks",
-                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics { heading() },
-                    style = MaterialTheme.roles.listHead,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Heading("Notebooks")
                 for (notebook in ui.notebooks) {
                     val here = notebook.localId == ui.notebookId
                     NavigationDrawerItem(
@@ -89,12 +101,22 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
     }
 }
 
+/** A group's name in the drawer: Quick Access (its notes shown), Notebooks. */
+@Composable
+private fun Heading(text: String) {
+    Text(
+        text,
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics { heading() },
+        style = MaterialTheme.roles.listHead,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
 
 @Composable
 private fun Item(label: String, icon: String, tag: String, selected: Boolean = false, onClick: () -> Unit) {
     val glyph = rememberLucideIcons()?.icon(icon)
     NavigationDrawerItem(
-        label = { Text(label, maxLines = 1) },
+        label = { Text(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
         selected = selected,
         onClick = onClick,
         icon = { if (glyph != null) Icon(LucideAssets.vector(glyph), contentDescription = null, Modifier.size(22.dp)) else Spacer(Modifier.size(22.dp)) },

@@ -29,7 +29,9 @@ import {
 import {
   HIDDEN_SECTIONS_SETTING,
   hiddenSectionsOf,
+  QUICK_ACCESS_IN_DRAWER_SETTING,
   QUICK_ACCESS_NOTEBOOK_SETTING,
+  quickAccessInDrawer,
   quickAccessShowsNotebook,
   RECENT_COUNT_SETTING,
   recentCountOf,
@@ -68,6 +70,7 @@ const READERS: ReadonlyArray<readonly [string, () => unknown]> = [
   [HIDDEN_SECTIONS_SETTING, () => [...hiddenSectionsOf(unset)]],
   [RECENT_COUNT_SETTING, () => recentCountOf(unset)],
   [QUICK_ACCESS_NOTEBOOK_SETTING, () => quickAccessShowsNotebook(unset)],
+  [QUICK_ACCESS_IN_DRAWER_SETTING, () => quickAccessInDrawer(unset)],
 ];
 
 describe('apps/android/contract/settings-v1.json (A1014)', () => {

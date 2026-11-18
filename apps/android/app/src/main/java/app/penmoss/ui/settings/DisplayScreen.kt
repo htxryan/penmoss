@@ -36,6 +36,8 @@ fun DisplayScreen(
     onSectionHidden: (section: String, hide: Boolean) -> Unit = { _, _ -> },
     onRecentCount: (Int) -> Unit = {},
     onQuickAccessNotebook: (Boolean) -> Unit = {},
+    /** Quick Access's notes in the drawer, each one tap away, in place of its page (A1622). */
+    onQuickAccessInDrawer: (Boolean) -> Unit = {},
     /** Home's sections in their new order (PEN-146). */
     onSectionOrder: (List<String>) -> Unit = {},
 ) {
@@ -82,6 +84,14 @@ fun DisplayScreen(
                     Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.settingRow("show-notebook-names").padding(start = 40.dp)) {
                         onQuickAccessNotebook(it)
                     }
+                    Toggle(
+                        "Notes in the Sidebar",
+                        "Each Quick Access note opens from the sidebar in one tap, in place of a Quick Access page",
+                        layout.quickAccessInDrawer,
+                        enabled,
+                        "display-quickAccessInDrawer",
+                        Modifier.settingRow("quick-access-in-sidebar").padding(start = 40.dp),
+                    ) { onQuickAccessInDrawer(it) }
                 }
             }
         }
