@@ -52,7 +52,7 @@ class SettingsContractTest {
         assertFalse(none.fullWidth)
         assertEquals(FontSettings.THEME, none.interfaceFont)
         assertEquals(FontSettings.THEME, none.noteFont)
-        assertEquals(FontSettings.SIZE_DEFAULT, none.noteFontSize)
+        assertEquals(FontSettings.PHONE_SIZE_DEFAULT, none.noteFontSize)
         assertEquals(emptyList<String>(), none.quickAccess)
         assertEquals(SidebarLayout.SECTIONS, none.sectionOrder)
         assertEquals(emptySet<String>(), none.hiddenSections)
@@ -121,7 +121,7 @@ class SettingsContractTest {
                 val read = Settings(JsonObject(mapOf(key to invalid)))
                 assertEquals(FontSettings.THEME, read.interfaceFont)
                 assertEquals(FontSettings.THEME, read.noteFont)
-                assertEquals(FontSettings.SIZE_DEFAULT, read.noteFontSize)
+                assertEquals(FontSettings.PHONE_SIZE_DEFAULT, read.noteFontSize)
             }
         }
         // Each valid preset is one Settings offers, with core's names.

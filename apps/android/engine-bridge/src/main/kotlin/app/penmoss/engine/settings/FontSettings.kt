@@ -18,7 +18,11 @@ object FontSettings {
     const val MAX_FAMILY_CHARS = 64
     const val SIZE_MIN = 12
     const val SIZE_MAX = 28
+    /** Core's default, the Mac's (the contract's `defaults`). */
     const val SIZE_DEFAULT = 16
+
+    /** The phone's own default, two sizes up from the Mac's: its note is small type at arm's length (A1628). */
+    const val PHONE_SIZE_DEFAULT = 18
 
     /** The presets in the order Settings offers them, with their names (core `FONT_PRESET_LABELS`). */
     val PRESETS: List<Pair<String, String>> = listOf(
@@ -88,7 +92,7 @@ object FontSettings {
 
     /** The stored note size, or the default while unset or unreadable (core `noteFontSizeOf`). */
     fun sizeOf(value: JsonElement?): Int =
-        if (value == null || value is JsonNull || problem(SettingKeys.NOTE_FONT_SIZE, value) != null) SIZE_DEFAULT
+        if (value == null || value is JsonNull || problem(SettingKeys.NOTE_FONT_SIZE, value) != null) PHONE_SIZE_DEFAULT
         else (value as JsonPrimitive).intOrNull ?: SIZE_DEFAULT
 
     /** A custom choice's family, or null for a preset. */

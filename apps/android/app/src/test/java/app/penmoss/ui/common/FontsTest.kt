@@ -77,7 +77,7 @@ class FontsTest {
             onNoteFont = { stored += "note" to it; fonts = ui(fonts.interfaceFont, it, fonts.noteSize) },
             onNoteSize = { stored += "size" to it; fonts = ui(fonts.interfaceFont, fonts.noteFont, it) },
         )
-        fonts = ui("theme", "theme", 16)
+        fonts = ui("theme", "theme", FontSettings.PHONE_SIZE_DEFAULT)
         compose.setContent {
             PenmossTheme {
                 AppearanceScreen(
@@ -101,6 +101,7 @@ class FontsTest {
         compose.onNodeWithTag("font-custom-use").performClick()
         assertEquals("note" to "custom:Charter", stored.last())
         compose.onNodeWithTag("font-note").assertTextContains("Charter")
-        compose.onNodeWithText("16 px (default)").performScrollTo().assertExists()
+        // 18 on the phone (A1628).
+        compose.onNodeWithText("18 px (default)").performScrollTo().assertExists()
     }
 }

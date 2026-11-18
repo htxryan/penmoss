@@ -2,6 +2,7 @@ package app.penmoss.git
 
 import app.penmoss.data.SettingsStore
 import app.penmoss.engine.settings.LocalSettings
+import app.penmoss.engine.settings.SettingKeys
 import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -76,8 +77,8 @@ class JournalDeviceSettings(
 
     /** The Journal's [map] with this phone's own look and layout over it: a value replaces, a JsonNull removes. */
     private fun shownOf(map: JsonObject, local: JsonObject): JsonObject {
-        if (local.isEmpty()) return map
-        val shown = map.toMutableMap()
+        // A note size picked on a Mac is for its screen: the phone shows its own, else its default (A1628).
+        val shown = map.toMutableMap().apply { remove(SettingKeys.NOTE_FONT_SIZE) }
         for ((key, value) in local) {
             if (!LocalSettings.isLocal(key)) continue
             if (value is JsonNull) shown.remove(key) else shown[key] = value

@@ -145,6 +145,21 @@ class JournalDeviceSettingsTest {
         assertEquals(17, after.noteFontSize)
     }
 
+    /** A note size the Mac saved in the notebook is the Mac's: the phone shows its own default, else its own pick (A1628). */
+    @Test
+    fun theNoteSizeIsNeverTheMacs(): Unit = runBlocking {
+        notebook[SettingKeys.NOTE_FONT_SIZE] = JsonPrimitive(16)
+        notebook[copyTags] = JsonPrimitive(false)
+        scope.launch { settings.follow() }
+        pass("h1")
+        val first = shows { it.values[copyTags] == JsonPrimitive(false) }.settings
+        assertEquals(app.penmoss.engine.settings.FontSettings.PHONE_SIZE_DEFAULT, first.noteFontSize)
+
+        assertTrue(settings.change(mapOf(SettingKeys.NOTE_FONT_SIZE to JsonPrimitive(20))))
+        assertEquals(20, shows { it.noteFontSize == 20 }.settings.noteFontSize)
+        assertEquals(JsonPrimitive(16), notebook[SettingKeys.NOTE_FONT_SIZE])
+    }
+
     @Test
     fun quickAccessPinsAndUnpinsInTheNotebook(): Unit = runBlocking {
         scope.launch { settings.follow() }

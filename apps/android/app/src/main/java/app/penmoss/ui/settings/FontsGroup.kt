@@ -73,7 +73,7 @@ internal fun FontsGroup(fonts: FontsUi, enabled: Boolean) {
         headlineContent = { Text("Note Font Size") },
         supportingContent = {
             Column {
-                Text("${size.roundToInt()} px${if (size.roundToInt() == FontSettings.SIZE_DEFAULT) " (default)" else ""}")
+                Text("${size.roundToInt()} px${if (size.roundToInt() == FontSettings.PHONE_SIZE_DEFAULT) " (default)" else ""}")
                 Slider(
                     value = size,
                     onValueChange = { size = it.roundToInt().toFloat() },
