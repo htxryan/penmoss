@@ -104,6 +104,23 @@ class SettingsStore(private val db: PenmossDatabase) {
     /** The device map as a change to it answered, before the next tree brings it. */
     suspend fun putDeviceMap(map: JsonObject) = settings.put(SettingEntity(DEVICE_SETTINGS, map.toString()))
 
+    // --- this phone's own look and layout (A1626) ---
+
+    /**
+     * The look and layout this phone keeps alone: never sent, never in a notebook. A JsonNull is
+     * "back to the default here", whatever the Journal notebook holds.
+     */
+    fun observeLocalSettings(): Flow<JsonObject> = settings.observe(LOCAL_SETTINGS).map(::objectOf)
+
+    suspend fun localSettingsNow(): JsonObject = objectOf(settings.get(LOCAL_SETTINGS))
+
+    /** Keeps [changes] on this phone alone (a null: its default here). */
+    suspend fun keepLocally(changes: Map<String, JsonElement?>) = db.withTransaction {
+        val now = objectOf(settings.get(LOCAL_SETTINGS)).toMutableMap()
+        for ((key, value) in changes) now[key] = value ?: JsonNull
+        settings.put(SettingEntity(LOCAL_SETTINGS, JsonObject(now).toString()))
+    }
+
     /** The synced settings as stored, to compare with what they should be. */
     fun observeSyncedSettings(): Flow<JsonObject?> = settings.observe(SYNCED_SETTINGS).map { it?.let(::objectOf) }
 
@@ -270,5 +287,8 @@ class SettingsStore(private val db: PenmossDatabase) {
 
         /** A git notebook's device map from its tree (A1014). */
         const val DEVICE_SETTINGS = "deviceSettings"
+
+        /** This phone's own look and layout (A1626). */
+        const val LOCAL_SETTINGS = "localSettings"
     }
 }

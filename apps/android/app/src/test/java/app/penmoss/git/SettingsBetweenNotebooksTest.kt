@@ -56,19 +56,11 @@ class SettingsBetweenNotebooksTest {
     )
 
     @Test
-    fun copySettingsWritesWhatDiffersRemovesWhatTheFirstLacksAndLeavesQuickAccessAndTheBadge() {
+    fun copySettingsWritesWhatDiffersRemovesWhatTheFirstLacksAndLeavesQuickAccessTheBadgeAndTheLook() {
         val changes = SettingsCopy.changes(work, home)
-        // The device map: the theme, the size and Copy Tags written, Full Width removed; the mode
-        // already matches, and Quick Access's pins are Home's own.
-        assertEquals(
-            mapOf(
-                SettingKeys.THEME to JsonPrimitive("nord"),
-                SettingKeys.NOTE_FONT_SIZE to JsonPrimitive(17),
-                COPY_TAGS_SETTING to JsonPrimitive(false),
-                SettingKeys.FULL_WIDTH to null,
-            ),
-            changes.device,
-        )
+        // The device map: Copy Tags written. Quick Access's pins are Home's own, and the theme,
+        // the size and Full Width are each device's (A1626).
+        assertEquals(mapOf(COPY_TAGS_SETTING to JsonPrimitive(false)), changes.device)
         // Its own: the time zone and the daily template written, the weekly one removed; the badge stays.
         assertEquals(
             mapOf(
@@ -78,9 +70,10 @@ class SettingsBetweenNotebooksTest {
             ),
             changes.own,
         )
-        assertEquals(7, changes.size)
+        assertEquals(4, changes.size)
         assertTrue(SettingsCopy.notCopied(SettingKeys.QUICK_ACCESS))
         assertTrue(SettingsCopy.notCopied("badge.color"))
+        assertTrue(SettingsCopy.notCopied(SettingKeys.THEME))
     }
 
     @Test

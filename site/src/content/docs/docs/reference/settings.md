@@ -7,11 +7,19 @@ This page lists every setting, page by page, so you can find one and see what it
 
 Open Settings with ⌘, on the Mac, or from the **☰** menu on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked with a laptop stay on the device where you set them (hover over the laptop, or focus it, to read why). Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
 
+### Kept on each device
+
+The look and layout stay on the device where you set them, and never reach a notebook, so a theme or light/dark mode picked on one Mac never changes another:
+
+- **Appearance:** the mode, the theme, the fonts and the note text size, Show Tooltips After and Dad Jokes.
+- **Sidebar** (**Home** on Android): its shortcuts, which sections show and in what order, Notes in Recent Notes, and Quick Access's Show Notebook Names and Notes in the Sidebar.
+- **Note:** Note Width, the title bar's buttons, and what shows under the title and in the status bar.
+
+They are marked with a laptop. **Copy Settings…** and **Keep Settings in Step** leave them as they are. Until you change one on a device, it shows what that device showed before. Your custom themes (to pick on any device), Quick Access pins, symbols, Daily Notes and Quick Capture stay the same everywhere.
+
 ### Kept apart for your Macs and your phones
 
-Appearance (the mode, the theme, the fonts and the note text size), the sidebar's layout (its shortcuts, which sections show and in what order, Notes in Recent Notes and Show Notebook Names in Quick Access; Home's on Android) and the keyboard shortcuts are kept once for your Macs and once for your Android phones, so you can have a different theme or sidebar on each. Every Mac shares the Macs' choices and every phone the phones'. On the Mac they are marked with a monitor, its tooltip saying they are kept for your Macs; on Android, with a phone.
-
-Until you change one of these on a platform, it shows what you had chosen before they were kept apart. Your first change there is that platform's own, and the other platform keeps what it had. Your custom themes, Quick Access pins, symbols, Daily Notes and Quick Capture stay the same everywhere.
+The keyboard shortcuts are kept once for your Macs and once for your Android phones. Every Mac shares the Macs' and every phone the phones'. On the Mac they are marked with a monitor; on Android, with a phone.
 
 ## On the Mac
 

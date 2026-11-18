@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DAILY_TEMPLATE, DEFAULT_WEEKLY_TEMPLATE } from '../src/periodic';
 import {
+  isLocalSetting,
   isPlatformSetting,
   captureDestinationOf,
   DAD_JOKES_SETTING,
@@ -97,6 +98,45 @@ describe('isPlatformSetting (PEN-156, A1605)', () => {
       'tooltip.delay',
     ]) {
       expect(isPlatformSetting(key), key).toBe(false);
+    }
+  });
+});
+
+describe('isLocalSetting (A1626)', () => {
+  it('keeps Appearance, the sidebar or Home, and the note’s look on each device', () => {
+    for (const key of [
+      'theme.id',
+      'theme.mode',
+      'font.note',
+      'font.noteSize',
+      'tooltip.delay',
+      'home.dadJokes',
+      'sidebar.graph',
+      'sidebar.hiddenSections',
+      'sidebar.recentCount',
+      'quickAccess.showNotebook',
+      'quickAccess.inDrawer',
+      'note.fullWidth',
+      'noteBar.delete',
+      'metadata.underTitle',
+      'metadata.statusBar',
+    ]) {
+      expect(isLocalSetting(key), key).toBe(true);
+    }
+  });
+
+  it('syncs custom themes, symbols, the shortcuts and the rest', () => {
+    for (const key of [
+      'theme.custom.ink',
+      'symbols.list',
+      'keys.app.search',
+      'quickAccess.notes',
+      'capture.destination',
+      'timeZone',
+      'template.daily',
+      'badge.color',
+    ]) {
+      expect(isLocalSetting(key), key).toBe(false);
     }
   });
 });

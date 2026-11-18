@@ -16,13 +16,9 @@ async function widthStored(page: Page, full: boolean) {
   await expect.poll(() => storedSetting(page, 'note.fullWidth'), { timeout: 10_000 }).toBe(full);
 }
 
-/** Waits until the notebook's remote holds full width as `full`. */
-async function widthSynced(host: GitHost, remote: string, full: boolean) {
-  await expect
-    .poll(async () => (await readRemote(host, remote)).setting('note.fullWidth') === true, {
-      timeout: 90_000,
-    })
-    .toBe(full);
+/** The notebook's remote never holds the note's width: it is this device's own (A1626). */
+async function widthNotSynced(host: GitHost, remote: string) {
+  expect((await readRemote(host, remote)).setting('note.fullWidth')).toBeUndefined();
 }
 
 const docWidth = (page: Page) =>
@@ -64,9 +60,9 @@ test('the note column: 52rem by default, the full window when asked, remembered'
     expect(strip).toBeGreaterThan(0);
     expect(await docWidth(page)).toBeGreaterThan(main - strip - 20);
 
-    // A synced setting: in the notebook's remote, after a reload, and in Settings → Note.
+    // This device's own: after a reload and in Settings → Note, never in the notebook's remote.
     await widthStored(page, true);
-    await widthSynced(host, seeded(notebook).remote, true);
+    await widthNotSynced(host, seeded(notebook).remote);
     await page.reload();
     await expect(page.getByTestId('note-view')).toHaveAttribute('data-width', 'full');
     await page.goto('/settings/note');
@@ -87,12 +83,12 @@ test('the note column: 52rem by default, the full window when asked, remembered'
     await page.keyboard.press(FULL_WIDTH);
     await expect(page.getByTestId('note-view')).not.toHaveAttribute('data-width', 'full');
   } finally {
-    // Off again, in the remote too. A step that failed in Settings left the note: back to it,
-    // so the toggle is there to press.
+    // Off again. A step that failed in Settings left the note: back to it, so the toggle is
+    // there to press.
     if (!(await toggle.isVisible())) await page.goto(`/notes/${id}`);
     if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-    await widthSynced(host, seeded(notebook).remote, false);
+    await widthNotSynced(host, seeded(notebook).remote);
   }
   expect(errors).toEqual([]);
 });

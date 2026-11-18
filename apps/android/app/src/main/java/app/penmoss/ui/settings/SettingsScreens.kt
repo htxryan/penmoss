@@ -357,22 +357,22 @@ private val FILL_MIN = 560.dp
 internal fun GroupTitle(
     text: String,
     modifier: Modifier = Modifier,
-    /** The group's settings are kept for the phones apart from the Macs (PEN-156, A1605): the phone mark follows. */
-    platform: Boolean = false,
+    /** The group's settings are kept on this phone alone (A1626): the laptop mark follows. */
+    deviceOnly: Boolean = false,
 ) {
     val padded = modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
     // At least the size of the rows under it (A1561): titleSmall was smaller than their names.
     val title = @Composable { m: Modifier ->
         Text(text, m.semantics { heading() }, style = MaterialTheme.roles.groupHead, color = MaterialTheme.colorScheme.primary)
     }
-    if (!platform) {
+    if (!deviceOnly) {
         title(padded)
         return
     }
     // The mark beside the title, not in it, so the heading stays its name (as A1559's laptop).
     Row(padded, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         title(Modifier)
-        PlatformMark(many = true)
+        DeviceOnlyMark(many = true)
     }
 }
 
@@ -517,7 +517,7 @@ fun AppearanceScreen(
             if (fonts != null) FontsAtSize(fonts, Modifier.padding(top = 12.dp), framed = false)
             return@Column
         }
-        GroupTitle("Theme", Modifier.settingRow("theme"), platform = true)
+        GroupTitle("Theme", Modifier.settingRow("theme"), deviceOnly = true)
         Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
         Help(
             if (mode == "system") "System follows this phone’s setting: ${if (systemDark) "dark" else "light"} right now."
@@ -535,7 +535,7 @@ fun AppearanceScreen(
             )
         }
         if (fonts != null) {
-            GroupTitle("Text", platform = true)
+            GroupTitle("Text", deviceOnly = true)
             FontsGroup(fonts, enabled)
         }
         GroupTitle("Note")

@@ -178,15 +178,15 @@ class DisplayAndSyncStopTest {
 
     /** PEN-156, A1605: Home's shortcuts and sections are kept for the phones, and the phone marks both groups. */
     @Test
-    fun homesGroupsCarryThePhoneMark() {
+    fun homesGroupsCarryTheThisPhoneOnlyMark() {
         compose.setContent {
             PenmossTheme {
                 DisplayScreen(displayChoices(Settings()), enabled = true, onChange = { _, _ -> }, onBack = {})
             }
         }
         // Unmerged, as BetweenNotebooksScreenTest finds the laptop: the mark is inside its row's semantics.
-        compose.onAllNodesWithTag("platformOnly", useUnmergedTree = true).assertCountEquals(2)
-        compose.onAllNodesWithTag("platformOnly", useUnmergedTree = true).onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
+        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).assertCountEquals(2)
+        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.DEVICE_ONLY_GROUP_TIP)
     }
 
     @Test

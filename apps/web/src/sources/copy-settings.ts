@@ -1,14 +1,18 @@
 import { QUICK_ACCESS_SETTING } from '@penmoss/core/quick-access';
+import { isLocalSetting } from '@penmoss/core/settings';
 import { BADGE_SETTINGS } from './badge';
 
 /**
  * Settings copied from one notebook to another (Quanta feedback 3, item 10; A1137): the
- * primary notebook's theme, display, shortcuts and the rest, written into another notebook so
+ * primary notebook's Daily Notes, Quick Capture, Symbols, keyboard shortcuts and the rest, written into another notebook so
  * it reads the same if it becomes the primary, or on a device where it is. Quick Access is not
  * copied: its pins are the primary notebook's own notes. Nor is the badge (PEN-140): it names
  * the notebook it belongs to.
  */
 export const NOT_COPIED: ReadonlySet<string> = new Set([QUICK_ACCESS_SETTING, ...BADGE_SETTINGS]);
+
+/** Not copied: Quick Access, the badge, and the look and layout, which stay on each device (A1626). */
+const notCopied = (key: string): boolean => NOT_COPIED.has(key) || isLocalSetting(key);
 
 export interface SettingsHolder {
   settings(): Record<string, unknown>;
@@ -26,12 +30,12 @@ export function copySettings(from: SettingsHolder, to: SettingsHolder): number {
   const target = to.settings();
   let changed = 0;
   for (const [key, value] of Object.entries(source)) {
-    if (NOT_COPIED.has(key) || same(target[key], value)) continue;
+    if (notCopied(key) || same(target[key], value)) continue;
     to.setSetting(key, value);
     changed += 1;
   }
   for (const key of Object.keys(target)) {
-    if (NOT_COPIED.has(key) || key in source) continue;
+    if (notCopied(key) || key in source) continue;
     to.setSetting(key, undefined);
     changed += 1;
   }

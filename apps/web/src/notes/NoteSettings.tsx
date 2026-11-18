@@ -48,7 +48,9 @@ export function NoteSettings() {
             <NotePanelSetting name={`${id}-panel`} />
           </div>
 
-          <GroupHead id={`${id}-bar`}>Title Bar Buttons</GroupHead>
+          <GroupHead id={`${id}-bar`} scope>
+            Title Bar Buttons
+          </GroupHead>
           <div
             className="lf-group lf-group-two"
             role="group"
@@ -83,7 +85,9 @@ export function NoteSettings() {
           </div>
           <p className="lf-help">Each is also in the note’s ⋯ menu, which always shows.</p>
 
-          <GroupHead id={`${id}-under`}>Under the Title</GroupHead>
+          <GroupHead id={`${id}-under`} scope>
+            Under the Title
+          </GroupHead>
           <div
             className="lf-chips"
             role="group"
@@ -103,7 +107,9 @@ export function NoteSettings() {
             ))}
           </div>
 
-          <GroupHead id={`${id}-status`}>In the Status Bar</GroupHead>
+          <GroupHead id={`${id}-status`} scope>
+            In the Status Bar
+          </GroupHead>
           <div
             className="lf-chips"
             role="group"
@@ -199,6 +205,7 @@ function NoteWidthSetting({ name }: { name: string }) {
     <SettingRow
       setting="note-width"
       label="Note Width"
+      scope
       labelId={`${id}-l`}
       help={
         <>

@@ -23,30 +23,33 @@ function holder(initial: Record<string, unknown>): SettingsHolder & { writes: st
 }
 
 describe('settings copied between notebooks (A1137)', () => {
-  it('makes the target the same, writing only what differs, and never Quick Access', () => {
+  it('makes the target the same, writing only what differs, and never Quick Access nor the look (A1626)', () => {
     const from = holder({
       theme: 'moss',
+      'theme.id': 'nord',
       'noteBar.delete': true,
       'keys.note.toggleSource': ['Mod+Shift+M'],
       [QUICK_ACCESS_SETTING]: ['a'],
     });
     const to = holder({
       theme: 'paper',
+      'theme.id': 'paper',
       'keys.note.toggleSource': ['Mod+Shift+M'],
       'sidebar.graph': false,
       [QUICK_ACCESS_SETTING]: ['b'],
     });
-    expect(copySettings(from, to)).toBe(3);
-    expect(to.writes.sort()).toEqual(['noteBar.delete', 'sidebar.graph', 'theme']);
+    expect(copySettings(from, to)).toBe(1);
+    expect(to.writes).toEqual(['theme']);
     expect(to.settings()).toEqual({
       theme: 'moss',
-      'noteBar.delete': true,
+      'theme.id': 'paper',
       'keys.note.toggleSource': ['Mod+Shift+M'],
+      'sidebar.graph': false,
       [QUICK_ACCESS_SETTING]: ['b'],
     });
     // Again: nothing differs, so nothing is written.
     expect(copySettings(from, to)).toBe(0);
-    expect(to.writes).toHaveLength(3);
+    expect(to.writes).toHaveLength(1);
   });
 
   it('keeps this Mac’s in-step choice, off by default', () => {

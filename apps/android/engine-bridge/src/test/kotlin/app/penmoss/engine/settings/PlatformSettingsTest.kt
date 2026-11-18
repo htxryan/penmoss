@@ -31,4 +31,14 @@ class PlatformSettingsTest {
             assertEquals(key, kept.jsonPrimitive.boolean, PlatformSettings.isPlatform(key))
         }
     }
+
+    @Test
+    fun theLocalKeysAreCores() {
+        val local = contract.getValue("local").jsonObject
+        assertEquals(local.getValue("keys").jsonArray.map { it.jsonPrimitive.content }, LocalSettings.KEYS)
+        assertEquals(local.getValue("prefixes").jsonArray.map { it.jsonPrimitive.content }, LocalSettings.PREFIXES)
+        for ((key, kept) in local.getValue("samples").jsonObject) {
+            assertEquals(key, kept.jsonPrimitive.boolean, LocalSettings.isLocal(key))
+        }
+    }
 }

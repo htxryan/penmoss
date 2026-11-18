@@ -12,6 +12,7 @@
  */
 import { DISPLAY_SETTING_KEYS, PHONE_SHORTCUT_SETTING_KEYS } from './display';
 import { FONT_SETTING_KEYS } from './fonts';
+import { STATUS_BAR_SETTING, UNDER_TITLE_SETTING } from './note-metadata';
 import {
   DEFAULT_DAILY_TEMPLATE,
   DEFAULT_TIME_ZONE,
@@ -26,6 +27,7 @@ import {
   RECENT_COUNT_SETTING,
   SECTION_ORDER_SETTING,
 } from './sidebar-layout';
+import { TOOLTIP_DELAY_SETTING } from './tooltips';
 
 type Settings = Readonly<Record<string, unknown>>;
 
@@ -91,6 +93,46 @@ export function isPlatformSetting(key: string): boolean {
   return (
     PLATFORM_SETTING_KEYS.includes(key) ||
     PLATFORM_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))
+  );
+}
+
+/**
+ * The look and layout (Ryan, 18 Nov 2026, A1626): the theme and its mode, the fonts and note text's
+ * size, the tooltips' delay and the dad jokes (Appearance), the sidebar's or Home's shortcuts and
+ * sections, Recent Notes' length and Quick Access's display (Sidebar, Home), and the note's width,
+ * title-bar buttons and fields (Note). Each device keeps its own, never synced, so a notebook's
+ * look never follows another device's. Symbols, custom themes and the keyboard shortcuts stay synced.
+ */
+export const LOCAL_SETTING_KEYS: readonly string[] = [
+  'theme.id',
+  'theme.mode',
+  ...FONT_SETTING_KEYS,
+  TOOLTIP_DELAY_SETTING,
+  DAD_JOKES_SETTING,
+  ...DISPLAY_SETTING_KEYS,
+  ...PHONE_SHORTCUT_SETTING_KEYS,
+  SECTION_ORDER_SETTING,
+  HIDDEN_SECTIONS_SETTING,
+  RECENT_COUNT_SETTING,
+  QUICK_ACCESS_NOTEBOOK_SETTING,
+  QUICK_ACCESS_IN_DRAWER_SETTING,
+  FULL_WIDTH_SETTING,
+  UNDER_TITLE_SETTING,
+  STATUS_BAR_SETTING,
+];
+
+/** The local keys by prefix: the note's title-bar buttons (`noteBar.<button>`). */
+export const LOCAL_SETTING_PREFIXES: readonly string[] = ['noteBar.'];
+
+/**
+ * A setting this device keeps alone (A1626): written only to the device's own storage (the Mac's
+ * and browser's `localStorage`, the phone's database), and read from there over the synced value,
+ * which shows only while this device has never changed it.
+ */
+export function isLocalSetting(key: string): boolean {
+  return (
+    LOCAL_SETTING_KEYS.includes(key) ||
+    LOCAL_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))
   );
 }
 

@@ -1,12 +1,13 @@
 /**
  * T28 acceptance: "custom themes sync across devices". Two Macs share a git notebook, whose
  * folders-and-settings document they merge (D49: the git engine carries it, A827; here each
- * update is handed straight across); a theme duplicated, edited and chosen on one is chosen and
- * identical on the other.
+ * update is handed straight across); a theme duplicated and edited on one is identical on the
+ * other, where it is there to choose: which theme each device shows is its own (A1626).
  */
 import { setSetting } from '@penmoss/model/workspace';
 import { createYjs14Replica } from '@penmoss/model/yjs14';
 import {
+  chooseTheme,
   CUSTOM_THEME_PREFIX,
   deleteCustomTheme,
   duplicateAndChoose,
@@ -60,18 +61,19 @@ async function twoDevices() {
 }
 
 describe('custom themes sync across devices (T28)', () => {
-  it('a theme duplicated, edited and chosen on one device is chosen on the other', async () => {
+  it('a theme duplicated and edited on one device is there on the other, which keeps its own choice (A1626)', async () => {
     const { mac, web } = await twoDevices();
     const copy = duplicateAndChoose(mac, NORD);
     const edited = { ...copy, name: 'Fjord', light: { ...copy.light, accent: '#205080' } };
     saveCustomTheme(mac, edited);
     setThemeMode(mac, 'light');
 
-    await vi.waitFor(() => {
-      const resolved = resolveThemeSettings(web.settings());
-      expect(resolved.theme).toEqual(edited);
-      expect(resolved.mode).toBe('light');
-    });
+    await vi.waitFor(() => expect(resolveThemeSettings(web.settings()).custom).toEqual([edited]));
+    const resolved = resolveThemeSettings(web.settings());
+    expect(resolved.theme.id).toBe('penmoss');
+    expect(resolved.mode).toBe('system');
+    chooseTheme(web, copy.id);
+    expect(resolveThemeSettings(web.settings()).theme).toEqual(edited);
     expect(resolveThemeSettings(web.settings()).custom.map((theme) => theme.name)).toEqual([
       'Fjord',
     ]);
@@ -104,7 +106,8 @@ describe('custom themes sync across devices (T28)', () => {
   it('merges two devices’ edits to one theme: an edit saved after the other arrived keeps both', async () => {
     const { mac, web } = await twoDevices();
     const copy = duplicateAndChoose(mac, NORD);
-    await vi.waitFor(() => expect(resolveThemeSettings(web.settings()).theme.id).toBe(copy.id));
+    await vi.waitFor(() => expect(resolveThemeSettings(web.settings()).custom).toHaveLength(1));
+    chooseTheme(web, copy.id);
     // The Mac starts editing the background; meanwhile the web changes the accent and saves.
     const macStart = resolveThemeSettings(mac.settings()).theme;
     const webStart = resolveThemeSettings(web.settings()).theme;
@@ -130,7 +133,8 @@ describe('custom themes sync across devices (T28)', () => {
   it('does not bring back a theme deleted on another device while it was being edited', async () => {
     const { mac, web } = await twoDevices();
     const copy = duplicateAndChoose(mac, NORD);
-    await vi.waitFor(() => expect(resolveThemeSettings(web.settings()).theme.id).toBe(copy.id));
+    await vi.waitFor(() => expect(resolveThemeSettings(web.settings()).custom).toHaveLength(1));
+    chooseTheme(web, copy.id);
     const start = resolveThemeSettings(mac.settings()).theme;
     deleteCustomTheme(web, start);
     await vi.waitFor(() => expect(resolveThemeSettings(mac.settings()).custom).toEqual([]));

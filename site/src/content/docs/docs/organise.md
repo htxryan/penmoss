@@ -38,7 +38,7 @@ Each notebook has a badge: a small square in a colour, holding a letter, a numbe
 
 One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it with **Primary Notebook** in **Settings → All Notebooks**. Each Mac chooses its own; the notebook's row and page show a **Primary** chip.
 
-To give another notebook the same settings, choose **Copy Settings…** under **Between Notebooks**, pick **From** and **To**, and choose **Copy Settings**: it replaces the other notebook's settings, once (Quick Access stays as it is). **Keep Settings in Step** does it for every change from then on, on this Mac. Android has **Primary Notebook**, **Keep Settings in Step** and **Copy Settings…** in **Settings → All Notebooks** too, and Keep Settings in Step is each phone's own choice.
+To give another notebook the same settings, choose **Copy Settings…** under **Between Notebooks**, pick **From** and **To**, and choose **Copy Settings**: it replaces the other notebook's settings, once (Quick Access stays as it is, and so do the theme and the rest of the look, which each device keeps for itself). **Keep Settings in Step** does it for every change from then on, on this Mac. Android has **Primary Notebook**, **Keep Settings in Step** and **Copy Settings…** in **Settings → All Notebooks** too, and Keep Settings in Step is each phone's own choice.
 
 ## Folders
 

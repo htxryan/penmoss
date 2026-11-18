@@ -13,6 +13,7 @@ import {
   WORKSPACE_RECORD_KEY,
 } from '@penmoss/model/workspace';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LOCAL_SETTINGS_KEY, LocalSettings } from '../../src/workspace/local-settings';
 import { planDrop } from '../../src/workspace/model';
 import { Workspace, type WorkspaceOptions } from '../../src/workspace/service';
 import { memoryNotes } from './support/memory-notes';
@@ -181,7 +182,7 @@ describe('Workspace', () => {
     expect(workspace.settings()).toEqual({ theme: 'dark' });
   });
 
-  it('keeps the Macs’ own look and layout, the shared value showing until there is one (PEN-156, A1605)', async () => {
+  it('keeps the look and layout on this device, the synced value showing until it has its own (A1605, A1626)', async () => {
     const { workspace } = setup();
     await workspace.start();
     // What every device shared before: an older app, or the phone before A1605.
@@ -189,28 +190,48 @@ describe('Workspace', () => {
     setSetting(workspace.doc, DEVICE_MAP, 'sidebar.hiddenSections', ['tags']);
     expect(workspace.settings()['theme.id']).toBe('nord');
 
-    // A change here is the Macs' own copy; the shared value and the phones' stay as they were.
+    // A change of the look stays on this device: nothing in the notebook changes. The keyboard
+    // shortcuts are still the Macs' own copy, synced.
     workspace.setSetting('theme.id', 'paper');
     workspace.setSetting('keys.app.search', ['Mod+J']);
     expect(workspace.settings()['theme.id']).toBe('paper');
     expect(readSettings(workspace.doc, DEVICE_MAP)['theme.id']).toBe('nord');
-    expect(readSettings(workspace.doc, 'desktop')).toEqual({
-      'theme.id': 'paper',
-      'keys.app.search': ['Mod+J'],
-    });
+    expect(readSettings(workspace.doc, 'desktop')).toEqual({ 'keys.app.search': ['Mod+J'] });
 
-    // A phone's change to its own copy doesn't show here.
+    // Another device's change, a phone's or an older Mac's, doesn't show here once it has its own.
     setSetting(workspace.doc, 'mobile', 'sidebar.hiddenSections', ['calendar']);
-    setSetting(workspace.doc, 'mobile', 'theme.id', 'slate');
+    setSetting(workspace.doc, 'desktop', 'theme.id', 'slate');
     expect(workspace.settings()['sidebar.hiddenSections']).toEqual(['tags']);
     expect(workspace.settings()['theme.id']).toBe('paper');
 
-    // Shared settings are still shared, and back to the default stays on the Macs.
+    // Shared settings are still shared, and back to the default stays on this device.
     workspace.setSetting('quickAccess.notes', ['01A']);
     expect(readSettings(workspace.doc, DEVICE_MAP)['quickAccess.notes']).toEqual(['01A']);
     workspace.setSetting('sidebar.hiddenSections', undefined);
     expect(workspace.settings()).not.toHaveProperty('sidebar.hiddenSections');
     expect(readSettings(workspace.doc, DEVICE_MAP)['sidebar.hiddenSections']).toEqual(['tags']);
+  });
+
+  it('shares this device’s look between its notebooks and windows, and tells them of a change (A1626)', async () => {
+    const storage = new Map<string, string>();
+    const local = new LocalSettings({
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => void storage.set(key, value),
+    } as unknown as Storage);
+    const one = setup(memoryNotes(), { localSettings: local }).workspace;
+    const two = setup(memoryNotes(), { localSettings: local }).workspace;
+    await Promise.all([one.start(), two.start()]);
+    let told = 0;
+    two.subscribe(() => (told += 1));
+    one.setSetting('theme.mode', 'dark');
+    expect(two.settings()['theme.mode']).toBe('dark');
+    expect(told).toBeGreaterThan(0);
+    expect(JSON.parse(storage.get(LOCAL_SETTINGS_KEY) ?? '{}')).toEqual({ 'theme.mode': 'dark' });
+    // Another window's copy, read again on its `storage` event.
+    const other = new LocalSettings({
+      getItem: (key: string) => storage.get(key) ?? null,
+    } as unknown as Storage);
+    expect(other.over({})).toEqual({ 'theme.mode': 'dark' });
   });
 
   it('files a journal note under Journal/<year>/<month> or Weekly, in folders every device names alike (T19)', async () => {

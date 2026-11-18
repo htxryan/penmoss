@@ -128,24 +128,24 @@ describe('Settings → Sidebar (PEN-146)', () => {
     expect(writes.at(-1)).toEqual(['sidebar.recentCount', 2]);
   });
 
-  it('marks the shortcuts and sections as the Macs’ own, and keeps a change off the phones (PEN-156, A1605)', () => {
+  it('marks the shortcuts and sections as this device’s own, and keeps a change out of the notebook (A1626)', () => {
     // What every device shared before: Graph hidden on all of them.
     act(() => setSetting(workspace.doc, DEVICE_MAP, 'sidebar.graph', false));
     render(<SidebarSettings />);
     const marks = [...host.querySelectorAll<HTMLElement>('.lf-sub .lf-scope')];
     expect(marks).toHaveLength(2);
     for (const mark of marks) {
-      expect(mark.dataset['scope']).toBe('platform');
-      expect(mark.querySelector('[data-icon="monitor"]')).not.toBeNull();
+      expect(mark.dataset['scope']).toBe('device');
+      expect(mark.querySelector('[data-icon="laptop"]')).not.toBeNull();
       expect(mark.getAttribute('aria-label')).toBe(
-        'These settings are kept for your computers only. Your Android phones keep their own.',
+        'These settings are kept only on this device and aren’t synced to your other devices.',
       );
     }
-    // The shared value shows until the Macs have their own.
+    // The synced value shows until this device has its own.
     expect(byTest<HTMLInputElement>('display-graph').checked).toBe(false);
     click(byTest('display-graph'));
     expect(byTest<HTMLInputElement>('display-graph').checked).toBe(true);
-    expect(readSettings(workspace.doc, 'desktop')['sidebar.graph']).toBe(true);
+    expect(readSettings(workspace.doc, 'desktop')).toEqual({});
     expect(readSettings(workspace.doc, DEVICE_MAP)['sidebar.graph']).toBe(false);
     expect(readSettings(workspace.doc, 'mobile')).toEqual({});
   });
@@ -217,7 +217,7 @@ describe('Settings → Note (PEN-146)', () => {
     // beside the label, so the radios' group keeps the label alone as its name.
     const mark = byTest('note-panel-setting').querySelector<HTMLElement>('.lf-scope')!;
     const sentence =
-      'Unlike other settings, this setting is kept only on this device and isn’t synced through your primary notebook.';
+      'This setting is kept only on this device and isn’t synced to your other devices.';
     expect(mark.querySelector('[data-icon="laptop"]')).not.toBeNull();
     expect(mark.getAttribute('role')).toBe('img');
     expect(mark.getAttribute('aria-label')).toBe(sentence);

@@ -43,9 +43,9 @@ fun DisplayScreen(
 ) {
     SectionScreen("Home", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
         Help("A hidden shortcut still works from Search and a keyboard. Search always shows.")
-        GroupTitle("Shortcuts on Home", Modifier.settingRow("shortcuts-on-home"), platform = true)
+        GroupTitle("Shortcuts on Home", Modifier.settingRow("shortcuts-on-home"), deviceOnly = true)
         for (choice in choices) Toggle(choice.label, null, choice.shown, enabled, "display-${choice.key}") { onChange(choice.key, it) }
-        GroupTitle("Sections", Modifier.settingRow("sections"), platform = true)
+        GroupTitle("Sections", Modifier.settingRow("sections"), deviceOnly = true)
         Help("Drag a section by its handle to move it.")
         val home = layout.order.filter { it in HomeLayout.HOME_SECTIONS }
         ReorderableColumn(
