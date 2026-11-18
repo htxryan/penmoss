@@ -494,7 +494,7 @@ fun AppearanceScreen(
     var previewing by rememberSaveable { mutableStateOf(false) }
     // The tabs hold still under the title and each tab's page scrolls under them, as option 3 draws it.
     SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }, fill = true) {
-        AppearanceTabs(previewing) { previewing = it }
+        SettingsPreviewTabs(previewing, "appearance") { previewing = it }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "appearancePreviewPanel" else "appearanceSettingsPanel")) {
         if (previewing) {
             val theme = themes.firstOrNull { it.id == chosen }?.name ?: "This theme"
@@ -552,11 +552,14 @@ fun AppearanceScreen(
 }
 
 /**
- * Appearance's two tabs (A1619), as option 3 draws them: full width under the title, each with
- * its icon; the one shown on the page's own background with the accent under it, the other darker.
+ * Settings and Preview, the two tabs of Appearance (A1619) and Home (A1633), as option 3 draws
+ * them: full width under the title, each with its icon; the one shown on the page's own
+ * background with the accent under it, the other darker. [tag] names them for tests:
+ * `<tag>Tabs`, `<tag>SettingsTab` and `<tag>PreviewTab`. The Mac's Appearance, Sidebar and Note
+ * have the same two (`PreviewTabs`).
  */
 @Composable
-private fun AppearanceTabs(previewing: Boolean, onPreview: (Boolean) -> Unit) {
+internal fun SettingsPreviewTabs(previewing: Boolean, tag: String, onPreview: (Boolean) -> Unit) {
     val colours = MaterialTheme.colorScheme
     val icons = rememberLucideIcons()
     Row(
@@ -564,7 +567,7 @@ private fun AppearanceTabs(previewing: Boolean, onPreview: (Boolean) -> Unit) {
             // A line above and below, edge to edge, as the design draws it.
             drawLine(colours.outlineVariant, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx())
             drawLine(colours.outlineVariant, androidx.compose.ui.geometry.Offset(0f, size.height), androidx.compose.ui.geometry.Offset(size.width, size.height), 1.dp.toPx())
-        }.selectableGroup().testTag("appearanceTabs"),
+        }.selectableGroup().testTag("${tag}Tabs"),
     ) {
         listOf(Triple("Settings", false, "sliders-horizontal"), Triple("Preview", true, "eye")).forEachIndexed { index, (label, preview, glyph) ->
             val on = previewing == preview
@@ -575,7 +578,7 @@ private fun AppearanceTabs(previewing: Boolean, onPreview: (Boolean) -> Unit) {
                     .fillMaxHeight()
                     .background(if (on) colours.background else androidx.compose.ui.graphics.lerp(colours.background, androidx.compose.ui.graphics.Color.Black, if (colours.background.luminance() < 0.5f) 0.25f else 0.05f))
                     .selectable(on, role = Role.Tab) { onPreview(preview) }
-                    .testTag(if (preview) "appearancePreviewTab" else "appearanceSettingsTab"),
+                    .testTag(if (preview) "${tag}PreviewTab" else "${tag}SettingsTab"),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -598,8 +601,8 @@ private val PREVIEW_NOTE_HEIGHT = 548.dp
 @Composable
 private fun PreviewApp(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -> Unit)?, modifier: Modifier, noteHeight: Dp?, noteArea: Boolean) {
     val colours = MaterialTheme.colorScheme
-    Box(modifier.then(if (noteHeight == null) Modifier.fillMaxHeight() else Modifier)) {
-        Column(Modifier.fillMaxWidth().border(1.dp, colours.outlineVariant).background(colours.surface).inert()) {
+    InertPreview(modifier.then(if (noteHeight == null) Modifier.fillMaxHeight() else Modifier), "appearancePreviewShield") {
+        Column(Modifier.fillMaxWidth().border(1.dp, colours.outlineVariant).background(colours.surface)) {
             HomeShortcutRow(shortcuts, onSearch = {}, onToday = {}, onThisWeek = {}, onGraph = {}, onCommands = {})
             if (noteArea) {
                 HorizontalDivider(color = colours.outlineVariant)
@@ -607,9 +610,20 @@ private fun PreviewApp(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -
                 Box(area) { if (note != null) note(Modifier.fillMaxSize()) }
             }
         }
-        // Over the preview, so no touch reaches it, yet a drag that starts on it still scrolls the
-        // page: this watches and consumes nothing, and the page's scroll sees the drag.
-        Box(Modifier.matchParentSize().pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }.testTag("appearancePreviewShield"))
+    }
+}
+
+/**
+ * A Preview tab's app (A1564, A1633): [content] drawn as the app draws it and taking nothing. Its
+ * semantics and focus are cleared ([inert]), and a shield ([shieldTag]) lies over it, so no touch
+ * reaches it, yet a drag that starts on it still scrolls the page: the shield watches and
+ * consumes nothing, and the page's scroll sees the drag.
+ */
+@Composable
+internal fun InertPreview(modifier: Modifier, shieldTag: String, content: @Composable () -> Unit) {
+    Box(modifier) {
+        Box(Modifier.inert()) { content() }
+        Box(Modifier.matchParentSize().pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }.testTag(shieldTag))
     }
 }
 
@@ -617,7 +631,7 @@ private fun PreviewApp(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -
  * Shows what is inside and takes nothing (A1564): focus never enters it and its semantics are
  * cleared, as the web's `inert` does; [PreviewApp]'s shield keeps touches from it.
  */
-private fun Modifier.inert(): Modifier = this
+internal fun Modifier.inert(): Modifier = this
     .clearAndSetSemantics {}
     .focusProperties { onEnter = { cancelFocusChange() } }
     .focusGroup()

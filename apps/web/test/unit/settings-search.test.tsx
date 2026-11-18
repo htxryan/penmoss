@@ -218,4 +218,23 @@ describe('revealSetting (PEN-146)', () => {
     expect(done).toBe(false);
     root.remove();
   });
+
+  it('shows the Settings tab first when the row is on it and Preview is shown (A1633)', async () => {
+    const root = document.createElement('div');
+    root.innerHTML =
+      '<button role="tab" aria-controls="p-settings"></button>' +
+      '<div role="tabpanel" id="p-settings" hidden><div data-setting="mode"><input /></div></div>';
+    document.body.append(root);
+    const tab = root.querySelector('button')!;
+    const panel = root.querySelector<HTMLElement>('[role="tabpanel"]')!;
+    tab.addEventListener('click', () => {
+      panel.hidden = false;
+    });
+    const stop = revealSetting(root, 'mode', () => undefined);
+    expect(panel.hidden).toBe(false);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    expect(root.querySelector('[data-setting="mode"]')!.hasAttribute('data-found')).toBe(true);
+    stop();
+    root.remove();
+  });
 });

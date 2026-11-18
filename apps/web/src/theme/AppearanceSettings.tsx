@@ -17,7 +17,7 @@ import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
 import { useThemeState } from './hooks';
 import { FontSettings } from './FontSettings';
-import { PreviewZoom } from './PreviewZoom';
+import { PreviewTabs } from './PreviewTabs';
 import { TypeSpecimen } from './TypeSpecimen';
 import { GroupHead, SettingRow } from './look-rows';
 import { ThemeEditor } from './ThemeEditor';
@@ -31,13 +31,13 @@ const MODES: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> =
 
 /**
  * Settings → Appearance (T28; PEN-146's Live Preview Studio): how Penmoss looks, in three groups
- * beside a live miniature of the app (`AppPreview`) that redraws as they change. Theme: the mode
+ * on the Settings tab, and the app itself (`AppPreview`), redrawn as they change, on the Preview
+ * tab (`PreviewTabs`, A1633). Theme: the mode
  * (Light, Dark, System), the theme (eight built-ins and the user's own) and Customize…, which
  * opens the theme editor on a copy of a built-in. Text: the fonts (T51 item 16, A944) and Show
  * Tooltips After (A1247, from Display) and Dad Jokes (the empty window's heading). Window, the Mac app's only and this Mac's own: the
  * compact title bar (T47, A724). The rest is the Primary Notebook's settings (A827), so it
- * follows Ryan to every device. Note Width and Note Panel are on the Note page now. On a narrow
- * window the preview goes under the controls.
+ * follows Ryan to every device. Note Width and Note Panel are on the Note page now.
  */
 export function AppearanceSettings() {
   const workspace = useWorkspace();
@@ -94,127 +94,126 @@ export function AppearanceSettings() {
         intro="The theme, fonts and tooltips. Every theme has a light and a dark variant."
       />
 
-      <div className="lf-split">
-        <div className="lf-controls">
-          <GroupHead id={`${id}-theme`} scope>
-            Theme
-          </GroupHead>
-          <div className="lf-group" role="group" aria-labelledby={`${id}-theme`}>
-            <SettingRow
-              setting="mode"
-              label="Mode"
-              labelId={`${id}-mode`}
-              help={
-                state.mode === 'system'
-                  ? `System follows ${device}: ${state.variant} right now.`
-                  : `Always ${state.mode}, whatever ${device} is set to.`
-              }
-            >
-              <div
-                className="seg"
-                role="radiogroup"
-                aria-labelledby={`${id}-mode`}
-                data-testid="theme-mode"
+      <PreviewTabs
+        name="Appearance"
+        testId="appearance-tabs"
+        settings={
+          <>
+            <GroupHead id={`${id}-theme`} scope>
+              Theme
+            </GroupHead>
+            <div className="lf-group" role="group" aria-labelledby={`${id}-theme`}>
+              <SettingRow
+                setting="mode"
+                label="Mode"
+                labelId={`${id}-mode`}
+                help={
+                  state.mode === 'system'
+                    ? `System follows ${device}: ${state.variant} right now.`
+                    : `Always ${state.mode}, whatever ${device} is set to.`
+                }
               >
-                {MODES.map((item) => (
-                  <label key={item.mode} className="seg-option">
-                    <input
-                      type="radio"
-                      name={`${id}-mode`}
-                      value={item.mode}
-                      checked={state.mode === item.mode}
-                      onChange={() => setThemeMode(workspace, item.mode)}
-                    />
-                    <Icon name={item.icon} size={14} />
-                    <span className="bold-steady" data-label={item.label}>
-                      {item.label}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </SettingRow>
-          </div>
-          <div
-            className="theme-grid"
-            role="radiogroup"
-            aria-label="Theme"
-            data-setting="theme"
-            data-testid="theme-grid"
-          >
-            {themes.map((theme) => (
-              <ThemeCard
-                key={theme.id}
-                theme={theme}
-                name={`${id}-theme`}
-                checked={theme.id === state.theme.id}
-                onChoose={() => chooseTheme(workspace, theme.id)}
-              />
-            ))}
-          </div>
-          <div className="lf-actions" data-setting="customize-theme">
-            <button
-              type="button"
-              className="btn"
-              data-ui="item"
-              data-testid="theme-customize"
-              onClick={customize}
+                <div
+                  className="seg"
+                  role="radiogroup"
+                  aria-labelledby={`${id}-mode`}
+                  data-testid="theme-mode"
+                >
+                  {MODES.map((item) => (
+                    <label key={item.mode} className="seg-option">
+                      <input
+                        type="radio"
+                        name={`${id}-mode`}
+                        value={item.mode}
+                        checked={state.mode === item.mode}
+                        onChange={() => setThemeMode(workspace, item.mode)}
+                      />
+                      <Icon name={item.icon} size={14} />
+                      <span className="bold-steady" data-label={item.label}>
+                        {item.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </SettingRow>
+            </div>
+            <div
+              className="theme-grid"
+              role="radiogroup"
+              aria-label="Theme"
+              data-setting="theme"
+              data-testid="theme-grid"
             >
-              <Icon name="brush" size={14} />
-              {`Customize ${state.theme.name}…`}
-            </button>
-            <span className="lf-help">
-              {builtIn
-                ? 'Edits a copy, which syncs to your other devices.'
-                : 'Its colours, fonts and note width.'}
-            </span>
-          </div>
+              {themes.map((theme) => (
+                <ThemeCard
+                  key={theme.id}
+                  theme={theme}
+                  name={`${id}-theme`}
+                  checked={theme.id === state.theme.id}
+                  onChoose={() => chooseTheme(workspace, theme.id)}
+                />
+              ))}
+            </div>
+            <div className="lf-actions" data-setting="customize-theme">
+              <button
+                type="button"
+                className="btn"
+                data-ui="item"
+                data-testid="theme-customize"
+                onClick={customize}
+              >
+                <Icon name="brush" size={14} />
+                {`Customize ${state.theme.name}…`}
+              </button>
+              <span className="lf-help">
+                {builtIn
+                  ? 'Edits a copy, which syncs to your other devices.'
+                  : 'Its colours, fonts and note width.'}
+              </span>
+            </div>
 
-          <GroupHead id={`${id}-text`} scope>
-            Text
-          </GroupHead>
-          <div
-            className="lf-group"
-            role="group"
-            aria-labelledby={`${id}-text`}
-            data-testid="font-settings"
-          >
-            <FontSettings onSizeDraft={setSizeDraft} />
-            <TooltipDelaySetting />
-            <DadJokesSetting />
-          </div>
-          <p className="lf-help">
-            Fonts lie over the theme’s own. Code keeps the theme’s monospace font. A custom font
-            shows where it is installed, else the system’s.
-          </p>
+            <GroupHead id={`${id}-text`} scope>
+              Text
+            </GroupHead>
+            <div
+              className="lf-group"
+              role="group"
+              aria-labelledby={`${id}-text`}
+              data-testid="font-settings"
+            >
+              <FontSettings onSizeDraft={setSizeDraft} />
+              <TooltipDelaySetting />
+              <DadJokesSetting />
+            </div>
+            <p className="lf-help">
+              Fonts lie over the theme’s own. Code keeps the theme’s monospace font. A custom font
+              shows where it is installed, else the system’s.
+            </p>
 
-          {mac ? (
-            <>
-              <GroupHead id={`${id}-window`} scope>
-                Window
-              </GroupHead>
-              <div className="lf-group" role="group" aria-labelledby={`${id}-window`}>
-                <CompactTitleBarSetting />
-              </div>
-            </>
-          ) : null}
-        </div>
-
-        <aside className="lf-preview-col" aria-label="Preview">
-          <p className="lf-label">Preview</p>
-          <PreviewZoom name="Appearance" testId="app-preview-zoom">
-            {(enlarged) => (
-              <AppPreview
-                style={previewStyle}
-                enlarged={enlarged}
-                testId={enlarged ? 'app-preview-large' : 'app-preview'}
-              />
-            )}
-          </PreviewZoom>
-          <p className="lf-help">Redraws as you change the mode, theme, fonts or size.</p>
-          {/* The fonts at the size the app draws them, beside the shrunk window (A1582). */}
-          <TypeSpecimen style={previewStyle} />
-        </aside>
-      </div>
+            {mac ? (
+              <>
+                <GroupHead id={`${id}-window`} scope>
+                  Window
+                </GroupHead>
+                <div className="lf-group" role="group" aria-labelledby={`${id}-window`}>
+                  <CompactTitleBarSetting />
+                </div>
+              </>
+            ) : null}
+          </>
+        }
+        preview={
+          <>
+            <p className="lf-help" data-testid="appearance-preview-caption">
+              {`${state.theme.name}, ${state.variant}, as the app draws it. Change it on Settings.`}
+            </p>
+            {/* The tab is the larger view (A1633): the window as large as the page allows. */}
+            <AppPreview style={previewStyle} enlarged />
+            {/* The fonts at the size the app draws them, under the window (A1582). */}
+            <TypeSpecimen style={previewStyle} />
+          </>
+        }
+      />
     </section>
   );
 }

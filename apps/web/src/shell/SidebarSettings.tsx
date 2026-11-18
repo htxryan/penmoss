@@ -10,7 +10,7 @@ import { useId, type CSSProperties } from 'react';
 import { PreviewCommands } from '../commands/CommandsRoot';
 import { useSourcesState } from '../sources/hooks';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
-import { PreviewZoom } from '../theme/PreviewZoom';
+import { PreviewTabs } from '../theme/PreviewTabs';
 import { useSidebarDisplay } from './display';
 import { usePaneSize } from './pane-widths';
 import { useReorder } from './reorder';
@@ -45,7 +45,8 @@ const SECTION_SETTING: Readonly<Record<SidebarSection, string>> = {
  * icons and its collapsed rail (T42, A576; Search always shows), and its sections (T53 item 8,
  * A983): which show, in what order (dragged by a row's handle, or Alt+↑ and Alt+↓, here as in
  * the sidebar), how many notes Recent Notes shows and whether Quick Access names each note's
- * notebook. The sidebar itself beside them (A1564) hides and moves with the switches. Synced
+ * notebook. The sidebar itself, on the Preview tab (A1564, A1633), hides and moves with the
+ * switches. Synced
  * through the Primary Notebook (A827).
  */
 export function SidebarSettings() {
@@ -63,66 +64,71 @@ export function SidebarSettings() {
         title="Sidebar"
         intro="What the sidebar shows, and in what order."
       />
-      <div className="lf-split lf-split-narrow">
-        <div className="lf-controls">
-          <GroupHead id={`${id}-shortcuts`} scope>
-            Shortcuts
-          </GroupHead>
-          <div
-            className="lf-group"
-            role="group"
-            aria-labelledby={`${id}-shortcuts`}
-            data-testid="display-settings"
-          >
-            <SettingRow
-              setting="search"
-              label={
-                <>
-                  <Icon name="search" size={14} />
-                  Search
-                </>
-              }
-              help={<span id={`${id}-search`}>Always shown</span>}
+      <PreviewTabs
+        name="Sidebar"
+        testId="sidebar-tabs"
+        settings={
+          <>
+            <GroupHead id={`${id}-shortcuts`} scope>
+              Shortcuts
+            </GroupHead>
+            <div
+              className="lf-group"
+              role="group"
+              aria-labelledby={`${id}-shortcuts`}
+              data-testid="display-settings"
             >
-              <Switch checked disabled aria-describedby={`${id}-search`} aria-label="Search" />
-            </SettingRow>
-            {ITEMS.map(({ item, label, icon }) => (
               <SettingRow
-                key={item}
-                setting={kebab(label)}
+                setting="search"
                 label={
                   <>
-                    <Icon name={icon} size={14} />
-                    {label}
+                    <Icon name="search" size={14} />
+                    Search
                   </>
                 }
-                labelFor={`${id}-${item}`}
+                help={<span id={`${id}-search`}>Always shown</span>}
               >
-                <Switch
-                  id={`${id}-${item}`}
-                  checked={display.shows(item)}
-                  disabled={!display.canChange}
-                  data-testid={`display-${item}`}
-                  onChange={(event) => display.set(item, event.target.checked)}
-                />
+                <Switch checked disabled aria-describedby={`${id}-search`} aria-label="Search" />
               </SettingRow>
-            ))}
-          </div>
-          <p className="lf-help">
-            New Note, Settings, Feedback and Trash are always on the sidebar. A hidden shortcut
-            still works from its keys and the command palette.
-          </p>
+              {ITEMS.map(({ item, label, icon }) => (
+                <SettingRow
+                  key={item}
+                  setting={kebab(label)}
+                  label={
+                    <>
+                      <Icon name={icon} size={14} />
+                      {label}
+                    </>
+                  }
+                  labelFor={`${id}-${item}`}
+                >
+                  <Switch
+                    id={`${id}-${item}`}
+                    checked={display.shows(item)}
+                    disabled={!display.canChange}
+                    data-testid={`display-${item}`}
+                    onChange={(event) => display.set(item, event.target.checked)}
+                  />
+                </SettingRow>
+              ))}
+            </div>
+            <p className="lf-help">
+              New Note, Settings, Feedback and Trash are always on the sidebar. A hidden shortcut
+              still works from its keys and the command palette.
+            </p>
 
-          <SectionSettings layout={layout} />
-        </div>
-
-        <aside className="lf-preview-col" aria-label="Preview">
-          <p className="lf-label">Preview</p>
-          <PreviewZoom name="Sidebar" testId="sidebar-preview-zoom">
-            {(enlarged) => <SidebarPreview layout={layout} enlarged={enlarged} />}
-          </PreviewZoom>
-        </aside>
-      </div>
+            <SectionSettings layout={layout} />
+          </>
+        }
+        preview={
+          <>
+            <p className="lf-help" data-testid="sidebar-preview-caption">
+              The sidebar as the app draws it, at its own width. Change it on Settings.
+            </p>
+            <SidebarPreview layout={layout} />
+          </>
+        }
+      />
     </section>
   );
 }
@@ -260,38 +266,26 @@ const NOWHERE: SidebarPlace = { activeId: null, openNote: null, graphOpen: false
 
 const ignore = () => undefined;
 
-/** The preview column's width (`.lf-split-narrow`). */
-const PREVIEW_REM = 16;
-
 /**
  * The sidebar itself (A1564): the main window's `SidebarBody`, New Note, the shortcuts and the
  * sections in order with their notes, notebooks, calendar and tags, as this device's settings
- * show it, at the sidebar's own width, scaled to the column. Inert: nothing in it can be clicked,
- * focused or read out, and its commands are registered apart (`PreviewCommands`).
+ * show it, at its real size and the width it has in the window (the Preview tab is the larger
+ * view, A1633). Inert: nothing in it can be clicked, focused or read out, and its commands are
+ * registered apart (`PreviewCommands`).
  */
-function SidebarPreview({
-  layout,
-  enlarged = false,
-}: {
-  readonly layout: SidebarLayout;
-  /** In the larger preview's dialog (A1589): at the sidebar's real size. */
-  readonly enlarged?: boolean;
-}) {
+function SidebarPreview({ layout }: { readonly layout: SidebarLayout }) {
   const sources = useSourcesState();
   const [width] = usePaneSize('sidebar');
   return (
     <PreviewCommands>
       <div
-        className={
-          enlarged ? 'lf-preview lf-sidebar-preview large' : 'lf-preview lf-sidebar-preview'
-        }
-        data-testid={enlarged ? 'sidebar-preview-large' : 'sidebar-preview'}
+        className="lf-preview lf-sidebar-preview"
+        data-testid="sidebar-preview"
         style={{ '--lf-sidebar-width': `${width}rem` } as CSSProperties}
         inert
         aria-hidden="true"
       >
-        {/* Its own width, scaled to the 16rem column: the shortcuts fit as they do there. */}
-        <div className="sidebar" style={{ zoom: enlarged ? 1 : Math.min(1, PREVIEW_REM / width) }}>
+        <div className="sidebar">
           <SidebarBody
             layout={layout}
             place={NOWHERE}
