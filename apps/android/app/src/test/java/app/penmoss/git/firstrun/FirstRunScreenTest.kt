@@ -4,6 +4,9 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasText
@@ -336,6 +339,61 @@ class FirstRunScreenTest {
         waitFor("githubTokenMessage")
         compose.onNodeWithTag("githubTokenMessage").assertTextEquals("GitHub refused the token. It was not saved.")
         compose.onNodeWithTag("githubTokenSave").assertIsEnabled()
+    }
+
+    /** Pick Folder (A1620, option 1): a tree whose levels open and close, a filter, and notebook folders marked, with Notebooks (N). */
+    @Test
+    fun pickFolderIsATreeWithAFilterAndMarksNotebookFolders() {
+        val repo = GitHubRepo("ryan/scratch", "ryan", "scratch", RepoVisibility.PRIVATE, "main", "https://github.com/ryan/scratch.git", null, canPush = true, empty = false)
+        val folders = RepoFolders(
+            empty = false,
+            truncated = false,
+            folders = listOf(
+                RepoFolder("", null),
+                RepoFolder("claude-global", null),
+                RepoFolder("claude-global/agents", null),
+                RepoFolder("claude-global/agents/definitions", null),
+                RepoFolder("hooks", null),
+                RepoFolder("notes", FolderNotebook("nb1", "Work Notes")),
+                RepoFolder("old", null),
+                RepoFolder("old/journal", FolderNotebook("nb2", "Journal")),
+            ),
+        )
+        var named: Place? = null
+        var opened: Pair<Place, String>? = null
+        compose.setContent {
+            PenmossTheme {
+                FolderPick(repo, "tok", folders, beside = false, onName = { named = it }, back = {}, added = setOf("nb1"), onOpen = { place, name -> opened = place to name })
+            }
+        }
+        // The notebooks stand out, their levels open: Work Notes is on the phone, Journal can open.
+        compose.onAllNodesWithTag("first-run-folder-notebook").assertCountEquals(2)
+        compose.onNodeWithText("Notebook: Journal").assertExists()
+        compose.onNodeWithText("Already Added").assertExists()
+        compose.onAllNodesWithTag("first-run-folder-open").assertCountEquals(1)
+        // A closed level: claude-global's folders show once it opens.
+        compose.onNodeWithText("agents").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Expand claude-global").performScrollTo().performClick()
+        compose.onNodeWithText("agents").assertExists()
+        compose.onNodeWithText("definitions").assertDoesNotExist()
+        // The filter keeps each match's parents, every level open.
+        compose.onNodeWithTag("first-run-folder-filter").performTextInput("def")
+        compose.onNodeWithText("definitions").assertExists()
+        compose.onNodeWithText("agents").assertExists()
+        compose.onNodeWithText("hooks").assertDoesNotExist()
+        compose.onNodeWithTag("first-run-folder-filter").performTextClearance()
+        // Notebooks (2): only the notebook folders, and their parents.
+        tap("first-run-folder-notebooks")
+        compose.onNodeWithText("hooks").assertDoesNotExist()
+        compose.onAllNodesWithTag("first-run-folder-notebook").assertCountEquals(2)
+        tap("first-run-folder-open")
+        assertEquals("old/journal" to "Journal", opened!!.first.dir to opened!!.second)
+        tap("first-run-folder-notebooks")
+        // A folder with no notebook takes the new one.
+        compose.onNodeWithText("hooks").performScrollTo().performClick()
+        compose.onNodeWithTag("first-run-folder-chosen").assertTextEquals("Notebook goes in hooks/")
+        tap("first-run-continue")
+        assertEquals("hooks", named!!.dir)
     }
 
     @Test

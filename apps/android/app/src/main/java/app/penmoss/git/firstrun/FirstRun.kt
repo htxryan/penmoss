@@ -337,7 +337,7 @@ fun NotebookSteps(
                 val now = hub
                 val loaded = reads[screen.repo.fullName]
                 if (now != null && loaded is RepoRead.Ready) {
-                    FolderPick(screen.repo, now.token, loaded.folders, beside = true, onName = { go(Screen.Name(it)) }, back = ::back)
+                    FolderPick(screen.repo, now.token, loaded.folders, beside = true, onName = { go(Screen.Name(it)) }, back = ::back, added = added, onOpen = { place, name -> go(Screen.SetUp(Setup.Open(place, name))) })
                 }
             }
             Screen.Url -> PasteUrl(

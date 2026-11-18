@@ -1,6 +1,12 @@
 package app.penmoss.git.firstrun
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -413,46 +419,117 @@ internal fun RepoPicked(
             }
         }
         // Other files: pick where the notebook goes.
-        else -> FolderPick(repo, token, folders, beside = false, onName = onName, back = back)
+        else -> FolderPick(repo, token, folders, beside = false, onName = onName, back = back, added = added, onOpen = onOpen)
     }
 }
 
-/** Pick Folder: the root or a folder with no notebook in it, or a new folder. */
+/**
+ * Pick Folder (Ryan's pick, option 1 of the Pick Folder Options canvas, 18 Nov 2026; A1620): the
+ * repository's folders as a tree whose levels open and close, with guide lines, a filter that keeps
+ * each match's parents, and Expand All / Collapse All. A folder that holds a Penmoss notebook
+ * stands out (its badge and name, Open when it isn't on the phone yet) and Notebooks (N) shows
+ * only those. The root, or a folder with no notebook in it, takes the new one; New Folder makes one.
+ */
 @Composable
-internal fun FolderPick(repo: GitHubRepo, token: String, folders: RepoFolders, beside: Boolean, onName: (Place) -> Unit, back: () -> Unit) {
+internal fun FolderPick(
+    repo: GitHubRepo,
+    token: String,
+    folders: RepoFolders,
+    beside: Boolean,
+    onName: (Place) -> Unit,
+    back: () -> Unit,
+    added: Set<String> = emptySet(),
+    onOpen: ((Place, String) -> Unit)? = null,
+) {
     val made = remember { mutableStateListOf<String>() }
+    val notebooks = remember(folders) { folders.folders.filter { it.notebook != null && it.path.isNotEmpty() }.associate { it.path to it.notebook!! } }
     val free = (folders.folders.filter { it.notebook == null }.map { it.path } + made).distinct()
-        .sortedWith(compareBy<String> { it.isNotEmpty() }.thenBy { it })
-    var chosen by remember { mutableStateOf(free.firstOrNull().orEmpty()) }
+    val all = remember(free, notebooks) { (free + notebooks.keys).filter { it.isNotEmpty() }.distinct().sorted() }
+    fun parentOf(path: String) = path.substringBeforeLast('/', "")
+    val children = remember(all) { all.groupBy { parentOf(it) } }
+    fun ancestors(path: String): List<String> = generateSequence(parentOf(path).takeIf { path.contains('/') }) { p -> parentOf(p).takeIf { p.contains('/') } }.toList()
+    var chosen by remember { mutableStateOf(free.firstOrNull { it.isEmpty() } ?: free.firstOrNull().orEmpty()) }
+    // Open at first: the levels down to each notebook, so they show without a tap.
+    var open by remember { mutableStateOf(notebooks.keys.flatMap { ancestors(it) }.toSet()) }
+    var filter by remember { mutableStateOf("") }
+    var onlyNotebooks by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     var problem by remember { mutableStateOf<String?>(null) }
+    val query = filter.trim()
+    // With a filter (or Notebooks), the matches and their parents, every level open.
+    val shown: Set<String>? = when {
+        onlyNotebooks -> notebooks.keys.flatMap { ancestors(it) + it }.toSet()
+        query.isNotEmpty() -> all.filter { it.substringAfterLast('/').contains(query, ignoreCase = true) }.flatMap { ancestors(it) + it }.toSet()
+        else -> null
+    }
+    val rows = buildList {
+        fun walk(parent: String, depth: Int) {
+            for (path in children[parent].orEmpty()) {
+                if (shown != null && path !in shown) continue
+                add(path to depth)
+                if (shown != null || path in open) walk(path, depth + 1)
+            }
+        }
+        walk("", 0)
+    }
     Frame(
         "folder",
         "Pick Folder",
         step = 2,
         back = back,
-        actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = free.isNotEmpty()) { onName(placeIn(repo, token, chosen)) } },
+        actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = chosen in free) { onName(placeIn(repo, token, chosen)) } },
     ) {
         Lead(if (beside) "Pick where the new notebook goes." else "${repo.fullName} holds other files. Pick where the notebook goes.")
-        Column(Modifier.selectableGroup().fillMaxWidth()) {
-            for (path in free) {
-                val depth = if (path.isEmpty()) 0 else path.count { it == '/' }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .selectable(path == chosen, role = Role.RadioButton) { chosen = path }
-                        .padding(start = (depth * 16).dp, top = 4.dp, bottom = 4.dp)
-                        .testTag("first-run-folder-option"),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(path == chosen, onClick = null)
-                    Column(Modifier.padding(start = 8.dp)) {
-                        Text(if (path.isEmpty()) "Root" else path.substringAfterLast('/'), style = MaterialTheme.roles.rowLabel)
-                        if (path in made) Text("New, made at the first sync", style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+        OutlinedTextField(
+            filter,
+            { filter = it },
+            Modifier.fillMaxWidth().testTag("first-run-folder-filter"),
+            label = { Text("Filter Folders") },
+            leadingIcon = { LucideGlyph("search", null, 18.dp) },
+            singleLine = true,
+        )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (notebooks.isNotEmpty()) {
+                androidx.compose.material3.FilterChip(
+                    selected = onlyNotebooks,
+                    onClick = { onlyNotebooks = !onlyNotebooks },
+                    label = { Text("Notebooks (${notebooks.size})", maxLines = 1, softWrap = false) },
+                    leadingIcon = { LucideGlyph("notebook", null, 16.dp) },
+                    shape = androidx.compose.ui.graphics.RectangleShape,
+                    modifier = Modifier.testTag("first-run-folder-notebooks"),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            val anyOpen = open.isNotEmpty()
+            Plain(if (anyOpen) "Collapse All" else "Expand All", "first-run-folder-all", if (anyOpen) "chevrons-down-up" else "chevrons-up-down", enabled = shown == null) {
+                open = if (anyOpen) emptySet() else children.keys.filter { it.isNotEmpty() }.toSet()
             }
         }
+        Column(Modifier.selectableGroup().fillMaxWidth().testTag("first-run-folder-tree")) {
+            if (shown == null && "" in free) FolderRow("", 0, "Root", "Top of the repository", chosen == "", null, false, null, null, onToggle = null) { chosen = "" }
+            for ((path, depth) in rows) {
+                val name = path.substringAfterLast('/')
+                val notebook = notebooks[path]
+                val kids = children[path].orEmpty().size
+                FolderRow(
+                    path,
+                    depth,
+                    name,
+                    if (path in made) "New, made at the first sync" else null,
+                    selected = chosen == path,
+                    notebook = notebook,
+                    alreadyAdded = notebook != null && notebook.id in added,
+                    expanded = if (kids == 0) null else (shown != null || path in open),
+                    highlight = query.takeIf { it.isNotEmpty() },
+                    onOpen = if (notebook != null && notebook.id !in added && onOpen != null) ({ onOpen(placeIn(repo, token, path), notebook.name) }) else null,
+                    onToggle = { if (shown == null) open = if (path in open) open - path else open + path },
+                ) { if (notebook == null) chosen = path }
+            }
+            if (shown != null && rows.isEmpty()) {
+                Lead(if (onlyNotebooks) "No notebooks here." else "No folder matches “$query”. Folders starting with a dot, and folders inside a notebook, aren’t listed.", Modifier.testTag("first-run-folder-none"), small = true)
+            }
+        }
+        Lead("Notebook goes in ${folderWords(chosen)}", Modifier.testTag("first-run-folder-chosen"), small = true)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 newName,
@@ -469,12 +546,91 @@ internal fun FolderPick(repo: GitHubRepo, token: String, folders: RepoFolders, b
                     val path = if (chosen.isEmpty()) newName.trim() else "$chosen/${newName.trim()}"
                     if (path !in made) made += path
                     newName = ""
+                    open = open + ancestors(path) + listOfNotNull(chosen.takeIf { it.isNotEmpty() })
                     chosen = path
                 }
             }
         }
         problem?.let { Problem(it, "first-run-new-folder-problem") }
         if (folders.truncated) Lead("GitHub left some folders out of a large repository. Paste a URL with the folder for one not listed.", small = true)
+    }
+}
+
+/**
+ * One folder in Pick Folder's tree: guide lines for its levels, a chevron when it holds folders,
+ * then a radio button, or a notebook's badge for a folder that holds one (not a place for another).
+ */
+@Composable
+private fun FolderRow(
+    path: String,
+    depth: Int,
+    name: String,
+    line: String?,
+    selected: Boolean,
+    notebook: FolderNotebook?,
+    alreadyAdded: Boolean,
+    expanded: Boolean?,
+    highlight: String?,
+    onOpen: (() -> Unit)? = null,
+    onToggle: (() -> Unit)?,
+    onSelect: () -> Unit,
+) {
+    val colours = MaterialTheme.colorScheme
+    val guide = colours.outlineVariant
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .then(if (notebook == null) Modifier.selectable(selected, role = Role.RadioButton, onClick = onSelect) else Modifier)
+            .background(if (selected) colours.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
+            .drawBehind {
+                // A guide line down each level above this one.
+                for (level in 0 until depth) {
+                    val x = (20 + level * 24).dp.toPx()
+                    drawLine(guide, androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), strokeWidth = 1.dp.toPx())
+                }
+            }
+            .padding(start = (depth * 24).dp, top = 2.dp, bottom = 2.dp)
+            .testTag(if (notebook != null) "first-run-folder-notebook" else "first-run-folder-option")
+            .semantics { if (expanded != null) stateDescription = if (expanded) "Expanded" else "Collapsed" },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(40.dp).then(if (expanded != null && onToggle != null) Modifier.clickable(role = Role.Button, onClickLabel = if (expanded) "Collapse" else "Expand", onClick = onToggle).testTag("first-run-folder-toggle") else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (expanded != null) LucideGlyph(if (expanded) "chevron-down" else "chevron-right", if (expanded) "Collapse $name" else "Expand $name", 18.dp)
+        }
+        if (notebook == null) {
+            RadioButton(selected, onClick = null)
+        } else {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.background(colours.primary).padding(4.dp)) { LucideGlyph("notebook", null, 16.dp) }
+            }
+        }
+        Column(Modifier.weight(1f).padding(start = 8.dp)) {
+            Text(highlighted(name, highlight, colours.tertiaryContainer), style = MaterialTheme.roles.rowLabel, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            when {
+                notebook != null -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Chip("Notebook: ${notebook.name}", "first-run-folder-notebook-chip")
+                    if (alreadyAdded) Chip("Already Added")
+                }
+                line != null -> Text(line, style = MaterialTheme.roles.meta, color = colours.onSurfaceVariant)
+            }
+        }
+        if (onOpen != null) Plain("Open", "first-run-folder-open", "folder-open", onClick = onOpen)
+    }
+}
+
+/** [name] with each match of [query] marked, as the filter finds it. */
+private fun highlighted(name: String, query: String?, mark: androidx.compose.ui.graphics.Color) = androidx.compose.ui.text.buildAnnotatedString {
+    if (query.isNullOrEmpty()) { append(name); return@buildAnnotatedString }
+    var at = 0
+    while (true) {
+        val hit = name.indexOf(query, at, ignoreCase = true)
+        if (hit < 0) { append(name.substring(at)); break }
+        append(name.substring(at, hit))
+        withStyle(androidx.compose.ui.text.SpanStyle(background = mark)) { append(name.substring(hit, hit + query.length)) }
+        at = hit + query.length
     }
 }
 
