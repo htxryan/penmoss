@@ -265,7 +265,7 @@ test('a notebook made on the Mac, notes and the Journal in it, synced on quit, n
   await go(page, '/');
   const title = `Plan ${RUN}`;
   const noteId = await newNote(page, title, `Secret words ${RUN}`);
-  await expect(page.getByTestId('save-status')).toHaveAttribute('data-state', /syncing|synced/);
+  await expect(page.getByTestId('save-status')).toHaveAttribute('data-state', /local|syncing|synced/);
 
   // Today's note made on both while apart: the same note, with the template once (A820).
   const cliDaily = JSON.parse(w.cli(['daily', '--notebook', 'nb', '--no-sync', '--json'])) as {

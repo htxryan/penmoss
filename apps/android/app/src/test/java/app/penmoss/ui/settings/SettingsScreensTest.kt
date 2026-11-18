@@ -110,7 +110,7 @@ class SettingsScreensTest {
         compose.onNodeWithText("Look and Feel").assertIsDisplayed()
         compose.onNodeWithText("Nord · Dark").assertIsDisplayed()
         compose.onNodeWithText("Every shortcut on Home").assertIsDisplayed()
-        compose.onNodeWithText("★ ? ! 💡 →").assertIsDisplayed()
+        compose.onNodeWithText("☐ ★ ? ! 💡 →").assertIsDisplayed()
         compose.onNodeWithTag("section-appearance").performClick()
         compose.onNodeWithTag("section-home").performClick()
         compose.onNodeWithTag("section-symbols").performClick()

@@ -131,7 +131,7 @@ export function SymbolsSettings() {
       <SettingsHeader
         id={`${id}-h`}
         title="Symbols"
-        intro="A symbol at the start of a line marks it: important, a question, a follow-up, an idea. Checkbox and list items are symbols too: their shortcut turns the line into one."
+        intro="A symbol at the start of a line marks it; a Checkbox or list item makes the line one."
       />
       <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
         {symbols.map((symbol, index) => {
