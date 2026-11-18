@@ -61,7 +61,10 @@ class SymbolsScreenTest {
     private var resets = 0
     private var shortcuts = 0
 
-    private fun screen(start: List<LineSymbol> = LineSymbols.DEFAULTS, enabled: Boolean = true) {
+    /** The defaults' glyphs, ★ ? ! 💡 → on slots 1–5, without the Checkbox before them (A1632). */
+    private val glyphs = LineSymbols.DEFAULTS.filter { it.kind == null }
+
+    private fun screen(start: List<LineSymbol> = glyphs, enabled: Boolean = true) {
         var symbols by mutableStateOf(start)
         compose.setContent {
             PenmossTheme {
@@ -319,13 +322,14 @@ class SymbolsScreenTest {
     fun addsUpToNineAndRemovesOne() {
         screen()
         compose.onNodeWithTag("symbol-add").performScrollTo().performClick()
+        compose.onNodeWithTag("symbol-add-symbol").performClick()
         // A glyph the list does not have yet, as the web suggests one.
         compose.onNodeWithTag("symbol-glyph").assertTextContains("✓")
         compose.onNodeWithTag("symbol-save").performClick()
         assertEquals(LineSymbol("✓", "✓", "accent"), stored.last().last())
         compose.onNodeWithTag("symbol-row-5").performScrollTo().performClick()
         compose.onNodeWithTag("symbol-remove").performClick()
-        assertEquals(LineSymbols.DEFAULTS, stored.last())
+        assertEquals(glyphs, stored.last())
         compose.onNodeWithTag("symbols-notice").assertTextContains("Removed ✓. Lines with ✓ show it as text.")
     }
 
@@ -347,7 +351,7 @@ class SymbolsScreenTest {
 
     @Test
     fun aRowsRemoveTakesItOffAndARebindingShowsItsNewKey() {
-        var symbols by mutableStateOf(LineSymbols.DEFAULTS)
+        var symbols by mutableStateOf(glyphs)
         compose.setContent {
             PenmossTheme {
                 SymbolsScreen(
@@ -365,9 +369,26 @@ class SymbolsScreenTest {
         compose.onNodeWithTag("symbols-notice").assertTextContains("Removed ?.", substring = true)
     }
 
+    /** Design A (A1632): the Checkbox's row says what its key does; Add offers the list items. */
+    @Test
+    fun theCheckboxIsARowAndAddOffersTheListItems() {
+        screen(LineSymbols.DEFAULTS)
+        compose.onNodeWithTag("symbol-colour-label-0", useUnmergedTree = true).assertTextEquals("Checkbox")
+        compose.onNodeWithTag("symbol-key-0", useUnmergedTree = true).assertTextEquals("Alt+Shift+1 · ☐ → ☑ → no box")
+        compose.onNodeWithTag("symbol-add").performScrollTo().performClick()
+        compose.onNodeWithTag("symbol-add-checkbox").assertIsNotEnabled()
+        compose.onNodeWithTag("symbol-add-ordered").performClick()
+        assertEquals(LineSymbols.kindSymbol("ordered"), stored.last().last())
+        assertEquals(JsonObject(mapOf("kind" to JsonPrimitive("ordered"))), LineSymbols.toJson(stored.last()).last())
+        compose.onNodeWithTag("symbols-notice").assertTextContains("Added Numbered List Item as symbol 7.")
+        compose.onNodeWithTag("symbol-delete-0").performScrollTo().performClick()
+        assertEquals("★", stored.last().first().glyph)
+        compose.onNodeWithTag("symbols-notice").assertTextContains("Removed Checkbox. Your lists stay as they are.")
+    }
+
     @Test
     fun theSettingsHomeListsTheGlyphs() {
-        assertEquals("★ ? ! 💡 →", symbolsSummary(Settings()))
+        assertEquals("☐ ★ ? ! 💡 →", symbolsSummary(Settings()))
         val none = Settings(JsonObject(mapOf(SettingKeys.SYMBOLS to LineSymbols.toJson(emptyList()))))
         assertEquals("None", symbolsSummary(none))
         assertEquals(emptyList<LineSymbol>(), none.symbols)

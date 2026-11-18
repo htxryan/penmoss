@@ -594,6 +594,27 @@
   width: 9.5rem;
 }
 
+/* A list item's row (A1632): its icon where a glyph goes, then its name and what it does. */
+.symbol-row .symbol-kind-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: var(--pm-control);
+}
+
+.symbol-row .symbol-kind-name {
+  flex: none;
+  width: 9.5rem;
+}
+
+.symbol-row .symbol-kind-does {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
 /* An emoji's colour can't be changed (A1588): the note beside its disabled colour. */
 .symbol-row .symbol-colour-note {
   flex: 0 1 auto;
@@ -608,6 +629,12 @@
 .symbol-foot {
   flex-wrap: wrap;
   gap: 0.5rem 0.75rem;
+}
+
+/* Add ▾ opens from the button's left edge: the column clips what hangs left of it (A1632). */
+.symbol-foot .menu {
+  right: auto;
+  left: 0;
 }
 
 .symbol-foot > .lf-help {

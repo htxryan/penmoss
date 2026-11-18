@@ -77,14 +77,45 @@ export const SYMBOL_COLOUR_LABELS: Readonly<Record<ThemeSymbolColour, string>> =
   calloutExample: 'Purple',
 };
 
+/**
+ * A list item a slot can be instead of a glyph (A1632): its shortcut turns the selection's
+ * lines into checklist, bulleted or numbered items and back. Stored as `{ "kind": … }`.
+ */
+export type SymbolKind = 'checkbox' | 'bullet' | 'ordered';
+
+/** The kinds in the order Settings → Symbols offers them, with how they are shown and named. */
+export const SYMBOL_KINDS: Readonly<Record<SymbolKind, { glyph: string; name: string }>> = {
+  checkbox: { glyph: '☐', name: 'Checkbox' },
+  bullet: { glyph: '•', name: 'Bulleted List Item' },
+  ordered: { glyph: '1.', name: 'Numbered List Item' },
+};
+
+export const SYMBOL_KIND_KEYS = Object.keys(SYMBOL_KINDS) as readonly SymbolKind[];
+
+const isKind = (value: unknown): value is SymbolKind =>
+  typeof value === 'string' && Object.hasOwn(SYMBOL_KINDS, value);
+
 export interface LineSymbol {
   readonly glyph: string;
   readonly name: string;
   readonly colour: SymbolColour;
+  /**
+   * A list item rather than a glyph (A1632). Its glyph and name are only how it is shown: it
+   * is never text at the start of a line, so no line's run holds it.
+   */
+  readonly kind?: SymbolKind;
 }
 
-/** The list until a person changes it (A743). */
+/** The entry for a list item kind (A1632). */
+export const kindSymbol = (kind: SymbolKind): LineSymbol => ({
+  ...SYMBOL_KINDS[kind],
+  colour: 'muted',
+  kind,
+});
+
+/** The list until a person changes it (A743): Checkbox on the first slot, then the glyphs (A1632). */
 export const DEFAULT_SYMBOLS: readonly LineSymbol[] = [
+  kindSymbol('checkbox'),
   { glyph: '★', name: 'Important', colour: 'calloutWarning' },
   { glyph: '?', name: 'Question', colour: 'calloutQuestion' },
   { glyph: '!', name: 'Follow-up', colour: 'danger' },
@@ -186,16 +217,24 @@ const isColour = (value: unknown): value is SymbolColour =>
 
 /**
  * Why `value` cannot be stored as `symbols.list`, or null when it can (A743): a list of at
- * most nine `{ glyph, name, colour }`, glyphs distinct. `[]` (no symbols) is a list.
+ * most nine `{ glyph, name, colour }`, glyphs distinct, or `{ kind }` list items, each kind
+ * once (A1632). `[]` (no symbols) is a list.
  */
 export function symbolListProblem(value: unknown): string | null {
   if (!Array.isArray(value)) return `${SYMBOLS_SETTING} must be a list of symbols`;
   if (value.length > MAX_SYMBOLS)
     return `${SYMBOLS_SETTING} must have at most ${MAX_SYMBOLS} symbols`;
   const seen = new Set<string>();
+  const kinds = new Set<SymbolKind>();
   for (const [index, entry] of (value as unknown[]).entries()) {
     const at = `${SYMBOLS_SETTING} symbol ${index + 1}`;
     if (!isRecord(entry)) return `${at} must be { glyph, name, colour }`;
+    if (entry['kind'] !== undefined) {
+      if (!isKind(entry['kind'])) return `${at} kind must be one of ${SYMBOL_KIND_KEYS.join(', ')}`;
+      if (kinds.has(entry['kind'])) return `${at} repeats the kind ${entry['kind']}`;
+      kinds.add(entry['kind']);
+      continue;
+    }
     const problem = glyphProblem(entry['glyph']) ?? symbolNameProblem(entry['name']);
     if (problem) return `${at} ${problem}`;
     if (!isColour(entry['colour']))
@@ -210,12 +249,22 @@ export function symbolListProblem(value: unknown): string | null {
 /** A valid stored list with only the fields this build knows, or null. */
 export function readSymbolList(value: unknown): readonly LineSymbol[] | null {
   if (symbolListProblem(value) !== null) return null;
-  return (value as Record<string, unknown>[]).map((entry) => ({
-    glyph: entry['glyph'] as string,
-    name: (entry['name'] as string).trim(),
-    colour: entry['colour'] as SymbolColour,
-  }));
+  return (value as Record<string, unknown>[]).map((entry) =>
+    isKind(entry['kind'])
+      ? kindSymbol(entry['kind'])
+      : {
+          glyph: entry['glyph'] as string,
+          name: (entry['name'] as string).trim(),
+          colour: entry['colour'] as SymbolColour,
+        },
+  );
 }
+
+/** A list as `symbols.list` stores it: `{ glyph, name, colour }`, or `{ kind }` for a list item. */
+export const storedSymbolList = (symbols: readonly LineSymbol[]): Record<string, string>[] =>
+  symbols.map(({ glyph, name, colour, kind }) =>
+    kind ? { kind } : { glyph, name: name.trim(), colour },
+  );
 
 /**
  * The person's symbols, from their settings: the stored list, or the defaults while it is
@@ -270,6 +319,8 @@ export function symbolRun(
   if (symbols.length === 0 || text.length === 0) return NO_RUN;
   const slots = new Map<string, number>();
   symbols.forEach((symbol, index) => {
+    // A list item is never text on the line (A1632).
+    if (symbol.kind) return;
     const key = glyphKey(symbol.glyph);
     if (!slots.has(key)) slots.set(key, index);
   });
@@ -324,7 +375,8 @@ export function symbolEdits(
   text?: string,
 ): TextEdit[] {
   const symbol = symbols[index];
-  if (!symbol) return [];
+  // A list item changes the line's block, not its text (A1632).
+  if (!symbol || symbol.kind) return [];
   // A second copy of a symbol (two devices added it at once) goes with any toggle on the line.
   const seen = new Set<number>();
   const extra = run.tokens.filter((token) => {

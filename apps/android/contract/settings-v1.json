@@ -29,6 +29,9 @@
     "note.fullWidth": false,
     "symbols.list": [
       {
+        "kind": "checkbox"
+      },
+      {
         "glyph": "★",
         "name": "Important",
         "colour": "calloutWarning"
@@ -170,6 +173,52 @@
             "glyph": "→",
             "name": "Next",
             "colour": "accent"
+          }
+        ],
+        [
+          {
+            "kind": "checkbox"
+          },
+          {
+            "glyph": "★",
+            "name": "Important",
+            "colour": "calloutWarning"
+          },
+          {
+            "glyph": "?",
+            "name": "Question",
+            "colour": "calloutQuestion"
+          },
+          {
+            "glyph": "!",
+            "name": "Follow-up",
+            "colour": "danger"
+          },
+          {
+            "glyph": "💡",
+            "name": "Idea",
+            "colour": "calloutTip"
+          },
+          {
+            "glyph": "→",
+            "name": "Next",
+            "colour": "accent"
+          }
+        ],
+        [
+          {
+            "kind": "bullet"
+          },
+          {
+            "glyph": "☐",
+            "name": "☐",
+            "colour": "accent"
+          },
+          {
+            "kind": "ordered"
+          },
+          {
+            "kind": "checkbox"
           }
         ],
         [],
@@ -393,6 +442,19 @@
             "glyph": "✓",
             "name": "✓",
             "colour": "#2e7d3"
+          }
+        ],
+        [
+          {
+            "kind": "bullet"
+          },
+          {
+            "kind": "bullet"
+          }
+        ],
+        [
+          {
+            "kind": "table"
           }
         ]
       ]

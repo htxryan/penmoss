@@ -299,7 +299,7 @@ describe('Settings → Symbols (PEN-146, Show the Keys)', () => {
     expect(restore.disabled).toBe(true);
     expect(ids()).toEqual([
       'symbols',
-      'add-a-symbol',
+      'add-a-symbol-or-list-item',
       'change-their-shortcuts',
       'restore-defaults',
     ]);
@@ -307,15 +307,46 @@ describe('Settings → Symbols (PEN-146, Show the Keys)', () => {
 
   it('moves a symbol with Alt+↓ and says its new place and key', () => {
     render(<SymbolsSettings />);
-    const first = DEFAULT_SYMBOLS[0]!.glyph;
-    const second = DEFAULT_SYMBOLS[1]!.glyph;
-    altKey(byTest('symbol-glyph-1'), 'ArrowDown');
-    const stored = settings()['symbols.list'] as Array<{ glyph: string }>;
-    expect(stored.slice(0, 2).map((symbol) => symbol.glyph)).toEqual([second, first]);
+    // Slot 1 is the Checkbox (A1632); ★ and ? follow it.
+    const first = DEFAULT_SYMBOLS[1]!.glyph;
+    const second = DEFAULT_SYMBOLS[2]!.glyph;
+    altKey(byTest('symbol-glyph-2'), 'ArrowDown');
+    const stored = settings()['symbols.list'] as Array<{ glyph?: string; kind?: string }>;
+    expect(stored[0]).toEqual({ kind: 'checkbox' });
+    expect(stored.slice(1, 3).map((symbol) => symbol.glyph)).toEqual([second, first]);
     expect(byTest('symbols-notice').textContent).toMatch(
-      new RegExp(`^${first} is now symbol 2, .+2\\.$`),
+      new RegExp(`^${first} is now symbol 3, .+3\\.$`),
     );
     expect(byTest('symbols-count').textContent).toBe(`${DEFAULT_SYMBOLS.length} of 9`);
+  });
+});
+
+describe('Settings → Symbols: list items (A1632)', () => {
+  it('shows the Checkbox row with what it does, and adds list items from the Add menu', () => {
+    render(<SymbolsSettings />);
+    const first = host.querySelector<HTMLElement>('[data-testid="symbol-row"]')!;
+    expect(first.dataset['kind']).toBe('checkbox');
+    expect(first.textContent).toContain('Checkbox');
+    expect(first.textContent).toContain('☐ → ☑ → no box');
+    // No glyph or colour to choose for it.
+    expect(host.querySelector('[data-testid="symbol-glyph-1"]')).toBeNull();
+    expect(host.querySelector('[data-testid="symbol-colour-1"]')).toBeNull();
+
+    click(byTest('symbol-add'));
+    expect(byTest<HTMLButtonElement>('symbol-add-checkbox').disabled).toBe(true);
+    click(byTest('symbol-add-bullet'));
+    const stored = settings()['symbols.list'] as Array<Record<string, string>>;
+    expect(stored.at(-1)).toEqual({ kind: 'bullet' });
+    expect(byTest('symbols-notice').textContent).toBe('Added Bulleted List Item as symbol 7.');
+
+    click(byTest('symbol-remove-1'));
+    expect((settings()['symbols.list'] as Array<Record<string, string>>)[0]).toEqual({
+      glyph: '★',
+      name: 'Important',
+      colour: 'calloutWarning',
+    });
+    click(byTest('symbol-add'));
+    expect(byTest<HTMLButtonElement>('symbol-add-checkbox').disabled).toBe(false);
   });
 });
 

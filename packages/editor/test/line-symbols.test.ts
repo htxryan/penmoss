@@ -1,6 +1,6 @@
 import { parseMarkdown, serializeMarkdown } from '@penmoss/core';
 import { schema as coreSchema } from '@penmoss/core/schema';
-import { DEFAULT_SYMBOLS, type LineSymbol } from '@penmoss/core/line-symbols';
+import { DEFAULT_SYMBOLS, kindSymbol, type LineSymbol } from '@penmoss/core/line-symbols';
 import { NOTE_ROOT } from '@penmoss/model/replica';
 import type { JSONContent } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
@@ -11,13 +11,27 @@ import { availableBlockItems } from '../src/extensions/block-items';
 import { EDITOR_COMMANDS, symbolCommandTitle } from '../src/commands';
 import {
   activeSymbols,
+  fixedSymbols,
   openSymbolPicker,
   setLineSymbols,
   toggleSymbolIn,
   type SymbolSource,
 } from '../src/extensions/line-symbols';
 import type { CollabEditor } from '../src/collab';
-import { codeBlock, openEditor, paragraph, press, select, type } from './support/editor';
+import type { NoteExtensionsOptions } from '../src/extensions';
+import {
+  codeBlock,
+  openEditor as openNote,
+  paragraph,
+  press,
+  select,
+  type,
+} from './support/editor';
+
+/** The defaults' glyphs, ★ ? ! 💡 → on slots 1–5, without the Checkbox before them (A1632). */
+const GLYPHS = DEFAULT_SYMBOLS.filter((symbol) => !symbol.kind);
+const openEditor = (content?: JSONContent[], options?: NoteExtensionsOptions) =>
+  openNote(content, { symbols: fixedSymbols(GLYPHS), ...options });
 
 const markdownOf = (collab: CollabEditor) =>
   serializeMarkdown({ frontmatter: null, doc: coreSchema.nodeFromJSON(collab.editor.getJSON()) });
@@ -316,7 +330,7 @@ describe('drawing symbols (T44, A741, A745)', () => {
     // "?" leaves the list: its lines show it as text again (A742).
     setLineSymbols(
       collab.editor,
-      DEFAULT_SYMBOLS.filter((symbol) => symbol.glyph !== '?'),
+      GLYPHS.filter((symbol) => symbol.glyph !== '?'),
     );
     expect(drawn(view)).toEqual(['★']);
     expect(texts(view)).toEqual(['★ ? Mixed', '? Only']);
@@ -326,7 +340,7 @@ describe('drawing symbols (T44, A741, A745)', () => {
   });
 
   it('follows a live source: Settings or another device changing the list', () => {
-    let list: readonly LineSymbol[] = DEFAULT_SYMBOLS;
+    let list: readonly LineSymbol[] = GLYPHS;
     const listeners = new Set<() => void>();
     const source: SymbolSource = {
       get: () => list,
@@ -434,6 +448,84 @@ describe('toggling symbols (T44, A740, A744)', () => {
     select(view, start, start + '★ Copied line'.length);
     const slice = view.state.selection.content();
     expect(slice.content.textBetween(0, slice.content.size)).toBe('★ Copied line');
+  });
+});
+
+describe('list items on symbol slots (A1632)', () => {
+  /** Each top-level block as `kind` (and the item's tick), with its text. */
+  const blocks = (view: EditorView) =>
+    view.state.doc.content.content
+      .map((node) => {
+        const item = node.firstChild;
+        if (node.type.name === 'taskList')
+          return `${item!.attrs['checked'] ? '☑' : '☐'} ${node.textContent}`;
+        if (node.type.name === 'bulletList') return `• ${node.textContent}`;
+        if (node.type.name === 'orderedList') return `1. ${node.textContent}`;
+        return node.textContent;
+      })
+      // Without the empty line the editor keeps at the end.
+      .filter((text) => text !== '');
+
+  it('steps a line through ☐, ☑ and no box with the Checkbox on ⌃1, by default', () => {
+    const collab = openNote([paragraph('Call the bank')]);
+    const { editor } = collab;
+    select(editor.view, 3);
+    expect(command('editor.symbol1').run({ editor })).toBe(true);
+    expect(blocks(editor.view)).toEqual(['☐ Call the bank']);
+    expect(activeSymbols(editor.state)).toEqual([0]);
+    expect(command('editor.symbol1').run({ editor })).toBe(true);
+    expect(blocks(editor.view)).toEqual(['☑ Call the bank']);
+    expect(command('editor.symbol1').run({ editor })).toBe(true);
+    expect(blocks(editor.view)).toEqual(['Call the bank']);
+    expect(activeSymbols(editor.state)).toEqual([]);
+    // The glyphs moved down a slot: ⌃2 is ★.
+    expect(command('editor.symbol2').run({ editor })).toBe(true);
+    expect(blocks(editor.view)).toEqual(['★ Call the bank']);
+  });
+
+  it('ticks every line of a selection once all are checklist items, then clears them', () => {
+    const { editor } = openNote([tasks('One', 'Two')]);
+    const { view } = editor;
+    select(view, lineStart(view, 0), lineStart(view, 1) + 3);
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    const ticks = view.state.doc.firstChild!.content.content.map(
+      (item) => item.attrs['checked'] === true,
+    );
+    expect(ticks).toEqual([true, true]);
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(blocks(view)).toEqual(['One', 'Two']);
+  });
+
+  it('makes bulleted and numbered items, and plain lines again', () => {
+    const list = [kindSymbol('bullet'), kindSymbol('ordered')];
+    const { editor } = openNote([paragraph('Item')], { symbols: fixedSymbols(list) });
+    const { view } = editor;
+    select(view, 2);
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(blocks(view)).toEqual(['• Item']);
+    expect(activeSymbols(editor.state)).toEqual([0]);
+    expect(toggleSymbolIn(view, 1)).toBe(true);
+    expect(blocks(view)).toEqual(['1. Item']);
+    expect(activeSymbols(editor.state)).toEqual([1]);
+    expect(toggleSymbolIn(view, 1)).toBe(true);
+    expect(blocks(view)).toEqual(['Item']);
+  });
+
+  it('is one undo step, and is named by what it is in the picker', () => {
+    const collab = openNote([paragraph('')]);
+    const { view } = collab.editor;
+    select(view, 1);
+    type(view, 'Words');
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(blocks(view)).toEqual(['☐ Words']);
+    expect(collab.undo()).toBe(true);
+    expect(blocks(view)).toEqual(['Words']);
+    expect(openSymbolPicker(collab.editor)).toBe(true);
+    const first = document.querySelector<HTMLElement>(
+      '[data-testid="symbol-picker"] [data-slot="0"]',
+    );
+    expect(first!.getAttribute('aria-label')).toBe('Checkbox');
+    expect(first!.textContent).toContain('☐');
   });
 });
 
@@ -596,9 +688,10 @@ describe('the symbol commands’ titles (T51 item 12, A940)', () => {
     expect(EDITOR_COMMANDS.find((each) => each.id === 'editor.symbol1')?.title).toBe(
       'Toggle Symbol 1',
     );
-    expect(symbolCommandTitle('editor.symbol1', DEFAULT_SYMBOLS)).toBe('Toggle Symbol ★');
-    expect(symbolCommandTitle('editor.symbol4', DEFAULT_SYMBOLS)).toBe('Toggle Symbol 💡');
-    expect(symbolCommandTitle('editor.symbol6', DEFAULT_SYMBOLS)).toBeUndefined();
+    expect(symbolCommandTitle('editor.symbol1', DEFAULT_SYMBOLS)).toBe('Toggle Checkbox');
+    expect(symbolCommandTitle('editor.symbol2', DEFAULT_SYMBOLS)).toBe('Toggle Symbol ★');
+    expect(symbolCommandTitle('editor.symbol5', DEFAULT_SYMBOLS)).toBe('Toggle Symbol 💡');
+    expect(symbolCommandTitle('editor.symbol7', DEFAULT_SYMBOLS)).toBeUndefined();
     expect(symbolCommandTitle('editor.symbolPicker', DEFAULT_SYMBOLS)).toBeUndefined();
     expect(symbolCommandTitle('editor.bold', DEFAULT_SYMBOLS)).toBeUndefined();
   });

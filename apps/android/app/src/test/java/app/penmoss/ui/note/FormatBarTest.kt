@@ -86,11 +86,13 @@ class FormatBarTest {
         compose.onNodeWithContentDescription("Symbol").performScrollTo().assert(selected(true)).performClick()
         compose.onNodeWithTag("symbol-0").assert(selected(true))
         compose.onNodeWithTag("symbol-1").assert(selected(false))
-        // Each goes by its glyph, in its colour, not its name (T51, A940).
-        compose.onNodeWithTag("symbol-2").assertTextContains("!")
+        // The Checkbox is first, by its glyph and name (A1632).
+        compose.onNodeWithTag("symbol-0").assertTextContains("☐  Checkbox")
+        // Each glyph goes by itself, in its colour, not its name (T51, A940).
+        compose.onNodeWithTag("symbol-3").assertTextContains("!")
         compose.onNodeWithText("Follow-up").assertDoesNotExist()
-        compose.onNodeWithTag("symbol-2").performClick()
-        assertEquals(listOf(2), toggled)
+        compose.onNodeWithTag("symbol-3").performClick()
+        assertEquals(listOf(3), toggled)
         compose.onNodeWithContentDescription("Symbol").performClick()
         compose.onNodeWithTag("symbol-edit").performClick()
         assertEquals(1, edits)

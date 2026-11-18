@@ -70,7 +70,7 @@ Appearance, Sidebar and Note each have two tabs: **Settings**, which the page op
 
 ### Symbols
 
-The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour (an emoji keeps its own colours, so its colour can't be changed), their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add a Symbol** (up to nine) and **Restore Defaults**.
+The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour (an emoji keeps its own colours, so its colour can't be changed), their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add** (a symbol, the Checkbox, a Bulleted List Item or a Numbered List Item; up to nine in all) and **Restore Defaults**.
 
 ## Writing
 

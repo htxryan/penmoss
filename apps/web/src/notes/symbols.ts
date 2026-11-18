@@ -8,6 +8,7 @@ import {
   DEFAULT_SYMBOLS,
   SYMBOLS_SETTING,
   symbolListProblem,
+  storedSymbolList,
   symbolsOf,
   type LineSymbol,
 } from '@penmoss/core/line-symbols';
@@ -75,11 +76,8 @@ export function useLineSymbols(): {
   const settings = workspace.settings();
   const save = useCallback(
     (symbols: readonly LineSymbol[]) => {
-      const value = symbols.map(({ glyph, name, colour }) => ({
-        glyph,
-        name: name.trim(),
-        colour,
-      }));
+      // A list item is stored as `{ kind }` alone (A1632).
+      const value = storedSymbolList(symbols);
       const problem = symbolListProblem(value);
       if (problem) return problem;
       workspace.setSetting(SYMBOLS_SETTING, value);

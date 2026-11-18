@@ -32,6 +32,8 @@ export function Menu({
   iconSize = 16,
   sheet = false,
   face,
+  disabled = false,
+  setting,
   children,
 }: {
   /** The button's accessible name and the menu's. */
@@ -48,6 +50,10 @@ export function Menu({
   readonly sheet?: boolean;
   /** The button's whole content, in place of the icon and text (Add Notebook's account switcher). */
   readonly face?: ReactNode;
+  /** The button can't be pressed (a list that is full). */
+  readonly disabled?: boolean;
+  /** Its anchor for Settings search (`data-setting`), on a settings page. */
+  readonly setting?: string;
   readonly children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -108,6 +114,8 @@ export function Menu({
         data-tip={text || face ? title : (title ?? label)}
         data-ui="menu"
         data-testid={testId}
+        disabled={disabled}
+        data-setting={setting}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {

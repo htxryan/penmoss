@@ -229,12 +229,18 @@ test('tabs in the Mac app: the File menu, the keys, the title bar, and a relaunc
   expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
   const active = (await strip(page).getByRole('tab', { selected: true }).boundingBox())!;
   expect(await regionAt(page, active.x + 20, active.y + active.height / 2)).toBe('no-drag');
-  // Every tab fills the row from the window's top edge (A1573), and clicks there too.
+  // Every tab runs from a gap under the window's top edge down to the rule (A1573, A1631): the
+  // gap drags the window, the tab clicks from its own top edge.
+  const gap = await page
+    .locator('.tab-list')
+    .evaluate((list) => parseFloat(getComputedStyle(list).paddingTop));
+  expect(gap).toBeGreaterThan(0);
   for (const each of await strip(page).getByRole('tab').all()) {
     const box = (await each.boundingBox())!;
-    expect(box.y).toBe(0);
-    expect(box.height).toBeGreaterThanOrEqual(TITLE_BAR_ROW);
-    expect(await regionAt(page, box.x + 20, 2)).toBe('no-drag');
+    expect(box.y).toBeCloseTo(gap, 0);
+    expect(box.y + box.height).toBeGreaterThanOrEqual(TITLE_BAR_ROW);
+    expect(await regionAt(page, box.x + 20, 1)).toBe('drag');
+    expect(await regionAt(page, box.x + 20, Math.ceil(box.y) + 1)).toBe('no-drag');
   }
   const menuButton = (await end.getByTestId('note-menu').boundingBox())!;
   expect(await regionAt(page, menuButton.x + 10, menuButton.y + 10)).toBe('no-drag');
