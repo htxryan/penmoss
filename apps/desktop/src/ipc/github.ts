@@ -7,12 +7,16 @@ import type { IpcHandlers } from '../ipc';
 import { githubBrowse, githubSignIn, githubToken } from '../services';
 
 export function registerGitHubIpc(ipc: IpcHandlers): void {
-  ipc.handle('gitGithubRepos', () => githubBrowse.repos());
-  ipc.handle('gitGithubFolders', (_call, fullName, branch) =>
-    githubBrowse.folders(fullName, branch),
+  // `account` picks one of Penmoss's accounts (A1617); without it, git's sign-in, else the first.
+  ipc.handle('gitGithubRepos', (_call, account) => githubBrowse.repos(account));
+  ipc.handle('gitGithubFolders', (_call, fullName, branch, account) =>
+    githubBrowse.folders(fullName, branch, account),
   );
-  ipc.handle('gitGithubOwners', () => githubBrowse.owners());
-  ipc.handle('gitGithubCreate', (_call, owner, name) => githubBrowse.create(owner, name));
+  ipc.handle('gitGithubOwners', (_call, account) => githubBrowse.owners(account));
+  ipc.handle('gitGithubCreate', (_call, owner, name, account) =>
+    githubBrowse.create(owner, name, account),
+  );
+  ipc.handle('gitGithubGitLogin', () => githubBrowse.gitLogin());
   // Starting a sign-in is the person's, after a click.
   ipc.handle('githubSignInStatus', async () => ({
     available: githubSignIn.available,
@@ -28,5 +32,14 @@ export function registerGitHubIpc(ipc: IpcHandlers): void {
   // click or key press in Settings.
   ipc.handle('githubTokenStatus', () => githubToken.status());
   ipc.handle('githubTokenSave', (_call, token) => githubToken.save(token));
-  ipc.handle('githubTokenRemove', async () => ({ ok: true, status: await githubToken.remove() }));
+  ipc.handle('githubTokenRemove', async (_call, login) => ({
+    ok: true,
+    status: await githubToken.remove(
+      typeof login === 'string' || login === null ? login : undefined,
+    ),
+  }));
+  ipc.handle('githubTokenMakePrimary', async (_call, login) => ({
+    ok: true,
+    status: await githubToken.makePrimary(login),
+  }));
 }

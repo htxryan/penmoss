@@ -13,11 +13,14 @@ import { useDeviceSignIn } from './device-sign-in';
 export function GitHubSignIn({
   signIn,
   again = false,
+  adding = false,
   onSignedIn,
 }: {
   signIn: DesktopGitHubSignIn;
   /** GitHub refused Penmoss's earlier sign-in: the button says Sign In Again. */
   again?: boolean;
+  /** Another account beside the ones kept (A1617): Add Account, and which account GitHub signs in. */
+  adding?: boolean;
   /** The sign-in this started finished: list the repositories with it. */
   onSignedIn: () => void;
 }) {
@@ -31,6 +34,12 @@ export function GitHubSignIn({
     return (
       <div className="repo-sign-in" data-testid="github-signin" data-state="waiting">
         <p>Enter this code on GitHub, in the page that opened in your browser:</p>
+        {adding ? (
+          <p className="muted" data-testid="github-signin-which">
+            GitHub signs in the account its page shows at the top right: switch there first to add
+            another one, such as a work account.
+          </p>
+        ) : null}
         <div className="repo-sign-in-code">
           <code data-testid="github-signin-code" aria-label={`Code ${state.userCode}`}>
             {state.userCode}
@@ -83,14 +92,16 @@ export function GitHubSignIn({
           disabled={asking}
           onClick={() => void start()}
         >
-          <Icon name="logIn" size={14} />
+          <Icon name={adding && !again ? 'userPlus' : 'logIn'} size={14} />
           {asking
             ? 'Asking GitHub…'
             : ended
               ? 'Try Again'
               : again
                 ? 'Sign In to GitHub Again'
-                : 'Sign In with GitHub'}
+                : adding
+                  ? 'Add Account'
+                  : 'Sign In with GitHub'}
         </button>
         <span className="muted">Penmoss keeps the sign-in in this Mac’s Keychain.</span>
       </div>

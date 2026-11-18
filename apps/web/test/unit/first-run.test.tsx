@@ -514,7 +514,7 @@ describe('the first run (A1030, First Run C)', () => {
     expect(repos[1]!.textContent).toContain('No notebook yet');
     expect(repos[1]!.querySelector('[data-testid="first-run-start-here"]')).not.toBeNull();
     expect(repos[2]!.textContent).toContain('Read Only');
-    expect($('first-run-via')?.textContent).toContain('Signed in as ryan');
+    expect($('first-run-via')?.textContent).toBe('ryan');
     // The count line is there before any filter, so typing one never moves the list.
     expect($('first-run-filter-count')?.textContent).toBe('3 repositories.');
     // The filter narrows repositories and notebooks.
@@ -527,6 +527,90 @@ describe('the first run (A1030, First Run C)', () => {
       expect.objectContaining({ remote: 'https://github.com/ryan/kept.git', dir: 'home' }),
     );
     expect(add.mock.calls.at(-1)![0]).not.toHaveProperty('name');
+  });
+
+  it('with two GitHub accounts asks which, and the work one’s token goes with the notebook (A1617)', async () => {
+    const { browse, calls } = github({
+      repos: { ok: true, via: 'penmoss', value: { more: false, repos: [repo('kept')] } },
+      folders: {
+        'ryan/kept': {
+          empty: false,
+          truncated: false,
+          folders: [{ path: '', notebook: { id: '01JBNOTEBOOK00000000000001', name: 'Work' } }],
+        },
+      },
+    });
+    const asWho: DesktopGitHubBrowse = {
+      ...browse,
+      repos: (account) => {
+        calls.push(['repos as', account]);
+        return browse.repos();
+      },
+      folders: (fullName, branch, account) => {
+        calls.push(['folders as', account]);
+        return browse.folders(fullName, branch);
+      },
+      // git's own sign-in is the first account's: listed once.
+      gitLogin: () => Promise.resolve('ryan'),
+    };
+    const { add } = await start(asWho);
+    Object.assign((window as { penmossDesktop?: object }).penmossDesktop!, {
+      githubToken: {
+        status: () =>
+          Promise.resolve({
+            saved: true,
+            login: 'ryan',
+            problem: null,
+            keychain: true,
+            signedIn: true,
+            accounts: [
+              { login: 'ryan', primary: true, signedIn: true, problem: null },
+              { login: 'ryan-work', primary: false, signedIn: true, problem: null },
+            ],
+          }),
+        save: () => Promise.resolve(null),
+        remove: () => Promise.resolve(null),
+        onChange: () => () => undefined,
+      },
+    });
+    await press('first-run-start');
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect($('first-run-account-ryan-work')).not.toBeNull());
+    expect(screen()).toBe('github-account');
+    expect($('first-run-account-git')).toBeNull();
+    expect($('first-run-account-add')).not.toBeNull();
+    await choose('first-run-account-ryan-work');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    expect(calls).toContainEqual(['repos as', 'ryan-work']);
+    expect(calls).toContainEqual(['folders as', 'ryan-work']);
+    // The switcher above the list (option 2): every account, the one in use checked.
+    await press('first-run-account-switcher');
+    await vi.waitFor(() => expect($('first-run-switch-ryan')).not.toBeNull());
+    expect($('first-run-switch-ryan-work')?.getAttribute('aria-checked')).toBe('true');
+    expect($('first-run-switch-ryan')?.getAttribute('aria-checked')).toBe('false');
+    expect($('first-run-switch-manage')?.textContent).toBe('Manage GitHub Accounts…');
+    // Another account: its repositories, read with its token.
+    calls.length = 0;
+    await press('first-run-switch-ryan');
+    await vi.waitFor(() => expect(calls).toContainEqual(['repos as', 'ryan']));
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    // Add Another Account: the sign-in first; back, the accounts to pick from.
+    await press('first-run-account-switcher');
+    await press('first-run-switch-add');
+    await vi.waitFor(() => expect($('first-run-add-account-hint')).not.toBeNull());
+    await press('first-run-back');
+    await vi.waitFor(() => expect(screen()).toBe('github-account'));
+    await choose('first-run-account-ryan-work');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await press($$('first-run-notebook-open')[0]!);
+    await vi.waitFor(() => expect(add).toHaveBeenCalled());
+    expect(add.mock.calls.at(-1)![0]).toMatchObject({
+      githubSignIn: true,
+      githubAccount: 'ryan-work',
+    });
   });
 
   it('reads repositories as they near the view, a few at a time, and opens those with a notebook', async () => {

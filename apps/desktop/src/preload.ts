@@ -79,6 +79,10 @@ type CaptureGit = Pick<DesktopGit, 'list' | 'onChange'>;
  * page's engine calls git through `op`. The owner checks (Remove, Delete for good) carry the
  * gesture: main refuses without one, then asks Touch ID. Main and note windows only.
  */
+/** An account named by the page (A1617): a login, null for one GitHub never named, else none. */
+const accountArg = (value: unknown): string | null | undefined =>
+  value === null ? null : typeof value === 'string' ? value : undefined;
+
 const git = {
   list: () => invoke('gitList'),
   add: (input) => invoke('gitAdd', input),
@@ -104,15 +108,19 @@ const git = {
   onChange: (listener) => on('gitChanged', () => listener()),
   // Browsing GitHub in Add a Git Notebook (T81, A1165): main answers the main window only.
   github: {
-    repos: () => invoke('gitGithubRepos'),
-    folders: (fullName, branch) => invoke('gitGithubFolders', String(fullName), String(branch)),
-    owners: () => invoke('gitGithubOwners'),
-    create: (owner, name) =>
+    // `account`: one of Penmoss's accounts (A1617); left out, git's sign-in, else the first.
+    repos: (account) => invoke('gitGithubRepos', accountArg(account)),
+    folders: (fullName, branch, account) =>
+      invoke('gitGithubFolders', String(fullName), String(branch), accountArg(account)),
+    owners: (account) => invoke('gitGithubOwners', accountArg(account)),
+    create: (owner, name, account) =>
       invoke(
         'gitGithubCreate',
         { login: String(owner?.login), kind: String(owner?.kind) },
         String(name),
+        accountArg(account),
       ),
+    gitLogin: () => invoke('gitGithubGitLogin'),
     // Sign in with GitHub (T82, A1170): the code to enter and the outcome, never the token.
     signIn: {
       status: () => invoke('githubSignInStatus'),
@@ -150,7 +158,8 @@ const appWindow = {
   githubToken: {
     status: () => invoke('githubTokenStatus'),
     save: (token) => invoke('githubTokenSave', String(token)),
-    remove: () => invoke('githubTokenRemove'),
+    remove: (login) => invoke('githubTokenRemove', accountArg(login)),
+    makePrimary: (login) => invoke('githubTokenMakePrimary', String(login)),
     onChange: (listener) => on('githubTokenChanged', () => listener()),
   },
   // Search by meaning (T76, A1152): main relays each call to the embedding service. The switch

@@ -7,6 +7,12 @@ import type { IpcHandlers } from '../ipc';
 import { NEEDS_A_PERSON } from '../ipc-contract';
 import { gitNotebooks, githubToken } from '../services';
 
+/** Add Notebook's account (A1617): a login, null for one GitHub never named, else none. */
+function accountIn(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  return typeof value === 'string' && value.length > 0 && value.length <= 100 ? value : undefined;
+}
+
 export function registerGitIpc(
   ipc: IpcHandlers,
   /** The call came from the main window's page (Settings' Add, T54). */
@@ -28,7 +34,8 @@ export function registerGitIpc(
       branch: fields['branch'],
       dir: fields['dir'],
       name: fields['name'],
-      token: signedIn ? await githubToken.token() : null,
+      // The account picked in Add Notebook (A1617); the first when none was.
+      token: signedIn ? await githubToken.token(accountIn(fields['githubAccount'])) : null,
     });
   });
   ipc.handle('gitRemove', (_call, localId, unpushed) => gitNotebooks.remove(localId, unpushed));

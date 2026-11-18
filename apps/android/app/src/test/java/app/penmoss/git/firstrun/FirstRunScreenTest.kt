@@ -2,6 +2,7 @@ package app.penmoss.git.firstrun
 
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -63,9 +64,11 @@ class FirstRunScreenTest {
            "clone_url":"https://github.com/ryan/$name.git","size":$size,"permissions":{"push":true}}"""
 
     /** GitHub with one empty repository, `ryan/notes`. */
-    private val github = GitHubBrowse(BrowseHttp { _, url, _, _ ->
+    private val github = GitHubBrowse(BrowseHttp { _, url, headers, _ ->
         when {
             url.contains("/user/repos") -> BrowseResponse(200, emptyMap(), "[${repoJson("notes", 0)}]")
+            // The work token is the work account's.
+            url.endsWith("/user") && headers.values.any { it.endsWith("tok-work") } -> BrowseResponse(200, emptyMap(), """{"login":"ryan-work"}""")
             url.endsWith("/user") -> BrowseResponse(200, emptyMap(), """{"login":"ryan"}""")
             url.contains("/user/orgs") -> BrowseResponse(200, emptyMap(), "[]")
             url.contains("/git/trees/") -> BrowseResponse(409, emptyMap(), "{}")
@@ -140,7 +143,7 @@ class FirstRunScreenTest {
         tap("first-run-continue")
         // The phone's GitHub sign-in answers, so GitHub Access goes straight on to the list.
         waitFor("first-run-repo-ryan/notes")
-        compose.onNodeWithText("Signed in as ryan").assertExists()
+        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan")
         compose.onNodeWithText("1 repository.").assertExists()
         tap("first-run-repo-ryan/notes")
         waitFor("first-run-repo-empty")
@@ -220,8 +223,27 @@ class FirstRunScreenTest {
         tap("first-run-account-ryan-work")
         tap("first-run-continue")
         waitFor("first-run-repo-ryan/notes")
-        // Use a Different GitHub Account opens Settings → GitHub's page; back from it, the accounts.
-        tap("first-run-other-account")
+        // The switcher above the list (option 2, 17 Nov 2026): the account, then a sheet of every one.
+        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan-work")
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-ryan")
+        tap("first-run-switch-ryan")
+        waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan")
+        // Add Another Account: the sign-in, with its hint.
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-add")
+        tap("first-run-switch-add")
+        waitFor("first-run-add-account-hint")
+        tap("first-run-back")
+        waitFor("first-run-account-ryan-work")
+        // Manage GitHub Accounts opens Settings → GitHub's page; back from it, the accounts.
+        tap("first-run-account-ryan-work")
+        tap("first-run-continue")
+        waitFor("first-run-repo-ryan/notes")
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-manage")
+        tap("first-run-switch-manage")
         waitFor("fake-accounts-back")
         tap("fake-accounts-back")
         waitFor("first-run-account-ryan-work")
@@ -237,7 +259,7 @@ class FirstRunScreenTest {
         assertEquals("tok-work", adds.last().place.token)
     }
 
-    /** With one account, Use a Different GitHub Account (Ryan, 17 Nov 2026) is on the list; an account added there is asked for after. */
+    /** With one account, the switcher (Ryan, 17 Nov 2026) is above the list; Manage GitHub Accounts opens Settings, and an account added there is asked for after. */
     @Test
     fun useADifferentAccountOpensSettingsGitHubAndAsksWhichAfter() {
         var accounts = listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true))
@@ -245,10 +267,21 @@ class FirstRunScreenTest {
         tap("first-run-continue")
         tap("first-run-way-existing")
         tap("first-run-continue")
-        // One account: straight to its repositories, with the link under Signed in as.
+        // One account: straight to its repositories, with the switcher above them.
         waitFor("first-run-repo-ryan/notes")
-        compose.onNodeWithText("Use a Different GitHub Account").assertExists()
-        tap("first-run-other-account")
+        compose.onNodeWithText("Listing this account’s repositories").assertExists()
+        // Add Another Account stays on the sign-in, even with one account; Back, the list again.
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-add")
+        tap("first-run-switch-add")
+        waitFor("first-run-add-account-hint")
+        compose.waitForIdle()
+        compose.onNodeWithTag("first-run-add-account-hint").assertExists()
+        tap("first-run-back")
+        waitFor("first-run-repo-ryan/notes")
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-manage")
+        tap("first-run-switch-manage")
         waitFor("fake-accounts-back")
         assertTrue(pages > 0)
         // The work account is added on that page; back, Add Notebook asks which.

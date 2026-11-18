@@ -32,10 +32,13 @@ export interface GitHubBrowseHostOptions {
   readonly gitEnv?: Readonly<Record<string, string>> | null;
   /** git's credential; tests stand in for it. Default: `git credential fill`. */
   readonly credential?: () => Promise<CredentialAnswer>;
-  /** Penmoss's own GitHub sign-in (T82), when there is one. */
-  readonly penmossToken?: () => Promise<string | null>;
-  /** GitHub refused Penmoss's sign-in (401): Settings → GitHub Token says so. */
-  readonly onPenmossRefused?: () => Promise<void>;
+  /**
+   * Penmoss's own GitHub sign-in (T82), when there is one: the first account's with no `login`,
+   * else that account's (A1617).
+   */
+  readonly penmossToken?: (login?: string | null) => Promise<string | null>;
+  /** GitHub refused one of Penmoss's sign-ins (401): Settings → GitHub says so. */
+  readonly onPenmossRefused?: (login?: string | null) => Promise<void>;
 }
 
 const NO_CREDENTIAL: BrowseError = {
@@ -50,6 +53,20 @@ const TIMEOUT: BrowseError = {
 const isString = (value: unknown, max = 300): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= max;
 
+/**
+ * Which of Penmoss's accounts a call is for (A1617): a login, `null` for an account GitHub never
+ * named, or undefined for no choice (git's sign-in, else the first account).
+ */
+export type BrowseAccount = string | null | undefined;
+
+const accountOf = (value: unknown): BrowseAccount | false =>
+  value === undefined || value === null ? value : isString(value, 100) ? value : false;
+
+const NO_ACCOUNT: BrowseError = {
+  reason: 'unauthorized',
+  message: 'That GitHub account isn’t signed in on this Mac any more. Sign in again.',
+};
+
 export class GitHubBrowseHost {
   private readonly browse: GitHubBrowse;
 
@@ -63,7 +80,13 @@ export class GitHubBrowseHost {
    */
   private async withToken<T>(
     call: (token: string) => Promise<BrowseResult<T>>,
+    account?: BrowseAccount,
   ): Promise<ViaResult<T>> {
+    // One of Penmoss's accounts, picked in Add Notebook (A1617): that account's token alone.
+    if (account !== undefined) {
+      const token = await this.options.penmossToken?.(account).catch(() => null);
+      return token ? this.withPenmoss(call, token, account) : { ok: false, error: NO_ACCOUNT };
+    }
     const git = await (
       this.options.credential ?? (() => gitHubCredential({ gitEnv: this.options.gitEnv ?? null }))
     )();
@@ -85,15 +108,27 @@ export class GitHubBrowseHost {
     return answer?.ok ? (answer.value.find((owner) => owner.kind === 'user')?.login ?? null) : null;
   }
 
+  /**
+   * The login git's own GitHub sign-in is for (A1617), so Add Notebook can list it beside
+   * Penmoss's accounts; null when git has none or GitHub won't say.
+   */
+  async gitLogin(): Promise<string | null> {
+    const git = await (
+      this.options.credential ?? (() => gitHubCredential({ gitEnv: this.options.gitEnv ?? null }))
+    )();
+    return git.ok ? this.loginOf(git.token) : null;
+  }
+
   /** One call with Penmoss's sign-in; a 401 marks it refused (A1171) and asks to sign in again. */
   private async withPenmoss<T>(
     call: (token: string) => Promise<BrowseResult<T>>,
     token: string,
+    account?: BrowseAccount,
   ): Promise<ViaResult<T>> {
     const answer = await call(token);
     if (answer.ok) return { ...answer, via: 'penmoss' };
     if (answer.error.reason !== 'unauthorized') return answer;
-    await this.options.onPenmossRefused?.().catch(() => undefined);
+    await this.options.onPenmossRefused?.(account).catch(() => undefined);
     return {
       ok: false,
       error: {
@@ -103,27 +138,34 @@ export class GitHubBrowseHost {
     };
   }
 
-  repos(): Promise<ViaResult<RepoList>> {
-    return this.withToken((token) => this.browse.repos(token));
+  repos(account?: unknown): Promise<ViaResult<RepoList>> {
+    const who = accountOf(account);
+    if (who === false) return Promise.resolve({ ok: false, error: NO_ACCOUNT });
+    return this.withToken((token) => this.browse.repos(token), who);
   }
 
-  folders(fullName: unknown, branch: unknown): Promise<ViaResult<RepoFolders>> {
-    if (!isString(fullName, 140) || !isString(branch, 200)) {
+  folders(fullName: unknown, branch: unknown, account?: unknown): Promise<ViaResult<RepoFolders>> {
+    const who = accountOf(account);
+    if (!isString(fullName, 140) || !isString(branch, 200) || who === false) {
       return Promise.resolve({
         ok: false,
         error: { reason: 'invalid', message: 'Pick a repository first.' },
       });
     }
-    return this.withToken((token) => this.browse.folders(token, fullName, branch));
+    return this.withToken((token) => this.browse.folders(token, fullName, branch), who);
   }
 
-  owners(): Promise<ViaResult<readonly GitHubOwner[]>> {
-    return this.withToken((token) => this.browse.owners(token));
+  owners(account?: unknown): Promise<ViaResult<readonly GitHubOwner[]>> {
+    const who = accountOf(account);
+    if (who === false) return Promise.resolve({ ok: false, error: NO_ACCOUNT });
+    return this.withToken((token) => this.browse.owners(token), who);
   }
 
-  create(owner: unknown, name: unknown): Promise<ViaResult<GitHubRepo>> {
+  create(owner: unknown, name: unknown, account?: unknown): Promise<ViaResult<GitHubRepo>> {
     const o = owner as { login?: unknown; kind?: unknown } | null;
+    const who = accountOf(account);
     if (
+      who === false ||
       !o ||
       !isString(o.login, 40) ||
       (o.kind !== 'user' && o.kind !== 'org') ||
@@ -136,6 +178,6 @@ export class GitHubBrowseHost {
     }
     const login = o.login;
     const kind = o.kind;
-    return this.withToken((token) => this.browse.createRepo(token, { login, kind }, name));
+    return this.withToken((token) => this.browse.createRepo(token, { login, kind }, name), who);
   }
 }

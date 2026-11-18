@@ -13,10 +13,17 @@
  * Back's place, writes no welcome note, and ends on the notebook's page in Settings.
  */
 import { BrandMark } from '@penmoss/ui/icons';
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { desktop, type DesktopGit, type GitHubRepo } from '../desktop/bridge';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  desktop,
+  type DesktopGit,
+  type GitHubAccountChoice,
+  type GitHubRepo,
+} from '../desktop/bridge';
+import { GitHubSettings } from '../feedback/GitHubSettings';
 import { gitNotebookPath, navigate } from '../router';
 import {
+  asAccount,
   FIRST_RUN_DOCS,
   placeIn,
   type AddNotebook,
@@ -28,6 +35,7 @@ import {
 import { Action, Frame } from './FirstRunFrame';
 import { GitHubAccess } from './FirstRunGitHub';
 import {
+  AccountSwitcher,
   CreateRepo,
   FolderPick,
   GitMissing,
@@ -226,6 +234,36 @@ function NotebookSteps({
   const go = (next: Screen) => setStack((now) => [...now, next]);
   const replace = (next: Screen) => setStack((now) => [...now.slice(0, -1), next]);
   const back = () => setStack((now) => (now.length > 1 ? now.slice(0, -1) : now));
+  /** GitHub as the account Pick GitHub Account chose (A1617), else as main finds it. */
+  const account = hub?.account;
+  const browse = useMemo(() => asAccount(github, account), [github, account]);
+  /** A new account's repositories: their folders are read afresh. */
+  const forgetReads = () => {
+    asked.current.clear();
+    setReads(new Map());
+  };
+
+  /** GitHub's step again, for `then`: as `account`, or Add Another Account (A1617). */
+  const githubAgain = (
+    then: 'create' | 'list',
+    next: { keep?: { account: GitHubAccountChoice | undefined }; add?: boolean },
+  ) => {
+    forgetReads();
+    setHub(null);
+    replace({ at: 'github', then, ...next });
+  };
+  /** Whose repositories these are, as a control above them (option 2, 17 Nov 2026; A1617). */
+  const switcher = (then: 'create' | 'list', shown: Hub) => (
+    <AccountSwitcher
+      github={github}
+      hub={shown}
+      {...(then === 'create' ? { line: 'Making the repository in this account' } : {})}
+      onPick={(picked) => githubAgain(then, { keep: { account: picked } })}
+      onAdd={() => githubAgain(then, { add: true })}
+      onManage={() => go({ at: 'accounts', then })}
+      onRefresh={() => githubAgain(then, { keep: { account: shown.account } })}
+    />
+  );
 
   /** One repository's folders, read once (again on Try Again or Refresh). */
   const read = useCallback(
@@ -233,7 +271,7 @@ function NotebookSteps({
       if (!again && asked.current.has(repo.fullName)) return;
       asked.current.add(repo.fullName);
       setReads((now) => new Map(now).set(repo.fullName, { state: 'loading' }));
-      void github
+      void browse
         .folders(repo.fullName, repo.defaultBranch || 'main')
         .catch(() => null)
         .then((answer) => {
@@ -245,13 +283,16 @@ function NotebookSteps({
           setReads((now) => new Map(now).set(repo.fullName, loaded));
         });
     },
-    [github],
+    [browse],
   );
 
   /** git.add, holding the first run while it works and after it adds (until the first sync). */
   const add: AddNotebook = async (input) => {
     onHold?.(true);
-    const result = await git.add(input).catch(() => null);
+    // The account picked gives the notebook its token (A1617).
+    const withAccount =
+      input.githubSignIn && account !== undefined ? { ...input, githubAccount: account } : input;
+    const result = await git.add(withAccount).catch(() => null);
     if (!(result?.ok && result.value.kind === 'added')) onHold?.(false);
     return result;
   };
@@ -381,7 +422,10 @@ function NotebookSteps({
       body = (
         <GitHubAccess
           github={github}
+          {...(screen.keep ? { keep: screen.keep } : {})}
+          add={screen.add === true}
           onReady={(answer) => {
+            forgetReads();
             setHub(answer);
             replace({ at: screen.then });
           }}
@@ -393,8 +437,9 @@ function NotebookSteps({
     case 'create':
       body = hub ? (
         <CreateRepo
-          github={github}
+          github={browse}
           hub={hub}
+          switcher={switcher('create', hub)}
           onCreated={(place, name) => go({ at: 'setup', setup: { kind: 'create', place, name } })}
           onUseExisting={() => replace({ at: 'list' })}
           back={back}
@@ -422,12 +467,8 @@ function NotebookSteps({
           }
           onUrl={() => go({ at: 'url' })}
           onCreate={goal === 'new' ? () => replace({ at: 'create' }) : null}
-          onRefresh={() => {
-            asked.current.clear();
-            setReads(new Map());
-            setHub(null);
-            replace({ at: 'github', then: 'list' });
-          }}
+          onRefresh={() => githubAgain('list', { keep: { account: hub.account } })}
+          switcher={switcher('list', hub)}
           back={back}
         />
       ) : null;
@@ -474,6 +515,20 @@ function NotebookSteps({
         />
       );
       break;
+    case 'accounts': {
+      // Back from the accounts: GitHub's step again, which asks which with two or more (A1617).
+      const leave = () => {
+        forgetReads();
+        setHub(null);
+        setStack((now) => [...now.slice(0, -2), { at: 'github', then: screen.then }]);
+      };
+      body = (
+        <Frame name="accounts" step={2} title="GitHub Accounts" back={leave}>
+          <GitHubSettings embedded />
+        </Frame>
+      );
+      break;
+    }
     case 'git-missing':
       body = <GitMissing back={back} />;
       break;

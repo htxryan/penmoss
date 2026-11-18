@@ -153,6 +153,19 @@ const PATHS = {
       {dot(5, 17.5, 1.1)}
     </>
   ),
+  // Another account (A1617): Add Account, Use a Different GitHub Account.
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15.5 4.8a3.5 3.5 0 0 1 0 6.4M17.5 14.3c2 .7 3.5 2.6 3.5 5.2" />
+    </>
+  ),
+  userPlus: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M18.5 8v6M15.5 11h6" />
+    </>
+  ),
   logIn: (
     <path d="M10 4.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h4M14 16.5l4.5-4.5L14 7.5M18.5 12H9" />
   ),

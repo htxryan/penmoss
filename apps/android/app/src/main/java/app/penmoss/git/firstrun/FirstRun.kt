@@ -147,6 +147,31 @@ fun NotebookSteps(
     }
     BackHandler(enabled = stack.size > 1 && screen !is Screen.SetUp) { back() }
 
+    /** The account the repositories are listed for, among the phone's (A1616). */
+    fun listed(): app.penmoss.feedback.GitHubAccount? = deps.accounts().firstOrNull { it.login == hub?.login }
+    /** GitHub's step again, for [then]: as [account], or Add Another Account. */
+    fun githubAgain(then: AfterGitHub, account: app.penmoss.feedback.GitHubAccount? = null, add: Boolean = false) {
+        reads.clear()
+        hub = null
+        replace(Screen.GitHub(then, account = account, add = add))
+    }
+    /** Refresh: the same account's repositories again, without asking which. */
+    val refresh = { githubAgain(AfterGitHub.LIST, listed()) }
+    /**
+     * Whose repositories these are, as a control (Ryan's pick, option 2, 17 Nov 2026; A1616): each
+     * account, Add Another Account, Manage GitHub Accounts (Settings → GitHub's page) and Refresh.
+     */
+    val switcher = @Composable { then: AfterGitHub, onRefresh: (() -> Unit)? ->
+        AccountSwitcher(
+            login = hub?.login,
+            accounts = remember(hub) { deps.accounts() },
+            onPick = { githubAgain(then, it) },
+            onAdd = { githubAgain(then, add = true) },
+            onManage = deps.accountsPage?.let { { go(Screen.Accounts(then)) } },
+            onRefresh = onRefresh,
+        )
+    }
+
     /** The hub's Add, holding the first run while it works and after it adds (until the first sync). */
     val add: suspend (Place, String?) -> AddResult = { place, name ->
         onHold(true)
@@ -245,6 +270,8 @@ fun NotebookSteps(
                     replace(if (screen.then == AfterGitHub.CREATE) Screen.Create else Screen.List)
                 },
                 choose = screen.choose,
+                account = screen.account,
+                add = screen.add,
                 onUrl = { replace(Screen.Url) },
                 back = ::back,
             )
@@ -265,7 +292,7 @@ fun NotebookSteps(
                     now,
                     onCreated = { place, name -> go(Screen.SetUp(Setup.Create(place, name))) },
                     onUseExisting = { replace(Screen.List) },
-                    onAccounts = deps.accountsPage?.let { { go(Screen.Accounts(AfterGitHub.CREATE)) } },
+                    switcher = { switcher(AfterGitHub.CREATE, null) },
                     back = ::back,
                 )
             }
@@ -280,13 +307,9 @@ fun NotebookSteps(
                     onOpen = { repo, folder -> go(Screen.SetUp(Setup.Open(placeIn(repo, now.token, folder.path), folder.notebook?.name ?: repo.name))) },
                     onUrl = { go(Screen.Url) },
                     onCreate = if (goal == Goal.NEW) ({ replace(Screen.Create) }) else null,
-                    onRefresh = {
-                        reads.clear()
-                        hub = null
-                        replace(Screen.GitHub(AfterGitHub.LIST))
-                    },
-                    // Another GitHub account's repositories (A1616): pick one, or add one.
-                    onAccounts = deps.accountsPage?.let { { go(Screen.Accounts(AfterGitHub.LIST)) } },
+                    onRefresh = refresh,
+                    // Another GitHub account's repositories (A1616): the switcher, option 2.
+                    switcher = { switcher(AfterGitHub.LIST, refresh) },
                     back = ::back,
                 )
             }

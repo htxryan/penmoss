@@ -8,10 +8,22 @@
 import { defaultRepoName } from '@penmoss/git-notebook/github-browse';
 import { Icon } from '@penmoss/ui/icons';
 import { Select } from '@penmoss/ui/controls/Select';
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Menu, MenuItem } from '../shell/Menu';
+import { accountChoices, type AccountChoice } from './github-choices';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import type {
   DesktopGitHubBrowse,
+  GitHubAccountChoice,
   GitHubRepo,
   GitHubVia,
   RepoFolder,
@@ -89,12 +101,15 @@ export function CreateRepo({
   onCreated,
   onUseExisting,
   back,
+  switcher,
 }: {
   github: DesktopGitHubBrowse;
   hub: Hub;
   onCreated: (place: Place, name: string) => void;
   onUseExisting: () => void;
   back: () => void;
+  /** Whose account the repository is made in, and another's (A1617). */
+  switcher?: ReactNode;
 }) {
   const formId = useId();
   const owners = hub.owners ?? [];
@@ -162,6 +177,7 @@ export function CreateRepo({
         </>
       }
     >
+      {switcher}
       <form id={formId} className="fr-form" onSubmit={(event) => void create(event)}>
         <fieldset className="fr-fields" disabled={busy}>
           <NameField
@@ -262,6 +278,111 @@ export function CreateRepo({
   );
 }
 
+/** The account on the switcher's button: its login, else whose sign-in it is. */
+const whoOf = (hub: Hub) =>
+  hub.login ?? (hub.via === 'git' ? 'This Mac’s Git Sign-In' : 'GitHub Account');
+
+/**
+ * Whose repositories these are, as a control (Ryan's pick, option 2, 17 Nov 2026; A1617): the
+ * account above Pick Repository and Create New Repo, and a menu of every account (the one in use
+ * checked) with Add Another Account, Manage GitHub Accounts and Refresh.
+ */
+export function AccountSwitcher({
+  github,
+  hub,
+  onPick,
+  onAdd,
+  onManage,
+  onRefresh,
+  line = 'Listing this account’s repositories',
+}: {
+  github: DesktopGitHubBrowse;
+  hub: Hub;
+  /** What the account is for here, under its name. */
+  line?: string;
+  onPick: (account: GitHubAccountChoice | undefined) => void;
+  onAdd: () => void;
+  onManage?: (() => void) | undefined;
+  onRefresh: () => void;
+}) {
+  const [choices, setChoices] = useState<readonly AccountChoice[]>([]);
+  useEffect(() => {
+    let live = true;
+    void accountChoices(github).then((all) => {
+      if (live) setChoices(all);
+    });
+    return () => {
+      live = false;
+    };
+  }, [github]);
+  const who = whoOf(hub);
+  // The account whose token read these; with none picked, git's, else the first (A1617).
+  const current =
+    hub.account !== undefined
+      ? choices.find((each) => each.key !== 'git' && each.account === hub.account)
+      : (choices.find((each) => each.key === 'git') ??
+        choices.find((each) => hub.login !== null && each.login === hub.login));
+  return (
+    <Menu
+      label="GitHub Account"
+      icon="users"
+      className="fr-switcher"
+      testId="first-run-account-switcher"
+      face={
+        <>
+          <span className="fr-switcher-initial" aria-hidden="true">
+            {(hub.login ?? 'G').slice(0, 1).toUpperCase()}
+          </span>
+          <span className="fr-switcher-text">
+            <strong data-testid="first-run-via">{who}</strong>
+            <span>{line}</span>
+          </span>
+          <Icon name="chevD" size={14} />
+        </>
+      }
+    >
+      {choices.map((each) => {
+        const checked = each === current;
+        return (
+          <button
+            key={each.key}
+            type="button"
+            role="menuitemradio"
+            aria-checked={checked}
+            tabIndex={-1}
+            className="menu-item"
+            data-ui="item"
+            data-testid={`first-run-switch-${each.key === 'git' ? 'git' : (each.login ?? '')}`}
+            onClick={() => {
+              if (!checked) onPick(each.account);
+            }}
+          >
+            <span className="menu-check" aria-hidden="true">
+              {checked ? <Icon name="check" /> : null}
+            </span>
+            <span className="menu-label">
+              {each.title}
+              <span className="fr-switcher-line">{each.line}</span>
+            </span>
+          </button>
+        );
+      })}
+      {choices.length > 0 ? <div className="menu-sep" role="separator" /> : null}
+      <MenuItem icon="userPlus" data-testid="first-run-switch-add" onClick={onAdd}>
+        Add Another Account…
+      </MenuItem>
+      {onManage ? (
+        <MenuItem icon="settings" data-testid="first-run-switch-manage" onClick={onManage}>
+          Manage GitHub Accounts…
+        </MenuItem>
+      ) : null}
+      <MenuItem icon="refresh" data-testid="first-run-refresh" onClick={onRefresh}>
+        Refresh Repositories
+      </MenuItem>
+    </Menu>
+  );
+}
+
 /** Text with what the filter matched marked (4.3). */
 function Marked({ text, query }: { text: string; query: string }) {
   const match = query ? fuzzyMatch(query, text, { scattered: false }) : null;
@@ -308,6 +429,7 @@ export function RepoTree({
   onCreate,
   onRefresh,
   back,
+  switcher,
 }: {
   hub: Hub;
   goal: Goal;
@@ -321,6 +443,8 @@ export function RepoTree({
   onCreate: (() => void) | null;
   onRefresh: () => void;
   back: () => void;
+  /** Whose repositories these are, and another account's (A1617); else a line with Refresh. */
+  switcher?: ReactNode;
 }) {
   const repos = useMemo(() => {
     const all = [...hub.list.repos];
@@ -464,6 +588,8 @@ export function RepoTree({
       </LinkButton>
     </p>
   );
+  // Whose repositories these are, and another account's, above the list (A1617).
+  const accountLines = switcher ?? signedInLine;
 
   // 4.4: nothing to pick.
   if (repos.length === 0) {
@@ -490,7 +616,7 @@ export function RepoTree({
         <p className="fr-empty" data-testid="first-run-no-repos">
           GitHub lists no repository{hub.login ? ` for ${hub.login}` : ' for this sign-in'}.
         </p>
-        {signedInLine}
+        {accountLines}
       </Frame>
     );
   }
@@ -505,6 +631,7 @@ export function RepoTree({
 
   return (
     <Frame name="list" state="ready" step={2} title="Pick Repository" back={back}>
+      {accountLines}
       <label className="fr-filter">
         <span className="fr-hidden">Filter</span>
         <Icon name="search" size={14} />
@@ -664,7 +791,6 @@ export function RepoTree({
       <LinkButton testId="first-run-url-instead" onClick={onUrl}>
         Paste a URL Instead
       </LinkButton>
-      {signedInLine}
     </Frame>
   );
 }

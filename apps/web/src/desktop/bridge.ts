@@ -196,6 +196,8 @@ export interface DesktopGit {
      * for a github.com address over HTTPS.
      */
     readonly githubSignIn?: boolean;
+    /** Which of Penmoss's accounts' token it gets (A1617); the first with none. */
+    readonly githubAccount?: GitHubAccountChoice;
   }): Promise<GitAnswer<GitAddResult> | null>;
   /**
    * Asks the Mac's owner first (Touch ID); only just after a key press or click. `unpushed`:
@@ -271,6 +273,9 @@ export interface DesktopGit {
 /** Which sign-in a browse call used: git's own, or Penmoss's (T82). */
 export type GitHubVia = 'git' | 'penmoss';
 
+/** One of Penmoss's GitHub accounts, by login; null for one GitHub never named (A1617). */
+export type GitHubAccountChoice = string | null;
+
 export type GitHubAnswer<T> =
   | { readonly ok: true; readonly value: T; readonly via: GitHubVia }
   | { readonly ok: false; readonly error: BrowseError };
@@ -280,11 +285,25 @@ export type GitHubAnswer<T> =
  * and the page never sees it. Null from a window that may not browse.
  */
 export interface DesktopGitHubBrowse {
-  repos(): Promise<GitHubAnswer<RepoList> | null>;
-  folders(fullName: string, branch: string): Promise<GitHubAnswer<RepoFolders> | null>;
-  owners(): Promise<GitHubAnswer<readonly GitHubOwner[]> | null>;
+  /**
+   * `account` is one of Penmoss's GitHub accounts, by login (A1617); left out, main uses git's
+   * sign-in, else the first account.
+   */
+  repos(account?: GitHubAccountChoice): Promise<GitHubAnswer<RepoList> | null>;
+  folders(
+    fullName: string,
+    branch: string,
+    account?: GitHubAccountChoice,
+  ): Promise<GitHubAnswer<RepoFolders> | null>;
+  owners(account?: GitHubAccountChoice): Promise<GitHubAnswer<readonly GitHubOwner[]> | null>;
   /** Makes an empty private repository; only just after a click. */
-  create(owner: GitHubOwner, name: string): Promise<GitHubAnswer<GitHubRepo> | null>;
+  create(
+    owner: GitHubOwner,
+    name: string,
+    account?: GitHubAccountChoice,
+  ): Promise<GitHubAnswer<GitHubRepo> | null>;
+  /** Whose git's own GitHub sign-in is; null when git has none (A1617). */
+  gitLogin?(): Promise<string | null>;
   /** Sign in with GitHub (T82, A1170). */
   readonly signIn: DesktopGitHubSignIn;
 }
@@ -470,7 +489,18 @@ export interface DesktopFeedbackAnswer {
   readonly retryAfter?: number;
 }
 
+/** One GitHub account kept on this Mac (A1617). */
+export interface DesktopGitHubAccount {
+  readonly login: string | null;
+  /** The first: Send Feedback files with it. */
+  readonly primary: boolean;
+  readonly signedIn: boolean;
+  readonly problem: string | null;
+}
+
 export interface DesktopGitHubTokenStatus {
+  /** Every account kept, the first first (A1617); a Mac from before lists its one account. */
+  readonly accounts?: readonly DesktopGitHubAccount[];
   readonly saved: boolean;
   readonly login: string | null;
   readonly problem: string | null;
@@ -489,7 +519,18 @@ export interface DesktopGitHubToken {
     | { readonly ok: false; readonly message: string }
     | null
   >;
-  remove(): Promise<
+  /** Forgets one account (A1617); the first with no `login`. */
+  remove(
+    login?: string | null,
+  ): Promise<
+    | { readonly ok: true; readonly status: DesktopGitHubTokenStatus }
+    | { readonly ok: false; readonly message: string }
+    | null
+  >;
+  /** Makes an account the first, Send Feedback's (A1617). */
+  makePrimary?(
+    login: string,
+  ): Promise<
     | { readonly ok: true; readonly status: DesktopGitHubTokenStatus }
     | { readonly ok: false; readonly message: string }
     | null

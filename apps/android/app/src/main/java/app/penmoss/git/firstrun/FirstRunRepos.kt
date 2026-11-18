@@ -1,5 +1,6 @@
 package app.penmoss.git.firstrun
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
@@ -61,7 +63,8 @@ internal fun CreateRepo(
     onCreated: (Place, String) -> Unit,
     onUseExisting: () -> Unit,
     back: () -> Unit,
-    onAccounts: (() -> Unit)? = null,
+    /** The account switcher (option 2, A1616), at the top. */
+    switcher: (@Composable () -> Unit)? = null,
 ) {
     val owners = hub.owners.orEmpty()
     var notebook by remember { mutableStateOf("") }
@@ -109,6 +112,7 @@ internal fun CreateRepo(
             )
         },
     ) {
+        switcher?.invoke()
         NameField(notebook, "first-run-create-notebook") {
             notebook = it
             if (!edited) repoName = defaultRepoName(it)
@@ -163,7 +167,6 @@ internal fun CreateRepo(
         if (owners.isEmpty()) Problem("GitHub didn’t say where a repository can be made. Go back and try again.", "first-run-create-problem")
         problem?.let { Problem(it, "first-run-create-problem") }
         // Made in another GitHub account, such as a work one (A1616): Settings → GitHub's page.
-        onAccounts?.let { Link("Use a Different GitHub Account", "first-run-other-account", "users", it) }
     }
 }
 
@@ -185,25 +188,30 @@ internal fun RepoTree(
     onCreate: (() -> Unit)?,
     onRefresh: () -> Unit,
     back: () -> Unit,
-    onAccounts: (() -> Unit)? = null,
+    /** The account switcher (option 2, A1616): whose repositories these are, and the others. */
+    switcher: (@Composable () -> Unit)? = null,
 ) {
     val repos = hub.list.repos
     var filter by remember { mutableStateOf("") }
     LaunchedEffect(repos) {
         repos.filter { !it.empty }.take(READ_AT_ONCE).forEach { read(it, false) }
     }
+    // Whose repositories these are, as a control (option 2, A1616): every account, Add Another
+    // Account, Manage GitHub Accounts and Refresh.
     val signedIn = @Composable {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                hub.login?.let { "Signed in as $it" } ?: "Signed in to GitHub",
-                Modifier.testTag("first-run-via"),
-                style = MaterialTheme.roles.help,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Link("Refresh", "first-run-refresh", "refresh-cw", onRefresh)
+        if (switcher != null) {
+            switcher()
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    hub.login?.let { "Signed in as $it" } ?: "Signed in to GitHub",
+                    Modifier.testTag("first-run-via"),
+                    style = MaterialTheme.roles.help,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Link("Refresh", "first-run-refresh", "refresh-cw", onRefresh)
+            }
         }
-        // A work account's repositories beside a personal one's (A1616): Settings → GitHub's page.
-        onAccounts?.let { Link("Use a Different GitHub Account", "first-run-other-account", "users", it) }
     }
     if (repos.isEmpty()) {
         Frame(
@@ -586,5 +594,114 @@ internal fun NameNotebook(place: Place, onMake: (String) -> Unit, back: () -> Un
         Lead("It shows in your list of notebooks.")
         NameField(name, "first-run-name-input") { name = it }
         PlaceCard(place.label, place.dir, place.branch)
+    }
+}
+
+/**
+ * Whose repositories these are, as a control (Ryan's pick of option 2 in the account designs,
+ * 17 Nov 2026; A1616): the account, then a sheet of every account, Add Another Account, Manage
+ * GitHub Accounts (Settings → GitHub's page inside the flow) and Refresh.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+internal fun AccountSwitcher(
+    login: String?,
+    accounts: List<app.penmoss.feedback.GitHubAccount>,
+    onPick: (app.penmoss.feedback.GitHubAccount) -> Unit,
+    onAdd: (() -> Unit)?,
+    onManage: (() -> Unit)?,
+    onRefresh: (() -> Unit)?,
+) {
+    var open by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            .background(MaterialTheme.colorScheme.surfaceBright)
+            .clickable(role = Role.Button, onClickLabel = "Change GitHub Account") { open = true }
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag("first-run-account-switcher"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        AccountInitial(login)
+        Column(Modifier.weight(1f)) {
+            Text(login ?: "GitHub", Modifier.testTag("first-run-via"), style = MaterialTheme.roles.rowLabel)
+            Text("Listing this account’s repositories", style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        LucideGlyph("chevron-down", contentDescription = null, size = 20.dp)
+    }
+    if (open) {
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { open = false }, modifier = Modifier.testTag("first-run-account-sheet")) {
+            Text(
+                "GitHub Account",
+                Modifier.padding(start = 22.dp, end = 22.dp, bottom = 8.dp),
+                style = MaterialTheme.roles.help,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val sheetRow = @Composable { tag: String, selected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
+                        .clickable(role = Role.Button) {
+                            open = false
+                            onClick()
+                        }
+                        .padding(horizontal = 22.dp, vertical = 12.dp)
+                        .testTag(tag),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) { content() }
+            }
+            for (account in accounts) {
+                val current = account.login == login
+                sheetRow("first-run-switch-${account.login.orEmpty()}", current, { if (!current) onPick(account) }) {
+                    AccountInitial(account.login)
+                    Column(Modifier.weight(1f)) {
+                        Text(account.login ?: "Token (Account Not Named)", style = MaterialTheme.roles.rowLabel)
+                        Text(
+                            if (account.primary) "Send Feedback uses it" else "Signed in on this phone",
+                            style = MaterialTheme.roles.help,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (current) LucideGlyph("check", contentDescription = "Listed now", size = 20.dp)
+                }
+            }
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            onAdd?.let { add ->
+                sheetRow("first-run-switch-add", false, add) {
+                    LucideGlyph("user-plus", contentDescription = null)
+                    Text("Add Another Account", style = MaterialTheme.roles.rowLabel)
+                }
+            }
+            onManage?.let { manage ->
+                sheetRow("first-run-switch-manage", false, manage) {
+                    LucideGlyph("settings", contentDescription = null)
+                    Text("Manage GitHub Accounts", style = MaterialTheme.roles.rowLabel)
+                }
+            }
+            onRefresh?.let { refresh ->
+                sheetRow("first-run-refresh", false, refresh) {
+                    LucideGlyph("refresh-cw", contentDescription = null)
+                    Text("Refresh Repositories", style = MaterialTheme.roles.rowLabel)
+                }
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 16.dp))
+        }
+    }
+}
+
+/** An account's first letter on a square of colour, so two accounts tell apart at a glance. */
+@Composable
+private fun AccountInitial(login: String?) {
+    val shades = listOf(0xFF2F5E86, 0xFF7A5A2F, 0xFF3F7A4A, 0xFF7A3F6B, 0xFF5A4F8C)
+    val shade = androidx.compose.ui.graphics.Color(shades[Math.floorMod((login ?: "").hashCode(), shades.size)])
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(36.dp).background(shade),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text((login?.firstOrNull() ?: 'G').uppercaseChar().toString(), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.roles.rowLabel)
     }
 }

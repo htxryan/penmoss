@@ -199,10 +199,11 @@ export function installFakeBridge(config: {
       cli: () => host('cliStatus'),
       // Browsing GitHub in Add a Git Notebook (T81): main's GitHubBrowseHost on the stand-in Mac.
       github: {
-        repos: () => host('githubRepos'),
-        folders: (fullName, branch) => host('githubFolders', fullName, branch),
-        owners: () => host('githubOwners'),
-        create: (owner, name) => host('githubCreate', owner, name),
+        repos: (account) => host('githubRepos', account),
+        folders: (fullName, branch, account) => host('githubFolders', fullName, branch, account),
+        owners: (account) => host('githubOwners', account),
+        create: (owner, name, account) => host('githubCreate', owner, name, account),
+        gitLogin: () => host('githubGitLogin'),
         // Sign in with GitHub (T82): main's DeviceSignIn on the stand-in Mac.
         signIn: {
           status: () => host('githubSignInStatus'),
@@ -226,7 +227,8 @@ export function installFakeBridge(config: {
     githubToken: {
       status: () => host('tokenStatus'),
       save: (token) => host('tokenSave', token),
-      remove: () => host('tokenRemove'),
+      remove: (login) => host('tokenRemove', login),
+      makePrimary: (login) => host('tokenMakePrimary', login),
       onChange: (listener) => listen(tokenListeners, listener),
     },
     updates: {

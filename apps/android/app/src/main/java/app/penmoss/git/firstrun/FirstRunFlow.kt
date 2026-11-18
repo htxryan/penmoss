@@ -53,7 +53,14 @@ sealed interface Screen {
     data object Goal : Screen
     data object Way : Screen
     /** GitHub Access; [choose] asks which account even with one (Switch Account, A1616). */
-    data class GitHub(val then: AfterGitHub, val choose: Boolean = false) : Screen
+    data class GitHub(
+        val then: AfterGitHub,
+        val choose: Boolean = false,
+        /** An account picked in the switcher (option 2, A1616): read it without asking. */
+        val account: app.penmoss.feedback.GitHubAccount? = null,
+        /** Add Another Account from the switcher: straight to the sign-in. */
+        val add: Boolean = false,
+    ) : Screen
     /** Settings → GitHub's accounts, opened from the repositories or Create New Repo; then [then]. */
     data class Accounts(val then: AfterGitHub) : Screen
     data object Create : Screen

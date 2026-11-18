@@ -799,6 +799,82 @@
   font-size: var(--pm-text-help);
 }
 
+/*
+ * The account switcher above Pick Repository and Create New Repo (option 2, A1617): the account
+ * as a wide button, its menu as wide as it.
+ */
+.menu-anchor:has(> .fr-switcher) {
+  display: grid;
+}
+
+.fr-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.4rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fr-switcher:hover,
+.fr-switcher[aria-expanded='true'] {
+  border-color: var(--pm-border-strong);
+}
+
+.fr-switcher:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.fr-switcher > .i {
+  color: var(--pm-muted);
+}
+
+.fr-switcher-initial {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+  font-weight: var(--pm-weight-semibold);
+}
+
+.fr-switcher-text {
+  display: grid;
+  flex: 1;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.fr-switcher-text strong {
+  overflow: hidden;
+  font-weight: var(--pm-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fr-switcher-text > span {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-help);
+}
+
+.menu-anchor > .fr-switcher ~ .menu {
+  left: 0;
+}
+
+.menu-item .fr-switcher-line {
+  margin-left: 0.6rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-help);
+}
+
 /* Work going on, and what went wrong. */
 .fr-status {
   display: flex;

@@ -160,8 +160,8 @@ export const githubBrowse = new GitHubBrowseHost({
   api: config.githubApi,
   gitEnv: config.gitEnv,
   // Penmoss's own sign-in when git has none (T82, A1171).
-  penmossToken: () => githubToken.token(),
-  onPenmossRefused: () => githubToken.refused(),
+  penmossToken: (login) => githubToken.token(login),
+  onPenmossRefused: (login) => githubToken.refused(login),
 });
 /**
  * Sign in with GitHub (T82, A1170): the device flow for Penmoss's OAuth app. The token goes to
