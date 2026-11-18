@@ -27,6 +27,7 @@ import {
   symbolRun,
   symbolSpokenName,
   type LineSymbol,
+  type SymbolKind,
   type SymbolRun,
 } from '@penmoss/core/line-symbols';
 import { Extension, type Editor } from '@tiptap/core';
@@ -42,7 +43,7 @@ import {
 } from '@tiptap/pm/state';
 import { AttrStep, ReplaceAroundStep } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import { dispatchMove } from './block-move';
+import { asOwnUndoStep, dispatchMove } from './block-move';
 import { SymbolFitter, toggleSymbolPopover } from './symbol-overflow';
 import { SymbolPicker } from './symbol-picker';
 
@@ -405,15 +406,61 @@ export function symbolLines(state: EditorState): Array<{ pos: number; node: PMNo
   return lines;
 }
 
+/** What list item a line is (A1632): its nearest item's kind, and whether a checkbox is ticked. */
+interface ListLine {
+  readonly kind: SymbolKind | null;
+  readonly checked: boolean;
+}
+
+function listLineAt(state: EditorState, pos: number): ListLine {
+  const $pos = state.doc.resolve(pos + 1);
+  for (let depth = $pos.depth - 1; depth > 0; depth--) {
+    const node = $pos.node(depth);
+    if (node.type.name === 'taskItem')
+      return { kind: 'checkbox', checked: node.attrs['checked'] === true };
+    if (node.type.name === 'listItem') {
+      const list = $pos.node(depth - 1).type.name;
+      const kind = list === 'orderedList' ? 'ordered' : list === 'bulletList' ? 'bullet' : null;
+      return { kind, checked: false };
+    }
+  }
+  return { kind: null, checked: false };
+}
+
 /** The symbol slots every line in the selection has (the picker's ticks, the phone's sheet). */
 export function activeSymbols(state: EditorState): number[] {
   const lines = symbolLines(state);
   const symbols = lineSymbolsOf(state);
   if (lines.length === 0) return [];
   const runs = lines.map(({ node }) => symbolRun(leadingText(node), symbols));
+  // A list item slot is ticked when every line is that kind of item (A1632).
+  const items = lines.map(({ pos }) => listLineAt(state, pos).kind);
   return symbols
     .map((_, index) => index)
-    .filter((index) => runs.every((run) => run.tokens.some((token) => token.index === index)));
+    .filter((index) => {
+      const kind = symbols[index]!.kind;
+      if (kind) return items.every((item) => item === kind);
+      return runs.every((run) => run.tokens.some((token) => token.index === index));
+    });
+}
+
+/**
+ * A list item slot's toggle on the selection's lines (A1632). Bulleted and Numbered make them
+ * that kind of item, or plain lines when they already are. Checkbox steps through ☐, ☑ and no
+ * box: lines that are not all checklist items become unticked ones, unticked ones are ticked,
+ * and ticked ones become plain lines. False when no line may be one (a heading, a cell).
+ */
+export function toggleListItem(editor: Editor, kind: SymbolKind): boolean {
+  const { state } = editor;
+  const lines = symbolLines(state);
+  if (lines.length === 0) return false;
+  const chain = editor.chain();
+  if (kind === 'bullet') return chain.toggleBulletList().run();
+  if (kind === 'ordered') return chain.toggleOrderedList().run();
+  const items = lines.map(({ pos }) => listLineAt(state, pos));
+  if (items.every((item) => item.kind === 'checkbox') && items.some((item) => !item.checked))
+    return chain.updateAttributes('taskItem', { checked: true }).run();
+  return chain.toggleTaskList().run();
 }
 
 /** Whether a symbol can go on the selection's lines (it holds a paragraph, item or heading). */
@@ -428,7 +475,8 @@ export const canHaveSymbols = (state: EditorState): boolean => symbolLines(state
 export function toggleLineSymbol(index: number) {
   return (state: EditorState, dispatch?: (tr: Transaction) => void): boolean => {
     const symbols = lineSymbolsOf(state);
-    if (!symbols[index]) return false;
+    // A list item slot needs the editor's list commands: `toggleSymbolIn` (A1632).
+    if (!symbols[index] || symbols[index].kind) return false;
     const lines = symbolLines(state);
     if (lines.length === 0) return false;
     const texts = lines.map(({ node }) => leadingText(node));
@@ -458,6 +506,12 @@ export function toggleSymbolIn(view: EditorView, index: number, fromKey = false)
   // A key's selection is the browser's (it may have just moved it); a menu's or the palette's
   // is the editor's, which a refocus must not replace with wherever the browser put the caret.
   if (fromKey && view.hasFocus()) readDOMSelection(view);
+  const kind = lineSymbolsOf(view.state)[index]?.kind;
+  if (kind) {
+    // A list item slot (A1632) runs the editor's list commands, as its own undo step too.
+    const editor = (view.dom as HTMLElement & { editor?: Editor }).editor;
+    return editor ? asOwnUndoStep(view, () => toggleListItem(editor, kind)) : false;
+  }
   return toggleLineSymbol(index)(view.state, (tr) => dispatchMove(view, tr));
 }
 

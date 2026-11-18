@@ -57,9 +57,12 @@ test('line symbols: Format menu items and keys toggle them; Edit line symbols op
       ]),
     );
   const items = (await formatItems(app))!;
-  // Named by the slot's glyph (T51 item 12, A940).
+  // Named by the slot's glyph (T51 item 12, A940); slot 1 is the Checkbox (A1632).
   await expect
     .poll(async () => (await formatItems(app))?.find((item) => item.id === 'editor.symbol1')?.label)
+    .toBe('Toggle Checkbox');
+  await expect
+    .poll(async () => (await formatItems(app))?.find((item) => item.id === 'editor.symbol2')?.label)
     .toBe('Toggle Symbol ★');
   expect(items.find((item) => item.id === 'editor.symbolPicker')?.label).toBe('Symbols…');
   expect(items.find((item) => item.id === 'app.symbols')?.label).toBe('Edit Line Symbols');
@@ -73,14 +76,14 @@ test('line symbols: Format menu items and keys toggle them; Edit line symbols op
   await expect(body(page)).toContainText('Call the bank');
 
   // The menu item: no key press in the page, the caret's line takes ★.
-  await chooseMenu(app, 'editor.symbol1');
+  await chooseMenu(app, 'editor.symbol2');
   const symbols = body(page).getByTestId('line-symbols').locator('.pm-symbol');
   await expect(symbols).toHaveText(['★']);
   // The key, as the menu shows it: ! joins, in the list's order.
-  await page.keyboard.press(SYMBOL(3));
+  await page.keyboard.press(SYMBOL(4));
   await expect(symbols).toHaveText(['★', '!']);
   // The menu item again takes ★ off; the text itself is untouched.
-  await chooseMenu(app, 'editor.symbol1');
+  await chooseMenu(app, 'editor.symbol2');
   await expect(symbols).toHaveText(['!']);
   await expect(body(page)).toContainText('Call the bank');
 

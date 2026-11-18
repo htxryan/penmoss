@@ -786,8 +786,9 @@ test('the setting asks first, then reopens the windows with the other title bar;
   await expect(setting).toBeChecked();
 
   // Cancel: nothing changes and no window reopens.
+  // (A click: Cancel puts the box back, so `uncheck` can find it unchanged and throw.)
   await answerDialog(app, 1);
-  await setting.uncheck();
+  await setting.click();
   await expect.poll(() => askedSoFar(app)).toEqual(['Use the standard title bar?']);
   await expect(setting).toBeChecked();
   await expect(setting).toBeEnabled();

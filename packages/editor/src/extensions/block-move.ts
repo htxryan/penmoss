@@ -98,10 +98,16 @@ export function moveBlockTransaction(
  * move would otherwise be undone together with it.
  */
 export function dispatchMove(view: EditorView, tr: Transaction): void {
+  asOwnUndoStep(view, () => view.dispatch(tr));
+}
+
+/** Runs a change made by commands as its own undo step, as `dispatchMove` dispatches one. */
+export function asOwnUndoStep<T>(view: EditorView, change: () => T): T {
   const undo = yUndoPluginKey.getState(view.state)?.undoManager;
   undo?.stopCapturing();
-  view.dispatch(tr);
+  const result = change();
   undo?.stopCapturing();
+  return result;
 }
 
 /**

@@ -83,8 +83,8 @@ test('T44: slot keys toggle symbols in the margin, in list order, as plain text,
   await page.keyboard.type('Call the bank');
   const left = await textLeft(page, 'Call the bank');
 
-  await page.keyboard.press(SYMBOL(5));
-  await page.keyboard.press(SYMBOL(1));
+  await page.keyboard.press(SYMBOL(6));
+  await page.keyboard.press(SYMBOL(2));
   const margin = body(page).locator('p').nth(1).getByTestId('line-symbols');
   await expect(margin).toBeVisible();
   await expect(margin.locator('.pm-symbol')).toHaveText(['★', '→']);
@@ -186,12 +186,12 @@ test('T44: a selection over a heading and a list takes a symbol on every line at
   // From the heading to the second item.
   await page.keyboard.press('Shift+ArrowUp');
   await page.keyboard.press('Shift+ArrowUp');
-  await page.keyboard.press(SYMBOL(2));
+  await page.keyboard.press(SYMBOL(3));
   await expect(body(page).getByTestId('line-symbols')).toHaveCount(3);
   // Again, on the same lines: every one has it, so it goes from all of them.
-  await page.keyboard.press(SYMBOL(2));
+  await page.keyboard.press(SYMBOL(3));
   await expect(body(page).getByTestId('line-symbols')).toHaveCount(0);
-  await page.keyboard.press(SYMBOL(2));
+  await page.keyboard.press(SYMBOL(3));
   await expect(body(page).getByTestId('line-symbols')).toHaveCount(3);
   await expectMarkdown(page, '## ? Open questions', '- ? First', '- ? Second');
   expect(errors).toEqual([]);
@@ -205,12 +205,12 @@ test('T44: every bullet and number shows in a list holding a symbol line, unfocu
   await newNote(page, `Symbol markers ${RUN}`);
   await page.keyboard.type('- One\nTwo\nThree');
   await page.keyboard.press('ArrowUp');
-  await page.keyboard.press(SYMBOL(1));
+  await page.keyboard.press(SYMBOL(2));
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press(LINE_END);
   await page.keyboard.type('\n\n1. First\nSecond\nThird');
   await page.keyboard.press('ArrowUp');
-  await page.keyboard.press(SYMBOL(2));
+  await page.keyboard.press(SYMBOL(3));
   await expect(body(page).getByTestId('line-symbols')).toHaveCount(2);
   await expect(body(page).locator('ul > li')).toHaveCount(3);
   await expect(body(page).locator('ol > li')).toHaveCount(3);
@@ -238,6 +238,62 @@ test('T44: every bullet and number shows in a list holding a symbol line, unfocu
   expect(errors).toEqual([]);
 });
 
+test('A1632: ⌃1 steps a line through ☐, ☑ and no box; list items come from Add', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await newNote(page, `Symbol checkbox ${RUN}`);
+  await page.keyboard.type('Buy milk');
+  const item = body(page).locator('li[data-checked]');
+  await page.keyboard.press(SYMBOL(1));
+  await expect(item).toHaveAttribute('data-checked', 'false');
+  await expect(item).toContainText('Buy milk');
+  await page.keyboard.press(SYMBOL(1));
+  await expect(item).toHaveAttribute('data-checked', 'true');
+  await expectMarkdown(page, '- [x] Buy milk');
+  await item.locator('p').click();
+  await page.keyboard.press(SYMBOL(1));
+  await expect(item).toHaveCount(0);
+  await expect(body(page).locator('p').first()).toHaveText('Buy milk');
+
+  // Settings → Symbols: the Checkbox row, and Add offering what the list lacks.
+  await page.goto('/settings/symbols');
+  const settings = page.getByTestId('symbols-settings');
+  const rows = settings.getByTestId('symbol-row');
+  const restore = settings.getByRole('button', { name: 'Restore Defaults' });
+  await expect(settings.getByTestId('symbol-move-1')).toBeEnabled();
+  try {
+    if (await restore.isEnabled()) await restore.click();
+    await expect(rows.first()).toContainText('Checkbox');
+    await expect(rows.first()).toContainText('☐ → ☑ → no box');
+    await settings.getByTestId('symbol-add').click();
+    const menu = page.getByRole('menu', { name: 'Add' });
+    await expect(menu.getByRole('menuitem')).toHaveText([
+      'Symbol',
+      /Checkbox/,
+      'Bulleted List Item',
+      'Numbered List Item',
+    ]);
+    await expect(menu.getByRole('menuitem', { name: /Checkbox/ })).toBeDisabled();
+    // Wholly inside the settings column, which would clip it.
+    const column = (await page.locator('.settings-content').boundingBox())!;
+    const box = (await menu.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(column.x);
+    await menu.getByRole('menuitem', { name: 'Numbered List Item' }).click();
+    await expect(rows).toHaveCount(7);
+    await expect
+      .poll(async () =>
+        ((await storedSetting(page, 'symbols.list')) as unknown[] | undefined)?.at(-1),
+      )
+      .toEqual({ kind: 'ordered' });
+  } finally {
+    if (await restore.isEnabled()) await restore.click();
+    await expect(rows).toHaveCount(6);
+  }
+  expect(errors).toEqual([]);
+});
+
 test('T44: the picker, the slash menu, the palette and a click in the margin', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
@@ -246,8 +302,10 @@ test('T44: the picker, the slash menu, the palette and a click in the margin', a
   await page.keyboard.press(SYMBOL_PICKER);
   const picker = page.getByRole('menu', { name: 'Symbols' });
   await expect(picker).toBeVisible();
-  // Each named by its glyph (T51 item 12, A940).
-  await expect(picker.getByRole('menuitemcheckbox')).toHaveText([/★/, /\?/, /!/, /💡/, /→/]);
+  // Each named by its glyph (T51 item 12, A940), after the Checkbox on slot 1 (A1632).
+  await expect(picker.getByRole('menuitemcheckbox')).toHaveText([/☐/, /★/, /\?/, /!/, /💡/, /→/]);
+  await expect(picker.getByRole('menuitemcheckbox').first()).toHaveAccessibleName('Checkbox');
+  await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await expect(picker).toBeHidden();
@@ -327,69 +385,70 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
   expect(sections).not.toContain('Devices and Agent Tokens');
   const rows = settings.getByTestId('symbol-row');
   const restore = settings.getByRole('button', { name: 'Restore Defaults' });
-  await expect(settings.getByTestId('symbol-glyph-1')).toBeEnabled();
+  await expect(settings.getByTestId('symbol-glyph-2')).toBeEnabled();
   try {
     // A shared workspace: start from the defaults.
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(5);
-    await expect(settings.getByTestId('symbol-keys-1')).toHaveText(/⌃1|Alt\+Shift\+1/);
+    await expect(rows).toHaveCount(6);
+    await expect(settings.getByTestId('symbol-keys-2')).toHaveText(/⌃2|Alt\+Shift\+2/);
     // No names to give (A940): a row is its keys, its glyph and its colour.
     await expect(rows.first().getByRole('textbox')).toHaveCount(0);
     // A focused control in the last row stays clear of the buttons below (T51 item 11).
-    const last = settings.getByTestId('symbol-glyph-5');
+    const last = settings.getByTestId('symbol-glyph-6');
     await last.focus();
     const lastBox = (await last.boundingBox())!;
-    const addBox = (await settings.getByRole('button', { name: 'Add a Symbol' }).boundingBox())!;
+    const addBox = (await settings.getByTestId('symbol-add').boundingBox())!;
     // Its 3 px focus ring included.
     expect(lastBox.y + lastBox.height + 3).toBeLessThanOrEqual(addBox.y);
 
     // The glyph picker (T51 item 9; A1568's Characters): a modal, its search focused, Characters
     // only; one another symbol has is marked; a pasted glyph that is markdown is refused; one is
     // found by name and chosen.
-    await settings.getByTestId('symbol-glyph-1').click();
-    const glyphs = page.getByTestId('symbol-glyph-1-picker');
+    await settings.getByTestId('symbol-glyph-2').click();
+    const glyphs = page.getByTestId('symbol-glyph-2-picker');
     await expect(glyphs.getByRole('dialog', { name: 'Choose a Symbol' })).toBeVisible();
-    const glyphSearch = glyphs.getByTestId('symbol-glyph-1-picker-search');
+    const glyphSearch = glyphs.getByTestId('symbol-glyph-2-picker-search');
     await expect(glyphSearch).toBeFocused();
     await expect(glyphs.getByRole('tab')).toHaveCount(0);
     await expect(
-      glyphs.getByRole('option', { name: 'Question Mark, Already symbol 2' }),
+      glyphs.getByRole('option', { name: 'Question Mark, Already symbol 3' }),
     ).toHaveAttribute('aria-disabled', 'true');
     await glyphSearch.fill('#');
     await expect(glyphs.getByRole('alert')).toContainText('Glyph cannot hold #');
     await glyphSearch.fill('flag');
     await glyphs.getByRole('option', { name: 'Flag', exact: true }).click();
     await expect(glyphs).toBeHidden();
-    await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('⚑');
-    await expect(settings.getByTestId('symbol-glyph-1')).toBeFocused();
+    await expect(settings.getByTestId('symbol-glyph-2')).toHaveText('⚑');
+    await expect(settings.getByTestId('symbol-glyph-2')).toBeFocused();
 
     // The colour picker (T51 item 10): a theme colour, then a colour of one's own by hex.
-    await settings.getByTestId('symbol-colour-1').click();
+    await settings.getByTestId('symbol-colour-2').click();
     await settings
-      .getByTestId('symbol-colour-1-picker')
+      .getByTestId('symbol-colour-2-picker')
       .getByRole('radio', { name: 'Rose' })
       .click();
-    await expect(settings.getByTestId('symbol-colour-1')).toContainText('Rose');
-    await settings.getByTestId('symbol-colour-3').click();
-    await settings.getByTestId('symbol-colour-3-hex').fill('#3366CC80');
-    await settings.getByTestId('symbol-colour-3-hex').press('Enter');
+    await expect(settings.getByTestId('symbol-colour-2')).toContainText('Rose');
+    await settings.getByTestId('symbol-colour-4').click();
+    await settings.getByTestId('symbol-colour-4-hex').fill('#3366CC80');
+    await settings.getByTestId('symbol-colour-4-hex').press('Enter');
     await page.keyboard.press('Escape');
-    await expect(settings.getByTestId('symbol-colour-3')).toContainText('#3366CC80');
+    await expect(settings.getByTestId('symbol-colour-4')).toContainText('#3366CC80');
 
     // Show the Keys (PEN-146): the count against the limit, and a row moved by its handle from
     // the keyboard, which keeps focus, says its new place, and back again.
-    await expect(settings.getByTestId('symbols-count')).toHaveText('5 of 9');
-    await settings.getByTestId('symbol-move-1').focus();
+    await expect(settings.getByTestId('symbols-count')).toHaveText('6 of 9');
+    await settings.getByTestId('symbol-move-2').focus();
     await page.keyboard.press('Alt+ArrowDown');
-    await expect(settings.getByTestId('symbol-glyph-2')).toHaveText('⚑');
-    await expect(settings.getByTestId('symbols-notice')).toContainText('⚑ is now symbol 2');
-    await expect(settings.getByTestId('symbol-move-2')).toBeFocused();
+    await expect(settings.getByTestId('symbol-glyph-3')).toHaveText('⚑');
+    await expect(settings.getByTestId('symbols-notice')).toContainText('⚑ is now symbol 3');
+    await expect(settings.getByTestId('symbol-move-3')).toBeFocused();
     await page.keyboard.press('Alt+ArrowUp');
-    await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('⚑');
+    await expect(settings.getByTestId('symbol-glyph-2')).toHaveText('⚑');
 
     await settings.getByRole('button', { name: 'Remove ?' }).click();
-    await expect(rows).toHaveCount(4);
+    await expect(rows).toHaveCount(5);
     const edited = [
+      { kind: 'checkbox' },
       { glyph: '⚑', name: '⚑', colour: 'calloutFailure' },
       { glyph: '!', name: 'Follow-up', colour: '#3366cc80' },
       { glyph: '💡', name: 'Idea', colour: 'calloutTip' },
@@ -409,9 +468,9 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
     await expect(body(page).locator('p').first()).toHaveText('? A question');
   } finally {
     await page.goto('/settings/symbols');
-    await expect(settings.getByTestId('symbol-glyph-1')).toBeEnabled();
+    await expect(settings.getByTestId('symbol-glyph-2')).toBeEnabled();
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(6);
     await expect.poll(() => storedSetting(page, 'symbols.list')).toBeUndefined();
     // Synced with the defaults back.
     await page.locator('.settings-bar .back-link').click();
@@ -431,55 +490,55 @@ test('A1588: an emoji keeps its own colours, so its colour is disabled with a no
   const rows = settings.getByTestId('symbol-row');
   const restore = settings.getByRole('button', { name: 'Restore Defaults' });
   const NOTE = 'This emoji’s colour can’t be changed.';
-  await expect(settings.getByTestId('symbol-glyph-1')).toBeEnabled();
+  await expect(settings.getByTestId('symbol-glyph-2')).toBeEnabled();
   try {
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(6);
     // 💡, a default: its colour is disabled, the note beside it and describing it, and the
     // glyph drawn without its colour.
-    const idea = settings.getByTestId('symbol-colour-4');
-    await expect(settings.getByTestId('symbol-glyph-4')).toHaveText('💡');
+    const idea = settings.getByTestId('symbol-colour-5');
+    await expect(settings.getByTestId('symbol-glyph-5')).toHaveText('💡');
     await expect(idea).toBeDisabled();
-    await expect(settings.getByTestId('symbol-colour-note-4')).toHaveText(NOTE);
+    await expect(settings.getByTestId('symbol-colour-note-5')).toHaveText(NOTE);
     await expect(idea).toHaveAccessibleDescription(NOTE);
-    await expect(settings.getByTestId('symbol-glyph-4')).not.toHaveAttribute('style', /color/);
+    await expect(settings.getByTestId('symbol-glyph-5')).not.toHaveAttribute('style', /color/);
     // ★ takes its colour.
-    const star = settings.getByTestId('symbol-colour-1');
+    const star = settings.getByTestId('symbol-colour-2');
     await expect(star).toBeEnabled();
     await expect(star).toContainText('Orange');
-    await expect(settings.getByTestId('symbol-colour-note-1')).toHaveCount(0);
-    await expect(settings.getByTestId('symbol-glyph-1')).toHaveAttribute('style', /color/);
+    await expect(settings.getByTestId('symbol-colour-note-2')).toHaveCount(0);
+    await expect(settings.getByTestId('symbol-glyph-2')).toHaveAttribute('style', /color/);
 
     // An emoji chosen in ★'s row: its colour is disabled with the note, and kept.
-    await settings.getByTestId('symbol-glyph-1').click();
-    let picker = page.getByTestId('symbol-glyph-1-picker');
-    await picker.getByTestId('symbol-glyph-1-picker-search').fill('fire');
+    await settings.getByTestId('symbol-glyph-2').click();
+    let picker = page.getByTestId('symbol-glyph-2-picker');
+    await picker.getByTestId('symbol-glyph-2-picker-search').fill('fire');
     await picker.getByRole('option', { name: 'Fire', exact: true }).click();
-    await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('🔥');
+    await expect(settings.getByTestId('symbol-glyph-2')).toHaveText('🔥');
     await expect(star).toBeDisabled();
-    await expect(settings.getByTestId('symbol-colour-note-1')).toHaveText(NOTE);
+    await expect(settings.getByTestId('symbol-colour-note-2')).toHaveText(NOTE);
     await expect(star).toContainText('Orange');
     await expect
-      .poll(async () => ((await storedSetting(page, 'symbols.list')) as unknown[] | undefined)?.[0])
+      .poll(async () => ((await storedSetting(page, 'symbols.list')) as unknown[] | undefined)?.[1])
       .toEqual({ glyph: '🔥', name: '🔥', colour: 'calloutWarning' });
 
     // A glyph that takes a colour again: the colour is back, as it was.
-    await settings.getByTestId('symbol-glyph-1').click();
-    picker = page.getByTestId('symbol-glyph-1-picker');
-    await picker.getByTestId('symbol-glyph-1-picker-search').fill('star');
+    await settings.getByTestId('symbol-glyph-2').click();
+    picker = page.getByTestId('symbol-glyph-2-picker');
+    await picker.getByTestId('symbol-glyph-2-picker-search').fill('star');
     // Two are named Star: the symbol and the emoji (⭐).
     await picker
       .getByRole('option', { name: 'Star', exact: true })
       .filter({ hasText: '★' })
       .click();
-    await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('★');
+    await expect(settings.getByTestId('symbol-glyph-2')).toHaveText('★');
     await expect(star).toBeEnabled();
     await expect(star).toContainText('Orange');
-    await expect(settings.getByTestId('symbol-colour-note-1')).toHaveCount(0);
-    await expect(settings.getByTestId('symbol-glyph-1')).toHaveAttribute('style', /color/);
+    await expect(settings.getByTestId('symbol-colour-note-2')).toHaveCount(0);
+    await expect(settings.getByTestId('symbol-glyph-2')).toHaveAttribute('style', /color/);
   } finally {
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(6);
   }
   expect(errors).toEqual([]);
 });
@@ -505,7 +564,7 @@ test('T44: the slot keys work in a note window too (T45)', async ({ page, contex
   }
   const popupBody = body(popup);
   await popupBody.locator('p').first().click();
-  await popup.keyboard.press(SYMBOL(4));
+  await popup.keyboard.press(SYMBOL(5));
   await expect(popupBody.locator('.pm-symbol')).toHaveText(['💡']);
   // The main window follows the edit.
   await page.bringToFront();
@@ -525,8 +584,8 @@ test('T52: symbols in a table cell, by key and the slash menu, before the cell�
   await page.keyboard.type('Budget');
   const cell = body(page).locator('td').first();
   const left = await textLeft(page, 'Budget');
-  await page.keyboard.press(SYMBOL(1));
-  await page.keyboard.press(SYMBOL(3));
+  await page.keyboard.press(SYMBOL(2));
+  await page.keyboard.press(SYMBOL(4));
   const symbols = cell.getByTestId('line-symbols');
   await expect(symbols.locator('.pm-symbol')).toHaveText(['★', '!']);
   // Inside the cell, before its text (the page's margin is out of reach there).
@@ -563,7 +622,7 @@ test('T52: more symbols than the gutter holds show as many as fit, a "+N" chip a
   await page.keyboard.type('Plain line');
   await page.keyboard.press('Enter');
   await page.keyboard.type('Three symbols');
-  for (const slot of [3, 4, 5]) await page.keyboard.press(SYMBOL(slot));
+  for (const slot of [4, 5, 6]) await page.keyboard.press(SYMBOL(slot));
   const line = body(page).locator('p').nth(1);
   const margin = line.getByTestId('line-symbols');
   await expect(margin.locator('.pm-symbol')).toHaveText(['!', '💡', '→']);
@@ -628,7 +687,7 @@ test('T52: more symbols than the gutter holds show as many as fit, a "+N" chip a
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(margin.locator('.pm-symbol:visible')).toHaveCount(3);
   await body(page).locator('p').nth(1).click();
-  await page.keyboard.press(SYMBOL(1));
+  await page.keyboard.press(SYMBOL(2));
   await expect(margin.locator('.pm-symbol')).toHaveText(['★', '!', '💡', '→']);
   await expect(margin.locator('.pm-symbol:visible')).toHaveText(['★', '!']);
   await expect(margin.locator('.pm-symbols-more')).toHaveText('+2');
@@ -645,7 +704,7 @@ test('T52: showing or hiding the side panel refits the margin, though the column
   await page.goto('/');
   await newNote(page, `Symbol panel ${RUN}`);
   await page.keyboard.type('Three symbols');
-  for (const slot of [3, 4, 5]) await page.keyboard.press(SYMBOL(slot));
+  for (const slot of [4, 5, 6]) await page.keyboard.press(SYMBOL(slot));
   const margin = body(page).getByTestId('line-symbols');
   const panel = page.locator('.note-columns');
   const column = async () => (await body(page).boundingBox())!;

@@ -14,7 +14,12 @@ import {
   NOTE_FONT_SIZE_SETTING,
   noteFontSizeOf,
 } from '@penmoss/core/fonts';
-import { DEFAULT_SYMBOLS, SYMBOLS_SETTING, symbolsOf } from '@penmoss/core/line-symbols';
+import {
+  DEFAULT_SYMBOLS,
+  SYMBOLS_SETTING,
+  storedSymbolList,
+  symbolsOf,
+} from '@penmoss/core/line-symbols';
 import { QUICK_ACCESS_SETTING, quickAccessOf } from '@penmoss/core/quick-access';
 import {
   CAPTURE_DESTINATION_SETTING,
@@ -61,7 +66,8 @@ const READERS: ReadonlyArray<readonly [string, () => unknown]> = [
   [CAPTURE_DESTINATION_SETTING, () => captureDestinationOf(unset)],
   // Unset, the note keeps the theme's width.
   [FULL_WIDTH_SETTING, () => fullWidthOf(unset) ?? false],
-  [SYMBOLS_SETTING, () => symbolsOf(unset)],
+  // As stored: a list item is `{ kind }` (A1632).
+  [SYMBOLS_SETTING, () => storedSymbolList(symbolsOf(unset))],
   [INTERFACE_FONT_SETTING, () => fontChoiceOf(unset, INTERFACE_FONT_SETTING)],
   [NOTE_FONT_SETTING, () => fontChoiceOf(unset, NOTE_FONT_SETTING)],
   [NOTE_FONT_SIZE_SETTING, () => noteFontSizeOf(unset)],
@@ -82,6 +88,6 @@ describe('apps/android/contract/settings-v1.json (A1014)', () => {
     for (const [key, read] of READERS) {
       expect(contract.defaults[key], key).toEqual(read());
     }
-    expect(contract.defaults[SYMBOLS_SETTING]).toEqual(DEFAULT_SYMBOLS);
+    expect(contract.defaults[SYMBOLS_SETTING]).toEqual(storedSymbolList(DEFAULT_SYMBOLS));
   });
 });

@@ -7,6 +7,8 @@ import {
   SYMBOL_GLYPH_PRESETS,
   SYMBOLS_SETTING,
   findHeading,
+  kindSymbol,
+  storedSymbolList,
   glyphKey,
   glyphProblem,
   headingKey,
@@ -23,7 +25,8 @@ import { findSection } from '../src/markdown/diff-apply';
 import { parseMarkdown } from '../src/markdown/parse';
 import { serializeMarkdown } from '../src/markdown/serialize';
 
-const symbols = DEFAULT_SYMBOLS;
+// The glyphs of the defaults, ★ ? ! 💡 →, without the Checkbox before them (A1632).
+const symbols = DEFAULT_SYMBOLS.filter((symbol) => !symbol.kind);
 /** The glyphs of a text's leading run. */
 const run = (text: string, list: readonly LineSymbol[] = symbols) =>
   symbolRun(text, list).tokens.map((token) => text.slice(token.from, token.to).trimEnd());
@@ -228,6 +231,49 @@ describe('toggling a symbol (A740)', () => {
   });
 });
 
+describe('list items in the symbol list (A1632)', () => {
+  const stored = [
+    { kind: 'checkbox' },
+    { glyph: '★', name: '★', colour: 'accent' },
+    { kind: 'ordered' },
+  ];
+
+  it('puts Checkbox on the first slot by default, the glyphs after it', () => {
+    expect(DEFAULT_SYMBOLS[0]).toEqual(kindSymbol('checkbox'));
+    expect(DEFAULT_SYMBOLS.slice(1).map((symbol) => symbol.glyph)).toEqual([
+      '★',
+      '?',
+      '!',
+      '💡',
+      '→',
+    ]);
+  });
+
+  it('stores a kind as { kind } alone, and reads it back as its entry', () => {
+    expect(symbolListProblem(stored)).toBeNull();
+    const read = readSymbolList(stored)!;
+    expect(read.map((symbol) => symbol.kind)).toEqual(['checkbox', undefined, 'ordered']);
+    expect(read[2]).toMatchObject({ glyph: '1.', name: 'Numbered List Item' });
+    expect(storedSymbolList(read)).toEqual(stored);
+  });
+
+  it('takes each kind once, and only the kinds there are', () => {
+    expect(symbolListProblem([{ kind: 'bullet' }, { kind: 'bullet' }])).toMatch(/repeats the kind/);
+    expect(symbolListProblem([{ kind: 'table' }])).toMatch(/kind must be/);
+    // A ☐ glyph of the person's own is not the Checkbox.
+    expect(
+      symbolListProblem([{ kind: 'checkbox' }, { glyph: '☐', name: '☐', colour: 'accent' }]),
+    ).toBeNull();
+  });
+
+  it('is never text at the start of a line, and a toggle leaves the text alone', () => {
+    const list = readSymbolList(stored)!;
+    expect(symbolRun('☐ 1. Call', list).tokens).toEqual([]);
+    expect(symbolRun('★ Call', list).tokens.map((token) => token.index)).toEqual([1]);
+    expect(symbolEdits(symbolRun('Call', list), list, 0, true, 'Call')).toEqual([]);
+  });
+});
+
 describe('the symbols setting (A743)', () => {
   it('takes up to nine distinct symbols with a glyph, a name and a theme colour', () => {
     expect(symbolListProblem(DEFAULT_SYMBOLS)).toBeNull();
@@ -269,7 +315,7 @@ describe('the glyph picker’s presets (T51 item 9, A939)', () => {
     for (const glyph of SYMBOL_GLYPH_PRESETS) expect(glyphProblem(glyph), glyph).toBeNull();
     const keys = SYMBOL_GLYPH_PRESETS.map(glyphKey);
     expect(new Set(keys).size).toBe(keys.length);
-    for (const symbol of DEFAULT_SYMBOLS) expect(keys).toContain(glyphKey(symbol.glyph));
+    for (const symbol of symbols) expect(keys).toContain(glyphKey(symbol.glyph));
   });
 
   it('make a storable list in any nine, named by their glyphs (A940)', () => {
