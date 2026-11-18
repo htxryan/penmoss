@@ -99,7 +99,7 @@ Math is written in LaTeX and drawn with KaTeX.
 
 Add a picture by pasting it, dropping it on the note, choosing **Image** in the slash menu, or typing `![alt](https://…)`. Penmoss stores PNG, JPEG, GIF, WebP and AVIF pictures; SVG is not accepted.
 
-Select a picture to resize it with its handle, and to set its **Alt text** and **Width**. Double-click it, or use **Open in Lightbox**, to see it full size: zoom up to 8× with the wheel, a pinch or a double-click, drag to pan, and step through the note's pictures with ← and →. Escape leaves full screen, then closes it.
+Select a picture to resize it with its handle, and to set its **Alt text** and **Width**. On Android a picture is always as wide as the note allows, up to its own size, so it has no handle or **Width** there; the width set on the Mac stays for the Mac. Double-click it, or use **Open in Lightbox**, to see it full size: zoom up to 8× with the wheel, a pinch or a double-click, drag to pan, and step through the note's pictures with ← and →. Escape leaves full screen, then closes it.
 
 Add any other file by dropping or pasting it, or with **File** in the slash menu. It shows as a chip with its name, size and type, with **Preview** for a PDF and a way to open or save a copy.
 
