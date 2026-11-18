@@ -169,7 +169,9 @@ class JGitTransport(
         credentials()?.let { UsernamePasswordCredentialsProvider(it.user, it.token) }
 
     /** Fetches the branch, shallow; its head, or null while the branch does not exist. */
-    fun fetch(): String? = exclusive { asked ->
+    fun fetch(): String? = exclusive { asked -> fetchLocked(asked) }
+
+    private fun fetchLocked(asked: Long): String? {
         val repo = repo()
         ensureTarget(repo)
         try {
@@ -187,11 +189,11 @@ class JGitTransport(
                 // A new notebook on a new branch, or one deleted on the host.
                 repo.exactRef(trackingRef)?.let { forceDelete(repo, trackingRef) }
                 listed = null
-                return@exclusive null
+                return null
             }
             throw classify(error, asked)
         }
-        repo.exactRef(trackingRef)?.objectId?.name
+        return repo.exactRef(trackingRef)?.objectId?.name
     }
 
     /** How deep fetches go: 1 until History asks for more (A824). */
@@ -493,13 +495,39 @@ class JGitTransport(
         listed = null
     }
 
-    /** Housekeeping after a sync: past [maxStoreBytes], the clone is made again, shallow (G0). */
-    fun maintain() = exclusive {
-        if (storeBytes() <= maxStoreBytes) return@exclusive
+    /**
+     * Housekeeping after a sync: past its limit, the clone is made again, shallow (G0), and fetched
+     * at once (A1625), so the files at the head (the pictures the notes show) are never missing
+     * until the next sync. The old clone stays if the new one can't be fetched (offline). The
+     * limit is [maxStoreBytes], or twice a fresh clone's size when that is more: a notebook that
+     * is big at its head alone is not made again after every sync.
+     */
+    fun maintain() = exclusive { asked ->
+        val fresh = repo().config.getLong("penmoss", null, "freshBytes", 0L)
+        if (storeBytes() <= maxOf(maxStoreBytes, fresh * 2)) return@exclusive
         repository?.close()
         repository = null
         listed = null
-        gitDir.deleteRecursively()
+        val kept = File(gitDir.parentFile, "${gitDir.name}.old")
+        kept.deleteRecursively()
+        if (!gitDir.renameTo(kept)) {
+            gitDir.deleteRecursively()
+            return@exclusive
+        }
+        try {
+            fetchLocked(asked)
+            repo().config.apply {
+                setLong("penmoss", null, "freshBytes", storeBytes())
+                save()
+            }
+            kept.deleteRecursively()
+        } catch (error: Throwable) {
+            repository?.close()
+            repository = null
+            listed = null
+            gitDir.deleteRecursively()
+            kept.renameTo(gitDir)
+        }
     }
 
     /** The clone's object store in bytes (Status, and [maintain]). */

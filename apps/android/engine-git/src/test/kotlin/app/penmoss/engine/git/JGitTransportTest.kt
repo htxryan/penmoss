@@ -182,10 +182,29 @@ class JGitTransportTest {
         git.push(one)
         assertTrue(File(clone, "repo.git").exists())
         git.maintain()
-        assertFalse("thrown away", File(clone, "repo.git").exists())
+        // Made again and fetched at once (A1625): the head's files read before the next sync.
+        assertTrue(File(clone, "repo.git").exists())
+        assertFalse(File(clone, "repo.git.old").exists())
+        assertEquals("a", String(git.read(one, listOf("a.md")).getValue("a.md")))
         assertEquals(one, git.fetch())
         val two = git.commit(one, mapOf("b.md" to bytes("b")), "two")!!
         assertEquals(PushOutcome.PUSHED, git.push(two))
+    }
+
+    @Test
+    fun offlineTheCloneIsKeptRatherThanMadeAgain() {
+        val remoteDir = temp.newFolder("remote.git")
+        val remote = GitTestRepos.bare(remoteDir)
+        val clone = temp.newFolder()
+        val git = transport(remote, clone = clone, maxStore = 1)
+        git.fetch()
+        val one = git.commit(null, mapOf("attachments/p.png" to bytes("png")), "one")!!
+        git.push(one)
+        // The host can't be reached: the old clone stays, with the picture in it.
+        remoteDir.deleteRecursively()
+        git.maintain()
+        assertEquals("png", String(git.read(one, listOf("attachments/p.png")).getValue("attachments/p.png")))
+        assertFalse(File(clone, "repo.git.old").exists())
     }
 
     @Test
