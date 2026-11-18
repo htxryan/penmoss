@@ -16,8 +16,10 @@ import app.penmoss.engine.git.GitEngineStatus
 import app.penmoss.engine.git.GitNotebookView
 import app.penmoss.ui.common.PenmossTheme
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.ui.platform.testTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,14 +75,14 @@ class FirstRunScreenTest {
 
     private fun deps(
         token: String?,
-        accounts: List<app.penmoss.feedback.GitHubAccount>? = null,
+        accounts: (() -> List<app.penmoss.feedback.GitHubAccount>)? = null,
         tokens: Map<String?, String> = emptyMap(),
         answer: (Place, String?) -> AddResult,
     ) = FirstRunDeps(
         browse = github,
         token = { token },
         login = { "ryan" },
-        accounts = { accounts ?: if (token != null) listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true)) else emptyList() },
+        accounts = { accounts?.invoke() ?: if (token != null) listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true)) else emptyList() },
         tokenFor = { login -> tokens[login] ?: token },
         saveToken = { _, _ -> },
         signIn = null,
@@ -93,7 +95,14 @@ class FirstRunScreenTest {
         syncNow = {},
         openUrl = {},
         copy = {},
+        accountsPage = { back ->
+            pages++
+            androidx.compose.material3.TextButton(onClick = back, modifier = androidx.compose.ui.Modifier.testTag("fake-accounts-back")) {
+                androidx.compose.material3.Text("Settings → GitHub")
+            }
+        },
     )
+    private var pages = 0
 
     private fun show(deps: FirstRunDeps, firstRun: Boolean = true) {
         compose.setContent {
@@ -193,7 +202,7 @@ class FirstRunScreenTest {
     @Test
     fun withTwoAccountsAddNotebookAsksWhichAndCanSwitchOrAddAnother() {
         val accounts = listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true), app.penmoss.feedback.GitHubAccount("ryan-work", primary = false))
-        show(deps("tok", accounts, mapOf("ryan" to "tok", "ryan-work" to "tok-work")) { _, name -> if (name == null) AddResult.NeedsName else AddResult.Added(view(name), created = true) }, firstRun = false)
+        show(deps("tok", { accounts }, mapOf("ryan" to "tok", "ryan-work" to "tok-work")) { _, name -> if (name == null) AddResult.NeedsName else AddResult.Added(view(name), created = true) }, firstRun = false)
         tap("first-run-continue") // Start a New Notebook
         tap("first-run-way-existing")
         tap("first-run-continue")
@@ -211,8 +220,10 @@ class FirstRunScreenTest {
         tap("first-run-account-ryan-work")
         tap("first-run-continue")
         waitFor("first-run-repo-ryan/notes")
-        // Switch GitHub Account goes back to the accounts.
-        tap("first-run-switch-account")
+        // Use a Different GitHub Account opens Settings → GitHub's page; back from it, the accounts.
+        tap("first-run-other-account")
+        waitFor("fake-accounts-back")
+        tap("fake-accounts-back")
         waitFor("first-run-account-ryan-work")
         tap("first-run-account-ryan-work")
         tap("first-run-continue")
@@ -224,6 +235,27 @@ class FirstRunScreenTest {
         tap("first-run-make")
         compose.waitUntil(5_000) { adds.isNotEmpty() }
         assertEquals("tok-work", adds.last().place.token)
+    }
+
+    /** With one account, Use a Different GitHub Account (Ryan, 17 Nov 2026) is on the list; an account added there is asked for after. */
+    @Test
+    fun useADifferentAccountOpensSettingsGitHubAndAsksWhichAfter() {
+        var accounts = listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true))
+        show(deps("tok", { accounts }, mapOf("ryan" to "tok", "ryan-work" to "tok-work")) { _, _ -> AddResult.NeedsName }, firstRun = false)
+        tap("first-run-continue")
+        tap("first-run-way-existing")
+        tap("first-run-continue")
+        // One account: straight to its repositories, with the link under Signed in as.
+        waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithText("Use a Different GitHub Account").assertExists()
+        tap("first-run-other-account")
+        waitFor("fake-accounts-back")
+        assertTrue(pages > 0)
+        // The work account is added on that page; back, Add Notebook asks which.
+        accounts = accounts + app.penmoss.feedback.GitHubAccount("ryan-work", primary = false)
+        tap("fake-accounts-back")
+        waitFor("first-run-account-ryan-work")
+        compose.onNodeWithText("Pick GitHub Account").assertExists()
     }
 
     @Test

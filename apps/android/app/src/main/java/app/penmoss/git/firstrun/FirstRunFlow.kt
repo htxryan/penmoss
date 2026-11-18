@@ -54,6 +54,8 @@ sealed interface Screen {
     data object Way : Screen
     /** GitHub Access; [choose] asks which account even with one (Switch Account, A1616). */
     data class GitHub(val then: AfterGitHub, val choose: Boolean = false) : Screen
+    /** Settings → GitHub's accounts, opened from the repositories or Create New Repo; then [then]. */
+    data class Accounts(val then: AfterGitHub) : Screen
     data object Create : Screen
     data object List : Screen
     data class Repo(val repo: GitHubRepo) : Screen

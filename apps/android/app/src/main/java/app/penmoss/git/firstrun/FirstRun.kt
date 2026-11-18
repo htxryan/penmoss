@@ -66,6 +66,11 @@ class FirstRunDeps(
     val syncNow: suspend (localId: String) -> Unit,
     val openUrl: (String) -> Unit,
     val copy: (String) -> Unit,
+    /**
+     * Settings → GitHub's page, opened from Use a Different GitHub Account (Ryan, 17 Nov 2026):
+     * add or sign out of accounts without leaving Add Notebook. Null hides the link.
+     */
+    val accountsPage: (@Composable (onBack: () -> Unit) -> Unit)? = null,
 ) {
     companion object {
         fun of(graph: app.penmoss.DeviceGraph, context: android.content.Context): FirstRunDeps {
@@ -93,6 +98,15 @@ class FirstRunDeps(
                 copy = { text ->
                     context.getSystemService(android.content.ClipboardManager::class.java)
                         ?.setPrimaryClip(android.content.ClipData.newPlainText("GitHub code", text))
+                },
+                accountsPage = { onBack ->
+                    var typing by remember { mutableStateOf(false) }
+                    if (typing) {
+                        BackHandler { typing = false }
+                        app.penmoss.feedback.GitHubTokenRoute(graph, onBack = { typing = false })
+                    } else {
+                        app.penmoss.feedback.GitHubAccountsRoute(graph, onToken = { typing = true }, onBack = onBack)
+                    }
                 },
             )
         }
@@ -234,12 +248,24 @@ fun NotebookSteps(
                 onUrl = { replace(Screen.Url) },
                 back = ::back,
             )
+            // Settings → GitHub's page inside the flow (Use a Different GitHub Account): back from it,
+            // the GitHub step reads the accounts again, asking which with two or more (A1616).
+            is Screen.Accounts -> {
+                val leave = {
+                    reads.clear()
+                    hub = null
+                    stack = stack.dropLast(2) + Screen.GitHub(screen.then, choose = deps.accounts().size > 1)
+                }
+                BackHandler(onBack = leave)
+                deps.accountsPage?.invoke(leave)
+            }
             Screen.Create -> hub?.let { now ->
                 CreateRepo(
                     deps,
                     now,
                     onCreated = { place, name -> go(Screen.SetUp(Setup.Create(place, name))) },
                     onUseExisting = { replace(Screen.List) },
+                    onAccounts = deps.accountsPage?.let { { go(Screen.Accounts(AfterGitHub.CREATE)) } },
                     back = ::back,
                 )
             }
@@ -260,7 +286,7 @@ fun NotebookSteps(
                         replace(Screen.GitHub(AfterGitHub.LIST))
                     },
                     // Another GitHub account's repositories (A1616): pick one, or add one.
-                    onSwitch = { replace(Screen.GitHub(AfterGitHub.LIST, choose = true)) },
+                    onAccounts = deps.accountsPage?.let { { go(Screen.Accounts(AfterGitHub.LIST)) } },
                     back = ::back,
                 )
             }
