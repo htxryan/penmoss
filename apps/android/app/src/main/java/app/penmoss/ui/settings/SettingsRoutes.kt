@@ -466,44 +466,10 @@ internal fun WhatsNewRoute(onBack: () -> Unit) {
  */
 @Composable
 internal fun GitHubRoute(host: SettingsHost, onToken: () -> Unit, onFeedbackForm: () -> Unit, onBack: () -> Unit) {
-    val device = host.device
-    val store = device.githubToken
-    val signIn by device.githubSignIn.state.collectAsStateWithLifecycle()
-    var accounts by remember { mutableStateOf(store.accounts()) }
-    // Read again as a sign-in ends, and back from the token's screen.
-    LaunchedEffect(signIn) { accounts = store.accounts() }
-    val scope = rememberCoroutineScope()
-    app.penmoss.feedback.GitHubScreen(
-        accounts = accounts,
-        signIn = signIn,
-        canSignIn = device.githubSignIn.available,
-        // The code shows first; Copy Code and Open GitHub opens the page (Ryan's feedback, 17 Nov 2026).
-        onSignIn = { device.githubSignIn.start(device.scope) },
-        onOpenGitHub = { code, uri ->
-            host.context.getSystemService(android.content.ClipboardManager::class.java)
-                ?.setPrimaryClip(android.content.ClipData.newPlainText("GitHub code", code))
-            runCatching {
-                host.context.startActivity(
-                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }
-        },
-        onCancelSignIn = device.githubSignIn::cancel,
-        onSignOut = { login ->
-            store.remove(login)
-            device.githubSignIn.reset()
-            accounts = store.accounts()
-        },
-        onMakePrimary = { login ->
-            store.makePrimary(login)
-            accounts = store.accounts()
-        },
+    app.penmoss.feedback.GitHubAccountsRoute(
+        host.device,
         onToken = onToken,
-        onBack = {
-            scope.launch { device.githubSignIn.reset() }
-            onBack()
-        },
-        repo = device.githubFeedback.repo,
+        onBack = onBack,
         onSendFeedback = host.openFeedback?.let { open -> { open("Settings → GitHub") } },
         // Feedback still on the phone (A1046), with Retry, Edit and Discard.
         outbox = { host.notebook?.let { app.penmoss.feedback.FeedbackOutboxRoute(it, openForm = onFeedbackForm) } },
