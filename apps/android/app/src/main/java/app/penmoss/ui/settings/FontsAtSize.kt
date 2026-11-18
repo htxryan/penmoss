@@ -24,12 +24,14 @@ import app.penmoss.ui.common.roles
  * Font and Note Font Size it uses.
  */
 @Composable
-internal fun FontsAtSize(fonts: FontsUi, modifier: Modifier = Modifier) {
+internal fun FontsAtSize(fonts: FontsUi, modifier: Modifier = Modifier, framed: Boolean = true) {
     val roles = MaterialTheme.roles
     val colours = MaterialTheme.colorScheme
     val ui = familyName(fonts.interfaceFont)
     Column(
-        modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().border(1.dp, colours.outlineVariant).padding(12.dp).testTag("fontsAtSize"),
+        modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()
+            .then(if (framed) Modifier.border(1.dp, colours.outlineVariant).padding(12.dp) else Modifier)
+            .testTag("fontsAtSize"),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("Fonts at Real Size", style = roles.listHead, color = colours.onSurfaceVariant)

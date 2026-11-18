@@ -189,18 +189,22 @@ fun NotebookSteps(
         }
     }
 
-    /** One repository's folders, read once (again on Try Again). */
-    fun read(repo: GitHubRepo, again: Boolean) {
+    /** One repository's folders on one branch, read once (again on Try Again). */
+    fun readAt(repo: GitHubRepo, branch: String, again: Boolean) {
         val now = hub ?: return
-        if (!again && reads.containsKey(repo.fullName)) return
-        reads[repo.fullName] = RepoRead.Loading
+        val at = readKey(repo, branch)
+        if (!again && reads.containsKey(at)) return
+        reads[at] = RepoRead.Loading
         scope.launch {
-            reads[repo.fullName] = when (val answer = deps.browse.folders(now.token, repo.fullName, repo.defaultBranch.ifEmpty { "main" })) {
+            reads[at] = when (val answer = deps.browse.folders(now.token, repo.fullName, branch)) {
                 is BrowseResult.Ok -> RepoRead.Ready(answer.value)
                 is BrowseResult.Failed -> RepoRead.Failed(answer.error.message)
             }
         }
     }
+
+    /** A repository's folders on its default branch: the repository list's own read. */
+    fun read(repo: GitHubRepo, again: Boolean) = readAt(repo, repo.defaultBranch.ifEmpty { "main" }, again)
 
     /** GitHub's sign-in first when the flow has none yet, then [then]. */
     fun viaGitHub(then: AfterGitHub) = go(if (hub != null) (if (then == AfterGitHub.CREATE) Screen.Create else Screen.List) else Screen.GitHub(then))
@@ -309,7 +313,7 @@ fun NotebookSteps(
                     added,
                     reads,
                     ::read,
-                    onRepo = { go(Screen.Repo(it)) },
+                    onRepo = { go(Screen.Branch(it)) },
                     onOpen = { repo, folder -> go(Screen.SetUp(Setup.Open(placeIn(repo, now.token, folder.path), folder.notebook?.name ?: repo.name))) },
                     onUrl = { go(Screen.Url) },
                     onCreate = if (goal == Goal.NEW) ({ replace(Screen.Create) }) else null,
@@ -319,25 +323,36 @@ fun NotebookSteps(
                     back = ::back,
                 )
             }
+            is Screen.Branch -> hub?.let { now ->
+                BranchPick(
+                    screen.repo,
+                    branches = { deps.browse.branches(now.token, screen.repo.fullName, screen.repo.defaultBranch.ifEmpty { "main" }) },
+                    // One branch, or none yet: nothing to pick, so straight on to its folders.
+                    onOnly = { replace(Screen.Repo(screen.repo, it)) },
+                    onPick = { go(Screen.Repo(screen.repo, it)) },
+                    back = ::back,
+                )
+            }
             is Screen.Repo -> hub?.let { now ->
                 RepoPicked(
                     screen.repo,
                     now.token,
                     added,
-                    reads[screen.repo.fullName],
-                    ::read,
+                    reads[readKey(screen.repo, screen.branch)],
+                    { repo, again -> readAt(repo, screen.branch, again) },
+                    branch = screen.branch,
                     onOpen = { place, name -> go(Screen.SetUp(Setup.Open(place, name))) },
                     onName = { go(Screen.Name(it)) },
-                    onFolder = { go(Screen.Folder(screen.repo)) },
+                    onFolder = { go(Screen.Folder(screen.repo, screen.branch)) },
                     onUrl = { go(Screen.Url) },
                     back = ::back,
                 )
             }
             is Screen.Folder -> {
                 val now = hub
-                val loaded = reads[screen.repo.fullName]
+                val loaded = reads[readKey(screen.repo, screen.branch)]
                 if (now != null && loaded is RepoRead.Ready) {
-                    FolderPick(screen.repo, now.token, loaded.folders, beside = true, onName = { go(Screen.Name(it)) }, back = ::back, added = added, onOpen = { place, name -> go(Screen.SetUp(Setup.Open(place, name))) })
+                    FolderPick(screen.repo, now.token, loaded.folders, beside = true, branch = screen.branch, onName = { go(Screen.Name(it)) }, back = ::back, added = added, onOpen = { place, name -> go(Screen.SetUp(Setup.Open(place, name))) })
                 }
             }
             Screen.Url -> PasteUrl(

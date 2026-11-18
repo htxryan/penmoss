@@ -28,6 +28,19 @@ class GitHubBrowseTest {
            "clone_url":"https://github.com/ryan/$name.git","pushed_at":"2026-11-15T00:00:00Z","size":$size,"permissions":{"push":$push}}"""
 
     @Test
+    fun branchesFollowGitHubsPagesWithTheDefaultFirst() = runBlocking {
+        val fake = Fake { call ->
+            if ("page=2" in call.url) ok("""[{"name":"Zeta"},{"name":"main"}]""")
+            else ok("""[{"name":"drafts"},{"name":"alpha"}]""", mapOf("link" to "<https://api.github.com/repos/ryan/notes/branches?per_page=100&page=2>; rel=\"next\""))
+        }
+        val answer = GitHubBrowse(fake).branches("tok", "ryan/notes", "main") as BrowseResult.Ok
+        assertEquals(listOf("main", "alpha", "drafts", "Zeta"), answer.value)
+        assertTrue(fake.asked.all { it.url.startsWith("https://api.github.com/repos/ryan/notes/branches") })
+        // Not a repository name: GitHub is never asked.
+        assertTrue(GitHubBrowse(Fake { error("asked") }).branches("tok", "not a repo", "main") is BrowseResult.Failed)
+    }
+
+    @Test
     fun reposFollowsGitHubsPagesWithTheTokenOnlyToTheApi() = runBlocking {
         val fake = Fake { call ->
             if ("page=2" in call.url) ok("[${repo("b", size = 0, push = false, private = false)}]")

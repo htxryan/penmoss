@@ -278,6 +278,8 @@ class SettingsScreensTest {
     }
 
     @Test
+    // A phone's height: the tabs hold still and the Settings tab scrolls under them (A1619).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun theThemeGridShowsEveryBuiltInAndChoosesOne() {
         var chosen by mutableStateOf("penmoss")
         var full by mutableStateOf(false)

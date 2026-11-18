@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -74,6 +75,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -489,8 +492,10 @@ fun AppearanceScreen(
     homeShortcuts: HomeShortcuts = HomeShortcuts(),
 ) {
     var previewing by rememberSaveable { mutableStateOf(false) }
-    SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
+    // The tabs hold still under the title and each tab's page scrolls under them, as option 3 draws it.
+    SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }, fill = true) {
         AppearanceTabs(previewing) { previewing = it }
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "appearancePreviewPanel" else "appearanceSettingsPanel")) {
         if (previewing) {
             val theme = themes.firstOrNull { it.id == chosen }?.name ?: "This theme"
             val dark = mode == "dark" || (mode == "system" && systemDark)
@@ -507,9 +512,9 @@ fun AppearanceScreen(
                 noteHeight = 360.dp,
                 noteArea = notePreview != null,
             )
-            // The interface's text at its real size, with the preview (A1582).
-            if (fonts != null) FontsAtSize(fonts, Modifier.padding(top = 8.dp))
-            return@SectionScreen
+            // The interface's text at its real size, under the preview and unframed (A1582).
+            if (fonts != null) FontsAtSize(fonts, Modifier.padding(top = 12.dp), framed = false)
+            return@Column
         }
         GroupTitle("Theme", Modifier.settingRow("theme"), platform = true)
         Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
@@ -541,22 +546,43 @@ fun AppearanceScreen(
             "width",
         ) { onFullWidth(it == "full") }
         Help("The theme’s is $editorWidth rem. A phone already uses its whole width; this shows on a tablet, an unfolded phone and your other devices.")
+        }
     }
 }
 
-/** Appearance's two tabs (A1619): the settings, or the app as they draw it. */
+/**
+ * Appearance's two tabs (A1619), as option 3 draws them: full width under the title, each with
+ * its icon; the one shown on the page's own background with the accent under it, the other darker.
+ */
 @Composable
 private fun AppearanceTabs(previewing: Boolean, onPreview: (Boolean) -> Unit) {
+    val colours = MaterialTheme.colorScheme
     val icons = rememberLucideIcons()
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("appearanceTabs")) {
+    Row(
+        Modifier.fillMaxWidth().height(48.dp).drawBehind {
+            // A line above and below, edge to edge, as the design draws it.
+            drawLine(colours.outlineVariant, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx())
+            drawLine(colours.outlineVariant, androidx.compose.ui.geometry.Offset(0f, size.height), androidx.compose.ui.geometry.Offset(size.width, size.height), 1.dp.toPx())
+        }.selectableGroup().testTag("appearanceTabs"),
+    ) {
         listOf(Triple("Settings", false, "sliders-horizontal"), Triple("Preview", true, "eye")).forEachIndexed { index, (label, preview, glyph) ->
-            SegmentedButton(
-                selected = previewing == preview,
-                onClick = { onPreview(preview) },
-                shape = SegmentedButtonDefaults.itemShape(index, 2, SQUARE),
-                icon = { icons?.icon(glyph)?.let { Icon(LucideAssets.vector(it), contentDescription = null, Modifier.size(18.dp)) } },
-                modifier = Modifier.testTag(if (preview) "appearancePreviewTab" else "appearanceSettingsTab"),
-            ) { Text(label, maxLines = 1, softWrap = false) }
+            val on = previewing == preview
+            if (index > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(colours.outlineVariant))
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(if (on) colours.background else androidx.compose.ui.graphics.lerp(colours.background, androidx.compose.ui.graphics.Color.Black, if (colours.background.luminance() < 0.5f) 0.25f else 0.05f))
+                    .selectable(on, role = Role.Tab) { onPreview(preview) }
+                    .testTag(if (preview) "appearancePreviewTab" else "appearanceSettingsTab"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    icons?.icon(glyph)?.let { Icon(LucideAssets.vector(it), contentDescription = null, Modifier.size(18.dp), tint = if (on) colours.onSurface else colours.onSurfaceVariant) }
+                    Text(label, style = MaterialTheme.typography.labelLarge, color = if (on) colours.onSurface else colours.onSurfaceVariant, maxLines = 1, softWrap = false)
+                }
+                if (on) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(2.dp).background(colours.primary))
+            }
         }
     }
 }

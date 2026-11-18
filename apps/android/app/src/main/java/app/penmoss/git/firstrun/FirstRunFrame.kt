@@ -290,7 +290,7 @@ internal fun <T> Options(value: T, items: List<Option<T>>, onChange: (T) -> Unit
                 RadioButton(selected = picked, onClick = null, enabled = item.enabled)
                 Column(Modifier.weight(1f)) {
                     Text(item.title, style = MaterialTheme.roles.rowLabel)
-                    Text(item.line, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (item.line.isNotEmpty()) Text(item.line, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (item.chip != null) Chip(item.chip)
             }

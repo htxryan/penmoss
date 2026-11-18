@@ -64,8 +64,10 @@ sealed interface Screen {
     data class Accounts(val then: AfterGitHub) : Screen
     data object Create : Screen
     data object List : Screen
-    data class Repo(val repo: GitHubRepo) : Screen
-    data class Folder(val repo: GitHubRepo) : Screen
+    /** Pick Branch, between the repository and its folders: a branch can hold other folders. */
+    data class Branch(val repo: GitHubRepo) : Screen
+    data class Repo(val repo: GitHubRepo, val branch: String = repo.defaultBranch.ifEmpty { "main" }) : Screen
+    data class Folder(val repo: GitHubRepo, val branch: String = repo.defaultBranch.ifEmpty { "main" }) : Screen
     data object Url : Screen
     data class Name(val place: Place) : Screen
     data class SetUp(val setup: Setup) : Screen

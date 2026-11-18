@@ -36,6 +36,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import app.penmoss.ui.common.LucideAssets
+import app.penmoss.ui.common.rememberLucideIcons
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -252,7 +256,7 @@ internal fun RepoTree(
         Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
             for ((at, repo) in shown.withIndex()) {
                 if (at > 0) HorizontalDivider()
-                RepoRow(repo, reads[repo.fullName], added, onRepo, onOpen)
+                RepoRow(repo, reads[readKey(repo, repo.defaultBranch.ifEmpty { "main" })], added, onRepo, onOpen)
             }
         }
         if (hub.list.more) Lead("Showing the 300 most recently pushed. Paste a URL for others.", small = true)
@@ -312,13 +316,16 @@ internal fun RepoPicked(
     added: Set<String>,
     loaded: RepoRead?,
     read: (GitHubRepo, Boolean) -> Unit,
+    /** The branch Pick Branch chose: its folders are the ones shown, and the notebook syncs it. */
+    branch: String = repo.defaultBranch.ifEmpty { "main" },
     onOpen: (Place, String) -> Unit,
     onName: (Place) -> Unit,
     onFolder: () -> Unit,
     onUrl: () -> Unit,
     back: () -> Unit,
 ) {
-    var branch by remember { mutableStateOf(repo.defaultBranch.ifEmpty { "main" }) }
+    val picked = branch
+    var branch by remember { mutableStateOf(picked) }
     var dir by remember { mutableStateOf("") }
     var another by remember { mutableStateOf("") }
     var anotherProblem by remember { mutableStateOf<String?>(null) }
@@ -344,7 +351,7 @@ internal fun RepoPicked(
     }
     val folders = loaded.folders
     val notebooks = notebooksIn(folders)
-    val branchNow = repo.defaultBranch.ifEmpty { "main" }
+    val branchNow = picked
     val rootIsNotebook = notebooks.any { it.path.isEmpty() }
     when {
         // Empty, so the notebook starts at its root.
@@ -373,7 +380,7 @@ internal fun RepoPicked(
                 if (notebook.id in added) {
                     Lead("Already Added: it is on this phone.", Modifier.testTag("first-run-already-added"), small = true)
                 } else {
-                    Primary("Open ${notebook.name}", "first-run-open", "folder-open") { onOpen(placeIn(repo, token, only.path), notebook.name) }
+                    Primary("Open ${notebook.name}", "first-run-open", "folder-open") { onOpen(placeIn(repo, token, only.path, picked), notebook.name) }
                 }
                 if (!rootIsNotebook) {
                     HorizontalDivider()
@@ -389,7 +396,7 @@ internal fun RepoPicked(
                         )
                         Plain("Make Notebook", "first-run-another-make", "folder-plus") {
                             val words = folderNameProblem(another)
-                            if (words != null) anotherProblem = words else onName(placeIn(repo, token, another.trim()))
+                            if (words != null) anotherProblem = words else onName(placeIn(repo, token, another.trim(), picked))
                         }
                     }
                     anotherProblem?.let { Problem(it, "first-run-another-problem") }
@@ -398,21 +405,21 @@ internal fun RepoPicked(
         }
         // Several notebooks: pick one.
         notebooks.size > 1 -> {
-            val picked = notebooks.firstOrNull { it.path == pick } ?: notebooks.firstOrNull { it.notebook!!.id !in added } ?: notebooks.first()
+            val chosen = notebooks.firstOrNull { it.path == pick } ?: notebooks.firstOrNull { it.notebook!!.id !in added } ?: notebooks.first()
             Frame(
                 "repo-several",
                 "Pick Notebook",
                 step = 2,
                 back = back,
                 actions = {
-                    Primary("Open ${picked.notebook!!.name}", "first-run-open", "folder-open", enabled = picked.notebook.id !in added) {
-                        onOpen(placeIn(repo, token, picked.path), picked.notebook.name)
+                    Primary("Open ${chosen.notebook!!.name}", "first-run-open", "folder-open", enabled = chosen.notebook.id !in added) {
+                        onOpen(placeIn(repo, token, chosen.path, branchNow), chosen.notebook.name)
                     }
                 },
             ) {
                 Lead("${repo.fullName} holds ${notebooks.size} notebooks.")
                 Options(
-                    picked.path,
+                    chosen.path,
                     notebooks.map { each ->
                         val id = each.notebook!!.id
                         Option(each.path, each.notebook.name, folderWords(each.path), "first-run-pick-notebook", chip = if (id in added) "Already Added" else null, enabled = id !in added)
@@ -422,9 +429,94 @@ internal fun RepoPicked(
             }
         }
         // Other files: pick where the notebook goes.
-        else -> FolderPick(repo, token, folders, beside = false, onName = onName, back = back, added = added, onOpen = onOpen)
+        else -> FolderPick(repo, token, folders, beside = false, onName = onName, back = back, added = added, onOpen = onOpen, branch = picked)
     }
 }
+
+/** Where one repository's folders on one branch are kept while the flow is open. */
+internal fun readKey(repo: GitHubRepo, branch: String) = "${repo.fullName}@$branch"
+
+/** What Pick Branch has of a repository's branches. */
+private sealed interface BranchRead {
+    data object Loading : BranchRead
+    data class Ready(val names: List<String>) : BranchRead
+    data class Failed(val message: String) : BranchRead
+}
+
+/**
+ * Pick Branch (Ryan, 18 Nov 2026; A1621): after the repository and before its folders, since each
+ * branch can hold other folders. The default branch first, marked Default and picked; a filter
+ * once there are more than [BRANCH_FILTER_AT]. With one branch (or an empty repository, none yet)
+ * there is nothing to pick, so it goes straight on with [onOnly].
+ */
+@Composable
+internal fun BranchPick(
+    repo: GitHubRepo,
+    branches: suspend () -> BrowseResult<List<String>>,
+    onOnly: (String) -> Unit,
+    onPick: (String) -> Unit,
+    back: () -> Unit,
+) {
+    val default = repo.defaultBranch.ifEmpty { "main" }
+    var read by remember { mutableStateOf<BranchRead>(BranchRead.Loading) }
+    var attempt by remember { mutableStateOf(0) }
+    var pick by rememberSaveable { mutableStateOf(default) }
+    var filter by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(attempt) {
+        read = BranchRead.Loading
+        read = when (val answer = branches()) {
+            is BrowseResult.Ok -> if (answer.value.size <= 1) {
+                onOnly(answer.value.firstOrNull() ?: default)
+                BranchRead.Loading
+            } else BranchRead.Ready(answer.value)
+            is BrowseResult.Failed -> BranchRead.Failed(answer.error.message)
+        }
+    }
+    when (val now = read) {
+        BranchRead.Loading -> Frame("branch", "Pick Branch", step = 2, back = back) { Working("Reading ${repo.fullName}’s branches…") }
+        is BranchRead.Failed -> Frame(
+            "branch",
+            "Pick Branch",
+            step = 2,
+            back = back,
+            actions = { Primary("Try Again", "first-run-retry", "refresh-cw") { attempt += 1 } },
+            below = { Link("Use $default", "first-run-branch-default", "git-branch") { onPick(default) } },
+        ) { Problem("Couldn’t read ${repo.fullName}’s branches: ${now.message}", "first-run-branch-problem") }
+        is BranchRead.Ready -> {
+            val query = filter.trim()
+            val shown = if (query.isEmpty()) now.names else now.names.filter { it.contains(query, ignoreCase = true) }
+            Frame(
+                "branch",
+                "Pick Branch",
+                step = 2,
+                back = back,
+                actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = pick in now.names) { onPick(pick) } },
+            ) {
+                Lead("${repo.fullName} has ${now.names.size} branches. Each can hold other folders, and the notebook syncs the one you pick.")
+                if (now.names.size > BRANCH_FILTER_AT) {
+                    OutlinedTextField(
+                        filter,
+                        { filter = it },
+                        Modifier.fillMaxWidth().testTag("first-run-branch-filter"),
+                        placeholder = { Text("Filter Branches") },
+                        leadingIcon = { rememberLucideIcons()?.icon("search")?.let { Icon(LucideAssets.vector(it), contentDescription = null, Modifier.size(18.dp)) } },
+                        singleLine = true,
+                    )
+                }
+                Options(
+                    pick,
+                    shown.map { name ->
+                        Option(name, name, if (name == default) "The repository’s default branch" else "", "first-run-pick-branch", chip = if (name == default) "Default" else null)
+                    },
+                ) { pick = it }
+                if (shown.isEmpty()) Lead("No branch matches “$query”.", small = true)
+            }
+        }
+    }
+}
+
+/** More branches than this and Pick Branch has a filter. */
+private const val BRANCH_FILTER_AT = 8
 
 /**
  * Pick Folder (Ryan's pick, option 1 of the Pick Folder Options canvas, "Tree With Filter", 18 Nov
@@ -446,6 +538,8 @@ internal fun FolderPick(
     back: () -> Unit,
     added: Set<String> = emptySet(),
     onOpen: ((Place, String) -> Unit)? = null,
+    /** The branch these folders are on (Pick Branch). */
+    branch: String = repo.defaultBranch.ifEmpty { "main" },
 ) {
     val made = remember { mutableStateListOf<String>() }
     val notebooks = remember(folders) { folders.folders.filter { it.notebook != null && it.path.isNotEmpty() }.associate { it.path to it.notebook!! } }
@@ -498,7 +592,7 @@ internal fun FolderPick(
             }
             Link("New Folder…", "first-run-new-folder-open", "folder-plus") { making = true }
         },
-        actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = chosen in free) { onName(placeIn(repo, token, chosen)) } },
+        actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = chosen in free) { onName(placeIn(repo, token, chosen, branch)) } },
     ) {
         Lead(if (beside) "Pick where the new notebook goes." else "${repo.fullName} holds other files. Pick where the notebook goes.")
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -558,7 +652,7 @@ internal fun FolderPick(
                     made = path in made,
                     expanded = expanded,
                     highlight = query.takeIf { it.isNotEmpty() },
-                    onOpen = if (notebook != null && notebook.id !in added && onOpen != null) ({ onOpen(placeIn(repo, token, path), notebook.name) }) else null,
+                    onOpen = if (notebook != null && notebook.id !in added && onOpen != null) ({ onOpen(placeIn(repo, token, path, branch), notebook.name) }) else null,
                     onToggle = { if (shown == null) open = if (path in open) open - path else open + path },
                 ) { if (notebook == null) chosen = path }
             }
