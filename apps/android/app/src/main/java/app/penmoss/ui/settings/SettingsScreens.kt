@@ -509,7 +509,8 @@ fun AppearanceScreen(
                 homeShortcuts,
                 notePreview,
                 Modifier.padding(horizontal = 16.dp).testTag("appearancePreviewApp").fillMaxWidth(),
-                noteHeight = 360.dp,
+                // The whole sample note, uncut, as the design draws it: the tab scrolls, not the note.
+                noteHeight = PREVIEW_NOTE_HEIGHT,
                 noteArea = notePreview != null,
             )
             // The interface's text at its real size, under the preview and unframed (A1582).
@@ -587,6 +588,9 @@ private fun AppearanceTabs(previewing: Boolean, onPreview: (Boolean) -> Unit) {
     }
 }
 
+/** The Preview tab's note: tall enough for the whole sample note at the default sizes. */
+private val PREVIEW_NOTE_HEIGHT = 548.dp
+
 /**
  * Home's own shortcut row above the editor page, inert (A1564); the note [noteHeight] high, or the
  * rest. [noteArea] keeps the note's room while the dialog has the note (one editor page at a time).
@@ -594,29 +598,29 @@ private fun AppearanceTabs(previewing: Boolean, onPreview: (Boolean) -> Unit) {
 @Composable
 private fun PreviewApp(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -> Unit)?, modifier: Modifier, noteHeight: Dp?, noteArea: Boolean) {
     val colours = MaterialTheme.colorScheme
-    Column(modifier.border(1.dp, colours.outlineVariant).background(colours.surface).inert()) {
-        HomeShortcutRow(shortcuts, onSearch = {}, onToday = {}, onThisWeek = {}, onGraph = {}, onCommands = {})
-        if (noteArea) {
-            HorizontalDivider(color = colours.outlineVariant)
-            val area = if (noteHeight != null) Modifier.fillMaxWidth().height(noteHeight) else Modifier.fillMaxWidth().weight(1f)
-            Box(area) { if (note != null) note(Modifier.fillMaxSize()) }
+    Box(modifier.then(if (noteHeight == null) Modifier.fillMaxHeight() else Modifier)) {
+        Column(Modifier.fillMaxWidth().border(1.dp, colours.outlineVariant).background(colours.surface).inert()) {
+            HomeShortcutRow(shortcuts, onSearch = {}, onToday = {}, onThisWeek = {}, onGraph = {}, onCommands = {})
+            if (noteArea) {
+                HorizontalDivider(color = colours.outlineVariant)
+                val area = if (noteHeight != null) Modifier.fillMaxWidth().height(noteHeight) else Modifier.fillMaxWidth().weight(1f)
+                Box(area) { if (note != null) note(Modifier.fillMaxSize()) }
+            }
         }
+        // Over the preview, so no touch reaches it, yet a drag that starts on it still scrolls the
+        // page: this watches and consumes nothing, and the page's scroll sees the drag.
+        Box(Modifier.matchParentSize().pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }.testTag("appearancePreviewShield"))
     }
 }
 
 /**
- * Shows what is inside and takes nothing (A1564): every touch is consumed before it reaches the
- * content, focus never enters it, and its semantics are cleared, as the web's `inert` does.
+ * Shows what is inside and takes nothing (A1564): focus never enters it and its semantics are
+ * cleared, as the web's `inert` does; [PreviewApp]'s shield keeps touches from it.
  */
 private fun Modifier.inert(): Modifier = this
     .clearAndSetSemantics {}
     .focusProperties { onEnter = { cancelFocusChange() } }
     .focusGroup()
-    .pointerInput(Unit) {
-        awaitPointerEventScope {
-            while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-        }
-    }
 
 /** The theme editor's way in from Appearance: the chosen theme's name, and what the button does. */
 data class ThemeEditorEntry(val name: String, val builtIn: Boolean, val onOpen: () -> Unit)
