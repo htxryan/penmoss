@@ -199,7 +199,8 @@ class JournalDeviceSettingsTest {
         assertTrue(settings.change(mapOf(key to deletion, SettingKeys.THEME to deletion["base"])))
         assertEquals(deletion, notebook[key])
         assertFalse(notebook.containsKey(SettingKeys.THEME))
-        assertTrue(shows { it.themeId == "nord" }.settings.customThemes.none { (it["id"] as? JsonPrimitive)?.content == "custom-abc" })
+        // Shown once both have landed: a pass in between may briefly show the map from before.
+        shows { it.themeId == "nord" && it.customThemes.none { theme -> (theme["id"] as? JsonPrimitive)?.content == "custom-abc" } }
     }
 
     @Test
