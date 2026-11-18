@@ -342,7 +342,9 @@ class FirstRunScreenTest {
     }
 
     /** Pick Folder (A1620, option 1): a tree whose levels open and close, a filter, and notebook folders marked, with Notebooks (N). */
+    // A phone's height: the tree scrolls on its own and lays out only the rows on screen.
     @Test
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h1400dp")
     fun pickFolderIsATreeWithAFilterAndMarksNotebookFolders() {
         val repo = GitHubRepo("ryan/scratch", "ryan", "scratch", RepoVisibility.PRIVATE, "main", "https://github.com/ryan/scratch.git", null, canPush = true, empty = false)
         val folders = RepoFolders(
@@ -369,7 +371,7 @@ class FirstRunScreenTest {
         // The notebooks stand out, their levels open: Work Notes is on the phone, Journal can open.
         compose.onAllNodesWithTag("first-run-folder-notebook").assertCountEquals(2)
         compose.onNodeWithText("Notebook: Journal").assertExists()
-        compose.onNodeWithText("Already Added").assertExists()
+        compose.onNodeWithText("Notebook: Work Notes · Already Added").assertExists()
         compose.onAllNodesWithTag("first-run-folder-open").assertCountEquals(1)
         // A closed level: claude-global's folders show once it opens.
         compose.onNodeWithText("agents").assertDoesNotExist()
@@ -391,7 +393,7 @@ class FirstRunScreenTest {
         tap("first-run-folder-notebooks")
         // A folder with no notebook takes the new one.
         compose.onNodeWithText("hooks").performScrollTo().performClick()
-        compose.onNodeWithTag("first-run-folder-chosen").assertTextEquals("Notebook goes in hooks/")
+        compose.onNodeWithTag("first-run-folder-chosen").assertTextEquals("hooks/")
         tap("first-run-continue")
         assertEquals("hooks", named!!.dir)
     }
