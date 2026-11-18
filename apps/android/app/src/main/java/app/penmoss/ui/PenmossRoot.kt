@@ -109,6 +109,25 @@ private fun Screens(graph: NotebookGraph, deepLinks: DeepLinkInbox) {
     val front by nav.currentBackStackEntryAsState()
     LaunchedEffect(front?.id) { root.selection.clear() }
 
+    // Where the app was left (A1624): kept as each screen comes to the front, and gone back to at
+    // launch. A note or a folder opens over the notes list; Settings opens on its first page.
+    val restore by deepLinks.restore.collectAsStateWithLifecycle()
+    LaunchedEffect(restore) {
+        val place = restore ?: return@LaunchedEffect
+        when (place.kind) {
+            app.penmoss.git.LastPlace.Kind.NOTE -> place.id?.let { nav.navigate("note/$it") }
+            app.penmoss.git.LastPlace.Kind.FOLDER -> place.id?.let { nav.navigate("folder/$it") }
+            app.penmoss.git.LastPlace.Kind.SETTINGS -> nav.navigate(app.penmoss.ui.settings.SettingsRoutes.HOME)
+            app.penmoss.git.LastPlace.Kind.NOTES -> Unit
+        }
+        deepLinks.restored(place)
+    }
+    LaunchedEffect(front?.id) {
+        val entry = front ?: return@LaunchedEffect
+        val place = app.penmoss.git.LastPlace.of(graph.localId, entry.destination.route, entry.arguments)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.penmoss.git.LastPlace.write(root.context.applicationContext, place) }
+    }
+
     // Screens slide sideways like the rest of Android (A351, PenmossNavHost).
     Box(Modifier.fillMaxSize()) {
         // Settings' (i) names the primary notebook on every Settings screen (A1560).
