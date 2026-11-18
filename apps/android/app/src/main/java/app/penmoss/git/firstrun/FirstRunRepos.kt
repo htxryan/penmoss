@@ -55,7 +55,14 @@ private fun NameField(value: String, tag: String, onChange: (String) -> Unit) {
  * the repository on GitHub, then Setting Up makes the notebook at its root.
  */
 @Composable
-internal fun CreateRepo(deps: FirstRunDeps, hub: Hub, onCreated: (Place, String) -> Unit, onUseExisting: () -> Unit, back: () -> Unit) {
+internal fun CreateRepo(
+    deps: FirstRunDeps,
+    hub: Hub,
+    onCreated: (Place, String) -> Unit,
+    onUseExisting: () -> Unit,
+    back: () -> Unit,
+    onAccounts: (() -> Unit)? = null,
+) {
     val owners = hub.owners.orEmpty()
     var notebook by remember { mutableStateOf("") }
     var repoName by remember { mutableStateOf("notes") }
@@ -155,6 +162,8 @@ internal fun CreateRepo(deps: FirstRunDeps, hub: Hub, onCreated: (Place, String)
         }
         if (owners.isEmpty()) Problem("GitHub didn’t say where a repository can be made. Go back and try again.", "first-run-create-problem")
         problem?.let { Problem(it, "first-run-create-problem") }
+        // Made in another GitHub account, such as a work one (A1616): Settings → GitHub's page.
+        onAccounts?.let { Link("Use a Different GitHub Account", "first-run-other-account", "users", it) }
     }
 }
 
@@ -176,7 +185,7 @@ internal fun RepoTree(
     onCreate: (() -> Unit)?,
     onRefresh: () -> Unit,
     back: () -> Unit,
-    onSwitch: () -> Unit = {},
+    onAccounts: (() -> Unit)? = null,
 ) {
     val repos = hub.list.repos
     var filter by remember { mutableStateOf("") }
@@ -193,8 +202,8 @@ internal fun RepoTree(
             )
             Link("Refresh", "first-run-refresh", "refresh-cw", onRefresh)
         }
-        // A work account's repositories beside a personal one's (A1616).
-        Link("Switch GitHub Account", "first-run-switch-account", "users", onSwitch)
+        // A work account's repositories beside a personal one's (A1616): Settings → GitHub's page.
+        onAccounts?.let { Link("Use a Different GitHub Account", "first-run-other-account", "users", it) }
     }
     if (repos.isEmpty()) {
         Frame(
@@ -214,6 +223,8 @@ internal fun RepoTree(
     val shown = if (query.isEmpty()) repos else repos.filter { it.fullName.lowercase().contains(query) }
     Frame("list", "Pick Repository", step = 2, back = back) {
         Lead(if (goal == Goal.NEW) "Pick an empty repository, or one to add a notebook to." else "Pick the repository that holds your notebook.")
+        // Whose repositories these are, and Use a Different GitHub Account, above the list (Ryan, 17 Nov 2026).
+        signedIn()
         OutlinedTextField(filter, { filter = it }, Modifier.fillMaxWidth().testTag("first-run-filter"), label = { Text("Filter") }, singleLine = true)
         Text(
             if (query.isEmpty()) "${repos.size} ${if (repos.size == 1) "repository" else "repositories"}." else "${shown.size} of ${repos.size} match.",
@@ -229,7 +240,6 @@ internal fun RepoTree(
         }
         if (hub.list.more) Lead("Showing the 300 most recently pushed. Paste a URL for others.", small = true)
         Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl)
-        signedIn()
     }
 }
 

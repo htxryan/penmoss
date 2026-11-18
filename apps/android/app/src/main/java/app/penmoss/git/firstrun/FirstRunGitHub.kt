@@ -47,7 +47,7 @@ private sealed interface Check {
  * (Settings → GitHub) it reads the repositories and goes straight on. With none, Sign In with
  * GitHub (the device code, PEN-146) or a personal access token typed here; refused, offline or
  * rate-limited, it says so with Try Again, and Paste a URL Instead goes on without GitHub. With
- * more than one account on the phone, or [choose] (Switch GitHub Account), it first asks which,
+ * more than one account on the phone, or [choose] (back from Use a Different GitHub Account), it first asks which,
  * with Add Another Account, which signs in beside the others (A1616).
  */
 @Composable

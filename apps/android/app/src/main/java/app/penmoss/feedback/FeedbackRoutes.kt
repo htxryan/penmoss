@@ -307,6 +307,61 @@ fun GitHubScreen(
     }
 }
 
+/**
+ * Settings → GitHub's accounts, wired to the phone (A1616): Settings' own screen, and the same page
+ * opened from Add Notebook's Use a Different GitHub Account. GitHub's code shows before its page
+ * opens; Copy Code and Open GitHub copies it and opens the page.
+ */
+@Composable
+fun GitHubAccountsRoute(
+    device: app.penmoss.DeviceGraph,
+    onToken: () -> Unit,
+    onBack: () -> Unit,
+    onSendFeedback: (() -> Unit)? = null,
+    outbox: @Composable () -> Unit = {},
+) {
+    val context = LocalContext.current
+    val store = device.githubToken
+    val signIn by device.githubSignIn.state.collectAsStateWithLifecycle()
+    var accounts by remember { mutableStateOf(store.accounts()) }
+    // Read again as a sign-in ends, and back from the token's screen.
+    LaunchedEffect(signIn) { accounts = store.accounts() }
+    val scope = rememberCoroutineScope()
+    GitHubScreen(
+        accounts = accounts,
+        signIn = signIn,
+        canSignIn = device.githubSignIn.available,
+        onSignIn = { device.githubSignIn.start(device.scope) },
+        onOpenGitHub = { code, uri ->
+            context.getSystemService(android.content.ClipboardManager::class.java)
+                ?.setPrimaryClip(android.content.ClipData.newPlainText("GitHub code", code))
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+        },
+        onCancelSignIn = device.githubSignIn::cancel,
+        onSignOut = { login ->
+            store.remove(login)
+            device.githubSignIn.reset()
+            accounts = store.accounts()
+        },
+        onMakePrimary = { login ->
+            store.makePrimary(login)
+            accounts = store.accounts()
+        },
+        onToken = onToken,
+        onBack = {
+            scope.launch { device.githubSignIn.reset() }
+            onBack()
+        },
+        repo = device.githubFeedback.repo,
+        onSendFeedback = onSendFeedback,
+        outbox = outbox,
+    )
+}
+
 /** A button's icon and words on one line (every button has an icon, and never wraps). */
 @Composable
 private fun Labelled(icon: String, words: String) {
