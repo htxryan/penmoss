@@ -69,7 +69,8 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(dark) { followShownVariant(dark) }
             PenmossTheme(appearance, dark) {
                 CompositionLocalProvider(LocalAppCommands provides commands) {
-                    NotebooksHome(graph, onBack = { finish() }, land = land, onLanded = { finish() })
+                    // Landed: gone from Recents too, so the notebook's task is the app's only card there.
+                    NotebooksHome(graph, onBack = { finish() }, land = land, onLanded = { finishAndRemoveTask() })
                 }
             }
         }
