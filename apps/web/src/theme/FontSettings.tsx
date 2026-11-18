@@ -82,7 +82,7 @@ function FontField({
     if (trimmed !== family) store(`${CUSTOM_FONT_PREFIX}${trimmed}`);
   };
   return (
-    <SettingRow setting={setting} label={label} labelFor={id} testId={testId} scope="platform">
+    <SettingRow setting={setting} label={label} labelFor={id} testId={testId}>
       <span className="font-control">
         <Select
           id={id}
@@ -175,7 +175,6 @@ function NoteSizeField({
     Math.min(NOTE_FONT_SIZE.max, Math.max(NOTE_FONT_SIZE.min, Math.round(value)));
   return (
     <SettingRow
-      scope="platform"
       setting="note-font-size"
       label="Note Font Size"
       labelFor={id}

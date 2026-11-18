@@ -283,14 +283,15 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     if (SHOTS)
       await page.locator('.settings-head-bar').screenshot({ path: `${SHOTS}/settings-home.png` });
 
-    // A setting in the primary notebook, copied into Work from Work's page.
-    await page.getByTestId('display-note-bar-delete').check();
-    await page.getByTestId('settings-info').click();
+    // The (i) is still open: its link to the primary notebook's page.
     await page.getByTestId('settings-home-link').click();
     await expect(page.getByTestId('git-primary-chip')).toBeVisible();
     // Item 12: no Private line.
     await expect(page.getByText('Private', { exact: true })).toHaveCount(0);
+    // A synced setting in the primary notebook, copied into Work from Work's page. The look
+    // (the note's bar, the theme) stays on each device and is never copied (A1626).
     await page.goto('/settings/git-notebooks');
+    await page.getByTestId('copy-tags-default').uncheck();
     await page.getByTestId('git-notebook-row').filter({ hasText: 'Work' }).click();
     // Copy Settings… opens From (the primary) and To (this notebook) (PEN-146).
     await page.getByTestId('git-copy-settings-open').click();
@@ -334,8 +335,7 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     await expect(page.getByTestId('settings-home')).toContainText(
       'Settings are synced through your primary notebook, Work.',
     );
-    await page.goto('/settings/note');
-    await expect(page.getByTestId('display-note-bar-delete')).toBeChecked();
+    await expect(page.getByTestId('copy-tags-default')).not.toBeChecked();
     expect(errors).toEqual([]);
   });
 });

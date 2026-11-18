@@ -96,7 +96,7 @@ export function AppearanceSettings() {
 
       <div className="lf-split">
         <div className="lf-controls">
-          <GroupHead id={`${id}-theme`} scope="platform">
+          <GroupHead id={`${id}-theme`} scope>
             Theme
           </GroupHead>
           <div className="lf-group" role="group" aria-labelledby={`${id}-theme`}>
@@ -169,7 +169,9 @@ export function AppearanceSettings() {
             </span>
           </div>
 
-          <GroupHead id={`${id}-text`}>Text</GroupHead>
+          <GroupHead id={`${id}-text`} scope>
+            Text
+          </GroupHead>
           <div
             className="lf-group"
             role="group"
@@ -181,9 +183,8 @@ export function AppearanceSettings() {
             <DadJokesSetting />
           </div>
           <p className="lf-help">
-            Fonts lie over the theme’s own on your Macs; your phones keep fonts of their own. Code
-            keeps the theme’s monospace font. A custom font shows where it is installed, else the
-            system’s.
+            Fonts lie over the theme’s own. Code keeps the theme’s monospace font. A custom font
+            shows where it is installed, else the system’s.
           </p>
 
           {mac ? (

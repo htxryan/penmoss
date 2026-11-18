@@ -29,8 +29,9 @@ data class NotebookSettings(val device: JsonObject, val own: JsonObject)
  * notebook it belongs to, A1504).
  */
 object SettingsCopy {
-    /** Not copied: Quick Access's pins and the badge, each notebook's own. */
-    fun notCopied(key: String): Boolean = key == SettingKeys.QUICK_ACCESS || key.startsWith("badge.")
+    /** Not copied: Quick Access’s pins and the badge, each notebook’s own, and the look, each device’s (A1626). */
+    fun notCopied(key: String): Boolean =
+        key == SettingKeys.QUICK_ACCESS || key.startsWith("badge.") || app.penmoss.engine.settings.LocalSettings.isLocal(key)
 
     /** The notebook's own keys (core's `isNotebookSetting`): its time zone, templates and badge. */
     fun isOwn(key: String): Boolean = key == SettingKeys.TIME_ZONE || key.startsWith("template.") || key.startsWith("badge.")

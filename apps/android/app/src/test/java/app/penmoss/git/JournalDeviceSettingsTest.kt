@@ -51,6 +51,9 @@ class JournalDeviceSettingsTest {
 
     private lateinit var settings: JournalDeviceSettings
 
+    /** A device setting every device shares (A1137). */
+    private val copyTags = "copyToNotebook.tags"
+
     @Before
     fun open() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
@@ -85,30 +88,61 @@ class JournalDeviceSettingsTest {
 
     @Test
     fun aSettingChangedOnThePhoneIsTheNotebooksDeviceKeyAndTheMacsShowsAfterAPull(): Unit = runBlocking {
-        // The Mac had set dark mode in the notebook; the phone's first pass reads it.
-        notebook[SettingKeys.MODE] = JsonPrimitive("dark")
+        // The Mac had set Copy Tags off in the notebook; the phone's first pass reads it.
+        notebook[copyTags] = JsonPrimitive(false)
         scope.launch { settings.follow() }
         pass("h1")
-        assertEquals("dark", shows { it.mode == "dark" }.settings.mode)
+        shows { it.values[copyTags] == JsonPrimitive(false) }
 
         // Changed on the phone: written as the same JSON value, shown at once.
-        assertTrue(settings.change(mapOf(SettingKeys.THEME to JsonPrimitive("nord"), SettingKeys.NOTE_FONT_SIZE to JsonPrimitive(17))))
-        assertEquals(JsonObject(mapOf(SettingKeys.THEME to JsonPrimitive("nord"), SettingKeys.NOTE_FONT_SIZE to JsonPrimitive(17))), written.single())
-        assertEquals(JsonPrimitive("nord"), notebook[SettingKeys.THEME])
-        assertEquals(JsonPrimitive(17), notebook[SettingKeys.NOTE_FONT_SIZE])
-        shows { it.themeId == "nord" && it.mode == "dark" }
+        val symbols = JsonArray(listOf(JsonPrimitive("→")))
+        assertTrue(settings.change(mapOf(SettingKeys.SYMBOLS to symbols)))
+        assertEquals(JsonObject(mapOf(SettingKeys.SYMBOLS to symbols)), written.single())
+        assertEquals(symbols, notebook[SettingKeys.SYMBOLS])
+        shows { it.values[SettingKeys.SYMBOLS] == symbols }
 
-        // The Mac switches back to light and the system theme; the pull's pass brings it.
-        notebook[SettingKeys.MODE] = JsonPrimitive("light")
-        notebook.remove(SettingKeys.THEME)
+        // The Mac turns Copy Tags back on; the pull's pass brings it.
+        notebook[copyTags] = JsonPrimitive(true)
         pass("h2")
-        val after = shows { it.mode == "light" }.settings
-        assertFalse(after.values.containsKey(SettingKeys.THEME))
-        assertEquals(17, after.noteFontSize)
+        shows { it.values[copyTags] == JsonPrimitive(true) }
 
         // Signed out, the account's settings were cleared: the Journal's are laid there again.
         deviceDb.settings().delete("syncedSettings")
-        shows { it.mode == "light" }
+        shows { it.values[copyTags] == JsonPrimitive(true) }
+    }
+
+    /**
+     * The look and layout stay on the phone (A1626): the notebook's value shows until the phone
+     * picks its own, which is never written to the notebook, and another device's later change
+     * there no longer reaches it.
+     */
+    @Test
+    fun theLookIsThisPhonesOwnAndNeverInTheNotebook(): Unit = runBlocking {
+        notebook[SettingKeys.MODE] = JsonPrimitive("dark")
+        notebook[SettingKeys.THEME] = JsonPrimitive("slate")
+        scope.launch { settings.follow() }
+        pass("h1")
+        shows { it.mode == "dark" && it.themeId == "slate" }
+
+        assertTrue(settings.change(mapOf(SettingKeys.MODE to JsonPrimitive("light"), SettingKeys.NOTE_FONT_SIZE to JsonPrimitive(17))))
+        assertTrue(settings.change(mapOf(SettingKeys.THEME to null)))
+        assertTrue(written.isEmpty())
+        assertEquals(JsonPrimitive("dark"), notebook[SettingKeys.MODE])
+        assertEquals(JsonPrimitive("slate"), notebook[SettingKeys.THEME])
+        val shown = shows { it.mode == "light" && it.noteFontSize == 17 && !it.values.containsKey(SettingKeys.THEME) }.settings
+        assertEquals("light", shown.mode)
+
+        // Another device changes the mode and the theme in the notebook: the phone keeps its own.
+        notebook[SettingKeys.MODE] = JsonPrimitive("system")
+        notebook[SettingKeys.THEME] = JsonPrimitive("nord")
+        pass("h2")
+        // A later pass's own change (Copy Tags) shows, the look as the phone left it.
+        notebook[copyTags] = JsonPrimitive(false)
+        pass("h3")
+        val after = shows { it.values[copyTags] == JsonPrimitive(false) }.settings
+        assertEquals("light", after.mode)
+        assertFalse(after.values.containsKey(SettingKeys.THEME))
+        assertEquals(17, after.noteFontSize)
     }
 
     @Test
@@ -152,6 +186,8 @@ class JournalDeviceSettingsTest {
         val key = app.penmoss.engine.settings.ThemeEdits.key("custom-abc")
         assertTrue(settings.change(mapOf(key to copy, SettingKeys.THEME to JsonPrimitive("custom-abc"))))
         assertEquals(copy, notebook[key])
+        // The theme itself is in the notebook for every device; choosing it is this phone's (A1626).
+        assertFalse(notebook.containsKey(SettingKeys.THEME))
         assertEquals("custom-abc", catalogue.resolve(shows { it.themeId == "custom-abc" }.settings).id)
 
         val renamed = app.penmoss.engine.settings.ThemeEdits.withName(copy, "Night")
@@ -162,20 +198,21 @@ class JournalDeviceSettingsTest {
         val deletion = app.penmoss.engine.settings.ThemeEdits.deletion(renamed, catalogue)
         assertTrue(settings.change(mapOf(key to deletion, SettingKeys.THEME to deletion["base"])))
         assertEquals(deletion, notebook[key])
-        assertEquals(JsonPrimitive("nord"), notebook[SettingKeys.THEME])
-        assertTrue(shows { it.themeId == "nord" }.settings.customThemes.none { (it["id"] as? JsonPrimitive)?.content == "custom-abc" })
+        assertFalse(notebook.containsKey(SettingKeys.THEME))
+        // Shown once both have landed: a pass in between may briefly show the map from before.
+        shows { it.themeId == "nord" && it.customThemes.none { theme -> (theme["id"] as? JsonPrimitive)?.content == "custom-abc" } }
     }
 
     @Test
     fun aChangeTheNotebookCannotTakeIsNotKept(): Unit = runBlocking {
-        notebook[SettingKeys.MODE] = JsonPrimitive("dark")
+        notebook[copyTags] = JsonPrimitive(false)
         scope.launch { settings.follow() }
         pass("h1")
-        shows { it.mode == "dark" }
+        shows { it.values[copyTags] == JsonPrimitive(false) }
         refuse = true
-        assertFalse(settings.change(mapOf(SettingKeys.MODE to JsonPrimitive("light"))))
+        assertFalse(settings.change(mapOf(copyTags to JsonPrimitive(true))))
         // What the notebook holds shows again.
-        assertEquals("dark", device.settingsNow().settings.mode)
+        assertEquals(JsonPrimitive(false), device.settingsNow().settings.values[copyTags])
         assertTrue(written.isEmpty())
     }
 }

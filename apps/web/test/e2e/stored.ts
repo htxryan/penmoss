@@ -1,6 +1,8 @@
 import { mergedSettings, readWorkspace, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 import { createYjs14Replica } from '@penmoss/model/yjs14';
 import type { Page } from '@playwright/test';
+import { isLocalSetting } from '@penmoss/core/settings';
+import { LOCAL_SETTINGS_KEY } from '../../src/workspace/local-settings';
 
 // What this browser has stored on the device (IndexedDB, A7), for tests that must not leave a
 // page (close, reload, navigate) before a change is written: a page that goes keeps only what
@@ -99,15 +101,23 @@ export async function storedFolders(page: Page, notebookId?: string): Promise<st
 }
 
 /**
- * Setting `key` in the notebook this browser stored, as the Mac app reads it: the notebook's own
- * (`timeZone`, `template.*`) or this device's, which a git notebook keeps under `device` (A827),
- * with the Macs' own copy of the look and layout over it (`desktop`, the web's `SETTINGS_PLATFORM`, A1605).
+ * Setting `key` as the Mac app reads it: the look and layout from this device's own copy in
+ * `localStorage` when it has one (A1626), else the notebook this browser stored, the notebook's
+ * own (`timeZone`, `template.*`) or this device's, which a git notebook keeps under `device`
+ * (A827), with the Macs' own copy over it (`desktop`, the web's `SETTINGS_PLATFORM`, A1605).
  */
 export async function storedSetting(
   page: Page,
   key: string,
   notebookId?: string,
 ): Promise<unknown> {
+  if (isLocalSetting(key)) {
+    const local = await page.evaluate(
+      (name) => JSON.parse(localStorage.getItem(name) ?? '{}') as Record<string, unknown>,
+      LOCAL_SETTINGS_KEY,
+    );
+    if (key in local) return local[key] ?? undefined;
+  }
   return storedWorkspace(
     page,
     (replica) => mergedSettings(replica.doc, 'desktop')[key],

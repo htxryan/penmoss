@@ -1,6 +1,7 @@
 package app.penmoss.git
 
 import app.penmoss.data.SettingsStore
+import app.penmoss.engine.settings.LocalSettings
 import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -17,6 +18,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * settings), so every screen reads and changes them unchanged: [follow] lays the Journal's map
  * there whenever it changes (a pass after a pull brings the Mac's), and [change] writes to the
  * Journal notebook through its notes server, shown at once.
+ *
+ * The look and layout ([LocalSettings]: theme, fonts, Home's layout) stay on this phone (A1626):
+ * kept in its own database, laid over the Journal's map, and never written to a notebook.
  */
 class JournalDeviceSettings(
     /** The device graph's settings: where the screens read them. */
@@ -34,10 +38,13 @@ class JournalDeviceSettings(
      * clearing them, a pull bringing another device's change). Runs until cancelled.
      */
     suspend fun follow() {
-        combine(journal.observeDeviceMap(), device.observeSyncedSettings()) { map, shown -> map to shown }.collect { (map, shown) ->
+        combine(journal.observeDeviceMap(), device.observeLocalSettings(), device.observeSyncedSettings()) { map, local, shown ->
+            Triple(map, local, shown)
+        }.collect { (map, local, shown) ->
             // Not read from the notebook yet: nothing to show (the screens wait, as before a first sync).
             map ?: return@collect
-            if (writing.get() == 0 && map != shown) device.useDeviceSettings(map)
+            val wanted = shownOf(map, local)
+            if (writing.get() == 0 && wanted != shown) device.useDeviceSettings(wanted)
         }
     }
 
@@ -50,15 +57,32 @@ class JournalDeviceSettings(
         writing.incrementAndGet()
         try {
             device.showSettingChanges(changes)
-            val answer = runCatching { write(JsonObject(changes.mapValues { (_, value) -> value ?: JsonNull })) }
+            val (local, synced) = changes.entries.partition { LocalSettings.isLocal(it.key) }
+            if (local.isNotEmpty()) device.keepLocally(local.associate { it.key to it.value })
+            if (synced.isEmpty()) return true
+            val answer = runCatching { write(JsonObject(synced.associate { (key, value) -> key to (value ?: JsonNull) })) }
             answer.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException) throw it }
             answer.getOrNull()?.let { journal.putDeviceMap(it) }
             return answer.isSuccess
         } finally {
             writing.decrementAndGet()
             // What the notebook holds now, the change in it or not.
-            journal.deviceMapNow()?.let { map -> if (map != device.syncedSettingsNow()) device.useDeviceSettings(map) }
+            journal.deviceMapNow()?.let { map ->
+                val wanted = shownOf(map, device.localSettingsNow())
+                if (wanted != device.syncedSettingsNow()) device.useDeviceSettings(wanted)
+            }
         }
+    }
+
+    /** The Journal's [map] with this phone's own look and layout over it: a value replaces, a JsonNull removes. */
+    private fun shownOf(map: JsonObject, local: JsonObject): JsonObject {
+        if (local.isEmpty()) return map
+        val shown = map.toMutableMap()
+        for ((key, value) in local) {
+            if (!LocalSettings.isLocal(key)) continue
+            if (value is JsonNull) shown.remove(key) else shown[key] = value
+        }
+        return JsonObject(shown)
     }
 }
 

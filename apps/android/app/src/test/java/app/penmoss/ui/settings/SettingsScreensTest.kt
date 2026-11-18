@@ -208,16 +208,16 @@ class SettingsScreensTest {
 
     /** PEN-156, A1605: the phone marks Appearance's Theme group, kept for the phones apart from the Macs. */
     @Test
-    fun theThemeCarriesThePhoneMarkAndSaysItIsKeptForPhones() {
+    fun theThemeCarriesTheLaptopMarkAndSaysItIsKeptOnThisPhone() {
         compose.setContent {
             PenmossTheme {
                 AppearanceScreen("system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52, enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {})
             }
         }
         // Unmerged, as BetweenNotebooksScreenTest finds the laptop: the mark is inside its row's semantics.
-        compose.onAllNodesWithTag("platformOnly", useUnmergedTree = true).onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.PLATFORM_GROUP_TIP)
-        // The laptop (this phone alone, A1559) marks nothing here.
-        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).assertCountEquals(0)
+        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).onFirst().assertContentDescriptionEquals(app.penmoss.ui.settings.DEVICE_ONLY_GROUP_TIP)
+        // The phone mark (the phones apart from the Macs, A1605) is the keyboard shortcuts' alone.
+        compose.onAllNodesWithTag("platformOnly", useUnmergedTree = true).assertCountEquals(0)
     }
 
     /** A1582, A1619: on the Preview tab, the interface's text at its real size, labelled, and the note's font and size. */

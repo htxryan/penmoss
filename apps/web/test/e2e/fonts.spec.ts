@@ -3,14 +3,14 @@ import { expect, seeded, test, type GitHost, type Page } from './fixtures';
 import { NEW_NOTE } from './keys';
 import { storedSetting } from './stored';
 import { readRemote } from './support/remote';
-import { pushedUntil } from './support/sync';
+import { pushed } from './support/sync';
 import { ULID, body, collectErrors } from './support/app';
 
 // T51 item 16 (A944): Settings → Appearance → Text. The Interface Font, the Note Font and the
 // Note Font Size are synced settings laid over the theme's fonts: the interface takes the
 // first, a note's title, headings and text the second and third, code keeps the theme's mono
-// font, and the page starts in them after a reload. On a git notebook (T59) they are the
-// notebook's device settings (A827), stored here and pushed to its remote; Reset clears them.
+// font, and the page starts in them after a reload. They are this device's own (A1626), kept
+// here and never in the notebook or its remote; Reset clears them.
 
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
@@ -41,25 +41,15 @@ async function pushedFonts(host: GitHost, remote: string) {
   return Object.fromEntries(FONT_KEYS.map((key) => [key, read.setting(key)]));
 }
 
-async function resetFonts(page: Page, host: GitHost, remote: string) {
+async function resetFonts(page: Page) {
   const fonts = await openFonts(page);
   await fonts.getByLabel('Interface Font', { exact: true }).selectOption('theme');
   await fonts.getByLabel('Note Font', { exact: true }).selectOption('theme');
   await fonts.getByRole('button', { name: 'Reset' }).click();
   await expect(fonts.getByTestId('note-size-value')).toHaveText('16 px');
-  // Stored here, and gone from the remote too once pushed.
   for (const key of FONT_KEYS) {
     await expect.poll(() => storedSetting(page, key), { timeout: 10_000 }).toBeUndefined();
   }
-  // Pushed with Sync Now, from the notes page (A1013).
-  await page.goto('/');
-  await pushedUntil(page, async () =>
-    expect(await pushedFonts(host, remote)).toEqual({
-      'font.interface': undefined,
-      'font.note': undefined,
-      'font.noteSize': undefined,
-    }),
-  );
 }
 
 test('the interface font, the note font and the note size apply over the theme’s', async ({
@@ -129,14 +119,15 @@ test('the interface font, the note font and the note size apply over the theme�
   await expect.poll(() => variable(page, '--pm-note-size')).toBe('20px');
   expect(await variable(page, '--pm-font')).toBe(`'Avenir Next', ${FONT_PRESET_STACKS.system}`);
 
-  // The notebook keeps them, and pushes them to its remote.
+  // This Mac keeps them; a sync pushes the note, never them (A1626).
   expect(await storedSetting(page, 'font.note')).toBe('mono');
-  await pushedUntil(page, async () =>
-    expect(await pushedFonts(host, remote)).toMatchObject({
-      'font.note': 'mono',
-      'font.noteSize': 20,
-    }),
-  );
-  await resetFonts(page, host, remote);
+  await page.goto('/');
+  await pushed(page);
+  expect(await pushedFonts(host, remote)).toEqual({
+    'font.interface': undefined,
+    'font.note': undefined,
+    'font.noteSize': undefined,
+  });
+  await resetFonts(page);
   expect(errors).toEqual([]);
 });

@@ -42,5 +42,49 @@
     "capture.destination": false,
     "timeZone": false,
     "template.daily": false
+  },
+  "local": {
+    "keys": [
+      "theme.id",
+      "theme.mode",
+      "font.interface",
+      "font.note",
+      "font.noteSize",
+      "tooltip.delay",
+      "home.dadJokes",
+      "sidebar.tags",
+      "sidebar.today",
+      "sidebar.thisWeek",
+      "sidebar.graph",
+      "sidebar.commands",
+      "sidebar.journal",
+      "sidebar.capture",
+      "sidebar.sectionOrder",
+      "sidebar.hiddenSections",
+      "sidebar.recentCount",
+      "quickAccess.showNotebook",
+      "quickAccess.inDrawer",
+      "note.fullWidth",
+      "metadata.underTitle",
+      "metadata.statusBar"
+    ],
+    "prefixes": ["noteBar."],
+    "samples": {
+      "theme.id": true,
+      "theme.mode": true,
+      "theme.custom.custom-ink": false,
+      "font.note": true,
+      "sidebar.graph": true,
+      "sidebar.hiddenSections": true,
+      "quickAccess.showNotebook": true,
+      "quickAccess.inDrawer": true,
+      "quickAccess.notes": false,
+      "note.fullWidth": true,
+      "noteBar.delete": true,
+      "keys.app.search": false,
+      "symbols.list": false,
+      "capture.destination": false,
+      "timeZone": false
+    }
   }
 }

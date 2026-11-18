@@ -12,6 +12,7 @@ import {
   type Page,
 } from './fixtures';
 import { BUILT_IN_THEMES, NORD, PENMOSS, themeVariables } from '@penmoss/ui/theme';
+import { storedSetting } from './stored';
 import { carried, pushed } from './support/sync';
 import { ULID, body, collectErrors } from './support/app';
 
@@ -266,17 +267,19 @@ test.describe.serial('T28: a custom theme', () => {
     test.setTimeout(120_000);
     // Another Mac on the notebook's remote: the theme reaches it once pushed and pulled, with
     // Sync Now on both from the notes page (A1013), not after the push delay and the minute's pull.
+    // It is there to choose; which theme each Mac shows is its own (A1626).
     const other = await anotherMac(browser, { remote });
     const device = other.page;
     try {
       await page.goto('/');
       await device.goto('/');
-      await carried(page, device, () =>
-        expect(device.locator('html')).toHaveAttribute('data-theme', customId),
+      await carried(page, device, async () =>
+        expect(await storedSetting(device, `theme.custom.${customId}`)).toBeTruthy(),
       );
       await device.goto('/settings/appearance');
+      await expect(device.locator('html')).not.toHaveAttribute('data-theme', customId);
+      await device.locator(`.theme-card[data-theme-id="${customId}"]`).click();
       await expect(device.locator('html')).toHaveAttribute('data-theme', customId);
-      await expect(device.locator('html')).toHaveAttribute('data-mode', 'light');
       await expect
         .poll(() =>
           device.evaluate(() => document.documentElement.style.getPropertyValue('--pm-accent')),

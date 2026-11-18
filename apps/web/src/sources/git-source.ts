@@ -32,6 +32,7 @@ import {
   type GitSyncStatus,
 } from './engine-host';
 import { IpcGitTransport } from './ipc-transport';
+import { localSettings } from '../workspace/local-settings';
 
 /** The notes store of a git notebook (A860). */
 export const gitStoreName = (notebookId: string) => `penmoss-git-${notebookId}`;
@@ -311,6 +312,8 @@ export class GitSource {
     this.workspace = new Workspace({
       openStore: () => notes.openLocal(),
       notices: deps.notices,
+      // This device's look and layout, the same whichever notebook is primary (A1626).
+      localSettings,
       gitNotebook: { id: this.id, ...(info.salt !== undefined ? { salt: info.salt } : {}) },
     });
     this.offs.push(notes.watchKeeper(this.workspace.keeper));

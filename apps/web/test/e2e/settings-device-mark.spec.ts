@@ -4,8 +4,7 @@
 import { expect, test } from './fixtures';
 import { collectErrors } from './support/app';
 
-const SENTENCE =
-  'Unlike other settings, this setting is kept only on this Mac and isn’t synced through your primary notebook.';
+const SENTENCE = 'This setting is kept only on this Mac and isn’t synced to your other devices.';
 
 test('the laptop mark says why on hover and on focus, and is named by it', async ({ page }) => {
   const errors = collectErrors(page);

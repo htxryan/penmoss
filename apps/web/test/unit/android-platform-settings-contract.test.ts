@@ -1,5 +1,5 @@
 /**
- * Per-platform settings on Android (PEN-156, A1605): apps/android/contract/platform-settings-v1.json
+ * Per-platform and local settings on Android (PEN-156, A1605, A1626): apps/android/contract/platform-settings-v1.json
  * is `@penmoss/core/settings`' list of the settings each platform keeps its own copy of, so the
  * Kotlin `PlatformSettings`, which marks them with the phone in Settings, is held to the keys the
  * phone's engine page actually keeps apart. The Kotlin `PlatformSettingsTest` reads the same file.
@@ -10,7 +10,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
+  isLocalSetting,
   isPlatformSetting,
+  LOCAL_SETTING_KEYS,
+  LOCAL_SETTING_PREFIXES,
   PLATFORM_SETTING_KEYS,
   PLATFORM_SETTING_PREFIXES,
   SETTINGS_PLATFORMS,
@@ -44,6 +47,25 @@ const SAMPLES = [
   'template.daily',
 ];
 
+/** Keys the phone reads, each with whether it stays on the device (A1626). */
+const LOCAL_SAMPLES = [
+  'theme.id',
+  'theme.mode',
+  'theme.custom.custom-ink',
+  'font.note',
+  'sidebar.graph',
+  'sidebar.hiddenSections',
+  'quickAccess.showNotebook',
+  'quickAccess.inDrawer',
+  'quickAccess.notes',
+  'note.fullWidth',
+  'noteBar.delete',
+  'keys.app.search',
+  'symbols.list',
+  'capture.destination',
+  'timeZone',
+];
+
 describe('the per-platform settings contract (A1605)', () => {
   it('is core’s list, as the phone reads it', () => {
     const now = {
@@ -53,6 +75,12 @@ describe('the per-platform settings contract (A1605)', () => {
       keys: [...PLATFORM_SETTING_KEYS],
       prefixes: [...PLATFORM_SETTING_PREFIXES],
       samples: Object.fromEntries(SAMPLES.map((key) => [key, isPlatformSetting(key)])),
+      // The look and layout each device keeps alone (A1626): the Kotlin `LocalSettings`.
+      local: {
+        keys: [...LOCAL_SETTING_KEYS],
+        prefixes: [...LOCAL_SETTING_PREFIXES],
+        samples: Object.fromEntries(LOCAL_SAMPLES.map((key) => [key, isLocalSetting(key)])),
+      },
     };
     if (process.env['PENMOSS_WRITE_CONTRACTS'])
       writeFileSync(FILE, `${JSON.stringify(now, null, 2)}\n`);

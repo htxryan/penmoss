@@ -7,7 +7,7 @@
  */
 import { ulid } from '@penmoss/core/ids';
 import { journalFolderId, type PeriodKind } from '@penmoss/core/periodic';
-import type { SettingsPlatform } from '@penmoss/core/settings';
+import { isLocalSetting, type SettingsPlatform } from '@penmoss/core/settings';
 import { type SortMode } from '@penmoss/core/workspace';
 import type { ReplicaStore } from '@penmoss/model/record';
 import { ReplicaKeeper } from '../store/keeper';
@@ -37,6 +37,7 @@ import {
 } from '@penmoss/model/workspace';
 import { isPurged, markPurged, unmarkPurged } from '@penmoss/git-notebook';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
+import { LocalSettings } from './local-settings';
 import type { MovePlan } from './model';
 
 /** The web and the Mac app share the Macs' copy of the look and layout (PEN-156, A1605). */
@@ -64,6 +65,11 @@ export interface WorkspaceOptions {
    * next one that does (#116, A676).
    */
   readonly notices?: boolean;
+  /**
+   * Where this device keeps its own look and layout (A1626): the app's one `localStorage` copy;
+   * a test's own, in memory, when not given.
+   */
+  readonly localSettings?: LocalSettings;
 }
 
 export interface WorkspaceState {
@@ -85,6 +91,8 @@ export class Workspace {
   private state: WorkspaceState;
   private loading: Promise<void> | null = null;
   private stopped: (() => void) | null = null;
+  private readonly local: LocalSettings;
+  private readonly unfollowLocal: () => void;
   private readonly store: ReplicaStore & Required<Pick<ReplicaStore, 'update'>>;
   private readonly notices: boolean;
   /** The git notebook's id (A860). */
@@ -96,6 +104,8 @@ export class Workspace {
     this.gitNotebookId = options.gitNotebook.id;
     this.gitSalt = options.gitNotebook.salt ?? options.gitNotebook.id;
     this.notices = options.notices ?? true;
+    this.local = options.localSettings ?? new LocalSettings(null);
+    this.unfollowLocal = this.local.subscribe(() => this.update({}));
     const { openStore } = options;
     let store: Promise<ReplicaStore> | null = null;
     // The store once open, for the page-hide write, which cannot wait for a promise (A626).
@@ -199,6 +209,7 @@ export class Workspace {
   stop(): void {
     this.stopped?.();
     this.stopped = null;
+    this.unfollowLocal();
   }
 
   subscribe = (listener: () => void): (() => void) => {
@@ -374,18 +385,23 @@ export class Workspace {
   }
 
   /**
-   * The settings: the device's, with the notebook's own over them (A827), and the Macs' own copy
-   * of the look and layout over the shared one (PEN-156, A1605).
+   * The settings: the device's, with the notebook's own over them (A827), the Macs' own copy of
+   * the look and layout over the shared one (PEN-156, A1605), and this device's own over that
+   * (A1626).
    */
   settings(): Record<string, unknown> {
-    return mergedSettings(this.doc, SETTINGS_PLATFORM);
+    return this.local.over(mergedSettings(this.doc, SETTINGS_PLATFORM));
   }
 
   /**
    * Sets one setting (undefined removes it), straight in: the engine commits it (A827). The look
-   * and layout go to the Macs' own copy, leaving the phones' and the shared one alone (A1605).
+   * and layout stay on this device and never reach the notebook (A1626).
    */
   setSetting(key: string, value: unknown): void {
+    if (isLocalSetting(key)) {
+      this.local.set(key, value);
+      return;
+    }
     writeSetting(this.doc, key, value, null, SETTINGS_PLATFORM);
   }
 
