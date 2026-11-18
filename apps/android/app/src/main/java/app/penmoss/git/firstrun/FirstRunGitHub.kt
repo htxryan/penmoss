@@ -62,9 +62,6 @@ internal fun GitHubAccess(
     var check by remember { mutableStateOf<Check>(Check.Checking) }
     var asked by remember { mutableIntStateOf(0) }
     var typing by remember { mutableStateOf(false) }
-    var token by remember { mutableStateOf("") }
-    var tokenBusy by remember { mutableStateOf(false) }
-    var tokenProblem by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val idle = remember { MutableStateFlow<SignInState>(SignInState.Idle) }
     val device by (deps.signIn?.state ?: idle).collectAsState()
@@ -113,47 +110,34 @@ internal fun GitHubAccess(
     }
     // In the screen, not the footer: a phone's footer holds Back and one button (A1404 on Android).
     val urlInstead = @Composable { Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl) }
+    // Settings → GitHub's words for the same page.
+    val tokenLink = @Composable { Link(if (deps.accounts().isEmpty()) "Use a Token Instead" else "Add with a Token", "first-run-use-token", "key-round") { typing = true } }
     val signInButton = @Composable { words: String ->
         if (deps.signIn?.available == true) Primary(words, "first-run-signin", "log-in", onClick = ::signIn)
         else Primary("Try Again", "first-run-retry", "refresh-cw", onClick = ::again)
     }
 
     if (typing) {
-        Frame(
-            "github-token",
-            "Use a Token",
-            step = 2,
-            back = { typing = false },
-            actions = {
-                Primary(if (tokenBusy) "Checking…" else "Continue", "first-run-token-continue", "arrow-right", enabled = token.isNotBlank(), busy = tokenBusy) {
-                    tokenBusy = true
-                    tokenProblem = null
-                    scope.launch {
-                        val typed = token.trim()
-                        val (hub, error) = readHub(deps.browse, typed, null)
-                        tokenBusy = false
-                        if (hub != null) {
-                            deps.saveToken(typed, hub.login)
-                            onReady(hub)
-                        } else {
-                            tokenProblem = error!!.message
+        // Settings → GitHub's token page, in this frame (one page, not two; Ryan, 18 Nov 2026).
+        Frame("github-token", app.penmoss.feedback.githubTokenTitle(remember { deps.accounts() }), step = 2, back = { typing = false }) {
+            app.penmoss.feedback.GitHubTokenForm(
+                deps.accounts,
+                deps.feedbackRepo,
+                onSave = { typed ->
+                    deps.addToken?.invoke(typed) ?: run {
+                        val (hub, error) = readHub(deps.browse, typed.trim(), null)
+                        if (hub == null) app.penmoss.feedback.GitHubTokenModel.Saved(false, error!!.message)
+                        else {
+                            deps.saveToken(typed.trim(), hub.login)
+                            app.penmoss.feedback.GitHubTokenModel.Saved(true, "Added.", hub.login)
                         }
                     }
-                }
-            },
-        ) {
-            Lead("A personal access token from GitHub. Penmoss lists your repositories with it, and each notebook you add here syncs with it. It is kept with the Android Keystore.")
-            OutlinedTextField(
-                token,
-                { token = it; tokenProblem = null },
-                Modifier.fillMaxWidth().testTag("first-run-token"),
-                label = { Text("Personal Access Token") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                },
+                onAdded = { saved ->
+                    typing = false
+                    withAccount(app.penmoss.feedback.GitHubAccount(saved.login, primary = false))
+                },
             )
-            tokenProblem?.let { Problem(it, "first-run-token-problem") }
-            Lead("A classic token with the repo scope lists every repository; a fine-grained one, only those it names (with Contents read and write, and Administration to make one).", small = true)
         }
         return
     }
@@ -233,7 +217,7 @@ internal fun GitHubAccess(
                     back = back,
                     actions = { signInButton("Sign In Again") },
                     below = {
-                        Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
+                        tokenLink()
                         urlInstead()
                     },
                 ) {
@@ -258,7 +242,7 @@ internal fun GitHubAccess(
             back = if (adding) ({ adding = false; again() }) else back,
             actions = { signInButton("Sign In with GitHub") },
             below = {
-                Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
+                tokenLink()
                 urlInstead()
             },
         ) {
@@ -284,7 +268,7 @@ internal fun GitHubAccess(
                     actions = { signInButton("Sign In with GitHub") },
                     below = {
                         Link("Try Again", "first-run-retry", "refresh-cw", ::again)
-                        Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
+                        tokenLink()
                         urlInstead()
                     },
                 ) {

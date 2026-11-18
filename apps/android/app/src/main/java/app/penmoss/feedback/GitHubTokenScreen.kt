@@ -1,7 +1,6 @@
 package app.penmoss.feedback
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,7 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.NotebookGraph
 import app.penmoss.ui.common.Button
-import app.penmoss.ui.settings.Help
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.settings.SectionScreen
 import kotlinx.coroutines.launch
 
@@ -81,82 +80,86 @@ class GitHubTokenModel(
 fun GitHubTokenRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val store = graph.githubToken
     val model = remember(store) { GitHubTokenModel(store, graph.githubFeedback::checkToken, graph.githubFeedback.repo) }
-    GitHubTokenScreen(
-        accounts = { store.accounts() },
-        repo = graph.githubFeedback.repo,
-        onSave = model::save,
-        onBack = onBack,
-    )
+    SectionScreen(githubTokenTitle(remember { store.accounts() }), onBack) {
+        GitHubTokenForm(store::accounts, graph.githubFeedback.repo, model::save, Modifier.padding(horizontal = 16.dp))
+    }
 }
 
+/** The token page's title, the same in Settings → GitHub and in Add Notebook. */
+fun githubTokenTitle(accounts: List<GitHubAccount>) = if (accounts.isEmpty()) "Use a Token" else "Add Account with a Token"
+
 /**
- * Adds a GitHub account by its token (Ryan's Android feedback, 18 Nov 2026): it never replaces
- * another account, so it shows no saved token and no Remove; each account's own ⋮ signs it out.
+ * The token page (Ryan's Android feedback, 18 Nov 2026: one page, not two): Settings → GitHub's
+ * Use a Token Instead… and Add Notebook's both show this, in their own frame. A token is added as
+ * the account it belongs to and never replaces another; each account's ⋮ signs it out. [onAdded]
+ * takes over once a token is kept (Add Notebook reads its repositories); without it, the page
+ * says what Save came to.
  */
 @Composable
-fun GitHubTokenScreen(
+fun GitHubTokenForm(
     accounts: () -> List<GitHubAccount>,
-    repo: String,
+    /** Send Feedback's repository: its scopes are named when this token would file feedback. */
+    feedbackRepo: String?,
     onSave: suspend (String) -> GitHubTokenModel.Saved,
-    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onAdded: ((GitHubTokenModel.Saved) -> Unit)? = null,
 ) {
     var token by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<GitHubTokenModel.Saved?>(null) }
     var here by remember { mutableStateOf(accounts()) }
     val scope = rememberCoroutineScope()
-    val adding = here.isNotEmpty()
-    SectionScreen(if (adding) "Add Account with a Token" else "GitHub Token", onBack) {
-        Help(
-            if (adding) {
-                "A personal access token of your own, instead of signing in. It is added as the GitHub account it belongs to, " +
-                    "beside ${here.joinToString { it.login?.let { login -> "@$login" } ?: "your token" }}; " +
-                    "a token for an account already here renews that one. It stays on this phone, encrypted by the Android Keystore."
-            } else {
-                "Instead of signing in, give Penmoss a token of your own. Send Feedback files the issue in $repo with it: a classic token with the public_repo scope or, as a collaborator, " +
-                    "a fine-grained token for $repo with Issues and Contents (read and write). It stays on this phone, encrypted by the Android Keystore."
-            },
+    val beside = here.joinToString(" and ") { it.login?.let { login -> "@$login" } ?: "your token" }
+    androidx.compose.foundation.layout.Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            "A personal access token from GitHub, instead of signing in. " +
+                (if (here.isEmpty()) "Penmoss lists your repositories with it, and the notebooks you add sync with it. "
+                else "It is added as the GitHub account it belongs to, beside $beside; a token for an account already here renews that one. ") +
+                "It stays on this phone, encrypted by the Android Keystore.",
+            Modifier.testTag("githubTokenLead"),
+            style = MaterialTheme.roles.body,
         )
-        if (adding) {
-            Text(
-                "To list a notebook’s repositories, a classic token needs the repo scope; a fine-grained one, Contents (read and write) on those repositories.",
-                Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("githubTokenScopes"),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
         OutlinedTextField(
             token,
-            { token = it.trim() },
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("githubTokenField"),
-            label = { Text("Token") },
+            { token = it.trim(); message = null },
+            Modifier.fillMaxWidth().testTag("githubTokenField"),
+            label = { Text("Personal Access Token") },
             singleLine = true,
             enabled = !busy,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         )
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = {
-                    busy = true
-                    message = "Checking it with GitHub…"
-                    scope.launch {
-                        val done = onSave(token)
-                        if (done.kept) token = ""
-                        message = done.message
+        Text(
+            "For notebooks, a classic token with the repo scope lists every repository; a fine-grained one, only those it names, with Contents (read and write), and Administration to make one." +
+                if (here.isEmpty() && feedbackRepo != null) " Send Feedback files issues in $feedbackRepo with it: public_repo, or Issues (read and write) there." else "",
+            Modifier.testTag("githubTokenScopes"),
+            style = MaterialTheme.roles.help,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(
+            onClick = {
+                busy = true
+                message = null
+                scope.launch {
+                    val done = onSave(token)
+                    busy = false
+                    if (done.kept) token = ""
+                    if (done.kept && onAdded != null) onAdded(done)
+                    else {
+                        message = done
                         here = accounts()
-                        busy = false
                     }
-                },
-                enabled = token.isNotEmpty() && !busy,
-                modifier = Modifier.testTag("githubTokenSave"),
-            ) { Labelled(if (adding) "user-plus" else "save", if (busy) "Checking…" else if (adding) "Add Account" else "Save") }
-        }
+                }
+            },
+            enabled = token.isNotEmpty() && !busy,
+            modifier = Modifier.testTag("githubTokenSave"),
+        ) { Labelled("user-plus", if (busy) "Checking…" else "Add Account") }
         message?.let {
             Text(
-                it,
-                Modifier.padding(horizontal = 16.dp, vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }.testTag("githubTokenMessage"),
-                style = MaterialTheme.typography.bodyMedium,
+                it.message,
+                Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("githubTokenMessage"),
+                style = MaterialTheme.roles.body,
+                color = if (it.kept) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
             )
         }
     }

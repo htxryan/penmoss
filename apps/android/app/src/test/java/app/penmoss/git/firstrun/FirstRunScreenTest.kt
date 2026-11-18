@@ -3,6 +3,7 @@ package app.penmoss.git.firstrun
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -80,6 +81,7 @@ class FirstRunScreenTest {
         token: String?,
         accounts: (() -> List<app.penmoss.feedback.GitHubAccount>)? = null,
         tokens: Map<String?, String> = emptyMap(),
+        addToken: (suspend (String) -> app.penmoss.feedback.GitHubTokenModel.Saved)? = null,
         answer: (Place, String?) -> AddResult,
     ) = FirstRunDeps(
         browse = github,
@@ -104,6 +106,8 @@ class FirstRunScreenTest {
                 androidx.compose.material3.Text("Settings → GitHub")
             }
         },
+        addToken = addToken,
+        feedbackRepo = "htxryan/penmoss",
     )
     private var pages = 0
 
@@ -277,6 +281,53 @@ class FirstRunScreenTest {
         compose.onNodeWithText("Pick GitHub Account").assertDoesNotExist()
         tap("first-run-account-switcher")
         waitFor("first-run-switch-ryan-work")
+    }
+
+    /** Add with a Token is Settings → GitHub's token page (one page, not two; Ryan, 18 Nov 2026), and lists the account it adds. */
+    @Test
+    fun addWithATokenIsSettingsTokenPageAndListsTheAccountItAdds() {
+        var accounts = listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true))
+        val saved = mutableListOf<String>()
+        val addToken: suspend (String) -> app.penmoss.feedback.GitHubTokenModel.Saved = { typed ->
+            saved += typed
+            accounts = accounts + app.penmoss.feedback.GitHubAccount("ryan-work", primary = false)
+            app.penmoss.feedback.GitHubTokenModel.Saved(true, "Added @ryan-work.", "ryan-work")
+        }
+        show(deps("tok", { accounts }, mapOf("ryan" to "tok", "ryan-work" to "tok-work"), addToken) { _, _ -> AddResult.NeedsName }, firstRun = false)
+        tap("first-run-continue")
+        tap("first-run-way-existing")
+        tap("first-run-continue")
+        waitFor("first-run-repo-ryan/notes")
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-add")
+        tap("first-run-switch-add")
+        waitFor("first-run-use-token")
+        compose.onNodeWithText("Add with a Token").assertExists()
+        tap("first-run-use-token")
+        waitFor("githubTokenField")
+        compose.onNodeWithText("Add Account with a Token").assertExists()
+        compose.onNodeWithTag("githubTokenLead").assert(hasText("beside @ryan;", substring = true))
+        compose.onNodeWithTag("githubTokenField").performTextInput("tok-work")
+        tap("githubTokenSave")
+        waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan-work")
+        assertEquals(listOf("tok-work"), saved)
+    }
+
+    /** The token page says why a token was refused, and keeps it to fix. */
+    @Test
+    fun theTokenPageSaysWhyATokenWasRefused() {
+        compose.setContent {
+            PenmossTheme(dark = true) {
+                app.penmoss.feedback.GitHubTokenForm({ emptyList() }, "htxryan/penmoss", { app.penmoss.feedback.GitHubTokenModel.Saved(false, "GitHub refused the token. It was not saved.") })
+            }
+        }
+        compose.onNodeWithTag("githubTokenScopes").assert(hasText("Send Feedback files issues in htxryan/penmoss", substring = true))
+        compose.onNodeWithTag("githubTokenField").performTextInput("ghp_bad")
+        tap("githubTokenSave")
+        waitFor("githubTokenMessage")
+        compose.onNodeWithTag("githubTokenMessage").assertTextEquals("GitHub refused the token. It was not saved.")
+        compose.onNodeWithTag("githubTokenSave").assertIsEnabled()
     }
 
     @Test
