@@ -234,7 +234,7 @@ function NotebookSteps({
   const go = (next: Screen) => setStack((now) => [...now, next]);
   const replace = (next: Screen) => setStack((now) => [...now.slice(0, -1), next]);
   const back = () => setStack((now) => (now.length > 1 ? now.slice(0, -1) : now));
-  /** GitHub as the account Pick GitHub Account chose (A1617), else as main finds it. */
+  /** GitHub as the account the switcher shows (A1618), else as main finds it. */
   const account = hub?.account;
   const browse = useMemo(() => asAccount(github, account), [github, account]);
   /** A new account's repositories: their folders are read afresh. */
@@ -259,7 +259,7 @@ function NotebookSteps({
       hub={shown}
       {...(then === 'create' ? { line: 'Making the repository in this account' } : {})}
       onPick={(picked) => githubAgain(then, { keep: { account: picked } })}
-      onAdd={() => githubAgain(then, { add: true })}
+      onAdd={() => githubAgain(then, { keep: { account: shown.account }, add: true })}
       onManage={() => go({ at: 'accounts', then })}
       onRefresh={() => githubAgain(then, { keep: { account: shown.account } })}
     />
@@ -516,11 +516,12 @@ function NotebookSteps({
       );
       break;
     case 'accounts': {
-      // Back from the accounts: GitHub's step again, which asks which with two or more (A1617).
+      // Back from the accounts: the same account's repositories, or the first's if it went (A1618).
       const leave = () => {
+        const was = hub ? { keep: { account: hub.account } } : {};
         forgetReads();
         setHub(null);
-        setStack((now) => [...now.slice(0, -2), { at: 'github', then: screen.then }]);
+        setStack((now) => [...now.slice(0, -2), { at: 'github', then: screen.then, ...was }]);
       };
       body = (
         <Frame name="accounts" step={2} title="GitHub Accounts" back={leave}>

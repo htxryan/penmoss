@@ -57,7 +57,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Pictures From the Web", "Storage", SettingsRoutes.STORAGE, "Kept to show again; Clear empties them", "cache", "images"),
     entry("Load Pictures From the Web", "Storage", SettingsRoutes.STORAGE, "Always, On Wi-Fi or Never", "privacy", "images", "mobile data", "wifi"),
     entry("GitHub", "GitHub", SettingsRoutes.GITHUB, "Your GitHub account on this phone", "account", "sign in", "sign out", "login"),
-    entry("GitHub Token", "GitHub", SettingsRoutes.GITHUB, "Use a token instead of signing in", "token", "personal access token", "pat"),
+    entry("GitHub Token", "GitHub", SettingsRoutes.GITHUB, "Use a token instead of signing in, or add an account with one", "token", "personal access token", "pat"),
     entry("Send Feedback", "GitHub", SettingsRoutes.GITHUB, "Files an issue with your GitHub account", "bug", "report", "feature request", "outbox"),
     entry("What’s New", "What’s New", SettingsRoutes.WHATS_NEW, "This version and earlier ones", "version", "release notes", "changelog", "update"),
     entry("Open Source Notices", "What’s New", SettingsRoutes.WHATS_NEW, "The licences of the open source software Penmoss includes", "licences", "licenses", "third-party notices", "credits", "about", "lucide"),

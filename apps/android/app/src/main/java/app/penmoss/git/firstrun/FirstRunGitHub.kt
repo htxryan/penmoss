@@ -37,8 +37,6 @@ private sealed interface Check {
     data object Checking : Check
     data object NoSignIn : Check
 
-    /** More than one account (or Switch Account): which one lists the repositories (A1616). */
-    data class Choose(val accounts: List<app.penmoss.feedback.GitHubAccount>) : Check
     data class Failed(val error: BrowseError) : Check
 }
 
@@ -47,8 +45,8 @@ private sealed interface Check {
  * (Settings → GitHub) it reads the repositories and goes straight on. With none, Sign In with
  * GitHub (the device code, PEN-146) or a personal access token typed here; refused, offline or
  * rate-limited, it says so with Try Again, and Paste a URL Instead goes on without GitHub. With
- * more than one account on the phone, or [choose] (back from Use a Different GitHub Account), it first asks which,
- * with Add Another Account, which signs in beside the others (A1616).
+ * several accounts it never asks which: it lists [account]'s, else the first account's, and the
+ * switcher at the top of the list changes it (A1618). Add Another Account signs in beside the others.
  */
 @Composable
 internal fun GitHubAccess(
@@ -56,8 +54,7 @@ internal fun GitHubAccess(
     onReady: (Hub) -> Unit,
     onUrl: () -> Unit,
     back: () -> Unit,
-    choose: Boolean = false,
-    /** Picked in the switcher (A1616): read at once. */
+    /** Picked in the switcher (A1618): read at once. Back from Add Another Account comes back to it. */
     account: app.penmoss.feedback.GitHubAccount? = null,
     /** Add Another Account from the switcher: the sign-in at once. */
     add: Boolean = false,
@@ -80,17 +77,15 @@ internal fun GitHubAccess(
 
     LaunchedEffect(Unit) { deps.signIn?.reset() }
     LaunchedEffect(asked) {
-        // Add Another Account (the switcher's, or the chooser's): nothing is read until it ends.
+        // Add Another Account (the switcher's): nothing is read until it ends.
         if (adding) {
             check = Check.NoSignIn
             return@LaunchedEffect
         }
         val accounts = deps.accounts()
-        val account = picked ?: accounts.singleOrNull()?.takeIf { !choose }
-        if (account == null && accounts.isNotEmpty() && !adding) {
-            check = Check.Choose(accounts)
-            return@LaunchedEffect
-        }
+        // Never Pick GitHub Account (Ryan, 18 Nov 2026; A1618): the one picked, else the first.
+        val account = picked?.takeIf { now -> accounts.any { it.login == now.login } }
+            ?: accounts.firstOrNull { it.primary } ?: accounts.firstOrNull()
         val saved = account?.let { deps.tokenFor(it.login) }
         if (saved == null) {
             check = Check.NoSignIn
@@ -105,9 +100,9 @@ internal fun GitHubAccess(
         deps.signIn?.reset()
         asked++
     }
-    fun withAccount(account: app.penmoss.feedback.GitHubAccount?) {
+    fun withAccount(account: app.penmoss.feedback.GitHubAccount) {
         picked = account
-        adding = account == null
+        adding = false
         again()
     }
     fun signIn() {
@@ -254,51 +249,21 @@ internal fun GitHubAccess(
         Check.Checking -> Frame("github", "Checking GitHub", step = 2, back = back) {
             Working("Reading your repositories…")
         }
-        is Check.Choose -> {
-            val add = "add"
-            fun keyOf(account: app.penmoss.feedback.GitHubAccount) = "account:${account.login.orEmpty()}"
-            var choice by remember(now) { mutableStateOf(keyOf(now.accounts.first())) }
-            Frame(
-                "github-account",
-                "Pick GitHub Account",
-                step = 2,
-                back = back,
-                actions = {
-                    Primary("Continue", "first-run-continue", "arrow-right") {
-                        withAccount(now.accounts.firstOrNull { keyOf(it) == choice })
-                    }
-                },
-                below = { urlInstead() },
-            ) {
-                Lead("Which account’s repositories? A notebook syncs as the account you add it with.")
-                Options(
-                    choice,
-                    now.accounts.map { account ->
-                        Option(
-                            keyOf(account),
-                            account.login?.let { "@$it" } ?: "Token (Account Not Named)",
-                            if (account.primary) "Your first account; Send Feedback uses it" else "Signed in on this phone",
-                            "first-run-account-${account.login.orEmpty()}",
-                        )
-                    } + Option(add, "Add Another Account", "Sign in to GitHub as someone else, such as your work account", "first-run-account-add"),
-                ) { choice = it }
-            }
-        }
         // 2.3: no GitHub sign-in on this phone yet, or Add Another Account (A1616).
         Check.NoSignIn -> Frame(
             "github",
             if (adding) "Add GitHub Account" else "Sign In to GitHub",
             step = 2,
-            // Back from Add Another Account goes back to the accounts.
-            back = if (adding) ({ adding = false; picked = null; again() }) else back,
+            // Back from Add Another Account: the account listed before, its repositories again.
+            back = if (adding) ({ adding = false; again() }) else back,
             actions = { signInButton("Sign In with GitHub") },
             below = {
                 Link("Use a Token Instead", "first-run-use-token", "key-round") { typing = true }
                 urlInstead()
             },
         ) {
-            // The Back gesture as the Back button: the accounts again, not the step before.
-            androidx.activity.compose.BackHandler(enabled = adding) { adding = false; picked = null; again() }
+            // The Back gesture as the Back button: the repositories again, not the step before.
+            androidx.activity.compose.BackHandler(enabled = adding) { adding = false; again() }
             if (adding) {
                 Lead("Sign in as your other GitHub account. Your other accounts, and the notebooks added with them, stay as they are.")
                 Lead("On GitHub’s page, check the account shown at the top right is the one you want; switch accounts there if it isn’t.", Modifier.testTag("first-run-add-account-hint"), small = true)

@@ -1,7 +1,7 @@
 /**
  * The GitHub accounts Add Notebook can read repositories as (A1617): git's own sign-in when it is
- * someone else's, then Penmoss's, the first first. Pick GitHub Account offers them, and so does
- * the account switcher above Pick Repository and Create New Repo.
+ * someone else's, then Penmoss's, the first first. Add Notebook lists the first one's
+ * repositories, and the account switcher above Pick Repository and Create New Repo offers them.
  */
 import { desktop, type DesktopGitHubBrowse, type GitHubAccountChoice } from '../desktop/bridge';
 import { accountsOf } from '../feedback/github-accounts';

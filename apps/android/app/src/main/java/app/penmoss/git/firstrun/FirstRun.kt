@@ -166,7 +166,7 @@ fun NotebookSteps(
             login = hub?.login,
             accounts = remember(hub) { deps.accounts() },
             onPick = { githubAgain(then, it) },
-            onAdd = { githubAgain(then, add = true) },
+            onAdd = { githubAgain(then, listed(), add = true) },
             onManage = deps.accountsPage?.let { { go(Screen.Accounts(then)) } },
             onRefresh = onRefresh,
         )
@@ -269,19 +269,19 @@ fun NotebookSteps(
                     reads.clear()
                     replace(if (screen.then == AfterGitHub.CREATE) Screen.Create else Screen.List)
                 },
-                choose = screen.choose,
                 account = screen.account,
                 add = screen.add,
                 onUrl = { replace(Screen.Url) },
                 back = ::back,
             )
-            // Settings → GitHub's page inside the flow (Use a Different GitHub Account): back from it,
-            // the GitHub step reads the accounts again, asking which with two or more (A1616).
+            // Settings → GitHub's page inside the flow (Manage GitHub Accounts): back from it, the same
+            // account's repositories again, or the first account's if it was removed (A1618).
             is Screen.Accounts -> {
                 val leave = {
+                    val was = listed()
                     reads.clear()
                     hub = null
-                    stack = stack.dropLast(2) + Screen.GitHub(screen.then, choose = deps.accounts().size > 1)
+                    stack = stack.dropLast(2) + Screen.GitHub(screen.then, account = was)
                 }
                 BackHandler(onBack = leave)
                 deps.accountsPage?.invoke(leave)

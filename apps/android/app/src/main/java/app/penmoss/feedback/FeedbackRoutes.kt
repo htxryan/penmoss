@@ -241,7 +241,7 @@ fun GitHubScreen(
                                 if (accounts.isEmpty()) Labelled("log-in", "Sign In with GitHub") else Labelled("user-plus", "Add Account")
                             }
                         }
-                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.settingRow("github-token").testTag("githubUseToken")) { Labelled("key-round", "Use a Token Instead…") }
+                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.settingRow("github-token").testTag("githubUseToken")) { Labelled("key-round", if (accounts.isEmpty()) "Use a Token Instead…" else "Add with a Token…") }
                     }
                     if (accounts.isNotEmpty()) {
                         Text(
@@ -364,7 +364,7 @@ fun GitHubAccountsRoute(
 
 /** A button's icon and words on one line (every button has an icon, and never wraps). */
 @Composable
-private fun Labelled(icon: String, words: String) {
+internal fun Labelled(icon: String, words: String) {
     app.penmoss.git.firstrun.ButtonIcon(icon)
     Text(words, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
 }

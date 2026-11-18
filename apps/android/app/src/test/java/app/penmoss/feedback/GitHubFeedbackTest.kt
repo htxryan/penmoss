@@ -402,7 +402,7 @@ class GitHubFeedbackTest {
         // Another store over the same preferences (the app started again) reads it back.
         assertEquals("ghp_good", GitHubTokenStore(prefs, XorBox).token())
 
-        assertEquals("Removed. Feedback waits on this phone until you add a token again.", model.remove())
+        store.remove("htxryan")
         assertNull(store.token())
         assertEquals(FeedbackRoutes.tokenSummary(emptyList()), "Not signed in")
     }
@@ -419,7 +419,7 @@ class GitHubFeedbackTest {
         github.login = "ryan-work"
         val work = model.save("ghp_work")
         assertTrue(work.kept)
-        assertEquals("Added @ryan-work beside your other GitHub account.", work.message)
+        assertEquals("Added @ryan-work beside your other GitHub accounts. Add Notebook’s account switcher lists it.", work.message)
         // The first stays Send Feedback's.
         assertEquals("ghp_personal", store.token())
         assertEquals(listOf(GitHubAccount("htxryan", true), GitHubAccount("ryan-work", false)), store.accounts())

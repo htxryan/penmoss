@@ -24,13 +24,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.NotebookGraph
 import app.penmoss.ui.common.Button
-import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
 import kotlinx.coroutines.launch
 
 /**
- * Settings → GitHub → Use a Token Instead… (A1012; PEN-146): the person's own token, which Send feedback files the
+ * Settings → GitHub → Use a Token Instead… or Add with a Token… (A1012; PEN-146): the person's own token, which Send feedback files the
  * issue with. Saving checks it with GitHub first and says plainly what it found; a token GitHub
  * does not accept is not kept. Never shown again once saved, never logged.
  */
@@ -70,16 +69,12 @@ class GitHubTokenModel(
 
     private fun isPrimary(login: String?) = store.login() == login
 
-    private fun addedAccount(login: String?) = "Added ${login?.let { "@$it" } ?: "the account"} beside your other GitHub account."
+    private fun addedAccount(login: String?) = "Added ${login?.let { "@$it" } ?: "the account"} beside your other GitHub accounts. Add Notebook’s account switcher lists it."
 
     /** A token that can't file feedback: that matters only for the primary account (A1616). */
     private fun savedButCannotFile(login: String?, message: String) =
         if (!isPrimary(login)) addedAccount(login) else "Saved${login?.let { " (@$it)" }.orEmpty()}, but: $message"
 
-    fun remove(): String {
-        store.clear()
-        return "Removed. Feedback waits on this phone until you add a token again."
-    }
 }
 
 @Composable
@@ -87,49 +82,54 @@ fun GitHubTokenRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val store = graph.githubToken
     val model = remember(store) { GitHubTokenModel(store, graph.githubFeedback::checkToken, graph.githubFeedback.repo) }
     GitHubTokenScreen(
-        saved = { store.hasToken },
-        login = { store.login() },
+        accounts = { store.accounts() },
         repo = graph.githubFeedback.repo,
         onSave = model::save,
-        onRemove = model::remove,
         onBack = onBack,
     )
 }
 
+/**
+ * Adds a GitHub account by its token (Ryan's Android feedback, 18 Nov 2026): it never replaces
+ * another account, so it shows no saved token and no Remove; each account's own ⋮ signs it out.
+ */
 @Composable
 fun GitHubTokenScreen(
-    saved: () -> Boolean,
-    login: () -> String?,
+    accounts: () -> List<GitHubAccount>,
     repo: String,
     onSave: suspend (String) -> GitHubTokenModel.Saved,
-    onRemove: () -> String,
     onBack: () -> Unit,
 ) {
     var token by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    var hasToken by remember { mutableStateOf(saved()) }
-    var account by remember { mutableStateOf(login()) }
+    var here by remember { mutableStateOf(accounts()) }
     val scope = rememberCoroutineScope()
-    SectionScreen("GitHub Token", onBack) {
+    val adding = here.isNotEmpty()
+    SectionScreen(if (adding) "Add Account with a Token" else "GitHub Token", onBack) {
         Help(
-            "Instead of signing in, give Penmoss a token of your own. Send Feedback files the issue in $repo with it: a classic token with the public_repo scope or, as a collaborator, " +
-                "a fine-grained token for $repo with Issues and Contents (read and write). It stays on this phone, encrypted by the Android Keystore.",
-        )
-        Text(
-            when {
-                !hasToken -> "No token saved: feedback waits on this phone until you add one."
-                account != null -> "Saved, for GitHub account @$account."
-                else -> "Saved."
+            if (adding) {
+                "A personal access token of your own, instead of signing in. It is added as the GitHub account it belongs to, " +
+                    "beside ${here.joinToString { it.login?.let { login -> "@$login" } ?: "your token" }}; " +
+                    "a token for an account already here renews that one. It stays on this phone, encrypted by the Android Keystore."
+            } else {
+                "Instead of signing in, give Penmoss a token of your own. Send Feedback files the issue in $repo with it: a classic token with the public_repo scope or, as a collaborator, " +
+                    "a fine-grained token for $repo with Issues and Contents (read and write). It stays on this phone, encrypted by the Android Keystore."
             },
-            Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("githubTokenState"),
-            style = MaterialTheme.typography.bodyLarge,
         )
+        if (adding) {
+            Text(
+                "To list a notebook’s repositories, a classic token needs the repo scope; a fine-grained one, Contents (read and write) on those repositories.",
+                Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("githubTokenScopes"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         OutlinedTextField(
             token,
             { token = it.trim() },
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("githubTokenField"),
-            label = { Text(if (hasToken) "Token (saved; type a new one to replace it)" else "Token") },
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("githubTokenField"),
+            label = { Text("Token") },
             singleLine = true,
             enabled = !busy,
             visualTransformation = PasswordVisualTransformation(),
@@ -144,25 +144,13 @@ fun GitHubTokenScreen(
                         val done = onSave(token)
                         if (done.kept) token = ""
                         message = done.message
-                        hasToken = saved()
-                        account = login()
+                        here = accounts()
                         busy = false
                     }
                 },
                 enabled = token.isNotEmpty() && !busy,
                 modifier = Modifier.testTag("githubTokenSave"),
-            ) { Text(if (busy) "Checking…" else "Save") }
-            if (hasToken) {
-                TextButton(
-                    onClick = {
-                        message = onRemove()
-                        hasToken = saved()
-                        account = login()
-                    },
-                    enabled = !busy,
-                    modifier = Modifier.testTag("githubTokenRemove"),
-                ) { Text("Remove") }
-            }
+            ) { Labelled(if (adding) "user-plus" else "save", if (busy) "Checking…" else if (adding) "Add Account" else "Save") }
         }
         message?.let {
             Text(
