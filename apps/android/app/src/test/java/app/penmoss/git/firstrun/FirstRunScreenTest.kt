@@ -201,55 +201,41 @@ class FirstRunScreenTest {
         assertEquals(localId, done)
     }
 
-    /** Two GitHub accounts (A1616): Add Notebook asks which, reads that one's repositories, and can switch or add another. */
+    /** Two GitHub accounts (A1618): Add Notebook never asks which; the first account's repositories, with the switcher to change. */
     @Test
-    fun withTwoAccountsAddNotebookAsksWhichAndCanSwitchOrAddAnother() {
+    fun withTwoAccountsAddNotebookListsTheFirstAndTheSwitcherChangesIt() {
         val accounts = listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true), app.penmoss.feedback.GitHubAccount("ryan-work", primary = false))
         show(deps("tok", { accounts }, mapOf("ryan" to "tok", "ryan-work" to "tok-work")) { _, name -> if (name == null) AddResult.NeedsName else AddResult.Added(view(name), created = true) }, firstRun = false)
         tap("first-run-continue") // Start a New Notebook
         tap("first-run-way-existing")
         tap("first-run-continue")
-        waitFor("first-run-account-ryan-work")
-        compose.onNodeWithText("Pick GitHub Account").assertExists()
-        compose.onNodeWithTag("first-run-account-ryan").assertExists()
-        // Add Another Account: the sign-in, with a word on GitHub's own account switcher; Back returns here.
-        tap("first-run-account-add")
-        tap("first-run-continue")
-        waitFor("first-run-add-account-hint")
-        compose.onNodeWithText("Add GitHub Account").assertExists()
-        tap("first-run-back")
-        waitFor("first-run-account-ryan-work")
-        // The work account: its token reads the repositories and goes with the notebook.
-        tap("first-run-account-ryan-work")
-        tap("first-run-continue")
+        // Straight to the first account's repositories: no Pick GitHub Account (Ryan, 18 Nov 2026).
         waitFor("first-run-repo-ryan/notes")
-        // The switcher above the list (option 2, 17 Nov 2026): the account, then a sheet of every one.
-        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan-work")
-        tap("first-run-account-switcher")
-        waitFor("first-run-switch-ryan")
-        tap("first-run-switch-ryan")
-        waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithText("Pick GitHub Account").assertDoesNotExist()
         compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan")
-        // Add Another Account: the sign-in, with its hint.
+        // The switcher above the list (option 2): a sheet of every account; the work one's repositories.
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-ryan-work")
+        tap("first-run-switch-ryan-work")
+        waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan-work")
+        // Add Another Account: the sign-in, with its hint; Back, the work account's list again.
         tap("first-run-account-switcher")
         waitFor("first-run-switch-add")
         tap("first-run-switch-add")
         waitFor("first-run-add-account-hint")
+        compose.onNodeWithText("Add GitHub Account").assertExists()
         tap("first-run-back")
-        waitFor("first-run-account-ryan-work")
-        // Manage GitHub Accounts opens Settings → GitHub's page; back from it, the accounts.
-        tap("first-run-account-ryan-work")
-        tap("first-run-continue")
         waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan-work")
+        // Manage GitHub Accounts opens Settings → GitHub's page; back from it, the same account's list.
         tap("first-run-account-switcher")
         waitFor("first-run-switch-manage")
         tap("first-run-switch-manage")
         waitFor("fake-accounts-back")
         tap("fake-accounts-back")
-        waitFor("first-run-account-ryan-work")
-        tap("first-run-account-ryan-work")
-        tap("first-run-continue")
         waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithTag("first-run-via", useUnmergedTree = true).assertTextEquals("ryan-work")
         tap("first-run-repo-ryan/notes")
         waitFor("first-run-repo-empty")
         tap("first-run-continue")
@@ -259,9 +245,9 @@ class FirstRunScreenTest {
         assertEquals("tok-work", adds.last().place.token)
     }
 
-    /** With one account, the switcher (Ryan, 17 Nov 2026) is above the list; Manage GitHub Accounts opens Settings, and an account added there is asked for after. */
+    /** With one account, the switcher is above the list; an account added in Manage GitHub Accounts is in it after, not asked for. */
     @Test
-    fun useADifferentAccountOpensSettingsGitHubAndAsksWhichAfter() {
+    fun manageGitHubAccountsAddsOneToTheSwitcherWithoutAsking() {
         var accounts = listOf(app.penmoss.feedback.GitHubAccount("ryan", primary = true))
         show(deps("tok", { accounts }, mapOf("ryan" to "tok", "ryan-work" to "tok-work")) { _, _ -> AddResult.NeedsName }, firstRun = false)
         tap("first-run-continue")
@@ -284,11 +270,13 @@ class FirstRunScreenTest {
         tap("first-run-switch-manage")
         waitFor("fake-accounts-back")
         assertTrue(pages > 0)
-        // The work account is added on that page; back, Add Notebook asks which.
+        // The work account is added on that page; back, the same list, and the switcher has it.
         accounts = accounts + app.penmoss.feedback.GitHubAccount("ryan-work", primary = false)
         tap("fake-accounts-back")
-        waitFor("first-run-account-ryan-work")
-        compose.onNodeWithText("Pick GitHub Account").assertExists()
+        waitFor("first-run-repo-ryan/notes")
+        compose.onNodeWithText("Pick GitHub Account").assertDoesNotExist()
+        tap("first-run-account-switcher")
+        waitFor("first-run-switch-ryan-work")
     }
 
     @Test

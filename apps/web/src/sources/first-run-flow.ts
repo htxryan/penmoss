@@ -80,8 +80,8 @@ export interface Hub {
   /** Where Create New Repo can make one; null when GitHub would not say. */
   readonly owners: readonly GitHubOwner[] | null;
   /**
-   * The account picked in Pick GitHub Account (A1617): one of Penmoss's, by login; undefined for
-   * no choice (git's sign-in, else the first account).
+   * The account the switcher shows (A1618): one of Penmoss's, by login; undefined for no choice
+   * (git's sign-in, else the first account).
    */
   readonly account?: GitHubAccountChoice;
 }

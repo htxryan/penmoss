@@ -67,7 +67,7 @@ Penmoss keeps the sign-in in the Mac's Keychain. It uses it to list your reposit
 
 Penmoss can keep several GitHub accounts, such as a personal one and a work one. **Pick Repository** and **Create New Repo** show the account in use at the top; click it to switch to another account, or choose **Add Another Account…**, **Manage GitHub Accounts…** or **Refresh Repositories**. You can also add one with **Add Account** in **Settings → GitHub**. GitHub signs in the account its page shows at the top right, so switch to the other account there before you enter the code.
 
-With two accounts or more (counting git's own sign-in when it's someone else's), Add Notebook asks **Pick GitHub Account**, with **Add Another Account**. Each notebook syncs as the account you added it with, and keeps working if you later sign out of that account. The first account in **Settings → GitHub** sends feedback; **Use for Send Feedback** on another one makes it the first.
+Add Notebook never asks which account: it lists the first one's repositories (git's own sign-in first, when it's someone else's), and the switcher at the top changes it. Each notebook syncs as the account you added it with, and keeps working if you later sign out of that account. The first account in **Settings → GitHub** sends feedback; **Use for Send Feedback** on another one makes it the first.
 
 If you prefer git's own sign-in, install the GitHub CLI and run `gh auth login`, then `gh auth setup-git`, then **Try Again** in Penmoss.
 

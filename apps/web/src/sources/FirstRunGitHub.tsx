@@ -4,26 +4,19 @@
  * Terminal's `gh auth login`. Refused, offline or rate-limited, it says so with Try Again, and
  * Paste a URL Instead goes on without GitHub. Once a sign-in answers, the flow goes straight on to
  * the next screen, which names the sign-in in a line (2.2 is not a stop). With two GitHub
- * accounts or more (git's and Penmoss's, A1617), Pick GitHub Account asks which, with Add Another
- * Account.
+ * accounts or more (git's and Penmoss's, A1617) it never asks which: the first one's repositories,
+ * and the switcher above them changes it or adds another (A1618).
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useState } from 'react';
 import type { BrowseError, DesktopGitHubBrowse, GitHubAccountChoice } from '../desktop/bridge';
-import { accountChoices, type AccountChoice } from './github-choices';
+import { accountChoices } from './github-choices';
 import { useDeviceSignIn } from './device-sign-in';
 import { FIRST_RUN_DOCS, readHub, type Hub } from './first-run-flow';
 import { Action, Frame, LinkButton, Problem, Working } from './FirstRunFrame';
 
-type Choice = AccountChoice;
-
 type Check =
-  | { readonly state: 'checking' }
-  | { readonly state: 'choose'; readonly choices: readonly Choice[] }
-  | { readonly state: 'failed'; readonly error: BrowseError };
-
-/** Add Another Account's key among the choices. */
-const ADD = 'add';
+  { readonly state: 'checking' } | { readonly state: 'failed'; readonly error: BrowseError };
 
 export function GitHubAccess({
   github,
@@ -37,7 +30,7 @@ export function GitHubAccess({
   onReady: (hub: Hub) => void;
   onUrl: () => void;
   back: () => void;
-  /** Refresh, or an account picked in the switcher: read it without asking which (A1617). */
+  /** Refresh, or an account picked in the switcher: read it (A1618). Add's Back comes back to it. */
   keep?: { readonly account: GitHubAccountChoice | undefined };
   /** The switcher's Add Another Account: straight to the sign-in, nothing read until it ends. */
   add?: boolean;
@@ -54,21 +47,18 @@ export function GitHubAccess({
   );
   /** Add Another Account: the sign-in, with the other accounts kept. */
   const [adding, setAdding] = useState(add);
-  const [choice, setChoice] = useState<string | null>(null);
 
   useEffect(() => {
     if (asked < 0) return;
     let live = true;
     void (async () => {
-      if (!picked) {
-        const choices = await accountChoices(github);
-        if (!live) return;
-        if (choices.length >= 2) {
-          setCheck({ state: 'choose', choices });
-          return;
-        }
-      }
-      const answer = await readHub(github, picked?.account);
+      // Never Pick GitHub Account (Ryan, 18 Nov 2026; A1618): the one picked, else the first.
+      const choices = await accountChoices(github);
+      if (!live) return;
+      const kept = picked && choices.some((each) => each.account === picked.account);
+      // With one account or none, no choice: git's sign-in, else Penmoss's.
+      const account = kept ? picked.account : choices.length >= 2 ? choices[0]!.account : undefined;
+      const answer = await readHub(github, account);
       if (!live) return;
       if (answer.ok) onReady(answer.hub);
       else setCheck({ state: 'failed', error: answer.error });
@@ -84,10 +74,6 @@ export function GitHubAccess({
     setSignedIn(false);
     setCheck({ state: 'checking' });
     setAsked((now) => now + 1);
-  };
-  const addAnother = () => {
-    setAdding(true);
-    setSignedIn(false);
   };
   const urlInstead = (
     <Action testId="first-run-url-instead" onClick={onUrl}>
@@ -204,7 +190,7 @@ export function GitHubAccess({
         back={() => {
           setAdding(false);
           if (device.ended) device.cancel();
-          // Opened from the switcher: the accounts to pick from, read now.
+          // Opened from the switcher: the account listed before, its repositories again.
           if (asked < 0) again();
         }}
         actions={
@@ -223,76 +209,6 @@ export function GitHubAccess({
           On GitHub’s page, check the account shown at the top right is the one you want; switch
           accounts there if it isn’t.
         </p>
-      </Frame>
-    );
-  }
-
-  // Pick GitHub Account (A1617): two accounts or more.
-  if (check.state === 'choose') {
-    const chosen = choice ?? check.choices[0]!.key;
-    const items = [
-      ...check.choices,
-      {
-        key: ADD,
-        title: 'Add Another Account',
-        line: 'Sign in to GitHub as someone else, such as your work account',
-      },
-    ];
-    return (
-      <Frame
-        name="github-account"
-        step={2}
-        title="Pick GitHub Account"
-        back={back}
-        actions={
-          <>
-            {urlInstead}
-            <Action
-              primary
-              testId="first-run-continue"
-              onClick={() => {
-                if (chosen === ADD) {
-                  addAnother();
-                  return;
-                }
-                const pick = check.choices.find((each) => each.key === chosen);
-                setPicked({ account: pick?.account });
-                again();
-              }}
-            >
-              Continue
-            </Action>
-          </>
-        }
-      >
-        <p className="fr-lead">
-          Which account’s repositories? A notebook syncs as the account you add it with.
-        </p>
-        <div className="fr-options" role="radiogroup" aria-label="GitHub Account">
-          {items.map((item) => (
-            <label
-              key={item.key}
-              className="fr-option"
-              data-testid={
-                item.key === ADD
-                  ? 'first-run-account-add'
-                  : `first-run-account-${item.key === 'git' ? 'git' : item.title.replace(/^@/, '')}`
-              }
-            >
-              <input
-                type="radio"
-                name="github-account"
-                value={item.key}
-                checked={chosen === item.key}
-                onChange={() => setChoice(item.key)}
-              />
-              <span className="fr-option-text">
-                <strong>{item.title}</strong>
-                <span>{item.line}</span>
-              </span>
-            </label>
-          ))}
-        </div>
       </Frame>
     );
   }
