@@ -598,5 +598,5 @@ internal fun rememberNoteScreenState(
 private val DEFAULT_FONTS = ToEditor.Fonts(
     app.penmoss.engine.settings.FontSettings.THEME,
     app.penmoss.engine.settings.FontSettings.THEME,
-    app.penmoss.engine.settings.FontSettings.SIZE_DEFAULT,
+    app.penmoss.engine.settings.FontSettings.PHONE_SIZE_DEFAULT,
 )
