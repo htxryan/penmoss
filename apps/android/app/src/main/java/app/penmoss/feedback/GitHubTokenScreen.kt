@@ -1,6 +1,10 @@
 package app.penmoss.feedback
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.semantics.heading
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -88,17 +92,21 @@ fun GitHubTokenRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
 /** The token page's title, the same in Settings → GitHub and in Add Notebook. */
 fun githubTokenTitle(accounts: List<GitHubAccount>) = if (accounts.isEmpty()) "Use a Token" else "Add Account with a Token"
 
+/** GitHub's page for a new classic token, with the repo scope ticked and Penmoss named. */
+const val NEW_TOKEN_URL = "https://github.com/settings/tokens/new?scopes=repo&description=Penmoss"
+
 /**
- * The token page (Ryan's Android feedback, 18 Nov 2026: one page, not two): Settings → GitHub's
- * Use a Token Instead… and Add Notebook's both show this, in their own frame. A token is added as
- * the account it belongs to and never replaces another; each account's ⋮ signs it out. [onAdded]
- * takes over once a token is kept (Add Notebook reads its repositories); without it, the page
- * says what Save came to.
+ * The token page (Ryan's Android feedback, 18 Nov 2026: one page, not two; then option 1 of the
+ * Token Page Options canvas, Three Steps): Settings → GitHub's Add with a Token… and Add
+ * Notebook's both show this, in their own frame. Make a token on GitHub (the permissions as a
+ * list, and Open GitHub), paste it, add the account. A token is added as the account it belongs
+ * to and never replaces another; each account's ⋮ signs it out. [onAdded] takes over once a
+ * token is kept (Add Notebook reads its repositories); without it, the page says what Save came to.
  */
 @Composable
 fun GitHubTokenForm(
     accounts: () -> List<GitHubAccount>,
-    /** Send Feedback's repository: its scopes are named when this token would file feedback. */
+    /** Send Feedback's repository: its permissions are named when this token would file feedback. */
     feedbackRepo: String?,
     onSave: suspend (String) -> GitHubTokenModel.Saved,
     modifier: Modifier = Modifier,
@@ -109,58 +117,113 @@ fun GitHubTokenForm(
     var message by remember { mutableStateOf<GitHubTokenModel.Saved?>(null) }
     var here by remember { mutableStateOf(accounts()) }
     val scope = rememberCoroutineScope()
-    val beside = here.joinToString(" and ") { it.login?.let { login -> "@$login" } ?: "your token" }
-    androidx.compose.foundation.layout.Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    val colours = MaterialTheme.colorScheme
+    androidx.compose.foundation.layout.Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "A personal access token from GitHub, instead of signing in. " +
-                (if (here.isEmpty()) "Penmoss lists your repositories with it, and the notebooks you add sync with it. "
-                else "It is added as the GitHub account it belongs to, beside $beside; a token for an account already here renews that one. ") +
-                "It stays on this phone, encrypted by the Android Keystore.",
+            if (here.isEmpty()) "A GitHub token, instead of signing in. Penmoss lists your repositories with it, and your notebooks sync with it."
+            else "Use a GitHub token instead of signing in.",
             Modifier.testTag("githubTokenLead"),
             style = MaterialTheme.roles.body,
         )
-        OutlinedTextField(
-            token,
-            { token = it.trim(); message = null },
-            Modifier.fillMaxWidth().testTag("githubTokenField"),
-            label = { Text("Personal Access Token") },
-            singleLine = true,
-            enabled = !busy,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        )
-        Text(
-            "For notebooks, a classic token with the repo scope lists every repository; a fine-grained one, only those it names, with Contents (read and write), and Administration to make one." +
-                if (here.isEmpty() && feedbackRepo != null) " Send Feedback files issues in $feedbackRepo with it: public_repo, or Issues (read and write) there." else "",
-            Modifier.testTag("githubTokenScopes"),
-            style = MaterialTheme.roles.help,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Button(
-            onClick = {
-                busy = true
-                message = null
-                scope.launch {
-                    val done = onSave(token)
-                    busy = false
-                    if (done.kept) token = ""
-                    if (done.kept && onAdded != null) onAdded(done)
-                    else {
-                        message = done
-                        here = accounts()
-                    }
-                }
-            },
-            enabled = token.isNotEmpty() && !busy,
-            modifier = Modifier.testTag("githubTokenSave"),
-        ) { Labelled("user-plus", if (busy) "Checking…" else "Add Account") }
-        message?.let {
-            Text(
-                it.message,
-                Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("githubTokenMessage"),
-                style = MaterialTheme.roles.body,
-                color = if (it.kept) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+        TokenStep(1, "Make a Token on GitHub") {
+            Permission("Classic Token", "every repository", listOf("repo"))
+            Permission("Fine-Grained Token", "only the repositories it names", listOf("Contents: Read and Write", "Administration: Read and Write"), last = "to make one")
+            if (here.isEmpty() && feedbackRepo != null) {
+                Permission("Optional", "Send Feedback to $feedbackRepo", listOf("public_repo"), last = "or Issues: Read and Write")
+            }
+            app.penmoss.ui.common.OutlinedButton(onClick = { runCatching { uri.openUri(NEW_TOKEN_URL) } }, Modifier.testTag("githubTokenOpenGitHub")) {
+                Labelled("external-link", "Open GitHub")
+            }
+        }
+        TokenStep(2, "Paste It Here") {
+            OutlinedTextField(
+                token,
+                { token = it.trim(); message = null },
+                Modifier.fillMaxWidth().testTag("githubTokenField"),
+                label = { Text("Personal Access Token") },
+                singleLine = true,
+                enabled = !busy,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             )
         }
+        TokenStep(3, "Add the Account") {
+            Button(
+                onClick = {
+                    busy = true
+                    message = null
+                    scope.launch {
+                        val done = onSave(token)
+                        busy = false
+                        if (done.kept) token = ""
+                        if (done.kept && onAdded != null) onAdded(done)
+                        else {
+                            message = done
+                            here = accounts()
+                        }
+                    }
+                },
+                enabled = token.isNotEmpty() && !busy,
+                modifier = Modifier.testTag("githubTokenSave"),
+            ) { Labelled("user-plus", if (busy) "Checking…" else "Add Account") }
+            message?.let {
+                Text(
+                    it.message,
+                    Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("githubTokenMessage"),
+                    style = MaterialTheme.roles.body,
+                    color = if (it.kept) colours.onSurface else colours.error,
+                )
+            }
+            if (here.isNotEmpty()) {
+                Note("users", "Joins ${here.joinToString(" and ") { a -> a.login?.let { "@$it" } ?: "your token" }}.", "githubTokenBeside")
+                Note("refresh-cw", "Already here? It renews that account.")
+            }
+            Note("lock", "Kept on this phone, encrypted by the Android Keystore.")
+        }
+    }
+}
+
+/** One numbered step: its number in a square, its title, then what it holds. */
+@Composable
+private fun TokenStep(number: Int, title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val colours = MaterialTheme.colorScheme
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        androidx.compose.foundation.layout.Box(
+            Modifier.size(28.dp).background(colours.primaryContainer),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) { Text("$number", style = MaterialTheme.roles.listHead, color = colours.onPrimaryContainer) }
+        androidx.compose.foundation.layout.Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, Modifier.semantics { heading() }, style = MaterialTheme.roles.listHead)
+            content()
+        }
+    }
+}
+
+/** A kind of token, what it reaches, and the permissions to tick, each as code. */
+@Composable
+private fun Permission(kind: String, reaches: String, ticks: List<String>, last: String? = null) {
+    val colours = MaterialTheme.colorScheme
+    androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("$kind · $reaches", style = MaterialTheme.roles.help, color = colours.onSurfaceVariant)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (tick in ticks) {
+                Text(
+                    tick,
+                    Modifier.background(colours.surfaceContainerHigh).padding(horizontal = 6.dp, vertical = 2.dp),
+                    style = MaterialTheme.roles.meta.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                )
+            }
+            last?.let { Text(it, style = MaterialTheme.roles.help, color = colours.onSurfaceVariant) }
+        }
+    }
+}
+
+/** A short line with its icon, under the button. */
+@Composable
+private fun Note(icon: String, words: String, tag: String? = null) {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        app.penmoss.git.firstrun.ButtonIcon(icon)
+        Text(words, if (tag != null) Modifier.testTag(tag) else Modifier, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

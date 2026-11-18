@@ -2,7 +2,9 @@ package app.penmoss.git.firstrun
 
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performTextClearance
@@ -306,7 +308,9 @@ class FirstRunScreenTest {
         tap("first-run-use-token")
         waitFor("githubTokenField")
         compose.onNodeWithText("Add Account with a Token").assertExists()
-        compose.onNodeWithTag("githubTokenLead").assert(hasText("beside @ryan;", substring = true))
+        compose.onNodeWithTag("githubTokenBeside").assertTextEquals("Joins @ryan.")
+        compose.onNodeWithText("Make a Token on GitHub").assertExists()
+        compose.onNodeWithTag("githubTokenOpenGitHub").assertHasClickAction()
         compose.onNodeWithTag("githubTokenField").performTextInput("tok-work")
         tap("githubTokenSave")
         waitFor("first-run-repo-ryan/notes")
@@ -319,10 +323,14 @@ class FirstRunScreenTest {
     fun theTokenPageSaysWhyATokenWasRefused() {
         compose.setContent {
             PenmossTheme(dark = true) {
-                app.penmoss.feedback.GitHubTokenForm({ emptyList() }, "htxryan/penmoss", { app.penmoss.feedback.GitHubTokenModel.Saved(false, "GitHub refused the token. It was not saved.") })
+                // In a scroll, as Settings and Add Notebook hold it: three steps are taller than the test's screen.
+                androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    app.penmoss.feedback.GitHubTokenForm({ emptyList() }, "htxryan/penmoss", { app.penmoss.feedback.GitHubTokenModel.Saved(false, "GitHub refused the token. It was not saved.") })
+                }
             }
         }
-        compose.onNodeWithTag("githubTokenScopes").assert(hasText("Send Feedback files issues in htxryan/penmoss", substring = true))
+        compose.onNodeWithText("Optional · Send Feedback to htxryan/penmoss").assertExists()
+        compose.onNodeWithTag("githubTokenBeside").assertDoesNotExist()
         compose.onNodeWithTag("githubTokenField").performTextInput("ghp_bad")
         tap("githubTokenSave")
         waitFor("githubTokenMessage")
