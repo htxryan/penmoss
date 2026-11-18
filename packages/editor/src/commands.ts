@@ -257,7 +257,9 @@ const SYMBOL_COMMAND = /^editor\.symbol([1-9])$/;
 export function symbolCommandTitle(id: string, symbols: readonly LineSymbol[]): string | undefined {
   const slot = SYMBOL_COMMAND.exec(id)?.[1];
   const symbol = slot === undefined ? undefined : symbols[Number(slot) - 1];
-  return symbol ? `Toggle Symbol ${symbol.glyph}` : undefined;
+  if (!symbol) return undefined;
+  // A list item slot is named by what it is: "Toggle Checkbox" (A1632).
+  return symbol.kind ? `Toggle ${symbol.name}` : `Toggle Symbol ${symbol.glyph}`;
 }
 
 export const SYMBOL_COMMANDS: readonly EditorCommand[] = [

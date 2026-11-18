@@ -9,11 +9,19 @@ import kotlinx.serialization.json.JsonPrimitive
  * One line symbol (T44, D36, A743): its glyph, its name and its colour (a theme token name such
  * as `calloutWarning`, or any colour as `#rrggbb` or `#rrggbbaa`, T51 A939), as core's
  * `line-symbols.ts` has it. A symbol made since T51 has its glyph as its name (A940).
+ *
+ * Or a list item (A1632): [kind] is `checkbox`, `bullet` or `ordered`, its glyph and name only
+ * how it is shown, and it is stored as `{ "kind": … }` alone.
  */
-data class LineSymbol(val glyph: String, val name: String, val colour: String) {
-    fun toJson(): JsonObject = JsonObject(
-        mapOf("glyph" to JsonPrimitive(glyph), "name" to JsonPrimitive(name), "colour" to JsonPrimitive(colour)),
-    )
+data class LineSymbol(val glyph: String, val name: String, val colour: String, val kind: String? = null) {
+    fun toJson(): JsonObject = if (kind != null) {
+        JsonObject(mapOf("kind" to JsonPrimitive(kind)))
+    } else {
+        JsonObject(mapOf("glyph" to JsonPrimitive(glyph), "name" to JsonPrimitive(name), "colour" to JsonPrimitive(colour)))
+    }
+
+    /** What the phone calls it: its glyph, or its name for a list item ("Checkbox"). */
+    val call: String get() = if (kind != null) name else glyph
 }
 
 /**
@@ -68,8 +76,27 @@ object LineSymbols {
         "💡", "⭐", "❓", "❗", "🔥", "📌", "📎", "💬", "⏰", "⏳", "🗓️", "🔒",
     )
 
-    /** The list until a person changes it. */
+    /**
+     * The list items a slot can be (A1632), in the order Settings offers them: each kind, its
+     * glyph and its name, as core's `SYMBOL_KINDS`.
+     */
+    val KINDS: List<Triple<String, String, String>> = listOf(
+        Triple("checkbox", "☐", "Checkbox"),
+        Triple("bullet", "•", "Bulleted List Item"),
+        Triple("ordered", "1.", "Numbered List Item"),
+    )
+
+    /** The entry for a list item [kind] (core `kindSymbol`). */
+    fun kindSymbol(kind: String): LineSymbol {
+        val (_, glyph, name) = KINDS.first { it.first == kind }
+        return LineSymbol(glyph, name, "muted", kind)
+    }
+
+    private fun isKind(kind: String) = KINDS.any { it.first == kind }
+
+    /** The list until a person changes it: Checkbox on the first slot, then the glyphs (A1632). */
     val DEFAULTS = listOf(
+        kindSymbol("checkbox"),
         LineSymbol("★", "Important", "calloutWarning"),
         LineSymbol("?", "Question", "calloutQuestion"),
         LineSymbol("!", "Follow-up", "danger"),
@@ -119,7 +146,13 @@ object LineSymbols {
     fun listProblem(symbols: List<LineSymbol>): String? {
         if (symbols.size > MAX) return "At most $MAX symbols"
         val seen = mutableSetOf<String>()
+        val kinds = mutableSetOf<String>()
         symbols.forEachIndexed { index, symbol ->
+            if (symbol.kind != null) {
+                if (!isKind(symbol.kind)) return "Symbol ${index + 1}: no such list item"
+                if (!kinds.add(symbol.kind)) return "${symbol.name} is in the list twice"
+                return@forEachIndexed
+            }
             val problem = glyphProblem(symbol.glyph) ?: nameProblem(symbol.name)
             if (problem != null) return "Symbol ${index + 1}: $problem"
             if (!isColour(symbol.colour)) return "Symbol ${index + 1}: no such colour"
@@ -137,6 +170,10 @@ object LineSymbols {
         val symbols = items.map { item ->
             val entry = item as? JsonObject ?: return null
             fun text(key: String) = (entry[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            if (entry["kind"] != null) {
+                val kind = text("kind")?.takeIf(::isKind) ?: return null
+                return@map kindSymbol(kind)
+            }
             LineSymbol(text("glyph") ?: return null, text("name") ?: return null, text("colour") ?: return null)
         }
         if (listProblem(symbols) != null) return null
@@ -146,9 +183,13 @@ object LineSymbols {
     /** The list as `PUT /api/settings` sends it. */
     fun toJson(symbols: List<LineSymbol>): JsonArray = JsonArray(symbols.map { it.copy(name = it.name.trim()).toJson() })
 
+    /** The list items not yet in [symbols], which Add offers (A1632). */
+    fun missingKinds(symbols: List<LineSymbol>): List<LineSymbol> =
+        KINDS.map { it.first }.filter { kind -> symbols.none { it.kind == kind } }.map(::kindSymbol)
+
     /** A glyph for a new symbol: the first suggestion the list does not have. */
     fun nextGlyph(symbols: List<LineSymbol>): String {
-        val taken = symbols.map { glyphKey(it.glyph) }.toSet()
+        val taken = symbols.filter { it.kind == null }.map { glyphKey(it.glyph) }.toSet()
         return SUGGESTED.firstOrNull { glyphKey(it) !in taken } ?: "•"
     }
 }

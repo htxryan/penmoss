@@ -156,7 +156,9 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     help: 'Type a symbol at the start of a line to mark it',
     aliases: ['line symbols', 'markers', 'star', 'emoji', 'colour', 'color'],
   }),
-  at('symbols')('Add a Symbol', { help: 'Up to nine' }),
+  at('symbols')('Add a Symbol or List Item', {
+    help: 'Up to nine: a symbol, Checkbox, Bulleted or Numbered List Item',
+  }),
   at('symbols')('Change Their Shortcuts', { aliases: ['symbol keys', 'keys'] }),
   at('symbols')('Restore Defaults', { aliases: ['reset symbols'] }),
   // Daily Notes.

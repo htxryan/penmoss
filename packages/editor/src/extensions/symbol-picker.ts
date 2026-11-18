@@ -92,8 +92,10 @@ export class SymbolPicker {
       item.setAttribute('aria-checked', String(active.has(index)));
       item.tabIndex = -1;
       item.dataset['slot'] = String(index);
-      // Named by its glyph (T51 item 12, A940): the glyph is the item's text.
-      item.dataset['label'] = symbol.glyph;
+      // Named by its glyph (T51 item 12, A940): the glyph is the item's text. A list item is
+      // named by its name, "Checkbox" (A1632).
+      item.dataset['label'] = symbol.kind ? symbol.name : symbol.glyph;
+      if (symbol.kind) item.setAttribute('aria-label', symbol.name);
       const glyph = doc.createElement('span');
       glyph.className = 'pm-symbol-item-glyph';
       // An emoji keeps its own colours (A1588).
