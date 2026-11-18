@@ -9,7 +9,9 @@ import type { LocalSyncState } from './service';
 export type SaveState =
   /** A change is not in this device's storage yet. */
   | 'saving'
-  /** On this device, on its way to git. */
+  /** On this device, not pushed to git yet: a yellow dot and Sync Now beside it (A1629). */
+  | 'local'
+  /** On this device and in git, while a sync runs. */
   | 'syncing'
   /** On this device and pushed to git. */
   | 'synced'
@@ -68,22 +70,23 @@ export function gitSaveStatus(
     return pending
       ? status(
           'offline',
-          'Saved here · offline',
+          'Saved Locally · Offline',
           `Saved on this device; it is pushed to git when the host answers.${sync.detail ? ` ${sync.detail}` : ''}`,
         )
       : status(
           'offline',
-          'Saved · offline',
+          'Saved Remotely · Offline',
           'Saved, and in git before the host stopped answering.',
         );
   }
   if (pending) {
     return status(
-      'syncing',
-      'Saved here · not pushed yet',
-      'Saved on this device; the notebook pushes it to git shortly.',
+      'local',
+      'Saved Locally',
+      'Saved on this device; the notebook pushes it to git shortly, or Sync Now pushes every notebook’s changes now.',
     );
   }
-  if (sync.phase === 'syncing') return status('syncing', 'Saved · syncing', 'Syncing with git now');
-  return status('synced', 'Saved · in git', 'Saved on this device and pushed to git');
+  if (sync.phase === 'syncing')
+    return status('syncing', 'Saved Remotely', 'In git; syncing with git now');
+  return status('synced', 'Saved Remotely', 'Saved on this device and pushed to git');
 }

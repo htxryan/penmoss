@@ -78,7 +78,7 @@ test('full width, the Info panel, the status bar and the sidebar rail, from the 
   await expect(bar.getByTestId('save-status')).toHaveAttribute('data-state', 'synced', {
     timeout: 20_000,
   });
-  await expect(bar.getByTestId('save-status')).toHaveText('Saved · in git');
+  await expect(bar.getByTestId('save-status')).toHaveText('Saved Remotely');
   await expect(bar.getByTestId('note-counts')).toContainText('5 words');
   await expect(bar.getByTestId('note-counts')).toContainText('23 characters');
   await body(page).press('Shift+Home');

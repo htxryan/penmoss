@@ -144,3 +144,8 @@ body {
 .note-body .pm-image-tools label:has(> .pm-image-width) {
   display: none;
 }
+
+/* Copy on a picture is the Mac's (A1630): a phone's WebView may not put a picture on the clipboard. */
+.note-body .pm-image-copy {
+  display: none;
+}

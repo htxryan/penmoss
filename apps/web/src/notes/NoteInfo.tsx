@@ -64,6 +64,30 @@ function SaveStatusLabel({ status }: { status: SaveStatus | null }) {
   );
 }
 
+/**
+ * Sync Now beside Saved Locally (A1629): the bar's full height, as its other controls are. It
+ * syncs every git notebook this window holds, so every change not pushed yet goes, not only this
+ * note's.
+ */
+export function SyncNowButton() {
+  const { all } = useAllSources();
+  return (
+    <button
+      type="button"
+      className="icon-btn status-sync-now"
+      data-ui="item"
+      data-testid="status-sync-now"
+      aria-label="Sync Now"
+      data-tip="Sync Now"
+      onClick={() => {
+        for (const source of all) source.syncNow();
+      }}
+    >
+      <Icon name="refresh" size={14} />
+    </button>
+  );
+}
+
 /** The save states worth interrupting for: not saved, or sync stopped. */
 const ANNOUNCED: ReadonlySet<SaveStatus['state']> = new Set(['error', 'stopped']);
 
@@ -105,6 +129,7 @@ export function StatusBar({
         data-state={status?.state ?? 'opening'}
       >
         <SaveStatusLabel status={status} />
+        {status?.state === 'local' ? <SyncNowButton /> : null}
       </span>
       {/* Read out only when it needs attention, never for routine saving and syncing (T41 review). */}
       <span className="sr-only" role="status" data-testid="save-alert">

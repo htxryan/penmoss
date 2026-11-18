@@ -93,18 +93,18 @@ describe('a git note’s save status (A860)', () => {
   it('says git, never the server', () => {
     expect(gitSaveStatus(local, sync('synced'), 'N')).toMatchObject({
       state: 'synced',
-      label: 'Saved · in git',
+      label: 'Saved Remotely',
     });
     expect(gitSaveStatus(local, sync('synced', ['N']), 'N')).toMatchObject({
-      state: 'syncing',
-      label: 'Saved here · not pushed yet',
+      state: 'local',
+      label: 'Saved Locally',
     });
     expect(gitSaveStatus(local, sync('offline', ['N']), 'N')).toMatchObject({
       state: 'offline',
-      label: 'Saved here · offline',
+      label: 'Saved Locally · Offline',
     });
     expect(gitSaveStatus(local, sync('offline', ['N']), 'N').hint).toContain('github.com');
-    expect(gitSaveStatus(local, sync('offline'), 'N').label).toBe('Saved · offline');
+    expect(gitSaveStatus(local, sync('offline'), 'N').label).toBe('Saved Remotely · Offline');
     expect(gitSaveStatus(local, sync('stopped'), 'N')).toMatchObject({
       state: 'stopped',
       label: 'Sync Stopped',
