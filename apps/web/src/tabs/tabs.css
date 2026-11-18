@@ -82,12 +82,19 @@
   border-left: 1px solid var(--pm-border-soft);
 }
 
+/* The tabs sit on the rule with a gap above them, under the window's top edge (A1631). */
 .tab-list {
   display: flex;
   flex: 0 1 auto;
   align-items: stretch;
   align-self: stretch;
+  box-sizing: border-box;
   min-width: 0;
+  padding-top: 0.5rem;
+}
+
+:root[data-titlebar='compact'] .tab-list {
+  padding-top: 0.3rem;
 }
 
 .tab-group {

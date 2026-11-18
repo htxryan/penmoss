@@ -801,7 +801,7 @@ function contrast(a: readonly number[], b: readonly number[]): number {
 }
 
 for (const scheme of ['light', 'dark'] as const) {
-  test(`tabs fill the strip from its top edge, and inactive tabs show their edges (A1573, ${scheme})`, async ({
+  test(`tabs sit on the rule with a gap above them, and inactive tabs show their edges (A1573, A1631, ${scheme})`, async ({
     page,
   }) => {
     const errors = collectErrors(page);
@@ -815,12 +815,13 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(await titles(page)).toEqual([`*${ALPHA}`, BETA, GAMMA]);
     await page.mouse.move(640, 600);
 
-    // Every tab spans the row, from its top edge down to the rule (the active one over it).
+    // Every tab runs from 8 px below the strip's top edge down to the rule (the active one over
+    // it): a gap between the tabs and the top of the window (A1631).
     const bar = (await strip(page).boundingBox())!;
     for (const each of await tabs(page).all()) {
       const box = (await each.boundingBox())!;
-      expect(box.y).toBe(bar.y);
-      expect(box.height).toBeGreaterThanOrEqual(bar.height - 1);
+      expect(box.y).toBe(bar.y + 8);
+      expect(box.y + box.height).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
     }
 
     // + and All Tabs are bar controls (A1592): top to bottom of the strip, no margin, + against

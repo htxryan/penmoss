@@ -43,7 +43,7 @@ The note's other actions are in the ⋯ at the end of the tab strip. There is no
 
 ## Tabs
 
-The main window opens several notes at once, as tabs in the strip above the note. Each tab has its own Back and Forward (their tooltips name the page they go to in this tab), keeps its place in the note and its note panel, and Penmoss reopens your tabs, in order, when you relaunch.
+The main window opens several notes at once, as tabs in the strip above the note. The tabs sit on the note with a little room above them; the open one is the note's colour, with a line in your theme's accent along its top. Each tab has its own Back and Forward (their tooltips name the page they go to in this tab), keeps its place in the note and its note panel, and Penmoss reopens your tabs, in order, when you relaunch.
 
 - **Open a note in the tab you are in:** click it, as before. A pinned tab keeps its note, so a click there opens a new tab.
 - **A note that is open in a tab already:** click it in the sidebar, or choose it in [Search](/docs/search/), the command palette or Quick Open, to switch to its tab; the tab you were in keeps its note. ⌘-clicking it in the sidebar opens no second tab, and its tab blinks. Links in a note still open it where you are, and ⌘↩ or ⇧⌘↩ in Search or **Duplicate Tab** open it again in a tab of its own, so you can have a note in two tabs.
