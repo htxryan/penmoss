@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -119,20 +125,39 @@ fun GitHubTokenForm(
     val scope = rememberCoroutineScope()
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val colours = MaterialTheme.colorScheme
-    androidx.compose.foundation.layout.Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    androidx.compose.foundation.layout.Column(modifier, verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(
             if (here.isEmpty()) "A GitHub token, instead of signing in. Penmoss lists your repositories with it, and your notebooks sync with it."
             else "Use a GitHub token instead of signing in.",
             Modifier.testTag("githubTokenLead"),
-            style = MaterialTheme.roles.body,
+            style = MaterialTheme.roles.help,
+            color = colours.onSurfaceVariant,
         )
+        androidx.compose.foundation.layout.Column {
         TokenStep(1, "Make a Token on GitHub") {
-            Permission("Classic Token", "every repository", listOf("repo"))
-            Permission("Fine-Grained Token", "only the repositories it names", listOf("Contents: Read and Write", "Administration: Read and Write"), last = "to make one")
-            if (here.isEmpty() && feedbackRepo != null) {
-                Permission("Optional", "Send Feedback to $feedbackRepo", listOf("public_repo"), last = "or Issues: Read and Write")
+            Permission("Classic Token", "every repository") { Tick { Code("repo") } }
+            Permission("Fine-Grained Token", "only the repositories it names") {
+                Tick { Text("Contents: Read and Write", style = MaterialTheme.roles.body) }
+                Tick {
+                    Text("Administration: Read and Write", style = MaterialTheme.roles.body)
+                    Text("to make one", style = MaterialTheme.roles.meta, color = colours.onSurfaceVariant)
+                }
             }
-            app.penmoss.ui.common.OutlinedButton(onClick = { runCatching { uri.openUri(NEW_TOKEN_URL) } }, Modifier.testTag("githubTokenOpenGitHub")) {
+            if (here.isEmpty() && feedbackRepo != null) {
+                Permission("Optional", "Send Feedback to $feedbackRepo") {
+                    Tick(glyph = "plus") {
+                        Code("public_repo")
+                        Text(", or Issues: Read and Write", style = MaterialTheme.roles.body, color = colours.onSurfaceVariant)
+                    }
+                }
+            }
+            // Tonal, as the design draws it: raised, with its border and an accent label.
+            app.penmoss.ui.common.OutlinedButton(
+                onClick = { runCatching { uri.openUri(NEW_TOKEN_URL) } },
+                Modifier.testTag("githubTokenOpenGitHub"),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = colours.surfaceContainerHigh, contentColor = colours.primary),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colours.outlineVariant),
+            ) {
                 Labelled("external-link", "Open GitHub")
             }
         }
@@ -148,7 +173,7 @@ fun GitHubTokenForm(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             )
         }
-        TokenStep(3, "Add the Account") {
+        TokenStep(3, "Add the Account", last = true) {
             Button(
                 onClick = {
                     busy = true
@@ -176,53 +201,98 @@ fun GitHubTokenForm(
                 )
             }
             if (here.isNotEmpty()) {
-                Note("users", "Joins ${here.joinToString(" and ") { a -> a.login?.let { "@$it" } ?: "your token" }}.", "githubTokenBeside")
+                // The accounts it joins stand out from the words around them, as the design draws them.
+                val joins = androidx.compose.ui.text.buildAnnotatedString {
+                    append("Joins ")
+                    here.forEachIndexed { i, a ->
+                        if (i > 0) append(" and ")
+                        withStyle(androidx.compose.ui.text.SpanStyle(color = colours.onSurface)) { append(a.login?.let { "@$it" } ?: "your token") }
+                    }
+                    append(".")
+                }
+                Note("user-plus", joins, "githubTokenBeside")
                 Note("refresh-cw", "Already here? It renews that account.")
             }
             Note("lock", "Kept on this phone, encrypted by the Android Keystore.")
         }
+        }
     }
 }
 
-/** One numbered step: its number in a square, its title, then what it holds. */
+/**
+ * One numbered step, as option 1 draws it: its number in an accent circle, a rail down to the
+ * next step, its title, then what it holds.
+ */
 @Composable
-private fun TokenStep(number: Int, title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+private fun TokenStep(number: Int, title: String, last: Boolean = false, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     val colours = MaterialTheme.colorScheme
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        androidx.compose.foundation.layout.Box(
-            Modifier.size(28.dp).background(colours.primaryContainer),
-            contentAlignment = androidx.compose.ui.Alignment.Center,
-        ) { Text("$number", style = MaterialTheme.roles.listHead, color = colours.onPrimaryContainer) }
-        androidx.compose.foundation.layout.Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, Modifier.semantics { heading() }, style = MaterialTheme.roles.listHead)
+    Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxHeight(), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.size(28.dp).background(colours.primary, androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+            ) { Text("$number", style = MaterialTheme.roles.listHead.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = colours.onPrimary) }
+            if (!last) androidx.compose.foundation.layout.Box(Modifier.padding(vertical = 4.dp).width(2.dp).weight(1f).background(colours.outlineVariant))
+        }
+        androidx.compose.foundation.layout.Column(
+            Modifier.weight(1f).padding(bottom = if (last) 0.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(if (last) 10.dp else 8.dp),
+        ) {
+            Text(title, Modifier.semantics { heading() }, style = MaterialTheme.roles.groupHead, color = colours.onSurface)
             content()
         }
     }
 }
 
-/** A kind of token, what it reaches, and the permissions to tick, each as code. */
+/** A kind of token and what it reaches, over the permissions to tick. */
 @Composable
-private fun Permission(kind: String, reaches: String, ticks: List<String>, last: String? = null) {
-    val colours = MaterialTheme.colorScheme
-    androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("$kind · $reaches", style = MaterialTheme.roles.help, color = colours.onSurfaceVariant)
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            for (tick in ticks) {
-                Text(
-                    tick,
-                    Modifier.background(colours.surfaceContainerHigh).padding(horizontal = 6.dp, vertical = 2.dp),
-                    style = MaterialTheme.roles.meta.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
-                )
-            }
-            last?.let { Text(it, style = MaterialTheme.roles.help, color = colours.onSurfaceVariant) }
-        }
+private fun Permission(kind: String, reaches: String, ticks: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text("$kind · $reaches", style = MaterialTheme.roles.meta.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ticks()
     }
 }
 
+/** A permission to tick: a green check (or a muted plus, for an optional one), then its name. */
+@Composable
+private fun Tick(glyph: String = "check", words: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    val colours = MaterialTheme.colorScheme
+    val tint = if (glyph == "check") tickGreen() else colours.onSurfaceVariant
+    Row(Modifier.padding(vertical = 1.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        app.penmoss.ui.common.rememberLucideIcons()?.icon(glyph)?.let {
+            androidx.compose.material3.Icon(app.penmoss.ui.common.LucideAssets.vector(it), contentDescription = null, Modifier.size(20.dp), tint = tint)
+        }
+        words()
+    }
+}
+
+/** A permission's own name, as code. */
+@Composable
+private fun Code(name: String) {
+    val colours = MaterialTheme.colorScheme
+    Text(
+        name,
+        Modifier
+            .background(colours.surfaceContainerHigh, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+            .border(1.dp, colours.outlineVariant, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp),
+        style = MaterialTheme.roles.body.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = androidx.compose.ui.unit.TextUnit(13f, androidx.compose.ui.unit.TextUnitType.Sp)),
+    )
+}
+
+/** The theme has no green; this is the design's, darker on a light page so it still reads. */
+@Composable
+private fun tickGreen(): androidx.compose.ui.graphics.Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) androidx.compose.ui.graphics.Color(0xFF93D3A2)
+    else androidx.compose.ui.graphics.Color(0xFF2E7D4F)
+
 /** A short line with its icon, under the button. */
 @Composable
-private fun Note(icon: String, words: String, tag: String? = null) {
-    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun Note(icon: String, words: String, tag: String? = null) = Note(icon, androidx.compose.ui.text.AnnotatedString(words), tag)
+
+@Composable
+private fun Note(icon: String, words: androidx.compose.ui.text.AnnotatedString, tag: String? = null) {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         app.penmoss.git.firstrun.ButtonIcon(icon)
         Text(words, if (tag != null) Modifier.testTag(tag) else Modifier, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

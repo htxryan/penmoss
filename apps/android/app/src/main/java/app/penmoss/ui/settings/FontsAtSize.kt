@@ -24,17 +24,20 @@ import app.penmoss.ui.common.roles
  * Font and Note Font Size it uses.
  */
 @Composable
-internal fun FontsAtSize(fonts: FontsUi, modifier: Modifier = Modifier) {
+internal fun FontsAtSize(fonts: FontsUi, modifier: Modifier = Modifier, framed: Boolean = true) {
     val roles = MaterialTheme.roles
     val colours = MaterialTheme.colorScheme
     val ui = familyName(fonts.interfaceFont)
     Column(
-        modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().border(1.dp, colours.outlineVariant).padding(12.dp).testTag("fontsAtSize"),
+        modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()
+            .then(if (framed) Modifier.border(1.dp, colours.outlineVariant).padding(12.dp) else Modifier)
+            .testTag("fontsAtSize"),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("Fonts at Real Size", style = roles.listHead, color = colours.onSurfaceVariant)
         Sample("Page Title", "Appearance", roles.pageTitle, ui)
-        Sample("Group", "Theme", roles.groupHead, ui)
+        // Group titles are the accent, as Settings draws them.
+        Sample("Group", "Theme", roles.groupHead, ui, colours.primary)
         Sample("Setting", "Note Font Size", roles.rowLabel, ui)
         Sample("Help", "Syncs to your other devices.", roles.help, ui)
         Text(
@@ -47,10 +50,10 @@ internal fun FontsAtSize(fonts: FontsUi, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Sample(role: String, text: String, style: TextStyle, family: String) {
+private fun Sample(role: String, text: String, style: TextStyle, family: String, colour: androidx.compose.ui.graphics.Color? = null) {
     val colours = MaterialTheme.colorScheme
     Column(Modifier.testTag("fontsAtSize-$role")) {
-        Text(text, style = style, color = colours.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, style = style, color = colour ?: colours.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text("$role · $family · ${sizeOf(style)}", style = MaterialTheme.roles.meta, color = colours.onSurfaceVariant)
     }
 }

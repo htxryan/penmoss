@@ -73,6 +73,10 @@ internal fun Frame(
     actions: (@Composable RowScope.() -> Unit)? = null,
     /** The screen's other ways on (Use a Token Instead, Paste a URL Instead): centred just above the footer. */
     below: (@Composable ColumnScope.() -> Unit)? = null,
+    /** The content fills the screen and scrolls itself (Pick Folder's tree): the frame doesn't scroll. */
+    fill: Boolean = false,
+    /** A full-width strip just above the footer, with its own rule (Pick Folder's Notebook Goes In). */
+    strip: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
     // The screen draws its own background, so its text takes the colour on it: without this,
@@ -87,7 +91,7 @@ internal fun Frame(
                 .testTag("first-run-$name"),
         ) {
             Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
+                Modifier.weight(1f).fillMaxWidth().then(if (fill) Modifier else Modifier.verticalScroll(rememberScrollState())).padding(horizontal = 24.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
             ) {
@@ -108,6 +112,15 @@ internal fun Frame(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("first-run-below"),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     content = below,
+                )
+            }
+            if (strip != null) {
+                HorizontalDivider()
+                Row(
+                    Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow).padding(start = 24.dp, end = 16.dp, top = 8.dp, bottom = 8.dp).testTag("first-run-strip"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    content = strip,
                 )
             }
             if (back != null || cancel != null || actions != null || start != null) {
@@ -277,7 +290,7 @@ internal fun <T> Options(value: T, items: List<Option<T>>, onChange: (T) -> Unit
                 RadioButton(selected = picked, onClick = null, enabled = item.enabled)
                 Column(Modifier.weight(1f)) {
                     Text(item.title, style = MaterialTheme.roles.rowLabel)
-                    Text(item.line, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (item.line.isNotEmpty()) Text(item.line, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (item.chip != null) Chip(item.chip)
             }

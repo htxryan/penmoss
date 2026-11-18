@@ -85,6 +85,32 @@ class GitHubBrowse(private val http: BrowseHttp, api: String = GITHUB_API) {
     }
 
     /**
+     * One repository's branches, the default first and then by name, at most [MAX_BRANCHES]: Pick
+     * Branch lists them, since a branch can hold other folders (A1621).
+     */
+    suspend fun branches(token: String, fullName: String, defaultBranch: String): BrowseResult<List<String>> {
+        val parts = fullName.split('/')
+        if (parts.size != 2 || !ownerOk(parts[0]) || !repoNameOk(parts[1])) {
+            return BrowseResult.Failed(BrowseError(BrowseReason.INVALID, "That is not a GitHub repository name."))
+        }
+        val names = mutableListOf<String>()
+        var url: String? = "$api/repos/${parts[0]}/${parts[1]}/branches?per_page=$PAGE"
+        var pages = 0
+        while (url != null && pages < MAX_BRANCHES / PAGE) {
+            val answer = call(url, token)
+            if (answer is Call.Failed) return BrowseResult.Failed(answer.error)
+            answer as Call.Ok
+            val body = parse(answer.response.body) as? JsonArray
+                ?: return BrowseResult.Failed(BrowseError(BrowseReason.GITHUB, "GitHub sent a list Penmoss cannot read."))
+            body.forEach { raw -> (raw as? JsonObject)?.text("name")?.takeIf { it.isNotEmpty() }?.let(names::add) }
+            pages += 1
+            url = nextLink(answer.response.header("link"))
+        }
+        val sorted = names.distinct().sortedWith(compareBy<String> { it != defaultBranch }.thenBy { it.lowercase() })
+        return BrowseResult.Ok(sorted)
+    }
+
+    /**
      * One repository's folders at [branch]: the root first, without dot-folders or the subfolders
      * of a folder holding a notebook, each with the notebook it holds.
      */
@@ -176,6 +202,7 @@ class GitHubBrowse(private val http: BrowseHttp, api: String = GITHUB_API) {
 
         /** At most this many repositories load (D62: 3 pages of 100). */
         const val MAX_REPOS = 300
+        const val MAX_BRANCHES = 300
         private const val PAGE = 100
 
         /** The notebook names read from one tree. */

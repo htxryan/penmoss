@@ -66,6 +66,8 @@ class FontsTest {
     }
 
     @Test
+    // A phone's height: Appearance's tabs hold still and the Settings tab scrolls under them (A1619).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun appearanceChoosesEachFontAndTheSize() {
         var fonts by mutableStateOf(FontsUi("theme", "theme", 16, {}, {}, {}))
         val stored = mutableListOf<Pair<String, Any>>()
