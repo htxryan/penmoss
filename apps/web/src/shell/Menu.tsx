@@ -10,7 +10,8 @@ import {
   type ReactNode,
 } from 'react';
 
-const ITEMS = '[role="menuitem"]:not([disabled]), [role="menuitemcheckbox"]:not([disabled])';
+const ITEMS =
+  '[role="menuitem"]:not([disabled]), [role="menuitemcheckbox"]:not([disabled]), [role="menuitemradio"]:not([disabled])';
 
 /**
  * A menu button with a WAI-ARIA menu (T15, T36): arrows move between items,
@@ -30,6 +31,7 @@ export function Menu({
   className = 'icon-btn',
   iconSize = 16,
   sheet = false,
+  face,
   children,
 }: {
   /** The button's accessible name and the menu's. */
@@ -44,6 +46,8 @@ export function Menu({
   readonly iconSize?: number;
   /** Opens as a bottom sheet on a phone. */
   readonly sheet?: boolean;
+  /** The button's whole content, in place of the icon and text (Add Notebook's account switcher). */
+  readonly face?: ReactNode;
   readonly children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -100,8 +104,8 @@ export function Menu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
-        aria-label={text ? undefined : label}
-        data-tip={text ? title : (title ?? label)}
+        aria-label={text || face ? undefined : label}
+        data-tip={text || face ? title : (title ?? label)}
         data-ui="menu"
         data-testid={testId}
         onClick={() => setOpen((value) => !value)}
@@ -112,8 +116,8 @@ export function Menu({
           }
         }}
       >
-        <Icon name={icon} size={iconSize} />
-        {text ? (
+        {face ?? <Icon name={icon} size={iconSize} />}
+        {text && !face ? (
           <>
             <span>{text}</span>
             <Icon name="chevD" size={12} className="xs" />

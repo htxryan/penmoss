@@ -55,10 +55,12 @@ export type Screen =
   | {
       readonly at: 'github';
       readonly then: 'create' | 'list';
-      /** Refresh: read the same account again rather than asking which (A1617). */
+      /** Refresh, or the switcher's pick: read that account rather than asking which (A1617). */
       readonly keep?: { readonly account: GitHubAccountChoice | undefined };
+      /** The switcher's Add Another Account: the sign-in first. */
+      readonly add?: boolean;
     }
-  /** Settings → GitHub's accounts inside the flow: Use a Different GitHub Account (A1617). */
+  /** Settings → GitHub's accounts inside the flow: the switcher's Manage GitHub Accounts (A1617). */
   | { readonly at: 'accounts'; readonly then: 'create' | 'list' }
   | { readonly at: 'create' }
   | { readonly at: 'list' }

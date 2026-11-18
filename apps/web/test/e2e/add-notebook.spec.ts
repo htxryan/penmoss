@@ -259,7 +259,7 @@ test('signs in with GitHub on the same screens, lists the repositories with it, 
   host.githubRepos.approve();
   await expect(sheet.getByTestId('first-run-signed-in')).toContainText('Signed in as ryan');
   await sheet.getByTestId('first-run-continue').click();
-  await expect(sheet.getByTestId('first-run-via')).toContainText('Signed in as ryan');
+  await expect(sheet.getByTestId('first-run-via')).toHaveText('ryan');
   await repoRow(sheet, 'ryan/notes').getByTestId('first-run-repo-pick').click();
   await expect(sheet.getByRole('heading', { name: 'Empty Repository' })).toBeVisible();
   await sheet.getByTestId('first-run-continue').click();
@@ -335,7 +335,7 @@ test('a sign-in still waiting when Add Notebook is opened again lists the reposi
   host.githubRepos.approve();
   await expect(sheet.getByTestId('first-run-signed-in')).toContainText('Signed in as ryan');
   await sheet.getByTestId('first-run-continue').click();
-  await expect(sheet.getByTestId('first-run-via')).toContainText('Signed in as ryan');
+  await expect(sheet.getByTestId('first-run-via')).toHaveText('ryan');
   expect(host.githubRepos.device.codes).toBe(1);
 });
 

@@ -122,7 +122,7 @@ function GitHubSection({
         <SettingsHeader
           id={`${id}-h`}
           title="GitHub"
-          intro="Your GitHub accounts for adding notebooks and sending feedback, kept in this Mac’s Keychain. Add a work account beside a personal one."
+          intro="Your GitHub accounts, such as a personal and a work one, kept in this Mac’s Keychain."
         />
       )}
       <div className="lf-group">

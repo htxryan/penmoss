@@ -217,7 +217,7 @@ test.describe('the first run', () => {
     await expect(siteToggle).toHaveAttribute('aria-expanded', 'false');
     // The count line is there before any filter, so typing one never moves the list.
     await expect(firstRun.getByTestId('first-run-filter-count')).toHaveText('3 repositories.');
-    await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in');
+    await expect(firstRun.getByTestId('first-run-via')).toBeVisible();
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/tree.png` });
 
     // The filter narrows repositories and notebooks; Escape clears it.
@@ -380,7 +380,7 @@ test.describe('the first run', () => {
     await expect(firstRun.getByTestId('first-run-signed-in')).toContainText('Signed in as ryan');
     await firstRun.getByTestId('first-run-continue').click();
     await expect(firstRun.getByTestId('first-run-tree-repo')).toHaveCount(1);
-    await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in as ryan');
+    await expect(firstRun.getByTestId('first-run-via')).toHaveText('ryan');
     expect(errors).toEqual([]);
   });
 });

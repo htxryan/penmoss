@@ -514,7 +514,7 @@ describe('the first run (A1030, First Run C)', () => {
     expect(repos[1]!.textContent).toContain('No notebook yet');
     expect(repos[1]!.querySelector('[data-testid="first-run-start-here"]')).not.toBeNull();
     expect(repos[2]!.textContent).toContain('Read Only');
-    expect($('first-run-via')?.textContent).toContain('Signed in as ryan');
+    expect($('first-run-via')?.textContent).toBe('ryan');
     // The count line is there before any filter, so typing one never moves the list.
     expect($('first-run-filter-count')?.textContent).toBe('3 repositories.');
     // The filter narrows repositories and notebooks.
@@ -585,8 +585,26 @@ describe('the first run (A1030, First Run C)', () => {
     await vi.waitFor(() => expect(screen()).toBe('list'));
     expect(calls).toContainEqual(['repos as', 'ryan-work']);
     expect(calls).toContainEqual(['folders as', 'ryan-work']);
-    // Another account is a click away, above the list.
-    expect($('first-run-other-account')?.textContent).toContain('Use a Different GitHub Account');
+    // The switcher above the list (option 2): every account, the one in use checked.
+    await press('first-run-account-switcher');
+    await vi.waitFor(() => expect($('first-run-switch-ryan')).not.toBeNull());
+    expect($('first-run-switch-ryan-work')?.getAttribute('aria-checked')).toBe('true');
+    expect($('first-run-switch-ryan')?.getAttribute('aria-checked')).toBe('false');
+    expect($('first-run-switch-manage')?.textContent).toBe('Manage GitHub Accounts…');
+    // Another account: its repositories, read with its token.
+    calls.length = 0;
+    await press('first-run-switch-ryan');
+    await vi.waitFor(() => expect(calls).toContainEqual(['repos as', 'ryan']));
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    // Add Another Account: the sign-in first; back, the accounts to pick from.
+    await press('first-run-account-switcher');
+    await press('first-run-switch-add');
+    await vi.waitFor(() => expect($('first-run-add-account-hint')).not.toBeNull());
+    await press('first-run-back');
+    await vi.waitFor(() => expect(screen()).toBe('github-account'));
+    await choose('first-run-account-ryan-work');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
     await press($$('first-run-notebook-open')[0]!);
     await vi.waitFor(() => expect(add).toHaveBeenCalled());
     expect(add.mock.calls.at(-1)![0]).toMatchObject({

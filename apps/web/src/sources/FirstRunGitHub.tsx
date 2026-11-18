@@ -9,24 +9,13 @@
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useState } from 'react';
-import {
-  desktop,
-  type BrowseError,
-  type DesktopGitHubBrowse,
-  type GitHubAccountChoice,
-} from '../desktop/bridge';
-import { accountsOf } from '../feedback/github-accounts';
+import type { BrowseError, DesktopGitHubBrowse, GitHubAccountChoice } from '../desktop/bridge';
+import { accountChoices, type AccountChoice } from './github-choices';
 import { useDeviceSignIn } from './device-sign-in';
 import { FIRST_RUN_DOCS, readHub, type Hub } from './first-run-flow';
 import { Action, Frame, LinkButton, Problem, Working } from './FirstRunFrame';
 
-/** One account Pick GitHub Account offers (A1617): `account` undefined is git's own sign-in. */
-interface Choice {
-  readonly key: string;
-  readonly account: GitHubAccountChoice | undefined;
-  readonly title: string;
-  readonly line: string;
-}
+type Choice = AccountChoice;
 
 type Check =
   | { readonly state: 'checking' }
@@ -36,48 +25,26 @@ type Check =
 /** Add Another Account's key among the choices. */
 const ADD = 'add';
 
-/**
- * The accounts to pick from (A1617): git's own sign-in when it is someone else's, then Penmoss's,
- * the first first. Fewer than two: nothing to ask.
- */
-async function choicesFor(github: DesktopGitHubBrowse): Promise<readonly Choice[]> {
-  const status = await desktop()
-    ?.githubToken?.status()
-    .catch(() => null);
-  const accounts = status ? accountsOf(status) : [];
-  if (accounts.length === 0) return [];
-  const gitLogin = (await github.gitLogin?.().catch(() => null)) ?? null;
-  const viaGit: Choice[] =
-    gitLogin && !accounts.some((each) => each.login === gitLogin)
-      ? [{ key: 'git', account: undefined, title: `@${gitLogin}`, line: 'This Mac’s git sign-in' }]
-      : [];
-  return [
-    ...viaGit,
-    ...accounts.map((each) => ({
-      key: `account:${each.login ?? ''}`,
-      account: each.login,
-      title: each.login ? `@${each.login}` : 'Token (Account Not Named)',
-      line: each.primary ? 'Your first account; Send Feedback uses it' : 'Signed in on this Mac',
-    })),
-  ];
-}
-
 export function GitHubAccess({
   github,
   onReady,
   onUrl,
   back,
   keep,
+  add = false,
 }: {
   github: DesktopGitHubBrowse;
   onReady: (hub: Hub) => void;
   onUrl: () => void;
   back: () => void;
-  /** Refresh: the account read before, read again without asking (A1617). */
+  /** Refresh, or an account picked in the switcher: read it without asking which (A1617). */
   keep?: { readonly account: GitHubAccountChoice | undefined };
+  /** The switcher's Add Another Account: straight to the sign-in, nothing read until it ends. */
+  add?: boolean;
 }) {
   const [check, setCheck] = useState<Check>({ state: 'checking' });
-  const [asked, setAsked] = useState(0);
+  /** -1: Add Another Account came first, so nothing is read yet. */
+  const [asked, setAsked] = useState(add ? -1 : 0);
   /** Penmoss's own sign-in just finished: 2.5, then Continue. */
   const [signedIn, setSignedIn] = useState(false);
   const device = useDeviceSignIn(github.signIn, () => setSignedIn(true));
@@ -86,14 +53,15 @@ export function GitHubAccess({
     keep ?? null,
   );
   /** Add Another Account: the sign-in, with the other accounts kept. */
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(add);
   const [choice, setChoice] = useState<string | null>(null);
 
   useEffect(() => {
+    if (asked < 0) return;
     let live = true;
     void (async () => {
       if (!picked) {
-        const choices = await choicesFor(github);
+        const choices = await accountChoices(github);
         if (!live) return;
         if (choices.length >= 2) {
           setCheck({ state: 'choose', choices });
@@ -236,6 +204,8 @@ export function GitHubAccess({
         back={() => {
           setAdding(false);
           if (device.ended) device.cancel();
+          // Opened from the switcher: the accounts to pick from, read now.
+          if (asked < 0) again();
         }}
         actions={
           <>

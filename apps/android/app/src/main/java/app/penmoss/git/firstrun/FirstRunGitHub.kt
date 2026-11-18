@@ -51,7 +51,17 @@ private sealed interface Check {
  * with Add Another Account, which signs in beside the others (A1616).
  */
 @Composable
-internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () -> Unit, back: () -> Unit, choose: Boolean = false) {
+internal fun GitHubAccess(
+    deps: FirstRunDeps,
+    onReady: (Hub) -> Unit,
+    onUrl: () -> Unit,
+    back: () -> Unit,
+    choose: Boolean = false,
+    /** Picked in the switcher (A1616): read at once. */
+    account: app.penmoss.feedback.GitHubAccount? = null,
+    /** Add Another Account from the switcher: the sign-in at once. */
+    add: Boolean = false,
+) {
     var check by remember { mutableStateOf<Check>(Check.Checking) }
     var asked by remember { mutableIntStateOf(0) }
     var typing by remember { mutableStateOf(false) }
@@ -64,12 +74,17 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
     /** This screen started a sign-in: only then do its outcomes show here. */
     var signing by remember { mutableStateOf(false) }
     /** The account picked, or just signed in to: its repositories are read (A1616). */
-    var picked by remember { mutableStateOf<app.penmoss.feedback.GitHubAccount?>(null) }
+    var picked by remember { mutableStateOf(account) }
     /** Add Another Account: the sign-in screen, with the other accounts kept. */
-    var adding by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(add) }
 
     LaunchedEffect(Unit) { deps.signIn?.reset() }
     LaunchedEffect(asked) {
+        // Add Another Account (the switcher's, or the chooser's): nothing is read until it ends.
+        if (adding) {
+            check = Check.NoSignIn
+            return@LaunchedEffect
+        }
         val accounts = deps.accounts()
         val account = picked ?: accounts.singleOrNull()?.takeIf { !choose }
         if (account == null && accounts.isNotEmpty() && !adding) {
@@ -282,6 +297,8 @@ internal fun GitHubAccess(deps: FirstRunDeps, onReady: (Hub) -> Unit, onUrl: () 
                 urlInstead()
             },
         ) {
+            // The Back gesture as the Back button: the accounts again, not the step before.
+            androidx.activity.compose.BackHandler(enabled = adding) { adding = false; picked = null; again() }
             if (adding) {
                 Lead("Sign in as your other GitHub account. Your other accounts, and the notebooks added with them, stay as they are.")
                 Lead("On GitHub’s page, check the account shown at the top right is the one you want; switch accounts there if it isn’t.", Modifier.testTag("first-run-add-account-hint"), small = true)

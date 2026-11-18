@@ -14,7 +14,12 @@
  */
 import { BrandMark } from '@penmoss/ui/icons';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { desktop, type DesktopGit, type GitHubRepo } from '../desktop/bridge';
+import {
+  desktop,
+  type DesktopGit,
+  type GitHubAccountChoice,
+  type GitHubRepo,
+} from '../desktop/bridge';
 import { GitHubSettings } from '../feedback/GitHubSettings';
 import { gitNotebookPath, navigate } from '../router';
 import {
@@ -30,6 +35,7 @@ import {
 import { Action, Frame } from './FirstRunFrame';
 import { GitHubAccess } from './FirstRunGitHub';
 import {
+  AccountSwitcher,
   CreateRepo,
   FolderPick,
   GitMissing,
@@ -237,6 +243,28 @@ function NotebookSteps({
     setReads(new Map());
   };
 
+  /** GitHub's step again, for `then`: as `account`, or Add Another Account (A1617). */
+  const githubAgain = (
+    then: 'create' | 'list',
+    next: { keep?: { account: GitHubAccountChoice | undefined }; add?: boolean },
+  ) => {
+    forgetReads();
+    setHub(null);
+    replace({ at: 'github', then, ...next });
+  };
+  /** Whose repositories these are, as a control above them (option 2, 17 Nov 2026; A1617). */
+  const switcher = (then: 'create' | 'list', shown: Hub) => (
+    <AccountSwitcher
+      github={github}
+      hub={shown}
+      {...(then === 'create' ? { line: 'Making the repository in this account' } : {})}
+      onPick={(picked) => githubAgain(then, { keep: { account: picked } })}
+      onAdd={() => githubAgain(then, { add: true })}
+      onManage={() => go({ at: 'accounts', then })}
+      onRefresh={() => githubAgain(then, { keep: { account: shown.account } })}
+    />
+  );
+
   /** One repository's folders, read once (again on Try Again or Refresh). */
   const read = useCallback(
     (repo: GitHubRepo, again = false) => {
@@ -395,6 +423,7 @@ function NotebookSteps({
         <GitHubAccess
           github={github}
           {...(screen.keep ? { keep: screen.keep } : {})}
+          add={screen.add === true}
           onReady={(answer) => {
             forgetReads();
             setHub(answer);
@@ -410,7 +439,7 @@ function NotebookSteps({
         <CreateRepo
           github={browse}
           hub={hub}
-          onAccounts={() => go({ at: 'accounts', then: 'create' })}
+          switcher={switcher('create', hub)}
           onCreated={(place, name) => go({ at: 'setup', setup: { kind: 'create', place, name } })}
           onUseExisting={() => replace({ at: 'list' })}
           back={back}
@@ -438,12 +467,8 @@ function NotebookSteps({
           }
           onUrl={() => go({ at: 'url' })}
           onCreate={goal === 'new' ? () => replace({ at: 'create' }) : null}
-          onRefresh={() => {
-            forgetReads();
-            setHub(null);
-            replace({ at: 'github', then: 'list', keep: { account: hub.account } });
-          }}
-          onAccounts={() => go({ at: 'accounts', then: 'list' })}
+          onRefresh={() => githubAgain('list', { keep: { account: hub.account } })}
+          switcher={switcher('list', hub)}
           back={back}
         />
       ) : null;
