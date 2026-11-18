@@ -239,6 +239,8 @@ class ImageView implements NodeView {
   private readonly widthInput: HTMLInputElement;
   /** The tools' Open in Lightbox (T51, A948); in a read-only note it is all the tools show. */
   private readonly lightboxButton: HTMLButtonElement;
+  /** The tools' Copy (A1630): the picture as a PNG on the clipboard; shown with Open in Lightbox. */
+  private readonly copyButton: HTMLButtonElement;
   private readonly offDouble: () => void;
   /** The lightbox this picture opened, while it may be open. */
   private lightbox: Lightbox | null = null;
@@ -298,7 +300,16 @@ class ImageView implements NodeView {
       this.lightboxButton.focus({ preventScroll: true });
       this.openLightbox();
     });
-    this.tools.append(this.lightboxButton);
+    this.copyButton = doc.createElement('button');
+    this.copyButton.type = 'button';
+    this.copyButton.className = 'pm-image-copy';
+    this.copyButton.textContent = 'Copy';
+    this.copyButton.dataset['testid'] = 'image-copy';
+    this.copyButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      void this.copyPicture();
+    });
+    this.tools.append(this.lightboxButton, this.copyButton);
     this.tools.addEventListener('focusout', (event) => {
       if (!this.tools.contains(event.relatedTarget as globalThis.Node | null) && !this.selected) {
         this.tools.hidden = true;
@@ -319,6 +330,39 @@ class ImageView implements NodeView {
       this.openLightbox();
     });
     this.render(true);
+  }
+
+  /**
+   * Copies the picture as a PNG (A1630): drawn from the `<img>` already shown, so a JPEG or WebP
+   * goes as PNG too, which is the one picture type every app pastes. The button says how it went.
+   */
+  private async copyPicture(): Promise<void> {
+    const button = this.copyButton;
+    const say = (text: string) => {
+      button.textContent = text;
+      setTimeout(() => (button.textContent = 'Copy'), 1500);
+    };
+    try {
+      const doc = this.dom.ownerDocument;
+      const win = doc.defaultView;
+      const ClipboardItemCtor = win?.ClipboardItem;
+      if (!win || !ClipboardItemCtor || !win.navigator.clipboard?.write)
+        throw new Error('No clipboard');
+      const canvas = doc.createElement('canvas');
+      canvas.width = this.img.naturalWidth;
+      canvas.height = this.img.naturalHeight;
+      canvas.getContext('2d')?.drawImage(this.img, 0, 0);
+      const png = new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error('No picture'))),
+          'image/png',
+        ),
+      );
+      await win.navigator.clipboard.write([new ClipboardItemCtor({ 'image/png': png })]);
+      say('Copied');
+    } catch {
+      say('Couldn’t Copy');
+    }
   }
 
   /** Whether the picture itself shows (not its alt text, Tap to load or a failure). */
@@ -360,6 +404,7 @@ class ImageView implements NodeView {
     const editable = this.view.editable;
     for (const label of this.tools.querySelectorAll('label')) label.hidden = !editable;
     this.lightboxButton.hidden = !this.showing();
+    this.copyButton.hidden = this.lightboxButton.hidden;
     if (!editable) {
       this.tools.hidden = this.lightboxButton.hidden;
       return;
@@ -454,6 +499,7 @@ class ImageView implements NodeView {
     this.releaseShown();
     this.loadButton.hidden = true;
     this.lightboxButton.hidden = true;
+    this.copyButton.hidden = true;
     if (WEB_URL.test(src)) {
       this.showWeb(src, false);
       return;
@@ -515,6 +561,7 @@ class ImageView implements NodeView {
     this.img.onload = () => {
       this.dom.dataset['state'] = 'ready';
       this.lightboxButton.hidden = false;
+      this.copyButton.hidden = false;
     };
     this.img.onerror = () => (this.dom.dataset['state'] = 'missing');
     this.img.src = url;

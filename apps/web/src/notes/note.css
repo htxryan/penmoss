@@ -533,7 +533,7 @@
   filter: invert(93%) hue-rotate(180deg);
 }
 
-.pm-image-tools .pm-image-lightbox {
+.pm-image-tools :is(.pm-image-lightbox, .pm-image-copy) {
   padding: 0.2rem 0.55rem;
   border: 1px solid var(--pm-border);
   border-radius: 0;
@@ -543,7 +543,7 @@
   cursor: pointer;
 }
 
-.pm-image-tools .pm-image-lightbox:hover {
+.pm-image-tools :is(.pm-image-lightbox, .pm-image-copy):hover {
   background: var(--pm-hover);
 }
 

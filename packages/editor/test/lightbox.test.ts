@@ -358,6 +358,55 @@ describe('an image in a note', () => {
     expect(document.activeElement).toBe(button);
   });
 
+  it('copies its picture as a PNG from Copy in its tools (A1630)', async () => {
+    const { collab } = await note();
+    const { view } = collab.editor;
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, 5)));
+    const tools = view.dom.querySelector<HTMLElement>('.pm-image-tools')!;
+    const copy = tools.querySelector<HTMLButtonElement>('[data-testid="image-copy"]')!;
+    expect(copy.hidden).toBe(false);
+    expect(copy.textContent).toBe('Copy');
+
+    // happy-dom draws nothing: a canvas gives a PNG, and the clipboard takes what it is given.
+    const png = new Blob(['png'], { type: 'image/png' });
+    const toBlob = vi
+      .spyOn(HTMLCanvasElement.prototype, 'toBlob')
+      .mockImplementation((done: BlobCallback) => done(png));
+    const written: Record<string, Promise<Blob>>[] = [];
+    class FakeItem {
+      constructor(readonly items: Record<string, Promise<Blob>>) {
+        written.push(items);
+      }
+    }
+    vi.stubGlobal('ClipboardItem', FakeItem);
+    const write = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true });
+    try {
+      copy.click();
+      await vi.waitFor(() => expect(copy.textContent).toBe('Copied'));
+      expect(write).toHaveBeenCalledTimes(1);
+      expect(Object.keys(written[0]!)).toEqual(['image/png']);
+      expect(await written[0]!['image/png']).toBe(png);
+    } finally {
+      toBlob.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('says so when the clipboard refuses the picture', async () => {
+    const { collab } = await note();
+    const { view } = collab.editor;
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, 5)));
+    const copy = view.dom.querySelector<HTMLButtonElement>('[data-testid="image-copy"]')!;
+    vi.stubGlobal('ClipboardItem', undefined);
+    try {
+      copy.click();
+      await vi.waitFor(() => expect(copy.textContent).toBe('Couldn’t Copy'));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('opens on a double click, in a read-only note too', async () => {
     const { imgs } = await note(false);
     imgs[0]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));

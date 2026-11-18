@@ -106,7 +106,7 @@ test('the status bar: save status, counts, and the selection’s counts', async 
     timeout: 40_000,
   });
   // A git notebook's words (A860): saved here, and pushed to git.
-  await expect(bar.getByTestId('save-status')).toContainText('Saved · in git');
+  await expect(bar.getByTestId('save-status')).toContainText('Saved Remotely');
   // Routine saving and syncing is not read out; only states that need attention are.
   await expect(bar.getByTestId('save-status')).not.toHaveAttribute('role', /.+/);
   await expect(bar.getByTestId('save-alert')).toHaveText('');

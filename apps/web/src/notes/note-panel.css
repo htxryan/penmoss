@@ -78,6 +78,21 @@
   background: var(--pm-accent);
 }
 
+/* Saved Locally: on this device, not pushed yet (A1629). The search highlight is each theme's yellow. */
+.save-status[data-state='local'] .dot {
+  background: var(--pm-search-match);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pm-fg) 25%, transparent);
+}
+
+/* Sync Now beside Saved Locally: the bar's full height (A1629). */
+.save-status-slot > .status-sync-now {
+  align-self: stretch;
+  height: auto;
+  margin-left: 0.35rem;
+  padding: 0 0.5rem;
+  border-radius: 0;
+}
+
 .save-status[data-state='offline'] .dot,
 .save-status[data-state='signed-out'] .dot {
   background: var(--pm-muted);
