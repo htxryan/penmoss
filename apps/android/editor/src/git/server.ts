@@ -1244,24 +1244,36 @@ export class LocalServer {
     return refusal(405, 'method_not_allowed', `${method} attachments`);
   }
 
-  /** An attachment by its hash: in the store, else at the branch's head (another writer's). */
+  /**
+   * An attachment by its hash: in the store, else at the branch's head (another writer's), then
+   * kept in the store (A1625). The clone is made again past its size (G0), and a picture read
+   * once keeps showing through that, and offline. A clone without the head answers "not here".
+   */
   private async findAttachment(sha256: string): Promise<Uint8Array | null> {
     const storage = this.engine.storage;
-    const lastHead = this.engine.replica.state.lastHead;
-    const root = this.engine.transport.root;
-    if (lastHead) {
-      const files = await this.engine.transport.list(lastHead);
-      for (const path of files.keys()) {
-        const name = path.slice(`${root}attachments/`.length);
-        if (!path.startsWith(`${root}attachments/`) || !name.startsWith(`${sha256}.`)) continue;
-        const local = await storage.readAttachment(name);
-        if (local) return local;
-        return (await this.engine.transport.read(lastHead, [path])).get(path) ?? null;
-      }
-    }
     for (const ext of ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'pdf', 'bin', 'heic', 'avif']) {
       const local = await storage.readAttachment(`${sha256}.${ext}`);
       if (local) return local;
+    }
+    const lastHead = this.engine.replica.state.lastHead;
+    if (!lastHead) return null;
+    const root = this.engine.transport.root;
+    const folder = `${root}attachments/`;
+    let files: ReadonlyMap<string, string>;
+    try {
+      files = await this.engine.transport.list(lastHead);
+    } catch {
+      return null;
+    }
+    for (const path of files.keys()) {
+      const name = path.slice(folder.length);
+      if (!path.startsWith(folder) || !name.startsWith(`${sha256}.`)) continue;
+      const bytes = (await this.engine.transport.read(lastHead, [path])).get(path) ?? null;
+      if (bytes && (await sha256Of(bytes)) === sha256) {
+        // Kept only when its bytes are its name: the store is trusted as the branch is.
+        await storage.writeAttachment(name, bytes).catch(() => undefined);
+      }
+      return bytes;
     }
     return null;
   }
@@ -1373,4 +1385,10 @@ function bodyOf(doc: Y.Doc | null): string {
   } finally {
     if (!doc) read.destroy();
   }
+}
+
+/** A file's SHA-256, as attachments are named (`attachments/<sha256>.<ext>`). */
+async function sha256Of(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }

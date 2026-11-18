@@ -20,6 +20,7 @@ object PlatformSettings {
         SettingKeys.HIDDEN_SECTIONS,
         SettingKeys.RECENT_COUNT,
         SettingKeys.QUICK_ACCESS_NOTEBOOK,
+        SettingKeys.QUICK_ACCESS_IN_DRAWER,
     )
 
     /** The keys, by prefix: the keyboard shortcuts (`keys.<command>`). */

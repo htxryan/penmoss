@@ -327,8 +327,6 @@ internal fun RepoPicked(
     val picked = branch
     var branch by remember { mutableStateOf(picked) }
     var dir by remember { mutableStateOf("") }
-    var another by remember { mutableStateOf("") }
-    var anotherProblem by remember { mutableStateOf<String?>(null) }
     var pick by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(loaded == null) { if (loaded == null) read(repo, false) }
     when (loaded) {
@@ -370,7 +368,14 @@ internal fun RepoPicked(
             PlaceCard(repo.fullName, dir.trim(), branch.trim().ifEmpty { "main" })
             MoreOptions(branch, dir, { branch = it }, { dir = it })
         }
-        // One notebook: open it, or start another in a folder beside it.
+        // One notebook, already on the phone: nothing to open, so straight to the folders to
+        // start another, the notebook's own folder marked Already Added (Ryan, 18 Nov 2026; A1623).
+        notebooks.size == 1 && notebooks.single().notebook!!.id in added && !rootIsNotebook ->
+            FolderPick(
+                repo, token, folders, beside = true, onName = onName, back = back, added = added, onOpen = onOpen, branch = picked,
+                lead = "${notebooks.single().notebook!!.name} is already on this phone. Pick a folder for a new notebook.",
+            )
+        // One notebook: open it, or browse the folders to start another beside it.
         notebooks.size == 1 -> {
             val only = notebooks.single()
             val notebook = only.notebook!!
@@ -382,25 +387,7 @@ internal fun RepoPicked(
                 } else {
                     Primary("Open ${notebook.name}", "first-run-open", "folder-open") { onOpen(placeIn(repo, token, only.path, picked), notebook.name) }
                 }
-                if (!rootIsNotebook) {
-                    HorizontalDivider()
-                    Text("Start Another Notebook in a Folder", style = MaterialTheme.roles.groupHead)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            another,
-                            { another = it; anotherProblem = null },
-                            Modifier.weight(1f).testTag("first-run-another"),
-                            label = { Text("Folder Name") },
-                            placeholder = { Text("journal") },
-                            singleLine = true,
-                        )
-                        Plain("Make Notebook", "first-run-another-make", "folder-plus") {
-                            val words = folderNameProblem(another)
-                            if (words != null) anotherProblem = words else onName(placeIn(repo, token, another.trim(), picked))
-                        }
-                    }
-                    anotherProblem?.let { Problem(it, "first-run-another-problem") }
-                }
+                if (!rootIsNotebook) Link("Start Another Notebook in a Folder", "first-run-start-another", "folder-plus", onFolder)
             }
         }
         // Several notebooks: pick one.
@@ -540,6 +527,8 @@ internal fun FolderPick(
     onOpen: ((Place, String) -> Unit)? = null,
     /** The branch these folders are on (Pick Branch). */
     branch: String = repo.defaultBranch.ifEmpty { "main" },
+    /** The line under the title, when the screen before says why the folders are here. */
+    lead: String? = null,
 ) {
     val made = remember { mutableStateListOf<String>() }
     val notebooks = remember(folders) { folders.folders.filter { it.notebook != null && it.path.isNotEmpty() }.associate { it.path to it.notebook!! } }
@@ -594,7 +583,7 @@ internal fun FolderPick(
         },
         actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = chosen in free) { onName(placeIn(repo, token, chosen, branch)) } },
     ) {
-        Lead(if (beside) "Pick where the new notebook goes." else "${repo.fullName} holds other files. Pick where the notebook goes.")
+        Lead(lead ?: if (beside) "Pick where the new notebook goes." else "${repo.fullName} holds other files. Pick where the notebook goes.")
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 filter,

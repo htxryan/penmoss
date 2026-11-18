@@ -18,7 +18,8 @@
     "sidebar.sectionOrder",
     "sidebar.hiddenSections",
     "sidebar.recentCount",
-    "quickAccess.showNotebook"
+    "quickAccess.showNotebook",
+    "quickAccess.inDrawer"
   ],
   "prefixes": ["keys."],
   "samples": {
@@ -33,6 +34,7 @@
     "sidebar.hiddenSections": true,
     "sidebar.recentCount": true,
     "quickAccess.showNotebook": true,
+    "quickAccess.inDrawer": true,
     "quickAccess.notes": false,
     "keys.app.search": true,
     "keysTyped": false,

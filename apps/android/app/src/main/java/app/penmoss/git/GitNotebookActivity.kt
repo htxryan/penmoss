@@ -62,7 +62,11 @@ class GitNotebookActivity : ComponentActivity() {
                 runCatching { graph.git.source(localId).front(true) }
             }
         }
-        if (savedInstanceState == null) offer(intent)
+        if (savedInstanceState == null) {
+            offer(intent)
+            // Where the app was left (A1624): only as it opens, never over a notebook already open.
+            restoreOf(intent)?.let(deepLinks::offer)
+        }
         setContent {
             val appearance by graph.appearance.collectAsStateWithLifecycle()
             val dark = appearance.isDark(isSystemInDarkTheme())
@@ -115,13 +119,29 @@ class GitNotebookActivity : ComponentActivity() {
         /** A note to open, from a `penmoss://note/<id>` link or a launcher shortcut (A1040). */
         const val EXTRA_NOTE = "app.penmoss.git.note"
 
+        /** Where the app was left in this notebook (A1624): a [app.penmoss.git.LastPlace.Kind] and its id. */
+        const val EXTRA_RESTORE_KIND = "app.penmoss.git.restoreKind"
+        const val EXTRA_RESTORE_ID = "app.penmoss.git.restoreId"
+
+        private fun restoreOf(intent: Intent?): LastPlace? {
+            val localId = intent?.getStringExtra(EXTRA_LOCAL_ID) ?: return null
+            val kind = intent.getStringExtra(EXTRA_RESTORE_KIND)?.let { name -> LastPlace.Kind.entries.firstOrNull { it.name == name } } ?: return null
+            return LastPlace(localId, kind, intent.getStringExtra(EXTRA_RESTORE_ID))
+        }
+
         /** Opens a notebook's screens; each notebook keeps one task (its document). */
-        fun open(context: Context, localId: String, action: app.penmoss.ui.keys.LauncherAction? = null, note: String? = null) {
+        fun open(context: Context, localId: String, action: app.penmoss.ui.keys.LauncherAction? = null, note: String? = null, restore: LastPlace? = null) {
             context.startActivity(
                 Intent(context, GitNotebookActivity::class.java)
                     .putExtra(EXTRA_LOCAL_ID, localId)
                     .apply { if (action != null) putExtra(EXTRA_ACTION, action.name) }
                     .apply { if (note != null) putExtra(EXTRA_NOTE, note) }
+                    .apply {
+                        if (restore != null && restore.localId == localId) {
+                            putExtra(EXTRA_RESTORE_KIND, restore.kind.name)
+                            restore.id?.let { putExtra(EXTRA_RESTORE_ID, it) }
+                        }
+                    }
                     .setData(android.net.Uri.parse("penmoss-git://notebook/$localId"))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_NEW_TASK),
             )

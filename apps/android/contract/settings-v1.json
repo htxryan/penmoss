@@ -16,7 +16,8 @@
     "sidebar.sectionOrder",
     "sidebar.hiddenSections",
     "sidebar.recentCount",
-    "quickAccess.showNotebook"
+    "quickAccess.showNotebook",
+    "quickAccess.inDrawer"
   ],
   "defaults": {
     "theme.id": "penmoss",
@@ -60,7 +61,8 @@
     "sidebar.sectionOrder": ["quickAccess", "recent", "notebooks", "calendar", "tags"],
     "sidebar.hiddenSections": [],
     "sidebar.recentCount": 10,
-    "quickAccess.showNotebook": false
+    "quickAccess.showNotebook": false,
+    "quickAccess.inDrawer": false
   },
   "templateMaxChars": 10000,
   "settingsPerRequest": 20,
@@ -490,6 +492,10 @@
       "invalid": [0, 51, 2.5, "10", true]
     },
     "quickAccess.showNotebook": {
+      "valid": [true, false, null],
+      "invalid": ["true", 0, 1]
+    },
+    "quickAccess.inDrawer": {
       "valid": [true, false, null],
       "invalid": ["true", 0, 1]
     }

@@ -90,8 +90,15 @@ fun NotebooksHome(
                     land -> {
                         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                         androidx.compose.runtime.LaunchedEffect(Unit) {
-                            val primary = graph.git.journal()?.takeIf { id -> views.any { it.localId == id } } ?: views.first().localId
-                            GitNotebookActivity.open(context, primary)
+                            // Where the app was left, when that notebook is still here (A1624); else the primary's notes list.
+                            val last = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { LastPlace.read(context) }
+                                ?.takeIf { place -> views.any { it.localId == place.localId } }
+                            if (last != null) {
+                                GitNotebookActivity.open(context, last.localId, restore = last)
+                            } else {
+                                val primary = graph.git.journal()?.takeIf { id -> views.any { it.localId == id } } ?: views.first().localId
+                                GitNotebookActivity.open(context, primary)
+                            }
                             onLanded()
                         }
                     }

@@ -328,6 +328,75 @@ describe('the notes server (A874)', () => {
     expect(readTitle(doc)).toBe('Plan B');
   });
 
+  it('keeps a picture read from the clone, so it shows while the clone is made again (A1625)', async () => {
+    const remote = new MemoryRemote();
+    let broken = false;
+    const phone = fakeApp({
+      remote,
+      transport: (base) =>
+        Object.assign(Object.create(Object.getPrototypeOf(base) as object) as GitTransport, base, {
+          list: (head: string) =>
+            broken ? Promise.reject(new Error('no clone')) : base.list(head),
+          read: (head: string, paths: readonly string[]) =>
+            broken ? Promise.reject(new Error('no clone')) : base.read(head, paths),
+        }),
+    });
+    await phone.app.call('open', {
+      notebookId: NOTEBOOK,
+      name: 'Work',
+      create: true,
+      host: 'github.com',
+      label: 'Penmoss for Android (Pixel)',
+      front: true,
+    });
+    await settle(phone.app);
+    // The Mac adds two pictures to the branch.
+    const pictures = ['one', 'two'].map((word) => new TextEncoder().encode(`png ${word}`));
+    const names: string[] = [];
+    for (const bytes of pictures) {
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      names.push(
+        Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join(''),
+      );
+    }
+    const mac = new MemoryTransport({
+      remote,
+      branch: 'main',
+      root: '',
+      author: { name: 'Mac', email: 'mac@example.invalid' },
+    });
+    const head = await mac.fetch();
+    const commit = await mac.commit(
+      head,
+      new Map(names.map((sha, i) => [`attachments/${sha}.png`, pictures[i]!] as const)),
+      'pictures',
+    );
+    await mac.push(commit!);
+    await settle(phone.app);
+    const get = async (sha: string) =>
+      (await phone.app.call('http', {
+        method: 'GET',
+        path: `/api/attachments/${sha}`,
+        headers: {},
+        body: null,
+      })) as {
+        status: number;
+        body: Uint8Array;
+      };
+    const first = await get(names[0]!);
+    expect(first.status).toBe(200);
+    expect(new TextDecoder().decode(first.body)).toBe('png one');
+    // The clone is gone (made again past its size): the one read shows still; the other is "not here", never a 500.
+    broken = true;
+    const again = await get(names[0]!);
+    expect(again.status).toBe(200);
+    expect(new TextDecoder().decode(again.body)).toBe('png one');
+    expect((await get(names[1]!)).status).toBe(404);
+    // Back, the other is read and kept too.
+    broken = false;
+    expect((await get(names[1]!)).status).toBe(200);
+  });
+
   it('a copy made on another store (its epoch) is replaced, never merged (A5)', async () => {
     const remote = new MemoryRemote();
     const phone = fakeApp({ remote });

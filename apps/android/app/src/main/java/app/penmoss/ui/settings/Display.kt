@@ -83,6 +83,7 @@ internal fun DisplayRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
         onSectionOrder = { home -> graph.changeSetting(SettingKeys.SECTION_ORDER, SidebarLayout.toJson(withHomeOrder(state.settings.sectionOrder, home))) },
         onRecentCount = { graph.changeSetting(SettingKeys.RECENT_COUNT, JsonPrimitive(it)) },
         onQuickAccessNotebook = { graph.changeSetting(SettingKeys.QUICK_ACCESS_NOTEBOOK, JsonPrimitive(it)) },
+        onQuickAccessInDrawer = { graph.changeSetting(SettingKeys.QUICK_ACCESS_IN_DRAWER, JsonPrimitive(it)) },
     )
 }
 
@@ -107,6 +108,8 @@ data class HomeLayout(
     val hidden: Set<String> = emptySet(),
     val recentCount: Int = SidebarLayout.RECENT_DEFAULT,
     val quickAccessNotebook: Boolean = false,
+    /** The drawer lists Quick Access's notes themselves, each one tap away (A1622). */
+    val quickAccessInDrawer: Boolean = false,
 ) {
     /** Home's sections that show, in order. */
     val shown: List<String> get() = order.filter { it in HOME_SECTIONS && it !in hidden }
@@ -120,6 +123,7 @@ data class HomeLayout(
             hidden = settings.hiddenSections,
             recentCount = settings.recentCount,
             quickAccessNotebook = settings.quickAccessShowsNotebook,
+            quickAccessInDrawer = settings.quickAccessInDrawer,
         )
     }
 }

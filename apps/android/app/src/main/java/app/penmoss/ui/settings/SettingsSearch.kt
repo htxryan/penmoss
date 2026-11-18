@@ -36,6 +36,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Shortcuts on Home", "Home", SettingsRoutes.DISPLAY, "Tags, Today, This Week, Graph and Commands", "hide", "sidebar", "buttons"),
     entry("Sections", "Home", SettingsRoutes.DISPLAY, "Quick Access, Recent Notes and Notebooks, in your order", "reorder", "sidebar"),
     entry("Show Notebook Names", "Home", SettingsRoutes.DISPLAY, "In Quick Access", "quick access"),
+    entry("Notes in the Sidebar", "Home", SettingsRoutes.DISPLAY, "Quick Access's notes, one tap each", "quick access", "drawer", "menu", "pinned"),
     entry("Recent Notes", "Home", SettingsRoutes.DISPLAY, "How many Home lists", "recent count"),
     entry("Symbols", "Symbols", SettingsRoutes.SYMBOLS, "Mark a line with a symbol at its start", "line symbols", "glyph", "emoji", "star"),
     entry("Restore Default Symbols", "Symbols", SettingsRoutes.SYMBOLS, null, "reset symbols"),

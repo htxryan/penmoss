@@ -77,6 +77,7 @@ describe('isPlatformSetting (PEN-156, A1605)', () => {
       'sidebar.hiddenSections',
       'sidebar.recentCount',
       'quickAccess.showNotebook',
+      'quickAccess.inDrawer',
       'keys.app.search',
     ]) {
       expect(isPlatformSetting(key), key).toBe(true);

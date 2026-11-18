@@ -32,7 +32,7 @@ Penmoss then sets the notebook up and runs its first sync, showing each step. Wh
 
 If the first sync fails, Penmoss says why. The notebook is on your Mac already, and nothing is lost: **Retry** tries again, and **Open Anyway** opens it, and the note's bottom bar shows how the sync stands until one works.
 
-If the repository you pick already holds a notebook, Penmoss offers to open it instead of making a second one.
+If the repository you pick already holds a notebook, Penmoss offers to open it instead of making a second one. **Start Another Notebook in a Folder** shows the repository's folders to pick from; on Android, when that notebook is already on the phone, the folders show straight away, with its own folder marked **Already Added**.
 
 ### More options
 

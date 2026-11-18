@@ -29,6 +29,20 @@ class DeepLinkInbox {
         launched.compareAndSet(action, null)
     }
 
+    private val returning = MutableStateFlow<app.penmoss.git.LastPlace?>(null)
+
+    /** Where the app was left, to open at launch (A1624), until the screens go there. */
+    val restore: StateFlow<app.penmoss.git.LastPlace?> = returning.asStateFlow()
+
+    fun offer(place: app.penmoss.git.LastPlace) {
+        returning.value = place
+    }
+
+    /** The screens went back to [place]. */
+    fun restored(place: app.penmoss.git.LastPlace) {
+        returning.compareAndSet(place, null)
+    }
+
     fun offer(noteId: String) {
         pending.value = noteId
     }

@@ -3,7 +3,9 @@ import { movedQuickAccess } from '../src/quick-access';
 import {
   HIDDEN_SECTIONS_SETTING,
   movedSection,
+  QUICK_ACCESS_IN_DRAWER_SETTING,
   QUICK_ACCESS_NOTEBOOK_SETTING,
+  quickAccessInDrawer,
   quickAccessShowsNotebook,
   RECENT_COUNT_SETTING,
   recentCountOf,
@@ -78,6 +80,9 @@ describe('the sidebar’s sections (T53 item 8)', () => {
     expect(recentCountOf({ [RECENT_COUNT_SETTING]: 500 })).toBe(10);
     expect(quickAccessShowsNotebook({})).toBe(false);
     expect(quickAccessShowsNotebook({ [QUICK_ACCESS_NOTEBOOK_SETTING]: true })).toBe(true);
+    expect(quickAccessInDrawer({})).toBe(false);
+    expect(quickAccessInDrawer({ [QUICK_ACCESS_IN_DRAWER_SETTING]: true })).toBe(true);
+    expect(sidebarLayoutProblem(QUICK_ACCESS_IN_DRAWER_SETTING, 'yes')).toMatch(/true or false/);
   });
 });
 
