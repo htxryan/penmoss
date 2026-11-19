@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { AGENT_CLIENTS } from '../src/analytics/actors';
-import { CATALOGUE } from '../src/analytics/catalogue';
+import { CATALOGUE, SETTING_VALUES } from '../src/analytics/catalogue';
 import {
   ACTORS,
   BATCH_VERSION,
@@ -46,7 +46,6 @@ import {
   MAX_SETTING_NUMBER,
   OS_VERSION_PATTERN,
   PROP_SPECS,
-  SETTING_TOKEN,
   VERSION_PATTERN,
 } from '../src/analytics/validate';
 
@@ -55,7 +54,7 @@ const FILE = fileURLToPath(
 );
 
 const COMMENT =
-  'The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names matching `patterns.flag`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket or a word matching `patterns.settingToken`; `screen`: a name in `catalogue.screen`). States are stored as their `code`. The catalogue only grows.';
+  'The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names matching `patterns.flag`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`). States are stored as their `code`. The catalogue only grows.';
 
 /** A pattern as Kotlin's Regex takes it: the source, no flags. */
 const source = (pattern: RegExp) => {
@@ -85,10 +84,10 @@ function contract() {
       osVersion: source(OS_VERSION_PATTERN),
       keys: source(KEYS_PATTERN),
       flag: source(FLAG_PATTERN),
-      settingToken: source(SETTING_TOKEN),
     },
     maxFlags: MAX_FLAGS,
     maxSettingNumber: MAX_SETTING_NUMBER,
+    settingValues: SETTING_VALUES,
     sending: {
       maxBatchEvents: MAX_BATCH_EVENTS,
       maxBatchBytes: MAX_BATCH_BYTES,

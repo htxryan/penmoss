@@ -10,7 +10,12 @@
  * which `test/analytics-contract.test.ts` writes from this file.
  */
 import { DISPLAY_SETTING_KEYS, PHONE_SHORTCUT_SETTING_KEYS } from '../display';
-import { FONT_SETTING_KEYS } from '../fonts';
+import {
+  FONT_PRESETS,
+  FONT_SETTING_KEYS,
+  INTERFACE_FONT_SETTING,
+  NOTE_FONT_SETTING,
+} from '../fonts';
 import { STATUS_BAR_SETTING, UNDER_TITLE_SETTING } from '../note-metadata';
 import {
   HIDDEN_SECTIONS_SETTING,
@@ -19,9 +24,10 @@ import {
   RECENT_COUNT_SETTING,
   SECTION_ORDER_SETTING,
 } from '../sidebar-layout';
-import { TOOLTIP_DELAY_SETTING } from '../tooltips';
+import { TOOLTIP_DELAY_SETTING, TOOLTIP_NEVER } from '../tooltips';
 import type { EventKind } from './events';
 import { LIMIT_KEYS } from './limits';
+import { BUILTIN_THEMES } from './themes';
 
 /** The command registry's ids (apps/web/src/commands/definitions.ts, and the phone's own). */
 export const COMMAND_NAMES: readonly string[] = [
@@ -376,6 +382,27 @@ export const SETTING_NAMES: readonly string[] = [
   'privacy.limits.reset',
   ...LIMIT_KEYS.map((key) => `privacy.limits.${key}`),
 ];
+
+/**
+ * The words a setting's `value` may be, by setting (PEN-137). A setting not listed takes no
+ * word at all: its value is a boolean, a whole number or a count bucket, or the event says only
+ * `changed: true`. So a notebook's name, a time zone, a template or a font's family can never
+ * pass as a value. A font names its preset or `custom`, a theme its built-in id or `custom`.
+ */
+export const SETTING_VALUES: Readonly<Record<string, readonly string[]>> = {
+  'theme.id': [...BUILTIN_THEMES, 'custom'],
+  'theme.mode': ['light', 'dark', 'system'],
+  [INTERFACE_FONT_SETTING]: [...FONT_PRESETS, 'custom'],
+  [NOTE_FONT_SETTING]: [...FONT_PRESETS, 'custom'],
+  [TOOLTIP_DELAY_SETTING]: [TOOLTIP_NEVER],
+  'capture.destination': ['daily', 'inbox'],
+  'updates.channel': ['stable', 'alpha'],
+};
+
+/** Whether `value` is one of the words setting `name` may be. */
+export function isSettingWord(name: string, value: string): boolean {
+  return Object.hasOwn(SETTING_VALUES, name) && SETTING_VALUES[name]!.includes(value);
+}
 
 /**
  * Tracked controls' ids (`data-event` on the web, `Modifier.tracked` on Android). A control

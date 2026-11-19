@@ -1,5 +1,5 @@
 {
-  "$comment": "The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names matching `patterns.flag`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket or a word matching `patterns.settingToken`; `screen`: a name in `catalogue.screen`). States are stored as their `code`. The catalogue only grows.",
+  "$comment": "The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names matching `patterns.flag`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`). States are stored as their `code`. The catalogue only grows.",
   "version": 1,
   "kinds": [
     "app",
@@ -68,11 +68,29 @@
     "version": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}(?:-[a-z0-9.]{1,20})?$",
     "osVersion": "^\\d{1,4}(?:\\.\\d{1,4})?$",
     "keys": "^(?:(?:Mod|Ctrl|Alt|Shift|Meta|Cmd|Option)\\+){0,4}(?:[A-Z0-9]|F\\d{1,2}|[\\x5B\\]\\\\;',./`=-]|Enter|Escape|Tab|Space|Backspace|Delete|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown)$",
-    "flag": "^[a-z][a-z0-9-]{0,31}$",
-    "settingToken": "^[a-zA-Z0-9][a-zA-Z0-9-]{0,31}$"
+    "flag": "^[a-z][a-z0-9-]{0,31}$"
   },
   "maxFlags": 16,
   "maxSettingNumber": 10000000,
+  "settingValues": {
+    "theme.id": [
+      "penmoss",
+      "paper",
+      "slate",
+      "nord",
+      "solarized",
+      "gruvbox",
+      "rose-pine",
+      "high-contrast",
+      "custom"
+    ],
+    "theme.mode": ["light", "dark", "system"],
+    "font.interface": ["theme", "system", "serif", "rounded", "humanist", "mono", "custom"],
+    "font.note": ["theme", "system", "serif", "rounded", "humanist", "mono", "custom"],
+    "tooltip.delay": ["never"],
+    "capture.destination": ["daily", "inbox"],
+    "updates.channel": ["stable", "alpha"]
+  },
   "sending": {
     "maxBatchEvents": 200,
     "maxBatchBytes": 65536,

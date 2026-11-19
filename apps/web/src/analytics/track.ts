@@ -8,10 +8,11 @@ import {
   SCREEN_NAMES,
   SETTING_NAMES,
   countBucket,
+  isSettingWord,
   themeForEvent,
   type PropValue,
 } from '@penmoss/core/analytics';
-import { FONT_PRESETS } from '@penmoss/core/fonts';
+import { CUSTOM_FONT_PREFIX } from '@penmoss/core/fonts';
 import type { Route } from '../router';
 import { record } from './record';
 
@@ -153,12 +154,6 @@ const SETTINGS: ReadonlySet<string> = new Set(SETTING_NAMES);
 /** The keyboard shortcuts' settings (`keys.<command id>`): one name for all of them. */
 const BINDING_PREFIX = 'keys.';
 const FONT_KEYS: ReadonlySet<string> = new Set(['font.interface', 'font.note']);
-/** Settings whose value is one of a few words; any other text setting records `changed` only. */
-const ENUMS: Readonly<Record<string, readonly string[]>> = {
-  'theme.mode': ['light', 'dark', 'system'],
-  'capture.destination': ['daily', 'inbox'],
-  'tooltip.delay': ['never'],
-};
 
 /** Settings copied between notebooks (A1137) are the person's one change, recorded once. */
 let quiet = 0;
@@ -173,7 +168,18 @@ export function withoutRecording<T>(write: () => T): T {
   }
 }
 
-/** What a setting's change records: its value when that is safe to send, else `changed`. */
+/** A text setting's value as an event may say it: a custom theme or font is `custom`. */
+function settingWord(key: string, value: string): string {
+  if (key === 'theme.id') return themeForEvent(value);
+  if (FONT_KEYS.has(key) && value.startsWith(CUSTOM_FONT_PREFIX)) return 'custom';
+  return value;
+}
+
+/**
+ * What a setting's change records: its value when that is safe to send, else `changed`. Text is
+ * sent only when it is one of the words core lists for that setting (SETTING_VALUES); any
+ * other text (a time zone, a template, a font's family) records `changed: true`.
+ */
 export function settingProps(key: string, value: unknown): Record<string, PropValue> {
   if (typeof value === 'boolean') return { value };
   if (typeof value === 'number') {
@@ -182,12 +188,8 @@ export function settingProps(key: string, value: unknown): Record<string, PropVa
     return { changed: true };
   }
   if (typeof value === 'string') {
-    if (key === 'theme.id') return { value: themeForEvent(value) };
-    if (FONT_KEYS.has(key)) {
-      if ((FONT_PRESETS as readonly string[]).includes(value)) return { value };
-      return { value: value.startsWith('custom:') ? 'custom' : 'other' };
-    }
-    if (ENUMS[key]?.includes(value)) return { value };
+    const word = settingWord(key, value);
+    if (isSettingWord(key, word)) return { value: word };
   }
   return { changed: true };
 }

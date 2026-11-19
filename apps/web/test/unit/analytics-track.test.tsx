@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { eventProblem } from '@penmoss/core/analytics';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useTrackedDialog } from '../../src/analytics/dialog';
 import { flushRecorded } from '../../src/analytics/record';
@@ -137,6 +138,43 @@ describe('settings by name', () => {
     expect(settingProps('capture.destination', 'inbox')).toEqual({ value: 'inbox' });
     expect(settingProps('template.daily', 'pangolincanary')).toEqual({ changed: true });
     expect(settingProps('timeZone', 'Europe/London')).toEqual({ changed: true });
+  });
+
+  it('sends a word only when core lists it for that setting, else changed', () => {
+    expect(settingProps('theme.mode', 'system')).toEqual({ value: 'system' });
+    expect(settingProps('font.interface', 'mono')).toEqual({ value: 'mono' });
+    expect(settingProps('tooltip.delay', 'never')).toEqual({ value: 'never' });
+    expect(settingProps('tooltip.delay', 1500)).toEqual({ value: 1500 });
+    // A single word is still free text unless the setting may be that word.
+    expect(settingProps('timeZone', 'UTC')).toEqual({ changed: true });
+    expect(settingProps('theme.mode', 'Zebracanary')).toEqual({ changed: true });
+    expect(settingProps('capture.destination', 'daily-notes')).toEqual({ changed: true });
+    expect(settingProps('font.note', 'Helvetica')).toEqual({ changed: true });
+    expect(settingProps('symbols.list', 'pangolincanary')).toEqual({ changed: true });
+    expect(settingProps('quickAccess.showNotebook', 'Work')).toEqual({ changed: true });
+    // What it sends, core takes.
+    for (const [key, value] of [
+      ['theme.mode', 'dark'],
+      ['theme.id', 'My Secret Theme'],
+      ['font.note', 'custom:Zebracanary Sans'],
+      ['sidebar.recentCount', 12.5],
+    ] as const) {
+      const event = {
+        session: '0123456789abcdef',
+        seq: 0,
+        at: 1,
+        client: 'mac',
+        actor: 'person',
+        version: '1.4.0',
+        channel: 'stable',
+        os: 'macos',
+        osVersion: '26.1',
+        kind: 'setting',
+        name: key,
+        props: settingProps(key, value),
+      };
+      expect(eventProblem(event), `${key}: ${value}`).toBeNull();
+    }
   });
 
   it('records allowlisted keys, a binding as shortcuts.custom, and nothing for a copy', () => {

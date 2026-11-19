@@ -2,10 +2,10 @@
  * Checks an event against the format and the catalogue (PEN-137): every client before it stores
  * one, and the ingest Worker again before it writes one to D1. A name must be catalogued and
  * every prop typed for its kind, so no free text can pass: strings are enums, buckets, flag
- * names or a normalised key combination.
+ * names, a normalised key combination or one of the words a setting may be (SETTING_VALUES).
  */
 import { AGENT_CLIENTS } from './actors';
-import { isCatalogued } from './catalogue';
+import { isCatalogued, isSettingWord } from './catalogue';
 import {
   ACTORS,
   BATCH_VERSION,
@@ -24,7 +24,8 @@ import {
 } from './events';
 import { BUILTIN_THEMES } from './themes';
 
-type Check = (value: unknown) => boolean;
+/** Whether a prop's value is allowed, for an event called `name`. */
+type Check = (value: unknown, name: string) => boolean;
 
 const oneOf =
   (values: readonly (string | number | boolean)[]): Check =>
@@ -51,17 +52,19 @@ const flags: Check = (value) =>
   value.length <= MAX_FLAGS &&
   value.every((flag) => typeof flag === 'string' && FLAG_PATTERN.test(flag));
 
-/** A setting's value: an enum-like token, a boolean, a bucket or a small whole number. */
-export const SETTING_TOKEN = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,31}$/;
 /** The largest whole number a setting's value may be. */
 export const MAX_SETTING_NUMBER = 10_000_000;
-const settingValue: Check = (value) =>
+/**
+ * A setting's value: a boolean, a whole number 0 to MAX_SETTING_NUMBER, a count bucket, or one
+ * of the words that setting may be (SETTING_VALUES). Any other word is refused.
+ */
+const settingValue: Check = (value, name) =>
   typeof value === 'boolean' ||
   (typeof value === 'number' &&
     Number.isInteger(value) &&
     value >= 0 &&
     value <= MAX_SETTING_NUMBER) ||
-  (typeof value === 'string' && (SETTING_TOKEN.test(value) || count(value)));
+  (typeof value === 'string' && (count(value, name) || isSettingWord(name, value)));
 
 const screenKind: Check = (value) => typeof value === 'string' && isCatalogued('screen', value);
 
@@ -89,7 +92,8 @@ export const FIRSTRUN_ERRORS = [
 /**
  * What a prop may hold, as data (the Kotlin twin reads it from `analytics-v1.json`): one of a
  * list; a boolean; a count or a duration bucket; a key combination (KEYS_PATTERN); a list of
- * flag names (FLAG_PATTERN, at most MAX_FLAGS); a setting's value; or a catalogued screen.
+ * flag names (FLAG_PATTERN, at most MAX_FLAGS); a setting's value (`settingValue`, by the
+ * event's name); or a catalogued screen.
  */
 export type PropSpec =
   | { readonly type: 'enum'; readonly values: readonly (string | number | boolean)[] }
@@ -220,7 +224,7 @@ export function eventProblem(event: unknown): string | null {
     // Own keys only: `constructor` or `toString` must not find Object's own.
     const check = Object.hasOwn(checks, key) ? checks[key] : undefined;
     if (!check) return `prop ${key}`;
-    if (!check(item)) return `prop ${key} value`;
+    if (!check(item, value.name)) return `prop ${key} value`;
   }
   return null;
 }

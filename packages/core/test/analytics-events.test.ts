@@ -6,7 +6,13 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { CATALOGUE, CLICK_NAMES, isCatalogued } from '../src/analytics/catalogue';
+import {
+  CATALOGUE,
+  CLICK_NAMES,
+  isCatalogued,
+  SETTING_NAMES,
+  SETTING_VALUES,
+} from '../src/analytics/catalogue';
 import {
   COUNT_BUCKETS,
   countBucket,
@@ -326,14 +332,10 @@ describe('eventProblem', () => {
   it('refuses free text in every prop of every kind', () => {
     const passed = KINDS.flatMap((kind) =>
       Object.keys(VALID[kind].props).flatMap((key) =>
-        FREE_TEXT.filter((text) => {
-          // A single word passes a setting's value (enum-like tokens); its callers send only
-          // enums, booleans, numbers and buckets (apps/web/src/analytics/track.ts).
-          if (kind === 'setting' && /^[a-zA-Z0-9][a-zA-Z0-9-]{0,31}$/.test(text)) return false;
-          return (
-            eventProblem({ ...VALID[kind], props: { ...VALID[kind].props, [key]: text } }) === null
-          );
-        }).map((text) => `${kind}.${key}: ${text}`),
+        FREE_TEXT.filter(
+          (text) =>
+            eventProblem({ ...VALID[kind], props: { ...VALID[kind].props, [key]: text } }) === null,
+        ).map((text) => `${kind}.${key}: ${text}`),
       ),
     );
     expect(passed).toEqual([]);
@@ -398,18 +400,59 @@ describe('eventProblem', () => {
     expect(eventProblem({ ...VALID.screen, props: { from: '/note/abc' } })).toBe('prop from value');
   });
 
-  it('takes a setting’s value as a word, a bucket, a boolean or a whole number in range', () => {
+  it('takes a setting’s value as a bucket, a boolean or a whole number in range', () => {
     const setting = VALID.setting;
-    for (const value of [true, 0, 10_000_000, 'dark', '5000+']) {
+    for (const value of [true, 0, 10_000_000, '5000+']) {
       expect(eventProblem({ ...setting, props: { value } }), String(value)).toBeNull();
     }
-    for (const value of [-1, 10_000_001, 1.5, 'two words', 'a/b', 'x'.repeat(33)]) {
+    for (const value of [-1, 10_000_001, 1.5, 'dark', 'two words', 'a/b', 'x'.repeat(33)]) {
       expect(eventProblem({ ...setting, props: { value } }), String(value)).toBe(
         'prop value value',
       );
     }
     expect(eventProblem({ ...setting, props: { changed: true } })).toBeNull();
     expect(eventProblem({ ...setting, props: { changed: false } })).toBe('prop changed value');
+  });
+
+  it('takes a word only from the words its setting may be', () => {
+    const setting = (name: string, value: unknown) =>
+      eventProblem({ ...VALID.setting, name, props: { value } });
+    expect(setting('theme.mode', 'dark')).toBeNull();
+    expect(setting('theme.mode', 'system')).toBeNull();
+    expect(setting('theme.id', 'nord')).toBeNull();
+    expect(setting('theme.id', 'custom')).toBeNull();
+    expect(setting('font.note', 'serif')).toBeNull();
+    expect(setting('font.interface', 'custom')).toBeNull();
+    expect(setting('tooltip.delay', 'never')).toBeNull();
+    expect(setting('tooltip.delay', 1500)).toBeNull();
+    expect(setting('capture.destination', 'inbox')).toBeNull();
+    expect(setting('updates.channel', 'alpha')).toBeNull();
+    // Another setting's word, a word the setting never takes, and a word for a setting that
+    // takes none (a time zone, a notebook's name, a font's family) are all refused.
+    for (const [name, value] of [
+      ['theme.mode', 'nord'],
+      ['theme.id', 'Zebracanary'],
+      ['theme.id', 'my-theme'],
+      ['font.note', 'Helvetica'],
+      ['font.note', 'custom:Helvetica'],
+      ['capture.destination', 'Zebracanary'],
+      ['timeZone', 'UTC'],
+      ['template.daily', 'Plan'],
+      ['note.fullWidth', 'true'],
+      ['sidebar.recentCount', 'ten'],
+    ] as const) {
+      expect(setting(name, value), `${name}: ${value}`).toBe('prop value value');
+    }
+  });
+
+  it('lists words only for settings the catalogue has, and none from Object', () => {
+    for (const name of Object.keys(SETTING_VALUES)) expect(SETTING_NAMES).toContain(name);
+    for (const words of Object.values(SETTING_VALUES)) {
+      for (const word of words) expect(word).toMatch(/^[a-z][a-z0-9-]{0,31}$/);
+    }
+    expect(
+      eventProblem({ ...VALID.setting, name: 'theme.mode', props: { value: 'toString' } }),
+    ).toBe('prop value value');
   });
 });
 
