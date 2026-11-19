@@ -397,7 +397,10 @@ export class AnalyticsStore {
     for (;;) {
       const excess = this.size() - limits['events.max'];
       if (excess <= 0) break;
-      removed += Number(byCap.run(Math.min(batch, excess)).changes);
+      const changes = Number(byCap.run(Math.min(batch, excess)).changes);
+      removed += changes;
+      // A count that drifted from the rows must not loop forever.
+      if (changes === 0) break;
       yield removed;
     }
     if (before > 0 && removed / before > 0.1) this.vacuum();
