@@ -632,25 +632,22 @@ What is already in place:
    - data safety: the answers below, which match the privacy policy (A607);
    - target audience: adults (18 and over).
 
-   **Play Data safety answers (A607).** If the policy changes, change these with it.
+   **Play Data safety answers (A607, amended by PEN-137).** If the policy (`site/src/pages/privacy.astro`) changes, change these with it. The app records usage on the phone always; it leaves the phone only if the person chooses Share Usage Data, so every data type below is **optional**.
    - Does the app collect or share any of the required user data types? **Yes.**
    - Is all of the user data collected by the app encrypted in transit? **Yes** (HTTPS only; the app refuses cleartext).
-   - Do you provide a way for users to request that their data is deleted? **Yes.** Notes are deleted in the app (Trash, then **Delete for good**, or after 30 days); the account on request. Deletion link: `https://penmoss.app/privacy#delete`.
-   - Shared: **none.** Cloudflare (hosting, sign-in, Workers AI embeddings) and GitHub (the private mirror) process data for the developer, which Play does not count as sharing. No data goes to advertisers, analytics or other apps.
-   - Collected, each **not shared**, **not processed ephemerally**, and **required** (the app does not work without an account and sync):
+   - Do you provide a way for users to request that their data is deleted? **Yes.** In the app: **Settings → Privacy → Delete My Shared Data** deletes everything the phone shared from the developer's server. Deletion link: `https://penmoss.app/privacy`.
+   - Shared: **none.** Cloudflare runs the developer's own server (t.penmoss.app) for the developer, and GitHub holds the feedback issues a person files with their own account, which Play does not count as sharing. No data goes to advertisers, analytics companies or other apps.
+   - Collected, each **not shared**, **not processed ephemerally**, and **optional** (the person chooses it):
 
-     | Play data type                              | What it is in Penmoss                                                                                                  | Purposes                              |
-     | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-     | Personal info → Email address               | The address you sign in with (Cloudflare Access), and a display name taken from it                                     | App functionality, account management |
-     | Photos and videos → Photos                  | Pictures you attach to notes                                                                                           | App functionality                     |
-     | Files and docs                              | Files you attach to notes                                                                                              | App functionality                     |
-     | App info and performance → Crash logs       | Error reports (message, stack, app version, device description), note names removed                                    | App functionality                     |
-     | App info and performance → Diagnostics      | The same reports for errors that are not crashes (a failed sync, the editor)                                           | App functionality                     |
-     | Device or other IDs                         | The server's record of this phone: a random device id, the phone model, last seen                                      | App functionality, account management |
-     | App activity → Other user-generated content | Your notes, folders, tags, settings and version history                                                                | App functionality                     |
-     | App activity → In-app search history        | What you type into search: sent to the server and to Workers AI, kept only in Cloudflare's request logs for a few days | App functionality                     |
+     | Play data type                              | What it is in Penmoss                                                                                                                                 | Purposes          |
+     | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+     | App activity → App interactions             | Which commands, shortcuts, buttons, screens, dialogs and settings are used, by name, never any text; only with Share Usage Data, kept 13 months       | Analytics         |
+     | Device or other IDs                         | The random analytics ID, which the person can reset or delete with their shared data                                                                  | Analytics         |
+     | App info and performance → Crash logs       | Error lines in the anonymised logs, only when the person attaches them to a bug report                                                                | App functionality |
+     | App info and performance → Diagnostics      | The anonymised logs and the captured context (app version, system, screen kind, sync state, counts), only in a bug report the person sends            | App functionality |
+     | App activity → Other user-generated content | The title, description and screenshots of a bug report or feature request the person writes and sends, filed as a GitHub issue with their own account | App functionality |
 
-     Not collected: location, contacts, calendar, financial info, health, audio, web browsing, messages, app interactions, installed apps. The fingerprint or face check stays on the phone.
+     Not collected: personal info (name, email address), location, contacts, calendar, financial info, health, audio, the photos and files in notes, web browsing, messages, search history, installed apps. Notes never reach the developer. The fingerprint or face check stays on the phone.
 
 2. **Testers.** In Test and release → Testing → Internal testing → Testers, create an email list containing your own Google account, save, and copy the tester opt-in link.
 
