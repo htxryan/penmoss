@@ -105,6 +105,7 @@ export function SettingsSearchResults({
                 data-ui="item"
                 data-testid="settings-search-result"
                 data-setting-result={entry.id}
+                data-event="settings.search.result"
                 onClick={(event) => {
                   if (!isPlainLeftClick(event)) return;
                   event.preventDefault();

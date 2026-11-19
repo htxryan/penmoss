@@ -353,6 +353,7 @@ export function AccountSwitcher({
             className="menu-item"
             data-ui="item"
             data-testid={`first-run-switch-${each.key === 'git' ? 'git' : (each.login ?? '')}`}
+            data-event="firstrun.account"
             onClick={() => {
               if (!checked) onPick(each.account);
             }}
@@ -693,6 +694,7 @@ export function RepoTree({
                   aria-label={`${expanded ? 'Hide' : 'Show'} what ${repo.fullName} holds`}
                   disabled={!repo.canPush}
                   data-testid="first-run-repo-toggle"
+                  data-event="firstrun.repo.toggle"
                   onClick={() => toggle(repo)}
                 >
                   <Icon name={expanded ? 'chevD' : 'chevR'} size={14} />
@@ -704,6 +706,7 @@ export function RepoTree({
                   disabled={!repo.canPush}
                   title={repo.canPush ? undefined : 'You can’t push to this repository'}
                   data-testid="first-run-repo-pick"
+                  data-event="firstrun.repo"
                   onClick={() => onRepo(repo)}
                 >
                   <span className="muted">
@@ -1020,6 +1023,7 @@ export function RepoPicked({
                 name={`${formId}-notebook`}
                 checked={each.path === picked.path}
                 disabled={isAdded(each)}
+                data-event="firstrun.notebook"
                 onChange={() => setPick(each.path)}
               />
               <strong className="fr-grow">{each.notebook.name}</strong>
@@ -1126,6 +1130,7 @@ export function FolderPick({
               type="radio"
               name={`${id}-folder`}
               checked={chosen === path}
+              data-event="firstrun.folder"
               onChange={() => setChosen(path)}
             />
             <Icon name="folder" size={14} />
