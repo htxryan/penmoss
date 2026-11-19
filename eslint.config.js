@@ -98,5 +98,11 @@ export default defineConfig(
     plugins: { penmoss: penmossLintPlugin },
     rules: { 'penmoss/no-literal-colours': 'error' },
   },
+  {
+    // PEN-137: every clickable control in the page has a data-command or a data-event id, so it
+    // is counted by name (packages/ui/lint/tracked-control.js). The plugin is the one above.
+    files: ['apps/web/src/**/*.tsx'],
+    rules: { 'penmoss/tracked-control': 'error' },
+  },
   prettier,
 );
