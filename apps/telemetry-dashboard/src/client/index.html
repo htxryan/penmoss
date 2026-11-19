@@ -13,8 +13,8 @@
     <header class="top">
       <p class="brand">Penmoss Usage</p>
       <form class="filters" aria-label="Filters">
-        <label class="filter">
-          <span>Period</span>
+        <div class="filter">
+          <label for="filter-days">Period</label>
           <select id="filter-days">
             <option value="7">Last 7 Days</option>
             <option value="30">Last 30 Days</option>
@@ -22,9 +22,9 @@
             <option value="365">Last 365 Days</option>
             <option value="395">Last 13 Months</option>
           </select>
-        </label>
-        <label class="filter">
-          <span>Client</span>
+        </div>
+        <div class="filter">
+          <label for="filter-client">Client</label>
           <select id="filter-client">
             <option value="">All Clients</option>
             <option value="mac">Mac</option>
@@ -32,31 +32,31 @@
             <option value="cli">CLI</option>
             <option value="mcp">MCP</option>
           </select>
-        </label>
-        <label class="filter">
-          <span>Actor</span>
+        </div>
+        <div class="filter">
+          <label for="filter-actor">Actor</label>
           <select id="filter-actor">
             <option value="">All Actors</option>
             <option value="person">Person</option>
             <option value="agent">Agent</option>
             <option value="script">Script</option>
           </select>
-        </label>
-        <label class="filter">
-          <span>Channel</span>
+        </div>
+        <div class="filter">
+          <label for="filter-channel">Channel</label>
           <select id="filter-channel">
             <option value="">All Channels</option>
             <option value="stable">Stable</option>
             <option value="alpha">Alpha</option>
             <option value="dev">Dev</option>
           </select>
-        </label>
-        <label class="filter">
-          <span>Version</span>
+        </div>
+        <div class="filter">
+          <label for="filter-version">Version</label>
           <select id="filter-version">
             <option value="">All Versions</option>
           </select>
-        </label>
+        </div>
       </form>
     </header>
     <nav class="views" aria-label="Views">

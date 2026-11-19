@@ -44,7 +44,8 @@ const SKEW_S = 60;
 export const fetchCertsOverNetwork: FetchCerts = async (url) => {
   const response = await fetch(url, { headers: { accept: 'application/json' } });
   if (!response.ok) throw new Error(`Access certs: ${response.status}`);
-  return response.json<{ keys: AccessKey[] }>();
+  const certs: unknown = await response.json();
+  return certs as { keys: AccessKey[] };
 };
 
 /** The team's host, or null when the setting is missing or not a host name. */
@@ -54,7 +55,7 @@ export function teamHost(team: string | undefined): string | null {
   return value.includes('.') ? value : `${value}.cloudflareaccess.com`;
 }
 
-function base64UrlBytes(text: string): Uint8Array | null {
+function base64UrlBytes(text: string): Uint8Array<ArrayBuffer> | null {
   if (!/^[A-Za-z0-9_-]*$/.test(text)) return null;
   const base64 = text.replace(/-/g, '+').replace(/_/g, '/');
   try {

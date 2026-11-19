@@ -1,10 +1,11 @@
 /**
- * Usage analytics' dashboard Worker (PEN-137) on stats.penmoss.app. Every request, the page's
+ * Usage analytics' dashboard Worker (PEN-137) on stats.penmoss.app, its requests (index.ts is the
+ * entry, which may export nothing but the handler). Every request, the page's
  * files included, needs a valid Cloudflare Access JWT (access.ts), or it gets 403. Then
  * GET /api/<view> answers JSON from the named queries (api.ts), cached for 5 minutes, and
  * anything else is the page's static files. It only reads: GET and HEAD, nothing else.
  */
-import { AccessVerifier, type AccessEnv } from './access';
+import type { AccessEnv, AccessVerifier } from './access';
 import { BadRequest, VIEWS, readFilters, viewData, type View } from './api';
 
 export interface DashboardEnv extends AccessEnv {
@@ -104,11 +105,3 @@ export async function handle(
   response.headers.set('x-frame-options', 'DENY');
   return response;
 }
-
-const verifier = new AccessVerifier();
-
-export default {
-  fetch(request: Request, env: DashboardEnv, ctx: ExecutionContext): Promise<Response> {
-    return handle(request, env, ctx, { verifier, now: Date.now, cache: caches.default });
-  },
-} satisfies ExportedHandler<DashboardEnv>;

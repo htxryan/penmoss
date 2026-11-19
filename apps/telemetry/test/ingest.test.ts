@@ -266,3 +266,8 @@ describe('every other route', () => {
     }
   });
 });
+
+it('the Worker entry exports nothing but its handler, as workerd requires', async () => {
+  const entry = await import('../src/index');
+  expect(Object.keys(entry)).toEqual(['default']);
+});

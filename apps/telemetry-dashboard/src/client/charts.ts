@@ -567,18 +567,24 @@ export interface TreeNode {
   readonly children: readonly TreeNode[];
 }
 
-/** Paths from a start event: a column per step, each node's share of the one before. */
+/**
+ * Paths from a start event, each node's share of the one before: a column per step, or on a
+ * narrow card an outline, a row per node indented by its step.
+ */
 export function tree(spec: { label: string; root: TreeNode }, width: number): SVGSVGElement {
   const leaves = (node: TreeNode): number =>
     node.children.length === 0 ? 1 : node.children.reduce((sum, child) => sum + leaves(child), 0);
-  const rowHeight = 40;
-  const total = leaves(spec.root);
-  const depth = 4;
-  const columnWidth = (width - 8) / depth;
-  const nodeWidth = Math.max(60, columnWidth - 18);
+  const count = (node: TreeNode): number =>
+    1 + node.children.reduce((sum, child) => sum + count(child), 0);
+  const outline = width < 560;
+  const rowHeight = outline ? 38 : 40;
+  const columnWidth = (width - 8) / 4;
+  const indent = 18;
+  const nodeWidth = outline ? 0 : Math.max(60, columnWidth - 18);
+  const rows = outline ? count(spec.root) : leaves(spec.root);
   const frame: Frame = {
     width,
-    height: Math.max(1, total) * rowHeight + 8,
+    height: Math.max(1, rows) * rowHeight + 8,
     left: 4,
     right: 4,
     top: 4,
@@ -587,6 +593,7 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
   const chart = root(frame, spec.label);
   const linkLayer = svg('g');
   chart.append(linkLayer);
+  let nextRow = 0;
   const place = (
     node: TreeNode,
     level: number,
@@ -594,38 +601,57 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
     parent: { x: number; y: number } | null,
     path: string[],
   ) => {
-    const span = leaves(node) * rowHeight;
-    const x = frame.left + level * columnWidth;
-    const y = top + span / 2;
+    const x = outline ? frame.left + level * indent : frame.left + level * columnWidth;
+    const y = outline
+      ? frame.top + nextRow++ * rowHeight + rowHeight / 2
+      : top + (leaves(node) * rowHeight) / 2;
+    const boxWidth = outline ? width - x - frame.right : nodeWidth;
+    const weight = Math.max(1, Math.round(node.share / 12.5));
     if (parent) {
       const midX = (parent.x + x) / 2;
       linkLayer.append(
         svg('path', {
-          d: `M${parent.x},${parent.y}C${midX},${parent.y} ${midX},${y} ${x},${y}`,
+          d: outline
+            ? `M${parent.x},${parent.y}V${y}H${x}`
+            : `M${parent.x},${parent.y}C${midX},${parent.y} ${midX},${y} ${x},${y}`,
           class: 'link',
-          'stroke-width': Math.max(1, Math.round(node.share / 12.5)),
+          'stroke-width': outline ? 1.5 : weight,
         }),
       );
     }
     const box = svg('g', { class: 'node' });
+    const value =
+      level === 0
+        ? `${fullNumber(node.sessions)} sessions`
+        : `${node.share}% · ${fullNumber(node.sessions)}`;
     box.append(
       svg('rect', {
         x,
         y: y - 15,
-        width: nodeWidth,
+        width: boxWidth,
         height: 30,
         rx: 4,
         class: node.event === 'end' ? 'node-box end' : 'node-box',
       }),
-      svg('text', { x: x + 6, y: y - 2, class: 'node-label' }, [
-        truncate(eventLabel(node.event), nodeWidth - 10),
-      ]),
-      svg('text', { x: x + 6, y: y + 10, class: 'node-value' }, [
-        level === 0
-          ? `${fullNumber(node.sessions)} sessions`
-          : `${node.share}% · ${fullNumber(node.sessions)}`,
-      ]),
     );
+    if (outline) {
+      // One line: the event, then its share at the right end.
+      box.append(
+        svg('text', { x: x + 8, y: y + 4, class: 'node-label' }, [
+          truncate(eventLabel(node.event), boxWidth - 110),
+        ]),
+        svg('text', { x: x + boxWidth - 8, y: y + 4, class: 'node-value', 'text-anchor': 'end' }, [
+          value,
+        ]),
+      );
+    } else {
+      box.append(
+        svg('text', { x: x + 6, y: y - 2, class: 'node-label' }, [
+          truncate(eventLabel(node.event), nodeWidth - 10),
+        ]),
+        svg('text', { x: x + 6, y: y + 10, class: 'node-value' }, [value]),
+      );
+    }
     const trail = [...path, eventLabel(node.event)];
     hoverable(box, trail.join(' → '), () => [
       { value: fullNumber(node.sessions), label: 'sessions' },
@@ -636,7 +662,8 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
     chart.append(box);
     let childTop = top;
     for (const child of node.children) {
-      place(child, level + 1, childTop, { x: x + nodeWidth, y }, trail);
+      const from = outline ? { x: x + indent / 2, y: y + 15 } : { x: x + nodeWidth, y };
+      place(child, level + 1, childTop, from, trail);
       childTop += leaves(child) * rowHeight;
     }
   };
@@ -644,11 +671,14 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
   return chart;
 }
 
-/** "command:note.new" → "note.new"; "end" → "Session Ended". */
+/** "command:note.new" → "note.new"; "screen:note" → "note (screen)"; "end" → "Session Ended". */
 export function eventLabel(event: string): string {
   if (event === 'end') return 'Session Ended';
   const at = event.indexOf(':');
-  return at < 0 ? event : event.slice(at + 1);
+  if (at < 0) return event;
+  const kind = event.slice(0, at);
+  const name = event.slice(at + 1);
+  return kind === 'command' ? name : `${name} (${kind})`;
 }
 
 /** `text` cut to about `width` pixels of 12px type, with an ellipsis. */

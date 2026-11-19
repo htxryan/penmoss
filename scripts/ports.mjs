@@ -21,6 +21,8 @@ export const BASE_PORTS = Object.freeze({
   fakeGithub: 8791,
   /** The Worker's inspector under `wrangler dev`. */
   inspector: 9229,
+  /** The usage dashboard Worker (apps/telemetry-dashboard): `pnpm dev` and its Playwright spec. */
+  dashboard: 8789,
 });
 
 /**
@@ -34,6 +36,7 @@ export const OFFSETS = Object.freeze({
   worker: 87,
   fakeGithub: 91,
   inspector: 29,
+  dashboard: 89,
 });
 
 /** The highest block: its ports stay under 30000, clear of macOS's ephemeral range (49152+). */

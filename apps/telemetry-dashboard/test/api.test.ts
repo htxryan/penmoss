@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { fixtureInstalls, seedFixture } from '../../telemetry/test/fixture';
 import { ACCESS_HEADER, AccessVerifier } from '../src/access';
 import { MIN_SESSIONS, pathTree } from '../src/api';
-import { handle, type Deps } from '../src/index';
+import { handle, type Deps } from '../src/handler';
 import { createSigner } from './signer';
 
 const NOW = Date.UTC(2026, 10, 19, 18, 0);

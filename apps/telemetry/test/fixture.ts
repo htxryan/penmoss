@@ -74,14 +74,19 @@ function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
         name: 'app.quickOpen',
         props: { source: index % 2 === 0 ? 'menu' : 'tray' },
       },
-      {
+    );
+    // The CLI every other day, an agent's MCP calls one day in three.
+    if ((index + day) % 2 === 0) {
+      drafts.push({
         kind: 'cli',
         name: 'search',
         client: 'cli',
         actor: index % 3 === 0 ? 'agent' : 'person',
         props: { flags: ['json'], exit: 'OK', took: '<1s', tty: index % 3 !== 0 },
-      },
-      {
+      });
+    }
+    if ((index + day) % 3 === 0) {
+      drafts.push({
         kind: 'tool',
         name: 'search_notes',
         client: 'mcp',
@@ -91,8 +96,8 @@ function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
           result: day % 7 === 0 ? 'failed' : 'ok',
           took: '<1s',
         },
-      },
-    );
+      });
+    }
   }
   if (index === 2 && day % 10 === 1) {
     drafts.push({
@@ -199,9 +204,17 @@ export async function seedFixture(db: D1Database, now: number): Promise<void> {
     db
       .prepare(
         `INSERT INTO ingest_daily (day, batches, accepted, dropped, forgets, written)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?3)`,
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
       )
-      .bind(addDays(today, -ago), 40 + (ago % 7), 400 + ago * 3, ago % 5, ago === 12 ? 1 : 0),
+      .bind(
+        addDays(today, -ago),
+        40 + (ago % 7),
+        400 + ago * 3,
+        ago % 5,
+        ago === 12 ? 1 : 0,
+        // A retried batch is accepted again but writes nothing.
+        400 + ago * 3 - (ago % 4) * 6,
+      ),
   );
   await db.batch(health);
   await refreshCatalogue(db);

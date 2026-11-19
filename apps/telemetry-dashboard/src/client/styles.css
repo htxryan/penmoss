@@ -228,7 +228,8 @@ main[aria-busy='true'] {
 .view-title,
 .range,
 .tiles,
-.picker {
+.picker,
+.card.wide {
   grid-column: 1 / -1;
 }
 

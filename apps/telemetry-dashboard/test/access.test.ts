@@ -7,7 +7,7 @@ import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test'
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { ACCESS_HEADER, AccessVerifier, teamHost } from '../src/access';
-import { handle, type Deps } from '../src/index';
+import { handle, type Deps } from '../src/handler';
 import { TEST_AUD, createSigner, type TestSigner } from './signer';
 
 const ORIGIN = 'https://stats.penmoss.test';
@@ -158,4 +158,9 @@ it('teamHost takes a team name or its domain, nothing else', () => {
   expect(teamHost(undefined)).toBeNull();
   expect(teamHost('evil.com/x')).toBeNull();
   expect(teamHost('penmoss.example.com')).toBeNull();
+});
+
+it('the Worker entry exports nothing but its handler, as workerd requires', async () => {
+  const entry = await import('../src/index');
+  expect(Object.keys(entry)).toEqual(['default']);
 });

@@ -94,6 +94,13 @@ export default defineConfig({
       workers: 1,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // The usage dashboard (PEN-137, apps/telemetry-dashboard): its spec starts the dashboard
+      // itself, in Miniflare, so it runs here too and `task proof:web` can record it.
+      name: 'dashboard',
+      testDir: '../telemetry-dashboard/test/e2e',
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
   webServer: [
     {

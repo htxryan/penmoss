@@ -213,6 +213,18 @@ tasks:
     cmds:
       - pnpm run deploy
 
+  dashboard:deploy:
+    desc: "Usage analytics' dashboard on stats.penmoss.app (PEN-137): build the page, then wrangler deploy (refused inside a factory run, FD24). Behind Cloudflare Access: set ACCESS_TEAM and ACCESS_AUD in apps/telemetry-dashboard/wrangler.jsonc first"
+    dir: apps/telemetry-dashboard
+    cmds:
+      - pnpm run deploy
+
+  dashboard:e2e:
+    desc: "Usage analytics' dashboard in headless Chromium (PEN-137): every view over a fixture D1 behind a stand-in for Access; `task e2e` and `task proof:web` run the same spec as apps/web's dashboard project"
+    dir: apps/telemetry-dashboard
+    cmds:
+      - pnpm exec playwright test --config test/e2e/playwright.config.ts {{.CLI_ARGS}}
+
   decision:next:
     desc: 'The next decision number for a row you add to docs/decisions.md by hand, reserved from the factory counter so an open run never takes it too (A1253): `task decision:next` (`-- --count 2` for two)'
     cmds:
@@ -310,7 +322,7 @@ tasks:
     # (@perf, @budget) alone, so the others' load never skews their numbers. A pass with
     # nothing to run passes.
     cmds:
-      - pnpm --filter @penmoss/web exec playwright test --project=chromium --pass-with-no-tests {{.CLI_ARGS}}
+      - pnpm --filter @penmoss/web exec playwright test --project=chromium --project=dashboard --pass-with-no-tests {{.CLI_ARGS}}
       - pnpm --filter @penmoss/web exec playwright test --project=timed --pass-with-no-tests {{.CLI_ARGS}}
 
   budgets:
@@ -326,7 +338,7 @@ tasks:
   proof:web:
     desc: "The software factory's web proof (F5): the given specs recorded on video with a final screenshot, `task proof:web -- comments.spec.ts`"
     cmds:
-      - PENMOSS_PROOF=1 pnpm --filter @penmoss/web exec playwright test --project=chromium --project=timed {{.CLI_ARGS}}
+      - PENMOSS_PROOF=1 pnpm --filter @penmoss/web exec playwright test --project=chromium --project=timed --project=dashboard {{.CLI_ARGS}}
 
   e2e:install:
     desc: Install the Chromium build Playwright needs (add `-- --with-deps` on a fresh Linux machine)

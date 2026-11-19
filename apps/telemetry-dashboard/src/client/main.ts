@@ -43,6 +43,8 @@ interface CardSpec {
   readonly legendShape?: 'line' | 'box';
   readonly table: TableSpec;
   readonly empty?: boolean;
+  /** Across the whole view, not one column. */
+  readonly wide?: boolean;
 }
 
 const VIEW_NAMES = {
@@ -73,6 +75,12 @@ const SOURCE_LABELS: Record<string, string> = {
   editor: 'Editor',
   other: 'Other',
   '': 'Other',
+};
+const SYNC_LABELS: Record<string, string> = {
+  ok: 'OK',
+  conflict: 'Conflict',
+  offline: 'Offline',
+  failed: 'Failed',
 };
 /** Person, agent, script: blue, orange, aqua (series 1–3). */
 const ACTOR_COLOURS: Record<string, string> = {
@@ -232,7 +240,7 @@ function button(label: string, onClick: () => void, name = label): HTMLButtonEle
 
 function card(spec: CardSpec): HTMLElement {
   const section = document.createElement('section');
-  section.className = 'card';
+  section.className = spec.wide ? 'card wide' : 'card';
   section.dataset['card'] = spec.id;
   const head = document.createElement('header');
   const title = document.createElement('h2');
@@ -263,6 +271,7 @@ function card(spec: CardSpec): HTMLElement {
   }
   const body = document.createElement('div');
   body.className = 'chart-body';
+  body.hidden = spec.chart === null && !spec.empty;
   section.append(body);
   if (spec.empty) {
     const empty = document.createElement('p');
@@ -273,7 +282,9 @@ function card(spec: CardSpec): HTMLElement {
     const draw = spec.chart;
     let drawnAt = 0;
     const redraw = () => {
-      const width = Math.floor(body.clientWidth);
+      const style = getComputedStyle(body);
+      const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const width = Math.floor(body.clientWidth - padding);
       if (width <= 0 || width === drawnAt) return;
       drawnAt = width;
       body.replaceChildren(draw(width));
@@ -311,7 +322,8 @@ function card(spec: CardSpec): HTMLElement {
         document.body.append(link);
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        // Kept a minute: the browser reads it after the click returns.
+        setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
       },
       `Download CSV: ${spec.title}`,
     ),
@@ -640,6 +652,7 @@ function paths(answer: Answer): HTMLElement[] {
     picker,
     card({
       id: 'paths',
+      wide: true,
       title: `What Comes After ${eventLabel(state.start)}`,
       note: `The three most common next events, three steps deep, over the last ${String(answer['days'])} days. A path fewer than 5 sessions took isn't shown.`,
       chart: root ? (width) => tree({ label: `Paths after ${state.start}`, root }, width) : null,
@@ -912,7 +925,7 @@ function health(answer: Answer): HTMLElement[] {
             unit: 'passes',
             series: [{ key: 'passes', label: 'Passes', color: 'var(--s1)' }],
             rows: results.map((result) => ({
-              label: result ? result[0]!.toUpperCase() + result.slice(1) : 'Unknown',
+              label: SYNC_LABELS[result] ?? 'Other',
               parts: [
                 sync
                   .filter((row) => row['result'] === result)
