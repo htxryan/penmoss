@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -99,8 +100,18 @@ class PrivacyScreenTest {
         compose.onNodeWithText("Waiting to Send 2 · Sent 41 · Not Shared 212").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("5c0e8f6a…7a96").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Penmoss records what you do in it, by name, on this phone, and never anything you write or name.").performScrollTo().assertIsDisplayed()
-        // Advanced is closed until opened.
+        // Advanced is closed until opened, a disclosure with its hint and a down chevron.
         assertEquals(0, compose.onAllNodes(hasTestTag("privacyLimits")).fetchSemanticsNodes().size)
+        compose.onNodeWithText("How long and how much Penmoss keeps on this phone").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("privacyAdvanced").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Closed"))
+        compose.onNodeWithTag("privacyAdvanced").performClick()
+        compose.onNodeWithTag("privacyAdvanced").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Open"))
+        compose.onNodeWithTag("privacyLimits").assertExists()
+        // Reset My Analytics ID and Delete My Shared Data are buttons in the ID's row, side by side.
+        val reset = compose.onNodeWithTag("privacyResetId").fetchSemanticsNode().boundsInRoot
+        val forget = compose.onNodeWithTag("privacyForget").fetchSemanticsNode().boundsInRoot
+        assertTrue("$reset $forget", forget.left >= reset.right || forget.top >= reset.bottom)
+        assertEquals(Role.Button, compose.onNodeWithTag("privacyForget").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Role))
         compose.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
     }
 

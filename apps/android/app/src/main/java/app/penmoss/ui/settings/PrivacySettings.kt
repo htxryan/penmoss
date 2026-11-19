@@ -12,6 +12,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.draw.rotate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -43,9 +48,11 @@ import app.penmoss.analytics.AnalyticsFormat
 import app.penmoss.analytics.EventState
 import app.penmoss.analytics.LimitSpec
 import app.penmoss.analytics.Limits
+import app.penmoss.analytics.TrackedScreen
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedId
+import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.OutlinedTextField
 import app.penmoss.ui.common.TextButton
 import kotlinx.coroutines.launch
@@ -122,8 +129,11 @@ val LIMIT_ROW_IDS: Map<String, String> = linkedMapOf(
 /** Each limit's label in the copy. */
 private fun limitLabel(key: String) = AnalyticsCopy.text("limits.$key.label")
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
+    // Opening Privacy is recorded, as the Mac's page records itself.
+    TrackedScreen("settings.privacy")
     var forgetAsk by rememberSaveable { mutableStateOf(false) }
     val mark = LocalSettingMark.current
     // A search result inside Advanced opens it first (AC48).
@@ -147,25 +157,33 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
             modifier = Modifier.settingRow("view-analytics-data").testTag("privacyViewData").trackedId("privacy.view-data")
                 .clickable(role = Role.Button, onClick = trackedClick("privacy.view-data", actions.onViewData)),
         )
+        // The ID, then its two buttons in one row as the Mac's: Reset My Analytics ID outlined,
+        // Delete My Shared Data as the destructive text button beside it (asks first).
         ListItem(
             headlineContent = { Text(AnalyticsCopy.text("privacy.id.label")) },
             supportingContent = {
                 Column {
                     Text(shortId(ui.install), Modifier.testTag("privacyId"), style = MaterialTheme.typography.bodyMedium)
                     Text(AnalyticsCopy.text("privacy.id.hint"))
+                    FlowRow(
+                        Modifier.fillMaxWidth().padding(top = 8.dp).testTag("privacyIdButtons"),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = trackedClick("privacy.reset-id", actions.onResetId),
+                            enabled = ui.known,
+                            modifier = Modifier.settingRow("reset-my-analytics-id").testTag("privacyResetId").trackedId("privacy.reset-id"),
+                        ) { Text(AnalyticsCopy.text("privacy.resetId.button")) }
+                        TextButton(
+                            onClick = trackedClick("privacy.forget") { forgetAsk = true },
+                            enabled = ui.known && !ui.forgetting,
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.settingRow("delete-my-shared-data").testTag("privacyForget").trackedId("privacy.forget"),
+                        ) { Text(AnalyticsCopy.text("privacy.forget.button")) }
+                    }
                 }
             },
             modifier = Modifier.settingRow("analytics-id"),
-        )
-        ListItem(
-            headlineContent = { Text(AnalyticsCopy.text("privacy.resetId.button")) },
-            modifier = Modifier.settingRow("reset-my-analytics-id").testTag("privacyResetId").trackedId("privacy.reset-id")
-                .clickable(role = Role.Button, enabled = ui.known, onClick = trackedClick("privacy.reset-id", actions.onResetId)),
-        )
-        ListItem(
-            headlineContent = { Text(AnalyticsCopy.text("privacy.forget.button"), color = MaterialTheme.colorScheme.error) },
-            modifier = Modifier.settingRow("delete-my-shared-data").testTag("privacyForget").trackedId("privacy.forget")
-                .clickable(role = Role.Button, enabled = ui.known && !ui.forgetting, onClick = trackedClick("privacy.forget") { forgetAsk = true }),
         )
         if (ui.notice != null) {
             Help(ui.notice, Modifier.testTag("privacyNotice").semantics { liveRegion = LiveRegionMode.Polite })
@@ -181,9 +199,13 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
             modifier = Modifier.settingRow("logs"),
         )
         HorizontalDivider()
+        // A disclosure that opens in place (AC26): its hint while closed, a down chevron that
+        // turns up once open, never a row that goes somewhere.
+        val turn by animateFloatAsState(if (advanced) 180f else 0f, label = "advancedChevron")
         ListItem(
             headlineContent = { Text(AnalyticsCopy.text("privacy.advanced.label")) },
-            trailingContent = { Icon(if (advanced) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight, contentDescription = null) },
+            supportingContent = { Text(AnalyticsCopy.text("privacy.advanced.hint"), Modifier.testTag("privacyAdvancedHint")) },
+            trailingContent = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.rotate(turn).testTag("privacyAdvancedChevron")) },
             modifier = Modifier.settingRow("advanced").testTag("privacyAdvanced").trackedId("privacy.advanced")
                 .semantics { stateDescription = if (advanced) "Open" else "Closed" }
                 .toggleable(value = advanced, role = Role.Button) {

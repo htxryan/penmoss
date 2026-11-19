@@ -47,7 +47,11 @@ async function endpoint(): Promise<FakeAnalytics> {
   return started;
 }
 
-/** The two answers are the same kind of button: same classes, neither focused, neither primary. */
+/**
+ * The two answers are the same button (ac1, ac8): same classes, neither focused, neither primary,
+ * each half of the row, with the same border and weight (the pointer moved off first, so neither
+ * shows its hover).
+ */
 async function expectEqualAnswers(scope: Locator) {
   const share = scope.getByRole('button', { name: 'Share Usage Data' });
   const dont = scope.getByRole('button', { name: 'Don’t Share' });
@@ -58,6 +62,21 @@ async function expectEqualAnswers(scope: Locator) {
   await expect(dont).not.toHaveClass(/primary/);
   await expect(share).not.toBeFocused();
   await expect(dont).not.toBeFocused();
+  await scope.page().mouse.move(0, 0);
+  const look = (button: Locator) =>
+    button.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return [style.borderColor, style.borderWidth, style.fontWeight, style.backgroundColor];
+    });
+  expect(await look(share)).toEqual(await look(dont));
+  const row = (await scope.locator('.consent-answers').boundingBox())!;
+  const shareBox = (await share.boundingBox())!;
+  const dontBox = (await dont.boundingBox())!;
+  expect(Math.abs(shareBox.width - dontBox.width)).toBeLessThan(1);
+  // Halves of the row: together, with the gap between them, they fill it.
+  expect(shareBox.width).toBeGreaterThan(row.width / 2 - 8);
+  expect(shareBox.x).toBeCloseTo(row.x, 0);
+  expect(dontBox.x + dontBox.width).toBeCloseTo(row.x + row.width, 0);
 }
 
 /** What the question says, wherever it is asked (ac1, ac8): the Mac's list has the CLI's line. */
@@ -103,6 +122,10 @@ test('a first run ends with the usage question; Share sends the setup’s steps,
   await expectQuestion(consent);
   await expectEqualAnswers(consent);
   await expect(consent.getByTestId('first-run-back')).toHaveCount(0);
+  // No band of empty card between the closing words and the answers.
+  const words = (await consent.getByTestId('consent-question').boundingBox())!;
+  const foot = (await consent.locator('.fr-foot').boundingBox())!;
+  expect(foot.y - (words.y + words.height)).toBeLessThan(40);
   // Escape answers nothing, and the app stays held back.
   await page.keyboard.press('Escape');
   await expect(consent).toBeVisible();

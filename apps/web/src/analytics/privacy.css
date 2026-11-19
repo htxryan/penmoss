@@ -53,17 +53,38 @@
   line-height: var(--pm-leading-help);
 }
 
-/* The two answers: the same button twice, side by side. */
+/* The two answers: the same button twice, each half of the row (ac1, ac8). */
 .consent-answers {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
 }
 
-/* The first run's card is a little wider for the two lists. */
+.consent-answers > .btn {
+  width: 100%;
+}
+
+/*
+ * The first run's last step: a little wider for the two lists, only as tall as what it says (no
+ * band of empty card under the words), and a footer that is the two answers alone.
+ */
 .fr-screen[data-screen='consent'] {
   width: min(100%, 36rem);
+  min-height: 0;
+}
+
+.fr-screen[data-screen='consent'] .fr-foot > :not(.fr-actions) {
+  display: none;
+}
+
+.fr-screen[data-screen='consent'] .fr-actions {
+  flex: 1 1 auto;
+  margin-inline-start: 0;
+}
+
+.consent-policy-line {
+  margin: 0;
 }
 
 /* The dialog over the app (an install asked once). */
@@ -78,14 +99,6 @@
 
 .consent-dialog .consent {
   margin-bottom: 1rem;
-}
-
-.consent-dialog-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
 }
 
 .consent-policy,
@@ -127,10 +140,17 @@
   font-size: var(--pm-text-code-inline);
 }
 
-/* A confirmation under the control that asked (a row's, a field's): its own line. */
+/*
+ * A confirmation under the control that asked (a row's, a field's): its own line, inside the
+ * row's padding as main's other confirmations sit inside theirs (border-box, so its padding and
+ * border never push it past the group's edge).
+ */
 .privacy-confirm {
   display: grid;
+  box-sizing: border-box;
   flex: 1 0 100%;
+  min-width: 0;
+  max-width: 100%;
   gap: 0.35rem;
   margin-top: 0.25rem;
   padding: 0.6rem 0.75rem;
@@ -178,6 +198,11 @@
   flex: none;
   color: var(--pm-muted);
   transition: transform var(--pm-fast) var(--pm-ease);
+}
+
+/* Closed, the subhead says what is inside; open, the intro says it in full. */
+.privacy-advanced[open] .privacy-advanced-hint {
+  display: none;
 }
 
 .privacy-advanced[open] .privacy-advanced-chevron {
@@ -295,6 +320,28 @@
 
 .settings-section .privacy-policy {
   margin: 2rem 0 0;
+}
+
+/* Analytics Data's counts by state, under the summary: "Waiting to Send 2 · Sent 41 · …". */
+.privacy-data-counts {
+  margin: 0.5rem 0 0;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* An event's state as a tinted chip: waiting amber, sent green, the rest neutral. */
+.chip.privacy-state {
+  background: color-mix(in oklab, var(--pm-fg) 8%, transparent);
+  white-space: nowrap;
+}
+
+.chip.privacy-state[data-state='waiting'] {
+  background: var(--pm-warn-bg);
+}
+
+.chip.privacy-state[data-state='sent'] {
+  background: color-mix(in oklab, var(--pm-success) 18%, transparent);
 }
 
 /* Analytics Data's entry in the nav, set in under Privacy as a notebook's is. */

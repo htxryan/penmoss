@@ -181,6 +181,10 @@
       "mac": "Advanced",
       "android": "Advanced"
     },
+    "privacy.advanced.hint": {
+      "mac": "How long and how much Penmoss keeps on this Mac",
+      "android": "How long and how much Penmoss keeps on this phone"
+    },
     "privacy.advanced.intro": {
       "mac": "How much Penmoss keeps on this Mac. Lowering a limit asks first, then deletes what falls outside it.",
       "android": "How much Penmoss keeps on this phone. Lowering a limit asks first, then deletes what falls outside it."

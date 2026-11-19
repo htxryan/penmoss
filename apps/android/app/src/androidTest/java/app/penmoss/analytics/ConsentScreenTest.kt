@@ -60,6 +60,11 @@ class ConsentScreenTest {
                 val dontShare = screen.tagged("consent-dont-share")
                 assertEquals(share.boundsInWindow.width, dontShare.boundsInWindow.width, 1f)
                 assertEquals(share.boundsInWindow.height, dontShare.boundsInWindow.height, 1f)
+                // Halves of one row: side by side, together nearly the row's width.
+                assertEquals(share.boundsInWindow.top, dontShare.boundsInWindow.top, 1f)
+                assertTrue("Share is left of Don't Share", share.boundsInWindow.right <= dontShare.boundsInWindow.left)
+                val row = screen.tagged("consent-answers").boundsInWindow
+                assertTrue("each answer is about half the row", share.boundsInWindow.width > row.width * 0.4f)
 
                 screen.tap(share)
                 screen.waitFor("the answer kept") { answered }
@@ -88,6 +93,11 @@ class ConsentScreenTest {
                 assertFalse("Home shows before the answer", screen.has("Home of Notebooks"))
                 // Not the first run: no step bar.
                 assertFalse(screen.has(AnalyticsCopy.text("consent.lastStep.label")))
+                // The same equal halves as the first run's step.
+                val share = screen.tagged("consent-share").boundsInWindow
+                val dontShare = screen.tagged("consent-dont-share").boundsInWindow
+                assertEquals(share.width, dontShare.width, 1f)
+                assertEquals(share.top, dontShare.top, 1f)
                 SystemClock.sleep(2_000)
                 ProofShot.take()
             }

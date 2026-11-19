@@ -93,3 +93,14 @@ fun rememberTrackedDialog(name: String, open: Boolean = true): TrackedDialog {
     }
     return dialog
 }
+
+/**
+ * Records the screen [kind] (a catalogue screen kind, never a route or an id) when it is shown,
+ * as the Mac's pages record themselves (PEN-137). The NavController's listener records the same
+ * kind when it navigates there; [Analytics.screen] keeps one of the two, so a screen shown inside
+ * another (a test's, or a sheet's) is recorded too.
+ */
+@Composable
+fun TrackedScreen(kind: String) {
+    androidx.compose.runtime.LaunchedEffect(kind) { Analytics.screen(kind) }
+}

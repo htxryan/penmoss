@@ -1,6 +1,5 @@
 package app.penmoss.log
 
-import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import android.net.Uri
@@ -37,8 +36,8 @@ import java.io.File
  * Log File", wraps ACTION_SEND of plain text whose stream is a content URI of the app's own
  * `.logs` authority, readable once (FLAG_GRANT_READ_URI_PERMISSION). What it hands over is the log
  * scrubbed twice: a canary token and a note title never reach it. The log itself, in
- * `filesDir/logs/`, has no URI at all. The chooser is caught by an ActivityMonitor, so nothing
- * opens over the app. Run with `task proof:android -- app.penmoss.log.ShareLogFileTest`.
+ * `filesDir/logs/`, has no URI at all. An ActivityMonitor sees the chooser start; the share sheet
+ * then opens over Privacy for the proof, and Back closes it with no target picked. Run with `task proof:android -- app.penmoss.log.ShareLogFileTest`.
  */
 @RunWith(AndroidJUnit4::class)
 class ShareLogFileTest {
@@ -52,13 +51,12 @@ class ShareLogFileTest {
         PenmossLog.info("ShareLogFileTest", "opened Zebracanary Title Q7")
         PenmossLog.drain()
 
-        // The chooser is caught as it starts, and answered in its place: nothing opens over the app.
+        // The chooser is seen as it starts, and then opens: the proof shows the share sheet.
         val started = java.util.concurrent.LinkedBlockingQueue<Intent>()
         val monitor = object : Instrumentation.ActivityMonitor() {
             override fun onStartActivity(intent: Intent): Instrumentation.ActivityResult? {
-                if (intent.action != Intent.ACTION_CHOOSER) return null
-                started += intent
-                return Instrumentation.ActivityResult(Activity.RESULT_OK, null)
+                if (intent.action == Intent.ACTION_CHOOSER) started += intent
+                return null
             }
         }
         instrumentation.addMonitor(monitor)
@@ -107,6 +105,9 @@ class ShareLogFileTest {
                 assertNotNull(send)
                 assertEquals(Intent.ACTION_SEND, send!!.action)
                 assertEquals("text/plain", send.type)
+                // Android 10 and later head the sheet with the shared intent's title.
+                assertEquals("Share Log File", send.getStringExtra(Intent.EXTRA_TITLE))
+                assertEquals("Share Log File", send.clipData?.description?.label?.toString())
                 assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
                 @Suppress("DEPRECATION")
                 val uri = send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)!!
@@ -125,9 +126,15 @@ class ShareLogFileTest {
                 val refused = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.logs", kept) }.exceptionOrNull()
                 assertTrue("filesDir/logs/ has a URI", refused is IllegalArgumentException)
 
-                // Held before the shot, the Privacy page and its Logs row on screen (A1255, A1279).
+                // The share sheet over Privacy, held before the shot (A1255, A1279); nothing is
+                // sent, since no target is picked, and Back closes it.
+                val sheet = SystemClock.uptimeMillis() + 10_000
+                while (SystemClock.uptimeMillis() < sheet && !sheetShows(instrumentation)) SystemClock.sleep(250)
                 SystemClock.sleep(2_000)
                 ProofShot.take()
+                instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+                instrumentation.waitForIdleSync()
+                SystemClock.sleep(500)
             }
         } finally {
             instrumentation.removeMonitor(monitor)
@@ -135,6 +142,21 @@ class ShareLogFileTest {
     }
 
     companion object {
+        /** Whether a window other than the app's is up: the share sheet (Android's resolver or chooser). */
+        fun sheetShows(instrumentation: Instrumentation): Boolean {
+            val app = instrumentation.targetContext.packageName
+            val automation = instrumentation.uiAutomation
+            val info = automation.serviceInfo
+            if (info.flags and android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS == 0) {
+                info.flags = info.flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+                automation.serviceInfo = info
+            }
+            return automation.windows.any { window ->
+                val root = window.root ?: return@any false
+                window.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION && root.packageName?.toString() != app
+            }
+        }
+
         /** The clickable node holding [text] (the button, not its label). */
         fun clickableWithText(view: android.view.View, text: String): androidx.compose.ui.semantics.SemanticsNode? {
             val label = ScreenTree.nodes(view).firstOrNull { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { it.text == text } }

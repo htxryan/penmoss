@@ -1,11 +1,13 @@
 /**
  * Settings → Privacy → Analytics Data (PEN-137, ac36): the record on this Mac, the app's, the
  * CLI's and the MCP server's, whatever the answer. Its own page under Privacy in the nav, with
- * the summary under its title (how long it is kept, the ID, since when it is shared) and Copy as
- * JSON beside it: the exact body of the last batch sent, or the events on the page. Filters by
- * state and client; a table of 100 events at a time, newest first, with Earlier and Later.
+ * the summary under its title (how long it is kept, the ID, since when it is shared), the counts
+ * by state under that, and Copy as JSON beside it: the exact body of the last batch sent, or the events on the page. Filters by
+ * state and client; a table of 100 events at a time, newest first, with Earlier and Later, each
+ * event's state a tinted chip (waiting amber, sent green, the rest neutral).
  */
 import {
+  countsLine,
   STATE_LABELS,
   type ClientFilter,
   type Cursor,
@@ -159,6 +161,11 @@ export function AnalyticsData() {
           </button>
         }
       />
+      {status ? (
+        <p className="privacy-data-counts" data-testid="analytics-data-counts">
+          {countsLine(status.counts)}
+        </p>
+      ) : null}
       <div className="privacy-filters">
         <Filter
           label={copy('viewer.col.state.label')}
@@ -210,7 +217,11 @@ export function AnalyticsData() {
                   <td>{event.kind}</td>
                   <td className="privacy-table-name">{event.name}</td>
                   <td className="privacy-table-props">{propsOf(event)}</td>
-                  <td>{STATE_LABELS[event.state]}</td>
+                  <td>
+                    <span className="chip privacy-state" data-state={event.state}>
+                      {STATE_LABELS[event.state]}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

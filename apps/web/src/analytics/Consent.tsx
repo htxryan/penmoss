@@ -21,7 +21,10 @@ const RECORDED = [
 ] as const;
 const NEVER = ['consent.never.1', 'consent.never.2', 'consent.never.3'] as const;
 
-/** What the question says: the sentence, the two lists, and where to change it later. */
+/**
+ * What the question says: the sentence, the two lists, where to change it later, and the Privacy
+ * Policy, so the footer below it is the two answers alone, each half of it.
+ */
 export function ConsentQuestion() {
   return (
     <div className="consent" data-testid="consent-question">
@@ -46,6 +49,9 @@ export function ConsentQuestion() {
         </section>
       </div>
       <p className="consent-later">{copy('consent.later')}</p>
+      <p className="consent-policy-line">
+        <PrivacyPolicyLink className="consent-policy" event="consent.policy" />
+      </p>
     </div>
   );
 }
@@ -73,7 +79,8 @@ export function PrivacyPolicyLink({
 }
 
 /**
- * Share Usage Data and Don't Share: the same kind of button, neither the default. `onAnswer`
+ * Share Usage Data and Don't Share: the same button twice, each half of the row, neither the
+ * default. `onAnswer`
  * runs once main has the answer (or could not be reached: the question is not asked again in
  * this window either way).
  */
@@ -158,10 +165,7 @@ function ConsentDialog({ onAnswer }: { readonly onAnswer: () => void }) {
         {copy('consent.title')}
       </h2>
       <ConsentQuestion />
-      <div className="consent-dialog-foot">
-        <PrivacyPolicyLink className="consent-policy" event="consent.policy" />
-        <ConsentAnswers onChoose={() => tracked.done()} onAnswer={onAnswer} />
-      </div>
+      <ConsentAnswers onChoose={() => tracked.done()} onAnswer={onAnswer} />
     </dialog>
   );
 }

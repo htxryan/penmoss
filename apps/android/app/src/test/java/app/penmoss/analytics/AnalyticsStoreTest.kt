@@ -3,7 +3,9 @@ package app.penmoss.analytics
 import androidx.paging.PagingSource
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -54,6 +56,23 @@ class AnalyticsStoreTest {
         assertEquals(3L, store.counts()[EventState.PENDING])
         assertEquals(1L, store.counts()[EventState.LOCAL])
         assertEquals(4L, store.size())
+    }
+
+    /** Privacy's View Analytics Data row follows these (AC6, Ryan's review of AC40). */
+    @Test
+    fun theObservedCountsFollowEveryInsertAndPrune() = runBlocking {
+        val counts = store.observeCounts()
+        seed(50, EventState.LOCAL, start = 1_000, step = 1_000)
+        val seeded = withTimeout(5_000) { counts.first { it[EventState.LOCAL] == 50L } }
+        assertEquals(50L, seeded.values.sum())
+        store.insert(listOf(event(100, 200_000) to EventState.PENDING))
+        withTimeout(5_000) { counts.first { it[EventState.PENDING] == 1L && it[EventState.LOCAL] == 50L } }
+        // A cap under the range's floor, as the prune test makes one: the oldest go.
+        val capped = Limits(Limits.DEFAULTS.values + (Limits.EVENTS_MAX to 23))
+        assertEquals(28L, store.prune(capped, now = 300_000))
+        val pruned = withTimeout(5_000) { counts.first { it.values.sum() == 23L } }
+        assertEquals(22L, pruned[EventState.LOCAL])
+        assertEquals(1L, pruned[EventState.PENDING])
     }
 
     @Test

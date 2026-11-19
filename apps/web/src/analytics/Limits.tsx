@@ -175,6 +175,9 @@ export function AdvancedLimits({
         <h3 className="lf-sub-name" id={`${id}-h`}>
           {copy('privacy.advanced.label')}
         </h3>
+        <span className="lf-sub-hint privacy-advanced-hint" data-testid="privacy-advanced-hint">
+          {copy('privacy.advanced.hint')}
+        </span>
       </summary>
       <p className="privacy-advanced-intro">{copy('privacy.advanced.intro')}</p>
       <div className="privacy-limits">

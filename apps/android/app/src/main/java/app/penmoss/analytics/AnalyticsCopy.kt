@@ -39,6 +39,7 @@ object AnalyticsCopy {
         "privacy.logs.button" to "Share Log File",
         "privacy.logs.hint" to "The last {days} days, on this phone. They leave only when you attach them to a bug report or share them.",
         "privacy.advanced.label" to "Advanced",
+        "privacy.advanced.hint" to "How long and how much Penmoss keeps on this phone",
         "privacy.advanced.intro" to "How much Penmoss keeps on this phone. Lowering a limit asks first, then deletes what falls outside it.",
         "privacy.policy.label" to "Privacy Policy",
         "limits.usage.title" to "Usage Record",

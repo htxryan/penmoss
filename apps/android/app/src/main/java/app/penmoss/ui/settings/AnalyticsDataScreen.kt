@@ -30,6 +30,11 @@ import app.penmoss.analytics.AnalyticsCopy
 import app.penmoss.analytics.AnalyticsFormat
 import app.penmoss.analytics.EventEntity
 import app.penmoss.analytics.EventState
+import app.penmoss.analytics.TrackedScreen
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedId
 import app.penmoss.ui.common.TextButton
@@ -59,7 +64,7 @@ fun viewerSummary(days: Int, install: String, sharing: Boolean?, since: Long?, z
 /**
  * Analytics Data (PEN-137, AC6): the record on this phone, whatever the switch says, newest first,
  * a page of 100 at a time as the list scrolls (Paging 3, keyset on time and id). Each row shows
- * its time, kind, name, props and state; the chips filter by state. Its own screen with a back
+ * its time, kind, name, props and its state as a tinted chip; the filter chips filter by state. Its own screen with a back
  * arrow to Privacy.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +78,7 @@ fun AnalyticsDataScreen(
     onCopyJson: (() -> Unit)?,
     onBack: () -> Unit,
 ) {
+    TrackedScreen("settings.privacy-data")
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -94,7 +100,15 @@ fun AnalyticsDataScreen(
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("viewerList")) {
             item(key = "summary") { Help(summary, Modifier.testTag("viewerSummary")) }
-            item(key = "counts") { Help(AnalyticsFormat.countsLine(counts), Modifier.testTag("viewerCounts")) }
+            // The counts by state under the summary, name first, as the Mac's (AC6, ac36).
+            item(key = "counts") {
+                Text(
+                    AnalyticsFormat.countsLine(counts),
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("viewerCounts"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             item(key = "filters") {
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp).testTag("viewerFilters").trackedId("privacy.data.filter-state"),
@@ -125,11 +139,36 @@ fun AnalyticsDataScreen(
 @Composable
 private fun EventRow(event: EventEntity) {
     ListItem(
-        overlineContent = { Text("${eventTime(event.at)} · ${event.eventState.label}") },
+        overlineContent = { Text(eventTime(event.at)) },
         headlineContent = { Text("${event.kind} · ${event.name}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (event.props == "{}") null else {
             { Text(event.props, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
         },
+        trailingContent = { StateChip(event.eventState) },
         modifier = Modifier.testTag("viewerEvent"),
     )
+}
+
+/** Penmoss's `warnBg` and `success` tokens (packages/ui/src/theme/builtins.ts), light and dark. */
+private val WARN_BG_LIGHT = Color(0xFFFBEFC9)
+private val WARN_BG_DARK = Color(0xFF4A3D14)
+private val SUCCESS_LIGHT = Color(0xFF4E7A3C)
+private val SUCCESS_DARK = Color(0xFF8DB974)
+
+/**
+ * An event's state as a tinted chip, as the Mac's (ac36): Waiting to Send amber, Sent green,
+ * Not Shared, Refused and Waiting for Your Answer neutral.
+ */
+@Composable
+internal fun StateChip(state: EventState) {
+    val colours = MaterialTheme.colorScheme
+    val dark = colours.background.luminance() < 0.5f
+    val tint = when (state) {
+        EventState.WAITING -> if (dark) WARN_BG_DARK else WARN_BG_LIGHT
+        EventState.SENT -> (if (dark) SUCCESS_DARK else SUCCESS_LIGHT).copy(alpha = 0.18f)
+        else -> colours.onSurface.copy(alpha = 0.08f)
+    }
+    Surface(color = tint, contentColor = colours.onSurface, shape = RoundedCornerShape(4.dp), modifier = Modifier.testTag("viewerState-${state.wire}")) {
+        Text(state.label, Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+    }
 }

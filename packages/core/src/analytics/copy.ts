@@ -57,6 +57,7 @@ export const ANALYTICS_COPY = {
       'The last {days} days, on this phone. They leave only when you attach them to a bug report or share them.',
   },
   'privacy.advanced.label': 'Advanced',
+  'privacy.advanced.hint': 'How long and how much Penmoss keeps on this {device}',
   'privacy.advanced.intro':
     'How much Penmoss keeps on this {device}. Lowering a limit asks first, then deletes what falls outside it.',
   'privacy.policy.label': 'Privacy Policy',

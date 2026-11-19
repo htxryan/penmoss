@@ -84,7 +84,7 @@ class AnalyticsCopyContractTest {
         val keys = listOf(
             "privacy.lead", "privacy.share.label", "privacy.share.hint", "privacy.viewData.label", "privacy.id.label",
             "privacy.id.hint", "privacy.resetId.button", "privacy.forget.button", "privacy.logs.label", "privacy.logs.button",
-            "privacy.advanced.label", "privacy.policy.label",
+            "privacy.advanced.label", "privacy.advanced.hint", "privacy.policy.label",
         )
         for (key in keys) compose.onNodeWithText(text(key), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
         // The title, in the top bar (drawn large and small).

@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.AnalyticsCopy
@@ -40,7 +41,7 @@ const val PRIVACY_POLICY_URL = "https://penmoss.app/privacy/"
  * on this phone, and the answer decides only whether it leaves. The first run's last step
  * ([lastStep], "Last Step" in the step bar's place), and once before Home on a phone that had a
  * notebook before the question existed. Share Usage Data and Don't Share are equal: the same
- * style, neither chosen first, and Back does nothing, so only an answer moves on.
+ * outlined button, each half of one row, neither chosen first, and Back does nothing, so only an answer moves on.
  */
 @Composable
 fun ConsentStep(lastStep: Boolean, busy: Boolean = false, onAnswer: (ConsentAnswer) -> Unit, openUrl: (String) -> Unit) {
@@ -50,12 +51,13 @@ fun ConsentStep(lastStep: Boolean, busy: Boolean = false, onAnswer: (ConsentAnsw
         AnalyticsCopy.text("consent.title"),
         stepLabel = if (lastStep) AnalyticsCopy.text("consent.lastStep.label") else null,
         below = {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            // Equal halves of one row, the same outline and weight (AC4, as the Mac's ac1).
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp).testTag("consent-answers"),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Answer(AnalyticsCopy.text("consent.share.button"), "consent-share", "consent.share", busy) { onAnswer(ConsentAnswer.YES) }
-                Answer(AnalyticsCopy.text("consent.dontShare.button"), "consent-dont-share", "consent.dont-share", busy) { onAnswer(ConsentAnswer.NO) }
+                Answer(AnalyticsCopy.text("consent.share.button"), "consent-share", "consent.share", busy, Modifier.weight(1f)) { onAnswer(ConsentAnswer.YES) }
+                Answer(AnalyticsCopy.text("consent.dontShare.button"), "consent-dont-share", "consent.dont-share", busy, Modifier.weight(1f)) { onAnswer(ConsentAnswer.NO) }
             }
         },
     ) {
@@ -67,14 +69,14 @@ fun ConsentStep(lastStep: Boolean, busy: Boolean = false, onAnswer: (ConsentAnsw
     }
 }
 
-/** One of the two answers: the same outlined button for both, the full width. */
+/** One of the two answers: the same outlined button for both, half the row each. */
 @Composable
-private fun Answer(text: String, tag: String, id: String, busy: Boolean, onClick: () -> Unit) {
+private fun Answer(text: String, tag: String, id: String, busy: Boolean, modifier: Modifier, onClick: () -> Unit) {
     OutlinedButton(
         onClick = trackedClick(id, onClick),
         enabled = !busy,
-        modifier = Modifier.fillMaxWidth().testTag(tag).trackedId(id),
-    ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        modifier = modifier.testTag(tag).trackedId(id),
+    ) { Text(text, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) }
 }
 
 /** A short titled list; an empty line (the Mac's own) is left out. */

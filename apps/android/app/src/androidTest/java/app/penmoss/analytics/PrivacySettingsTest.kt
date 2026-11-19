@@ -3,6 +3,7 @@ package app.penmoss.analytics
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,8 +89,15 @@ class PrivacySettingsTest {
             screen.text("Share Log File")
             screen.text("Waiting to Send 2 · Sent 41 · Not Shared 212")
             screen.text("5c0e8f6a…7a96")
-            // Advanced is closed.
+            // The ID's two buttons in one row: Reset outlined, Delete My Shared Data beside it.
+            val reset = screen.tagged("privacyResetId").boundsInWindow
+            val forget = screen.tagged("privacyForget").boundsInWindow
+            assertTrue("$reset $forget", forget.left >= reset.right || forget.top >= reset.bottom)
+            // Advanced is closed: a disclosure with its hint, not a row that goes somewhere.
+            screen.text("How long and how much Penmoss keeps on this phone")
+            assertEquals("Closed", screen.tagged("privacyAdvanced").config.getOrNull(SemanticsProperties.StateDescription))
             assertFalse(screen.has(AnalyticsCopy.text("limits.usage.title")))
+            screen.reveal(screen.tagged("privacyResetId"), margin = 200f)
             SystemClock.sleep(2_000)
             ProofShot.take()
         }
@@ -110,9 +118,10 @@ class PrivacySettingsTest {
                             val pages = remember(filter) {
                                 Pager(PagingConfig(pageSize = 100, initialLoadSize = 100, enablePlaceholders = false)) { phone.store.pagingSource(filter) }.flow.cachedIn(scope)
                             }
+                            val counts by remember { phone.store.observeCounts() }.collectAsState(emptyMap())
                             AnalyticsDataScreen(
                                 summary = "On this phone, kept 7 days. ID 5c0e8f6a…7a96. Sharing since 19 Nov 2026.",
-                                counts = mapOf(EventState.SENT to 230L, EventState.LOCAL to 12L),
+                                counts = counts,
                                 filter = filter,
                                 onFilter = { filter = it },
                                 events = pages.collectAsLazyPagingItems(),
@@ -128,13 +137,24 @@ class PrivacySettingsTest {
                 // Newest first: the twelve recorded last, then the older ones.
                 val first = screen.waitFor("the first event") { screen.nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == "viewerEvent" } }
                 val newest = runBlocking { phone.store.page(null, null, 1).single() }
-                assertTrue(first.toString(), screen.has("${eventTime(newest.at)} · Not Shared"))
+                assertTrue(first.toString(), screen.has(eventTime(newest.at)))
+                // Each state a tinted chip: Not Shared neutral, Sent green.
+                screen.tagged("viewerState-local")
+                screen.text("Not Shared")
                 screen.tap("viewerFilter-sent")
                 screen.waitFor("only Sent rows") { if (!screen.has("click · privacy.share-log-file")) true else null }
                 assertTrue(screen.has("click · privacy.view-data"))
+                screen.tagged("viewerState-sent")
+                SystemClock.sleep(1_500)
+                screen.tap("viewerFilter-all")
+                // The counts line under the summary, as the Mac's, held in the shot.
+                val top = screen.tagged("viewerCounts")
+                screen.reveal(top, margin = 400f)
+                screen.text("Sent 230 · Not Shared 12")
                 screen.tap("viewerFilter-local")
                 screen.text("click · privacy.share-log-file")
                 assertFalse(screen.has("click · privacy.view-data"))
+                screen.text("Sent 230 · Not Shared 12")
                 // Its own screen, with a way back.
                 val back = screen.waitFor("Back") { screen.nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Back") == true } }
                 SystemClock.sleep(2_000)

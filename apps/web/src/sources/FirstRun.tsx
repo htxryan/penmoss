@@ -17,12 +17,7 @@
  * leaves is recorded by name (`firstrun` events: done or back), on this Mac whatever the answer.
  */
 import { BrandMark } from '@penmoss/ui/icons';
-import {
-  ConsentAnswers,
-  ConsentQuestion,
-  ExistingInstallConsent,
-  PrivacyPolicyLink,
-} from '../analytics/Consent';
+import { ConsentAnswers, ConsentQuestion, ExistingInstallConsent } from '../analytics/Consent';
 import { record } from '../analytics/record';
 import { analyticsBridge, copy } from '../analytics/status';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -617,7 +612,6 @@ function NotebookSteps({
           name="consent"
           last
           title={copy('consent.title')}
-          start={<PrivacyPolicyLink className="fr-learn" event="consent.policy" />}
           actions={
             <ConsentAnswers
               onAnswer={() => {

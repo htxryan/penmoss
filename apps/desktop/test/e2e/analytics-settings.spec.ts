@@ -104,7 +104,24 @@ test('Privacy is the last page of This Mac; Analytics Data pages the record; Off
     'The last 7 days, on this Mac. They leave only when you attach them to a bug report.',
   );
   await expect(section.getByTestId('privacy-advanced')).not.toHaveAttribute('open');
+  // Closed, Advanced says what is inside it.
+  await expect(section.getByTestId('privacy-advanced-hint')).toHaveText(
+    'How long and how much Penmoss keeps on this Mac',
+  );
   await expect(section.getByLabel('Keep Events For')).toBeHidden();
+  // Delete My Shared Data is the app's quiet destructive button: red words, no fill.
+  const forget = section.getByRole('button', { name: 'Delete My Shared Data' });
+  await expect(forget).toHaveClass(/\bquiet\b/);
+  await expect(forget).toHaveClass(/\bdanger\b/);
+  const danger = await forget.evaluate((element) => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--pm-danger)';
+    element.parentElement!.append(probe);
+    const red = getComputedStyle(probe).color;
+    probe.remove();
+    return [getComputedStyle(element).color, red];
+  });
+  expect(danger[0]).toBe(danger[1]);
   await expect(section.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute(
     'href',
     'https://penmoss.app/privacy/',
@@ -124,6 +141,10 @@ test('Privacy is the last page of This Mac; Analytics Data pages the record; Off
   await expect(data.getByTestId('settings-intro')).toHaveText(
     /^On this Mac, kept 7 days\. ID [0-9a-f]{8}…[0-9a-f]{4}\. Sharing since \d+ \w+ \d{4}\.$/,
   );
+  // The counts by state, under the summary, as the Privacy row says them.
+  await expect(data.getByTestId('analytics-data-counts')).toHaveText(
+    /^(Waiting to Send [\d,]+ · )?Sent [\d,]+/,
+  );
   await expect(data.getByRole('columnheader')).toHaveText([
     'Time',
     'Client',
@@ -141,6 +162,8 @@ test('Privacy is the last page of This Mac; Analytics Data pages the record; Off
   // Sent only: every row says so; Earlier and Later page through them.
   await data.getByTestId('analytics-data-state').getByText('Sent', { exact: true }).click();
   await expect(rows.locator('td:nth-child(6)')).toHaveText(Array(100).fill('Sent'));
+  // Each state a tinted chip: sent green, waiting amber, the rest neutral.
+  await expect(rows.first().locator('.chip.privacy-state')).toHaveAttribute('data-state', 'sent');
   await expect(showing).toHaveText(/^Showing 1–100 of [\d,]+$/);
   await data.getByTestId('analytics-data-earlier').click();
   await expect(showing).toHaveText(/^Showing 101–[\d,]+ of [\d,]+$/);
@@ -166,7 +189,9 @@ test('Privacy is the last page of This Mac; Analytics Data pages the record; Off
     .toMatch(/^\{"v":1,"install":"[0-9a-f]{32}","events":\[/);
   const copied = await app.evaluate(({ clipboard }) => clipboard.readText());
   expect(fake.bodies).toContain(copied);
-  await data.getByTestId('analytics-data-table').scrollIntoViewIfNeeded();
+  // Ends on the summary, the counts under it and the chips.
+  await data.getByRole('heading', { level: 1 }).scrollIntoViewIfNeeded();
+  await page.mouse.move(0, 0);
   await holdForProof(page);
 
   // Off keeps what waits on this Mac (AC16): the endpoint is down, so events wait to be sent.
@@ -217,6 +242,18 @@ test('Delete My Shared Data asks first, naming the ID; only Delete forgets it (a
   );
   await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused();
   await expect(confirm.getByRole('button', { name: 'Delete' })).toHaveClass(/danger/);
+  // Inside the group, inset from its edges as main's other confirmations are.
+  const group = (await page
+    .getByTestId('privacy-settings')
+    .locator('.lf-group')
+    .first()
+    .boundingBox())!;
+  const box = (await confirm.boundingBox())!;
+  const remove = (await confirm.getByRole('button', { name: 'Delete' }).boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(group.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(group.x + group.width - 1);
+  expect(remove.x + remove.width).toBeLessThan(group.x + group.width - 4);
+  await page.mouse.move(0, 0);
   await holdForProof(page);
   await page.keyboard.press('Escape');
   await expect(confirm).toHaveCount(0);

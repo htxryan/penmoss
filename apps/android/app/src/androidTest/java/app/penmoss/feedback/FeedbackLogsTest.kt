@@ -57,40 +57,62 @@ class FeedbackLogsTest {
             for (text in listOf("Description", "Captured Context", "Attach Anonymised Logs", summary)) assertTrue("$text is not on screen: $texts", text in texts)
             assertTrue("Captured context" !in texts)
 
-            // Ticked for a bug (O6); the exact lines shown once opened, scrolled into view.
+            // Ticked for a bug (O6). The proof holds on the box and its summary first.
             scenario.onActivity { activity ->
                 val nodes = ScreenTree.nodes(activity.window.decorView)
                 val box = nodes.single { it.config.getOrNull(SemanticsProperties.TestTag) == "feedbackLogs" }
                 assertEquals(ToggleableState.On, box.config.getOrNull(SemanticsProperties.ToggleableState))
-                nodes.single { it.config.getOrNull(SemanticsProperties.TestTag) == "feedbackLogsToggle" }.config[SemanticsActions.OnClick].action?.invoke()
+                scrollIntoView(box)
             }
-            var shown: SemanticsNode? = null
+            instrumentation.waitForIdleSync()
+            SystemClock.sleep(1_500)
+
+            // Then opens the preview: the exact lines, in the monospace block.
+            scenario.onActivity { activity ->
+                ScreenTree.nodes(activity.window.decorView).single { it.config.getOrNull(SemanticsProperties.TestTag) == "feedbackLogsToggle" }
+                    .config[SemanticsActions.OnClick].action?.invoke()
+            }
             val opened = SystemClock.uptimeMillis() + 10_000
+            var inSight = false
             do {
                 instrumentation.waitForIdleSync()
-                scenario.onActivity { activity ->
-                    shown = ScreenTree.nodes(activity.window.decorView).firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == "feedbackLogsText" }
-                    shown?.let { scrollIntoView(it) }
-                }
-                if (shown != null) break
                 SystemClock.sleep(250)
-            } while (SystemClock.uptimeMillis() < opened)
-            instrumentation.waitForIdleSync()
+                instrumentation.waitForIdleSync()
+                scenario.onActivity { activity ->
+                    val block = ScreenTree.nodes(activity.window.decorView).firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == "feedbackLogsText" }
+                    if (block != null) {
+                        // Laid out at its full height: bring the whole block into the form's view.
+                        val view = scroller(block)?.boundsInWindow
+                        inSight = view != null && block.boundsInWindow.top >= view.top && block.boundsInWindow.bottom <= view.bottom
+                        if (!inSight) scrollIntoView(block)
+                    }
+                }
+            } while (!inSight && SystemClock.uptimeMillis() < opened)
+            assertTrue("the logs' block is not in sight", inSight)
             scenario.onActivity { activity ->
                 val text = ScreenTree.nodes(activity.window.decorView).single { it.config.getOrNull(SemanticsProperties.TestTag) == "feedbackLogsText" }
                 assertEquals(logs.joinToString("\n"), text.config.getOrNull(SemanticsProperties.Text).orEmpty().joinToString("") { it.text })
+                // The lines themselves are shown in the monospace face.
+                val layout = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+                text.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layout)
+                assertEquals(androidx.compose.ui.text.font.FontFamily.Monospace, layout.single().layoutInput.style.fontFamily)
             }
-            // Held before the shot, the logs box on screen (A1255, A1279).
-            SystemClock.sleep(2_000)
+            // Held on the opened lines before the shot (A1255, A1279).
+            SystemClock.sleep(2_500)
             ProofShot.take()
         }
     }
 
-    /** Scrolls the form so [node] sits in the upper part of the window. */
-    private fun scrollIntoView(node: SemanticsNode) {
+    /** The scrolling container [node] sits in. */
+    private fun scroller(node: SemanticsNode): SemanticsNode? {
         var parent = node.parent
         while (parent != null && parent.config.getOrNull(SemanticsActions.ScrollBy) == null) parent = parent.parent
-        val scroller = parent ?: return
+        return parent
+    }
+
+    /** Scrolls the form so [node] sits in the upper part of the window. */
+    private fun scrollIntoView(node: SemanticsNode) {
+        val scroller = scroller(node) ?: return
         val by = node.boundsInWindow.top - scroller.boundsInWindow.top - scroller.boundsInWindow.height / 4
         if (by > 0) scroller.config[SemanticsActions.ScrollBy].action?.invoke(0f, by)
     }

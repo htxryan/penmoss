@@ -3,6 +3,7 @@ package app.penmoss.analytics
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -33,14 +35,20 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class LimitsSettingsTest {
+    /**
+     * Privacy over [phone]'s record, as PrivacyRoute wires it: the counts follow the store live,
+     * and the page records itself (the global recorder is [phone]'s for the test).
+     */
     private fun show(scenario: ActivityScenario<ComponentActivity>, phone: TestAnalytics) {
+        Analytics.install(phone.service)
         scenario.onActivity { activity ->
             activity.setContent {
                 PenmossTheme {
                     val scope = rememberCoroutineScope()
                     var limits by remember { mutableStateOf(Limits.DEFAULTS) }
+                    val counts by remember { phone.store.observeCounts() }.collectAsState(emptyMap())
                     PrivacyScreen(
-                        PrivacyUi(install = "0".repeat(32), limits = limits),
+                        PrivacyUi(install = "0".repeat(32), limits = limits, counts = counts),
                         PrivacyActions(
                             preview = { next -> LimitsPreview(events = phone.store.outside(next, phone.clock)) },
                             onLimits = { next ->
@@ -53,6 +61,9 @@ class LimitsSettingsTest {
             }
         }
     }
+
+    @After
+    fun uninstall() = Analytics.install(null)
 
     @Test
     fun advancedOpensInPlaceWithEveryLimit() {
@@ -74,10 +85,19 @@ class LimitsSettingsTest {
                 // Reset to Defaults is at the foot, below every field.
                 val tops = screen.layoutTops(Limits.SPECS.map { "limit-${it.key}" } + "limitsReset")
                 assertTrue(tops.toString(), tops.dropLast(1).all { it < tops.last() })
-                // Bug Reports and Reset to Defaults in sight for the proof.
+                // The proof holds on each part in turn: Usage Record, then the logs' space
+                // estimate, then Bug Reports with Reset to Defaults at the foot.
+                screen.reveal(screen.text("Usage Record"), margin = 40f)
+                SystemClock.sleep(1_500)
+                val logsSpace = screen.tagged("limitsSpace-logs")
+                screen.reveal(logsSpace, margin = 320f)
+                assertTrue(screen.has("Up to 2 MB of logs on this phone (at most 400 MB)"))
+                SystemClock.sleep(1_500)
                 screen.reveal(screen.text("Bug Reports"), margin = 40f)
-                screen.text("Attach Logs from the Last")
-                screen.tagged("limitsReset")
+                for (shown in listOf("Bug Reports", "Attach Logs from the Last", "A bug report attaches the last 24 hours, at most 300 lines and 16 KB.", "Reset to Defaults")) {
+                    assertTrue("$shown on screen with Bug Reports", screen.has(shown))
+                }
+                assertTrue("Reset to Defaults in sight", onScreen(screen.tagged("limitsReset"), scenario))
                 SystemClock.sleep(2_000)
                 ProofShot.take()
             }
@@ -95,12 +115,19 @@ class LimitsSettingsTest {
             ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
                 show(scenario, phone)
                 val screen = OnScreen(scenario)
+                // The View Analytics Data row follows the record live: the fifty seeded, and
+                // opening Privacy recorded as a screen.
+                screen.waitFor("the record's counts on Privacy") { screen.texts().firstOrNull { it.contains("Not Shared 50") } }
+                screen.waitFor("Privacy recorded") {
+                    runBlocking { phone.service.flush(); phone.store.page(null, null, 100) }.firstOrNull { it.kind == "screen" && it.name == "settings.privacy" }
+                }
+                screen.waitFor("the screen event counted") { screen.texts().firstOrNull { it.contains("Waiting for Your Answer") && it.contains("Not Shared 50") } }
                 screen.tap("privacyAdvanced")
                 screen.reveal("limit-events.days")
                 // Out of range: refused, saying the range.
                 screen.type("limit-events.days", "400")
                 screen.text("Between 1 and 360")
-                assertEquals(50L, runBlocking { phone.store.size() })
+                assertEquals(50L, runBlocking { phone.store.counts()[EventState.LOCAL] })
 
                 screen.type("limit-events.days", "3")
                 val title = "Delete ${AnalyticsFormat.number(old)} Events?"
@@ -110,16 +137,26 @@ class LimitsSettingsTest {
                 screen.waitFor("the old value back") {
                     if (screen.tagged("limit-events.days").config.getOrNull(SemanticsProperties.EditableText)?.text == "7") true else null
                 }
-                assertEquals(50L, runBlocking { phone.store.size() })
+                assertEquals(50L, runBlocking { phone.store.counts()[EventState.LOCAL] })
 
                 screen.type("limit-events.days", "3")
                 screen.dialogText(title)
                 SystemClock.sleep(2_000)
                 ProofShot.take()
                 screen.dialogTap("Delete")
-                screen.waitFor("the record pruned") { if (runBlocking { phone.store.size() } == 50L - old) true else null }
+                screen.waitFor("the record pruned") { if (runBlocking { phone.store.counts()[EventState.LOCAL] } == 50L - old) true else null }
+                // The row behind follows at once.
+                screen.reveal(screen.tagged("privacyViewData"))
+                screen.waitFor("the counts after the prune") { screen.texts().firstOrNull { it.contains("Not Shared ${50L - old}") } }
                 assertEquals(3, runBlocking { phone.service.stateNow() }.limits.eventsDays)
             }
         }
     }
+}
+
+/** Whether [node] lies wholly inside the window. */
+internal fun onScreen(node: androidx.compose.ui.semantics.SemanticsNode, scenario: ActivityScenario<ComponentActivity>): Boolean {
+    var height = 0
+    scenario.onActivity { height = it.window.decorView.height }
+    return node.boundsInWindow.top >= 0f && node.boundsInWindow.bottom <= height
 }

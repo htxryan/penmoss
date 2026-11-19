@@ -28,15 +28,21 @@ object LogShare {
     /** The content URI of the shared copy [file]; throws for a file outside `cacheDir/share/`. */
     fun uriOf(context: Context, file: File): Uri = FileProvider.getUriForFile(context, authority(context), file)
 
-    /** The chooser, titled "Share Log File", wrapping ACTION_SEND of [file]. */
+    /**
+     * The chooser, titled "Share Log File", wrapping ACTION_SEND of [file]. The title goes to the
+     * chooser and to the shared intent too: since Android 10 the share sheet ignores a chooser's
+     * title for ACTION_SEND and heads its preview with the shared intent's EXTRA_TITLE instead.
+     */
     fun intent(context: Context, file: File): Intent {
+        val title = AnalyticsCopy.text("privacy.logs.button")
         val uri = uriOf(context, file)
         val send = Intent(Intent.ACTION_SEND)
             .setType("text/plain")
             .putExtra(Intent.EXTRA_STREAM, uri)
+            .putExtra(Intent.EXTRA_TITLE, title)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        send.clipData = ClipData.newRawUri(file.name, uri)
-        return Intent.createChooser(send, AnalyticsCopy.text("privacy.logs.button"))
+        send.clipData = ClipData.newRawUri(title, uri)
+        return Intent.createChooser(send, title)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 

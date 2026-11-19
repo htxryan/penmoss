@@ -275,6 +275,8 @@ object Analytics {
         private set
 
     fun install(service: AnalyticsService?) {
+        // A new recorder starts with no screen before it, so its first screen is recorded.
+        if (service !== this.service) lastScreen = null
         this.service = service
     }
 

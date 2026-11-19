@@ -11,7 +11,21 @@ import { collectErrors, holdForProof } from './support/app';
 const nav = (page: Page) => page.getByRole('navigation', { name: /settings sections/i });
 const fake = (page: Page) => page.evaluate(() => window.__penmossFakeAnalytics!);
 
-/** The two answers are the same kind of button: same classes, neither focused, neither primary. */
+/** `inner` sits within `outer`, its right edge (and its last button's) clear of `outer`'s border. */
+async function expectInside(inner: Locator, outer: Locator) {
+  const box = (await inner.boundingBox())!;
+  const group = (await outer.boundingBox())!;
+  const last = (await inner.getByRole('button').last().boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(group.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(group.x + group.width - 1);
+  expect(last.x + last.width).toBeLessThan(group.x + group.width - 4);
+}
+
+/**
+ * The two answers are the same button (ac1, ac8): same classes, neither focused, neither primary,
+ * each half of the row, with the same border and weight (the pointer moved off first, so neither
+ * shows its hover).
+ */
 async function expectEqualAnswers(scope: Locator) {
   const share = scope.getByRole('button', { name: 'Share Usage Data' });
   const dont = scope.getByRole('button', { name: 'Don’t Share' });
@@ -21,6 +35,21 @@ async function expectEqualAnswers(scope: Locator) {
   await expect(share).not.toHaveClass(/primary/);
   await expect(share).not.toBeFocused();
   await expect(dont).not.toBeFocused();
+  await scope.page().mouse.move(0, 0);
+  const look = (button: Locator) =>
+    button.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return [style.borderColor, style.borderWidth, style.fontWeight, style.backgroundColor];
+    });
+  expect(await look(share)).toEqual(await look(dont));
+  const row = (await scope.locator('.consent-answers').boundingBox())!;
+  const shareBox = (await share.boundingBox())!;
+  const dontBox = (await dont.boundingBox())!;
+  expect(Math.abs(shareBox.width - dontBox.width)).toBeLessThan(1);
+  // Halves of the row: together, with the gap between them, they fill it.
+  expect(shareBox.width).toBeGreaterThan(row.width / 2 - 8);
+  expect(shareBox.x).toBeCloseTo(row.x, 0);
+  expect(dontBox.x + dontBox.width).toBeCloseTo(row.x + row.width, 0);
 }
 
 /** What the question says, wherever it is asked (ac1, ac8). */
@@ -74,6 +103,10 @@ test.describe('the first run (ac1)', () => {
     await expectQuestion(consent);
     await expectEqualAnswers(consent);
     await expect(consent.getByTestId('first-run-back')).toHaveCount(0);
+    // No band of empty card between the closing words and the answers.
+    const words = (await consent.getByTestId('consent-question').boundingBox())!;
+    const foot = (await consent.locator('.fr-foot').boundingBox())!;
+    expect(foot.y - (words.y + words.height)).toBeLessThan(40);
     // Escape answers nothing.
     await page.keyboard.press('Escape');
     await expect(consent).toBeVisible();
@@ -199,6 +232,23 @@ test.describe('Settings → Privacy', () => {
       'The last 7 days, on this Mac. They leave only when you attach them to a bug report.',
     );
     await expect(section.getByTestId('privacy-advanced')).not.toHaveAttribute('open');
+    // Closed, Advanced says what is inside it.
+    await expect(section.getByTestId('privacy-advanced-hint')).toHaveText(
+      'How long and how much Penmoss keeps on this Mac',
+    );
+    // Delete My Shared Data is the app's quiet destructive button: red words, no fill.
+    const forget = section.getByRole('button', { name: 'Delete My Shared Data' });
+    await expect(forget).toHaveClass(/\bquiet\b/);
+    await expect(forget).toHaveClass(/\bdanger\b/);
+    const danger = await forget.evaluate((element) => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--pm-danger)';
+      element.parentElement!.append(probe);
+      const red = getComputedStyle(probe).color;
+      probe.remove();
+      return [getComputedStyle(element).color, red];
+    });
+    expect(danger[0]).toBe(danger[1]);
     await expect(section.getByLabel('Keep Events For')).toBeHidden();
     await expect(section.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute(
       'href',
@@ -227,6 +277,8 @@ test.describe('Settings → Privacy', () => {
     await expect(page).toHaveURL(/\/settings\/privacy$/);
     const advanced = section.getByTestId('privacy-advanced');
     await expect(advanced).toHaveAttribute('open', '');
+    // Open, the intro says it in full and the subhead's hint steps aside.
+    await expect(section.getByTestId('privacy-advanced-hint')).toBeHidden();
     await expect(advanced).toContainText(
       'How much Penmoss keeps on this Mac. Lowering a limit asks first, then deletes what falls outside it.',
     );
@@ -288,6 +340,7 @@ test.describe('Settings → Privacy', () => {
     );
     await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused();
     await expect(confirm.getByRole('button', { name: 'Delete' })).toHaveClass(/danger/);
+    await expectInside(confirm, advanced.getByTestId('privacy-limits-usage'));
     await confirm.getByRole('button', { name: 'Cancel' }).click();
     await expect(confirm).toHaveCount(0);
     await expect(field).toHaveValue('7');
@@ -354,7 +407,12 @@ test.describe('Settings → Privacy', () => {
     await expect(confirm).toHaveCount(0);
     expect((await fake(page)).calls).not.toContain('forget');
 
+    // Inside the group, inset from its edges as main's other confirmations are.
     await button.click();
+    await expectInside(confirm, page.getByTestId('privacy-settings').locator('.lf-group').first());
+    await confirm.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    await holdForProof(page, 2_000);
     await confirm.getByRole('button', { name: 'Delete' }).click();
     await expect(row.getByTestId('privacy-id-note')).toHaveText(
       'Your shared data was deleted, and this Mac has a new ID.',
@@ -390,6 +448,12 @@ test.describe('Analytics Data (ac36)', () => {
     await expect(data.getByRole('heading', { level: 1 })).toHaveText('Analytics Data');
     await expect(data.getByTestId('settings-intro')).toHaveText(
       /^On this Mac, kept 7 days\. ID [0-9a-f]{8}…[0-9a-f]{4}\. Sharing since \d+ \w+ \d{4}\.$/,
+    );
+    // The counts by state, under the summary, as the Privacy row says them.
+    const record = await fake(page);
+    const tally = (state: string) => record.events.filter((event) => event.state === state).length;
+    await expect(data.getByTestId('analytics-data-counts')).toHaveText(
+      new RegExp(`Waiting to Send \\d+ · Sent ${tally('sent')}`),
     );
     await expect(data.getByRole('columnheader')).toHaveText([
       'Time',
@@ -435,9 +499,15 @@ test.describe('Analytics Data (ac36)', () => {
     await expect(rows.locator('td:nth-child(6)')).toHaveText(
       Array(waiting).fill('Waiting to Send'),
     );
+    // Each state a tinted chip: waiting amber, sent green.
+    const tint = (row: Locator) =>
+      row.locator('.chip.privacy-state').evaluate((chip) => getComputedStyle(chip).backgroundColor);
+    const amber = await tint(rows.first());
     await data.getByTestId('analytics-data-client').getByText('All', { exact: true }).click();
     await data.getByTestId('analytics-data-state').getByText('Sent', { exact: true }).click();
     await expect(showing).toHaveText(`Showing 1–100 of ${sent}`);
+    const green = await tint(rows.first());
+    expect(green).not.toBe(amber);
 
     // Copy as JSON: the events on the page, with nothing sent yet.
     await data.getByRole('button', { name: 'Copy as JSON' }).click();
@@ -446,7 +516,12 @@ test.describe('Analytics Data (ac36)', () => {
     }>;
     expect(copied.length).toBe(await rows.count());
     expect(new Set(copied.map((event) => event.state))).toEqual(new Set(['sent']));
-    await data.getByTestId('analytics-data-table').scrollIntoViewIfNeeded();
+    // Ends on every state: the summary, the counts under it, and amber and green chips.
+    await data.getByTestId('analytics-data-state').getByText('All', { exact: true }).click();
+    await expect(rows.locator('.chip.privacy-state[data-state="waiting"]').first()).toBeVisible();
+    await expect(rows.locator('.chip.privacy-state[data-state="sent"]').first()).toBeVisible();
+    await data.getByRole('heading', { level: 1 }).scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
     await holdForProof(page, 2_000);
     expect(errors).toEqual([]);
   });
