@@ -34,9 +34,12 @@ const bool: Check = (value) => typeof value === 'boolean';
 const count = oneOf(COUNT_BUCKETS);
 const took = oneOf(DURATION_BUCKETS);
 
-/** A normalised key combination: modifiers, then one key name ("Mod+Alt+N", "Ctrl+/"). */
+/**
+ * A normalised key combination: modifiers, then one key name ("Mod+Alt+N", "Ctrl+/"). `[` is
+ * written `\x5B` so Kotlin's Regex, which reads `[` in a class as a nested class, takes it too.
+ */
 export const KEYS_PATTERN =
-  /^(?:(?:Mod|Ctrl|Alt|Shift|Meta|Cmd|Option)\+){0,4}(?:[A-Z0-9]|F\d{1,2}|[[\]\\;',./`=-]|Enter|Escape|Tab|Space|Backspace|Delete|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown)$/;
+  /^(?:(?:Mod|Ctrl|Alt|Shift|Meta|Cmd|Option)\+){0,4}(?:[A-Z0-9]|F\d{1,2}|[\x5B\]\\;',./`=-]|Enter|Escape|Tab|Space|Backspace|Delete|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown)$/;
 const keys: Check = (value) => typeof value === 'string' && KEYS_PATTERN.test(value);
 
 /** A CLI flag's name, never its value. */
