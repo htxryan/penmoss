@@ -6,6 +6,18 @@
  * requests: there is no server to sign in to.
  */
 import type {
+  ConsentAnswer,
+  EventKind,
+  ForgetResult,
+  LimitKey,
+  Limits,
+  Page,
+  PageQuery,
+  Props,
+  SizeClass,
+  StateName,
+} from '@penmoss/core/analytics';
+import type {
   BrowseError,
   GitHubOwner,
   GitHubRepo,
@@ -441,6 +453,8 @@ export interface PenmossDesktop {
   readonly updates?: DesktopUpdates;
   /** Search by meaning (T76): main and note windows. */
   readonly meaning?: DesktopMeaning;
+  /** Usage analytics and the log file (PEN-137): main and note windows. */
+  readonly analytics?: DesktopAnalytics;
   readonly clipboard: {
     /** Only just after a key press or click, or a menu command (false otherwise). */
     write(data: ClipboardWrite): Promise<boolean>;
@@ -706,4 +720,68 @@ export interface DesktopMeaning {
 
 export function desktop(): PenmossDesktop | null {
   return typeof window === 'undefined' ? null : (window.penmossDesktop ?? null);
+}
+
+/** What the page records: main stamps the session, `seq`, the client fields and the state. */
+export interface PageEvent {
+  readonly kind: EventKind;
+  readonly name: string;
+  readonly props?: Props;
+  readonly at: number;
+  readonly sizeClass?: SizeClass;
+}
+
+/** Usage analytics' state as Settings → Privacy shows it (PEN-137). */
+export interface DesktopAnalyticsStatus {
+  /** null until the person answers. */
+  readonly consent: ConsentAnswer | null;
+  /** Whether to ask now: no answer, and this install has a notebook (first run or update). */
+  readonly ask: boolean;
+  readonly install: string;
+  readonly sharingSince: number | null;
+  readonly counts: Readonly<Record<StateName, number>>;
+  readonly limits: Limits;
+  /** The events' and the logs' size on disk, in bytes. */
+  readonly logBytes: number;
+  /** The exact body of the last batch sent, or null. */
+  readonly lastBatch: string | null;
+  /** DO_NOT_TRACK or PENMOSS_ANALYTICS=off in main's environment. */
+  readonly optedOut: boolean;
+}
+
+/** What lowering limits would delete now. */
+export interface LimitsPreview {
+  readonly events: number;
+  readonly logBytes: number;
+}
+
+/** The logs a bug report attaches, after scrub #2. */
+export interface ReportLogs {
+  readonly lines: readonly string[];
+  readonly bytes: number;
+}
+
+export interface DesktopAnalytics {
+  /** Records events (fire and forget; main checks each against the catalogue). */
+  record(events: readonly PageEvent[]): void;
+  /** A line for the log file from the page (console.warn/error, the error ring); rate-limited. */
+  log(level: 'warn' | 'error', message: string): void;
+  status(): Promise<DesktopAnalyticsStatus>;
+  onChange(listener: (status: DesktopAnalyticsStatus) => void): () => void;
+  /** The consent question's answer (first run, or the one-time dialog). */
+  answer(consent: ConsentAnswer): Promise<DesktopAnalyticsStatus>;
+  /** Settings → Privacy's switch. */
+  setSharing(on: boolean): Promise<DesktopAnalyticsStatus>;
+  resetId(): Promise<DesktopAnalyticsStatus>;
+  /** Delete My Shared Data, after the confirmation: then a new ID. */
+  forget(): Promise<ForgetResult>;
+  page(query: PageQuery): Promise<Page>;
+  /** What setting `changes` would delete now (nothing is changed). */
+  preview(changes: Partial<Record<LimitKey, number>>): Promise<LimitsPreview>;
+  /** Saves `changes` (null: Reset to Defaults) and prunes at once. */
+  setLimits(changes: Partial<Record<LimitKey, number>> | null): Promise<DesktopAnalyticsStatus>;
+  /** Reveals the log file in Finder. */
+  showLogFile(): Promise<boolean>;
+  /** The logs for a bug report, with `names` (note titles, folders, tags…) scrubbed too. */
+  reportLogs(names: readonly string[]): Promise<ReportLogs>;
 }
