@@ -98,4 +98,151 @@ object ErrorScrub {
             else -> "${header.groupValues[1]}: $WITHHELD"
         }
     }
+
+    // --- The log scrubber (PEN-137): core's `scrub.ts`, line for line ---
+
+    /**
+     * What a scrubber knows to replace beyond its patterns (core's `ScrubKnown`): the GitHub login,
+     * the notebooks' names, their repositories (URLs or `owner/name`) and branches, and, for scrub
+     * #2, note titles and folder, tag and attachment names.
+     */
+    data class Known(
+        val login: String? = null,
+        val notebooks: List<String> = emptyList(),
+        val repositories: List<String> = emptyList(),
+        val branches: List<String> = emptyList(),
+        val names: List<String> = emptyList(),
+    ) {
+        /** These, and [more] names besides (scrub #2). */
+        fun withNames(more: Collection<String>) = copy(names = names + more)
+    }
+
+    /** The shortest name scrubbed as a known name; shorter ones would eat ordinary words. */
+    const val MIN_KNOWN_NAME = 3
+
+    /** One scrubber: it numbers what it replaces consistently (`‹repo-N›`, `‹id-N›`). */
+    interface LineScrubber {
+        /** One line, scrubbed. */
+        fun line(text: String): String
+
+        /** Many lines (a whole report), scrubbed. */
+        fun text(text: String): String = text.split(Regex("\r?\n")).joinToString("\n") { line(it) }
+    }
+
+    /** One line scrubbed (a fresh scrubber, so numbering starts at 1): core's `scrubLogLine`. */
+    fun line(text: String, known: Known = Known()): String = scrubber(known).line(text)
+
+    /*
+     * JavaScript's regular expressions, spelt out so the JVM's and Android's (ICU) read them the
+     * same: `\b`, `\s` and `\w` as JavaScript means them without the `u` flag.
+     */
+    private const val W = "A-Za-z0-9_"
+    private const val B = "(?:(?<=[$W])(?![$W])|(?<![$W])(?=[$W]))"
+    private const val S = Js.SPACE
+
+    /** JavaScript's `i` without `u`: ASCII case only (Kotlin's IGNORE_CASE folds Unicode too). */
+    private fun ci(pattern: String): Regex = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE).toRegex()
+
+    private val TOKENS = listOf(
+        Regex("$B(?:gh[pousr]_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{20,})$B"),
+        Regex("${B}pm_[A-Za-z0-9_-]{16,}$B"),
+        Regex("$B(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}$B"),
+        Regex("${B}xox[abprs]-[A-Za-z0-9-]{10,}$B"),
+        Regex("${B}AKIA[0-9A-Z]{16}$B"),
+        Regex("${B}eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}$B"),
+    )
+    private val BEARER = ci("$B(Bearer|Basic|token)[$S]+[A-Za-z0-9._~+/=-]{8,}")
+    private val KEY_VALUE = ci(
+        "$B(password|passwd|secret|token|access_token|refresh_token|api[_-]?key|authorization|private[_-]?key)" +
+            "([\"']?[$S]*[:=][$S]*[\"']?)(?!‹|(?:Bearer|Basic|token)[$S])[^$S\"',;&]+",
+    )
+    private val PEM = Regex("-----BEGIN [A-Z ]+-----[\\s\\S]*?(?:-----END [A-Z ]+-----|\\z)")
+    private val EMAIL = Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
+    private val SSH_REPO = Regex("$B(?:ssh://)?[A-Za-z0-9_.-]+@[A-Za-z0-9.-]+[:/][A-Za-z0-9_.~/-]*[A-Za-z0-9_~/-]")
+    private val URL = Regex("$B(https?|git|file)://[^$S\"'<>()\\[\\]{}]+")
+    private val LOG_QUOTED = Regex("\"[^\"\\n]{1,400}\"|“[^”\\n]{1,400}”|‘[^’\\n]{1,400}’|'[^'\\n]{1,400}'|`[^`\\n]{1,400}`")
+    private const val PATH_END = "[^$S\"'<>|:;,)\\]}]"
+    private val PATH = Regex(
+        "(?:~|\\\$HOME|%USERPROFILE%)(?:[/\\\\]$PATH_END*)?" +
+            "|(?<![$W./])/(?:Users|home|private|var|tmp|Volumes|opt|data|storage|sdcard|mnt|etc|root|Library|Applications|System|usr)(?:/$PATH_END*)*" +
+            "|$B[A-Za-z]:\\\\$PATH_END*",
+    )
+    private val ULID = ci("$B[0-7][0-9A-HJKMNP-TV-Z]{25}$B")
+    private val UUID = Regex("$B[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$B")
+    private val HEX_ID = ci("$B(?=[0-9a-f]*[a-f])(?=[0-9a-f]*[0-9])[0-9a-f]{12,}$B")
+    private val CODE_HOST = ci("(^|\\.)(github\\.com|gitlab\\.com|bitbucket\\.org|codeberg\\.org)$")
+    private val DOT_GIT = ci("\\.git$")
+
+    /** A name as a whole word, any case (JavaScript's `iu`: Kotlin's IGNORE_CASE folds Unicode). */
+    private fun wholeWord(name: String): Regex =
+        Regex("(?<![\\p{L}\\p{N}_])${Regex.escape(name)}(?![\\p{L}\\p{N}_])", RegexOption.IGNORE_CASE)
+
+    private fun repoKey(value: String): String = value.lowercase(java.util.Locale.ROOT)
+        .replaceFirst(Regex("^(?:https?|git|ssh)://(?:[^@/]+@)?"), "")
+        .replaceFirst(Regex("^[^@]+@"), "")
+        .replaceFirst(":", "/")
+        .replaceFirst(Regex("\\.git$"), "")
+        .replaceFirst(Regex("/+$"), "")
+
+    /** A scrubber that numbers what it replaces consistently (core's `createScrubber`). */
+    fun scrubber(known: Known = Known()): LineScrubber {
+        val repos = HashMap<String, Int>()
+        val ids = HashMap<String, Int>()
+        fun repoLabel(value: String): String = "‹repo-${repos.getOrPut(repoKey(value)) { repos.size + 1 }}›"
+        fun idLabel(value: String): String = "‹id-${ids.getOrPut(value.lowercase(java.util.Locale.ROOT)) { ids.size + 1 }}›"
+        fun usableNames(values: List<String?>) =
+            values.map { Js.trim(it.orEmpty()) }.distinct().filter { it.length >= MIN_KNOWN_NAME }.sortedByDescending { it.length }
+        val repositories = usableNames(known.repositories)
+        val repoNames = repositories.map { repoKey(it).split('/').takeLast(2).joinToString("/") }
+        val repoOwners = repositories.mapNotNull { repoKey(it).split('/').takeLast(2).firstOrNull() }.filter { it.length >= MIN_KNOWN_NAME }
+        val repoBare = repositories.mapNotNull { repoKey(it).split('/').lastOrNull() }.filter { it.length >= MIN_KNOWN_NAME }
+        val notebooks = usableNames(known.notebooks)
+        val branches = usableNames(known.branches).filter { it.lowercase(java.util.Locale.ROOT) !in setOf("main", "master") }
+        val login = usableNames(listOf(known.login))
+        val names = usableNames(known.names)
+        val notebookNumber = notebooks.mapIndexed { index, name -> name.lowercase(java.util.Locale.ROOT) to index + 1 }.toMap()
+        val patterns: List<Pair<Regex, (String) -> String>> =
+            repoNames.distinct().filter { '/' in it }.map { wholeWord(it) to { match: String -> repoLabel(match) } } +
+                notebooks.map { wholeWord(it) to { match: String -> "‹notebook-${notebookNumber[match.lowercase(java.util.Locale.ROOT)] ?: 0}›" } } +
+                login.map { wholeWord(it) to { _: String -> "‹login›" } } +
+                (repoOwners + repoBare).distinct().map { wholeWord(it) to { _: String -> "‹repo›" } } +
+                branches.map { wholeWord(it) to { _: String -> "‹branch›" } } +
+                names.map { wholeWord(it) to { _: String -> "‹name›" } }
+
+        return object : LineScrubber {
+            override fun line(text: String): String {
+                var out = text.replace(Regex("[\r\n]+"), " ")
+                out = PEM.replace(out) { "‹token›" }
+                for (pattern in TOKENS) out = pattern.replace(out) { "‹token›" }
+                out = BEARER.replace(out) { "${it.groupValues[1]} ‹token›" }
+                out = KEY_VALUE.replace(out) { "${it.groupValues[1]}${it.groupValues[2]}‹token›" }
+                out = URL.replace(out) { match ->
+                    val scheme = match.groupValues[1]
+                    val rest = match.value.substring(scheme.length + 3)
+                    if (scheme == "file") return@replace "‹path›"
+                    val hostEnd = rest.indexOfFirst { it == '/' || it == '?' || it == '#' }
+                    val authority = if (hostEnd == -1) rest else rest.substring(0, hostEnd)
+                    val host = authority.replaceFirst(Regex("^[^@]*@"), "")
+                    val path = if (hostEnd == -1) "" else rest.substring(hostEnd)
+                    val segments = path.split('?', '#')[0].split('/').filter { it.isNotEmpty() }
+                    if (scheme == "git" || DOT_GIT.containsMatchIn(segments.lastOrNull().orEmpty()) || (CODE_HOST.containsMatchIn(host) && segments.size >= 2)) {
+                        repoLabel("$host/${segments.take(2).joinToString("/")}")
+                    } else if (segments.isNotEmpty()) {
+                        "$scheme://$host/‹path›"
+                    } else {
+                        "$scheme://$host"
+                    }
+                }
+                out = SSH_REPO.replace(out) { if ('@' in it.value) repoLabel(it.value) else it.value }
+                out = EMAIL.replace(out) { "‹email›" }
+                for ((pattern, replace) in patterns) out = pattern.replace(out) { replace(it.value) }
+                out = PATH.replace(out) { "‹path›" }
+                out = LOG_QUOTED.replace(out) { "‹text›" }
+                out = UUID.replace(out) { idLabel(it.value) }
+                out = ULID.replace(out) { idLabel(it.value) }
+                out = HEX_ID.replace(out) { idLabel(it.value) }
+                return out
+            }
+        }
+    }
 }

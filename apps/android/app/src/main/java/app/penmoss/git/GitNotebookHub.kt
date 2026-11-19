@@ -482,7 +482,7 @@ class GitNotebookHub(
             inStep,
             settings,
             others,
-            onFailure = { error -> runCatching { android.util.Log.w("PenmossGit", "Keep Settings in Step could not copy", error) } },
+            onFailure = { error -> app.penmoss.log.PenmossLog.warn("PenmossGit", "Keep Settings in Step could not copy", error) },
         ) { from, id -> withContext(Dispatchers.IO) { copyInto(from, graph(id)) } }
     }
 
@@ -707,7 +707,7 @@ class GitNotebookHub(
             pass = {
                 opened()?.let { engine ->
                     try {
-                        GitRecovery(engine, RoomOldCopies(graph.database), log = { runCatching { android.util.Log.w("PenmossGit", it) } })
+                        GitRecovery(engine, RoomOldCopies(graph.database), log = { app.penmoss.log.PenmossLog.warn("PenmossGit", it) })
                             .run { note -> recovered(localId, note.title) }
                             .also { pass -> if (pass == null || !pass.later) recoveryDue = false }
                     } finally {
@@ -717,7 +717,7 @@ class GitNotebookHub(
                 }
             },
             onPass = { pass -> if (!pass.later) unrecovered(localId, pass.unrecovered.map { it.title }) },
-            log = { runCatching { android.util.Log.w("PenmossGit", it) } },
+            log = { app.penmoss.log.PenmossLog.warn("PenmossGit", it) },
         )
 
         /** The page's sync status, through page restarts. */
@@ -896,7 +896,7 @@ class GitNotebookHub(
     companion object {
         /** Logs what a coroutine of the hub's threw, instead of ending the app. */
         val LOGGED = kotlinx.coroutines.CoroutineExceptionHandler { _, error ->
-            runCatching { android.util.Log.w("PenmossGit", "A git notebook task failed", error) }
+            app.penmoss.log.PenmossLog.warn("PenmossGit", "A git notebook task failed", error)
         }
 
         const val PREFS = "penmoss.git"

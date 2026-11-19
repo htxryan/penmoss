@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What Share Log File's FileProvider shares (PEN-137, AC49): the scrubbed copy in the cache's
+    share folder, cacheDir/share/penmoss-log.txt, and nothing else. Never filesDir/logs/, where the
+    log itself is kept.
+-->
+<paths>
+    <cache-path
+        name="share"
+        path="share/" />
+</paths>
