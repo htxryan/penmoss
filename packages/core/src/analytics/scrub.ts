@@ -7,7 +7,8 @@
  * - tokens, bearer values, keys → ‹token›; emails → ‹email›;
  * - repository URLs → ‹repo-N›; any other URL keeps its scheme and host, never its path, query
  *   or fragment;
- * - the GitHub login → ‹login›; notebook names → ‹notebook-N›; names known to scrub #2 → ‹name›;
+ * - the GitHub login → ‹login›; notebook names → ‹notebook-N›; their branches → ‹branch›; names
+ *   known to scrub #2 → ‹name›;
  * - absolute and home paths → ‹path›;
  * - quoted text → ‹text›;
  * - ULIDs, UUIDs and long hex ids → ‹id-N›.
@@ -23,6 +24,8 @@ export interface ScrubKnown {
   readonly notebooks?: readonly string[] | undefined;
   /** Their repositories' URLs or `owner/name`s. */
   readonly repositories?: readonly string[] | undefined;
+  /** Their branches' names (a default `main` or `master` is left alone). */
+  readonly branches?: readonly string[] | undefined;
   /** Scrub #2: note titles, folder, tag and attachment names in the open notebooks. */
   readonly names?: readonly string[] | undefined;
 }
@@ -36,19 +39,21 @@ const TOKENS: readonly RegExp[] = [
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,
 ];
 const BEARER = /\b(Bearer|Basic|token)\s+[A-Za-z0-9._~+/=-]{8,}/gi;
+/** A secret's key and its value; a value already replaced, or a scheme BEARER handles, is left. */
 const KEY_VALUE =
-  /\b(password|passwd|secret|token|access_token|refresh_token|api[_-]?key|authorization|private[_-]?key)(["']?\s*[:=]\s*["']?)[^\s"',;&]+/gi;
+  /\b(password|passwd|secret|token|access_token|refresh_token|api[_-]?key|authorization|private[_-]?key)(["']?\s*[:=]\s*["']?)(?!‹|(?:Bearer|Basic|token)\s)[^\s"',;&]+/gi;
 const PEM = /-----BEGIN [A-Z ]+-----[\s\S]*?(?:-----END [A-Z ]+-----|$)/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 /** git@host:owner/repo(.git) and ssh://… */
-const SSH_REPO = /\b(?:ssh:\/\/)?[A-Za-z0-9_.-]+@[A-Za-z0-9.-]+[:/][A-Za-z0-9_.~/-]+?(?:\.git)?\b/g;
+const SSH_REPO =
+  /\b(?:ssh:\/\/)?[A-Za-z0-9_.-]+@[A-Za-z0-9.-]+[:/][A-Za-z0-9_.~/-]*[A-Za-z0-9_~/-]/g;
 /** Any http(s) or git URL. */
 const URL = /\b(https?|git|file):\/\/[^\s"'<>()[\]{}]+/g;
 const QUOTED = /"[^"\n]{1,400}"|“[^”\n]{1,400}”|‘[^’\n]{1,400}’|'[^'\n]{1,400}'|`[^`\n]{1,400}`/g;
 /** Absolute paths (Unix, home, Windows); a path runs to whitespace or a closing delimiter. */
 const PATH =
-  /(?:~|\$HOME|%USERPROFILE%)(?:[/\\][^\s"'<>|:;,)\]}]*)?|(?<![\w.:/])\/(?:Users|home|private|var|tmp|Volumes|opt|data|storage|sdcard|mnt|etc|root|Library|Applications|System|usr)(?:\/[^\s"'<>|:;,)\]}]*)*|\b[A-Za-z]:\\[^\s"'<>|:;,)\]}]*/g;
-const ULID = /\b[0-7][0-9A-HJKMNP-TV-Z]{25}\b/g;
+  /(?:~|\$HOME|%USERPROFILE%)(?:[/\\][^\s"'<>|:;,)\]}]*)?|(?<![\w./])\/(?:Users|home|private|var|tmp|Volumes|opt|data|storage|sdcard|mnt|etc|root|Library|Applications|System|usr)(?:\/[^\s"'<>|:;,)\]}]*)*|\b[A-Za-z]:\\[^\s"'<>|:;,)\]}]*/g;
+const ULID = /\b[0-7][0-9A-HJKMNP-TV-Z]{25}\b/gi;
 const UUID = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g;
 const HEX_ID = /\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{12,}\b/gi;
 /** A git notebook's repository as `owner/name`, when it is known. */
@@ -114,6 +119,9 @@ export function createScrubber(known: ScrubKnown = {}): Scrubber {
     .map((repo) => repoKey(repo).split('/').slice(-1)[0] ?? '')
     .filter((name) => name.length >= MIN_KNOWN_NAME);
   const notebooks = usable(known.notebooks);
+  const branches = usable(known.branches).filter(
+    (name) => !['main', 'master'].includes(name.toLowerCase()),
+  );
   const login = usable([known.login]);
   const names = usable(known.names);
   const notebookNumber = new Map(notebooks.map((name, index) => [name.toLowerCase(), index + 1]));
@@ -132,6 +140,7 @@ export function createScrubber(known: ScrubKnown = {}): Scrubber {
     ...[...new Set([...repoOwners, ...repoBare])].map(
       (name) => [wholeWord(name), () => '‹repo›'] as const,
     ),
+    ...branches.map((name) => [wholeWord(name), () => '‹branch›'] as const),
     ...names.map((name) => [wholeWord(name), () => '‹name›'] as const),
   ];
 
