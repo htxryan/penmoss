@@ -127,6 +127,8 @@ class DisplayAndSyncStopTest {
     }
 
     @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun displayHasASwitchPerShortcutThatSendsTheWebsKeys() {
         var current by mutableStateOf(Settings())
         var enabled by mutableStateOf(false)
@@ -161,6 +163,8 @@ class DisplayAndSyncStopTest {
 
     /** Recent Notes' − and + say what they change (T53 pass), and the notebook names switch is A984's. */
     @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun theRecentCountsButtonsAreNamedAndStepTheCount() {
         val counts = mutableListOf<Int>()
         compose.setContent {
@@ -201,6 +205,8 @@ class DisplayAndSyncStopTest {
 
     /** PEN-146: Home's sections move by dragging their handle, or by TalkBack's Move Up and Move Down. */
     @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun homesSectionsMoveByDragAndByTheirActions() {
         val orders = mutableListOf<List<String>>()
         val hidden = mutableListOf<Pair<String, Boolean>>()
@@ -242,6 +248,8 @@ class DisplayAndSyncStopTest {
      * the switches.
      */
     @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun homeIsTwoTabsAndItsPreviewIsHomeItselfInert() {
         var current by mutableStateOf(Settings())
         var layout by mutableStateOf(HomeLayout())
