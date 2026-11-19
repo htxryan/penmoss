@@ -167,6 +167,51 @@ object ErrorScrub {
             "|(?<![$W./])/(?:Users|home|private|var|tmp|Volumes|opt|data|storage|sdcard|mnt|etc|root|Library|Applications|System|usr)(?:/$PATH_END*)*" +
             "|$B[A-Za-z]:\\\\$PATH_END*",
     )
+
+    /**
+     * A path with spaces (`/Users/a/My Notes/b c.md`), as core's `pathEnd`: [PATH] stops at the
+     * first space, so the words after it are read on, [PATH_SPACE_WORDS] at a time, while the path
+     * so far has no file extension. The first word that holds a `/` or `\` or ends in an extension
+     * ends the stretch taken, with every word before it; a word that starts another path stops it.
+     */
+    private const val PATH_SPACE_WORDS = 3
+    private val PATH_WORDS = Regex("^(?: [^$S\"'<>|:;,)\\]}]+){1,$PATH_SPACE_WORDS}")
+    private val PATH_START = Regex("^(?:[/\\\\~]|\\\$HOME|%USERPROFILE%|[A-Za-z]:\\\\)")
+    private val EXTENSION = Regex("\\.[A-Za-z][A-Za-z0-9]{0,7}$")
+    private val SEPARATOR = Regex("[/\\\\]")
+
+    /** Where the path [PATH] found at [start]..<[end] really ends, its spaced words read on. */
+    private fun pathEnd(text: String, start: Int, end: Int): Int {
+        var at = end
+        while (!EXTENSION.containsMatchIn(text.substring(start, at))) {
+            val words = PATH_WORDS.find(text.substring(at))?.value?.substring(1)?.split(' ').orEmpty()
+            var taken = -1
+            for ((index, word) in words.withIndex()) {
+                if (PATH_START.containsMatchIn(word)) break
+                if (SEPARATOR.containsMatchIn(word) || EXTENSION.containsMatchIn(word)) {
+                    taken = index
+                    break
+                }
+            }
+            if (taken < 0) break
+            at += words.take(taken + 1).sumOf { it.length + 1 }
+        }
+        return at
+    }
+
+    /** Every path in [text] → ‹path›, with its spaced words ([pathEnd]). */
+    private fun replacePaths(text: String): String {
+        val out = StringBuilder()
+        var from = 0
+        for (match in PATH.findAll(text)) {
+            val start = match.range.first
+            if (start < from) continue
+            out.append(text, from, start).append("‹path›")
+            from = pathEnd(text, start, match.range.last + 1)
+        }
+        return out.append(text, from, text.length).toString()
+    }
+
     private val ULID = ci("$B[0-7][0-9A-HJKMNP-TV-Z]{25}$B")
     private val UUID = Regex("$B[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$B")
     private val HEX_ID = ci("$B(?=[0-9a-f]*[a-f])(?=[0-9a-f]*[0-9])[0-9a-f]{12,}$B")
@@ -236,7 +281,7 @@ object ErrorScrub {
                 out = SSH_REPO.replace(out) { if ('@' in it.value) repoLabel(it.value) else it.value }
                 out = EMAIL.replace(out) { "‹email›" }
                 for ((pattern, replace) in patterns) out = pattern.replace(out) { replace(it.value) }
-                out = PATH.replace(out) { "‹path›" }
+                out = replacePaths(out)
                 out = LOG_QUOTED.replace(out) { "‹text›" }
                 out = UUID.replace(out) { idLabel(it.value) }
                 out = ULID.replace(out) { idLabel(it.value) }
