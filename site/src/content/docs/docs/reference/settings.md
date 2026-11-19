@@ -146,25 +146,36 @@ The GitHub accounts Penmoss uses, kept in this Mac's Keychain, each with **Sign 
 
 A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Under it, **Open Source Notices** with **Show Notices**, which shows the licences of the open source software Penmoss includes, such as [Lucide](https://lucide.dev)'s icons. Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**, folded away until you open it (open by itself for an offered update or after one): what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
 
+### Privacy
+
+What Penmoss records about how you use it, on this Mac, and whether it is shared. See [Usage data](/docs/help/usage-data/).
+
+- **Share Usage Data**: sends the record to Penmoss's developer from now on. Off, it stays on this Mac.
+- **View Analytics Data**, with the counts by state: opens **Analytics Data** under Privacy, every event recorded by the app, the CLI and the MCP server, newest first, 100 at a time, filtered by App, CLI or MCP and by state, with **Copy as JSON**.
+- **Analytics ID**: the random ID your events carry, with **Reset My Analytics ID** and **Delete My Shared Data** (which asks first).
+- **Logs**: **Show Log File** shows the app's log in Finder.
+- **Advanced**, folded away: how long events are kept (**Keep Events For**, **Keep at Most**), the logs' size and age (**Log File Size**, **Log Files Kept**, **Keep Log Lines For**), and what a bug report attaches (**Attach Logs from the Last**, **At Most** lines and KB), each with its range, and **Reset to Defaults**. Lowering one that would delete anything asks first.
+
 ## On Android
 
 Open Settings from the **☰** menu. Each screen's title is large at the top and shrinks into the bar as you scroll; the ⓘ in the bar says which notebook your settings are synced through. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
 
-| Group         | Screen             | What it holds                                                                                                                      |
-| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts) and **Preview** (the app, fonts at real size)               |
-| Look and Feel | Home               | Two tabs: **Settings** (shortcuts, sections, Recent Notes, Quick Access) and **Preview** (Home's shortcuts and the menu's sidebar) |
-| Look and Feel | Note               | Two tabs: **Settings** (Note Width) and **Preview** (the note at that width, at its real size)                                     |
-| Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                            |
-| Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                     |
-| Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                |
-| Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                  |
-| Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks)) |
-| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits From This Phone**, the signing key and background sync |
-| Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                              |
-| This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                       |
-| This Phone    | GitHub             | Your GitHub accounts (**Add Account**, or a token), and what they are used for, such as **Send Feedback**                          |
-| This Phone    | What’s New         | The version, open source notices, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))    |
+| Group         | Screen             | What it holds                                                                                                                                              |
+| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts) and **Preview** (the app, fonts at real size)                                       |
+| Look and Feel | Home               | Two tabs: **Settings** (shortcuts, sections, Recent Notes, Quick Access) and **Preview** (Home's shortcuts and the menu's sidebar)                         |
+| Look and Feel | Note               | Two tabs: **Settings** (Note Width) and **Preview** (the note at that width, at its real size)                                                             |
+| Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                                    |
+| Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                                             |
+| Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                                        |
+| Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                                          |
+| Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks))                         |
+| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits From This Phone**, the signing key and background sync                         |
+| Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                                                      |
+| This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                                               |
+| This Phone    | GitHub             | Your GitHub accounts (**Add Account**, or a token), and what they are used for, such as **Send Feedback**                                                  |
+| This Phone    | What’s New         | The version, open source notices, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                            |
+| This Phone    | Privacy            | **Share Usage Data**, **View Analytics Data**, the analytics ID, **Share Log File** and **Advanced**, as on the Mac ([Usage data](/docs/help/usage-data/)) |
 
 ## For a notebook, from the CLI or an agent
 
