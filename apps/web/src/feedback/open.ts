@@ -8,7 +8,7 @@ import { macWindowStore } from '../desktop/mac-window';
 import type { Notes } from '../notes/service';
 import type { Workspace } from '../workspace/service';
 import type { ContextFacts } from './context';
-import { gatherContext, panelsOn, selectedFolderOn, sidebarOn, type GatherDeps } from './gather';
+import { gatherContext, panelsOn, sidebarOn, type GatherDeps } from './gather';
 import type { FeedbackService } from './service';
 
 /** How long the Mac's capture of the window may take before the form opens without it. */
@@ -83,7 +83,6 @@ export function openingFacts(options: OpeningOptions): ContextFacts {
     openedFrom: options.openedFrom,
     panels: panelsOn(document),
     sidebar: sidebarOn(document),
-    selectedFolderId: selectedFolderOn(document),
     online: notes.isOnline,
     sync: {
       phase: sync.phase,

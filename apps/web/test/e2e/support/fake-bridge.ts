@@ -447,8 +447,11 @@ export function installFakeBridge(config: {
         changed('showLogFile');
         return Promise.resolve(true);
       },
-      reportLogs: () => {
-        const lines = [...(config.reportLines ?? [])];
+      reportLogs: (names: readonly string[]) => {
+        // As main does: the newest lines the limits allow (only report.lines here), and the
+        // names scrub #2 was given, for the spec to read.
+        (window as { __penmossReportNames?: readonly string[] }).__penmossReportNames = names;
+        const lines = (config.reportLines ?? []).slice(-fake.limits['report.lines']!);
         const bytes = lines.reduce(
           (sum, line) => sum + new TextEncoder().encode(line).length + 1,
           0,

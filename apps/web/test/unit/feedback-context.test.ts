@@ -18,7 +18,6 @@ import {
   gatherContext,
   osOf,
   panelsOn,
-  selectedFolderOn,
   sidebarOn,
   type GatherDeps,
 } from '../../src/feedback/gather';
@@ -62,7 +61,6 @@ function deps(overrides: Partial<GatherDeps> = {}): GatherDeps {
     openedFrom: 'menu',
     panels: ['Info', 'Version history'],
     sidebar: 'none on this screen',
-    selectedFolderId: 'f2',
     online: true,
     sync: { phase: 'syncing', pending: 2, detail: null },
     lastSynced: Date.parse('2026-10-27T15:04:05.000Z'),
@@ -166,7 +164,7 @@ describe('the captured context (A791)', () => {
     expect(JSON.stringify({ title: 'x', description: '', context })).not.toContain(MARKER);
   });
 
-  it('names the client, version, route, window, panel, sync and the note’s details', () => {
+  it('names the client, version, screen, window, panel, sync and the note’s details', () => {
     const field = (group: string, name: string) =>
       context.groups.find((item) => item.id === group)?.rows.find((row) => row[0] === name)?.[1];
     expect(field('app', 'Client')).toBe('Mac');
@@ -176,11 +174,9 @@ describe('the captured context (A791)', () => {
     expect(field('app', 'Window')).toBe('note window');
     expect(field('app', 'Title bar')).toBe('compact');
     expect(field('app', 'Keep on top')).toBe('yes');
-    expect(field('where', 'Route')).toBe(`/window/notes/${NOTE}`);
     expect(field('where', 'Screen')).toBe('note (in its own window)');
     expect(field('where', 'Open panel')).toBe('Info, Version history');
     expect(field('where', 'Opened from')).toBe('menu');
-    expect(field('where', 'Selected folder')).toBe('Projects / Penmoss');
     expect(field('sync', 'Sync')).toBe('syncing');
     expect(field('sync', 'Folders socket')).toBeUndefined();
     expect(field('sync', 'Image uploads waiting')).toBeUndefined();
@@ -190,10 +186,6 @@ describe('the captured context (A791)', () => {
     expect(field('sync', 'Last sync error')).toBe(
       'stopped (notes): 1 note could not sync: ‹name› is too large',
     );
-    expect(field('note', 'Id')).toBe(NOTE);
-    expect(field('note', 'Title')).toBe('Groceries');
-    expect(field('note', 'Folder')).toBe('Projects / Penmoss');
-    expect(field('note', 'Tags')).toBe('#home, #todo');
     expect(field('note', 'Created')).toBe('2026-10-20T09:00:00-05:00');
     expect(field('note', 'Words')).toBe('13');
     expect(field('note', 'Attachments')).toBe('1');
@@ -204,6 +196,23 @@ describe('the captured context (A791)', () => {
     expect(field('note', 'Backlinks')).toBe('1');
     expect(field('note', 'Outgoing links')).toBe('0');
     expect(field('note', 'Open in windows')).toBe('2');
+  });
+
+  it('has none of the server era’s rows: no route, ids, title, folder, notebook or tags (O5)', () => {
+    const names = context.groups.flatMap((group) => group.rows.map((row) => row[0]));
+    for (const gone of ['Route', 'Selected folder', 'Id', 'Title', 'Folder', 'Notebook', 'Tags']) {
+      expect(names).not.toContain(gone);
+    }
+    for (const secret of [NOTE, 'Groceries', 'Projects / Penmoss', '#home']) {
+      expect(JSON.stringify(context)).not.toContain(secret);
+    }
+  });
+
+  it('knows, for scrubbing a bug report’s logs only, the titles, folders, tags and paths', () => {
+    const names = facts.private.logNames ?? [];
+    for (const name of ['Groceries', 'Garden plan', 'Projects', 'home', '#home', 'todo']) {
+      expect(names).toContain(name);
+    }
   });
 
   it('drops an error that quotes the note and redacts names in the rest', () => {
@@ -266,13 +275,13 @@ describe('opened from Home, with another note’s text in the recent errors', ()
 
   it('names an unknown path by what it is, not what was typed', () => {
     const stray = gatherContext(deps({ pathname: `/${MARKER}/x`, editorDoc: null }));
-    expect(stray.where.route).toBe('(not a Penmoss page)');
+    expect(stray.where.screen).toBe('not-found');
     expect(JSON.stringify(buildContext(stray))).not.toContain(MARKER);
   });
 });
 
 describe('reading the page', () => {
-  it('names the panels, the sidebar and the selected folder from the markup', () => {
+  it('names the panels and the sidebar from the markup', () => {
     document.body.innerHTML = `
       <div class="notes-app" data-sidebar="collapsed">
         <div class="folder-row" data-key="folder:f2" aria-selected="true"></div>
@@ -281,10 +290,8 @@ describe('reading the page', () => {
       </div>`;
     expect(panelsOn(document)).toEqual(['Info', 'Markdown source']);
     expect(sidebarOn(document)).toBe('collapsed (icon rail)');
-    expect(selectedFolderOn(document)).toBe('f2');
     document.body.innerHTML = '';
     expect(sidebarOn(document)).toBe('none on this screen');
-    expect(selectedFolderOn(document)).toBeNull();
   });
 
   it('names the OS and browser from a user agent', () => {

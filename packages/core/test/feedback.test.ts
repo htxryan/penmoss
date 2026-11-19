@@ -1,4 +1,7 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { INTAKE_BODY_LIMIT } from '../src/analytics/log-block';
 import {
   contextJson,
   contextMarkdown,
@@ -46,7 +49,7 @@ describe('feedback labels (A794)', () => {
 describe('the captured context as markdown (A791, A794)', () => {
   it('is a details block with a table per group, then the JSON copy', () => {
     const markdown = contextMarkdown(context);
-    expect(markdown.startsWith('<details><summary>Captured context</summary>\n\n#### App')).toBe(
+    expect(markdown.startsWith('<details><summary>Captured Context</summary>\n\n#### App')).toBe(
       true,
     );
     expect(markdown).toContain('| Field | Value |\n| --- | --- |\n| Client | web |');
@@ -125,6 +128,67 @@ describe('the issue body (A794)', () => {
         submissionId: 'X',
       }),
     ).toBe('Sent from Penmoss Android unknown · submission X\n');
+  });
+});
+
+/** Log lines as the Mac's log file writes them, oldest first. */
+const logLines = (count: number, from = 0) =>
+  Array.from(
+    { length: count },
+    (_, index) =>
+      `2026-11-19T11:${String(Math.floor((from + index) / 60) % 60).padStart(2, '0')}:${String((from + index) % 60).padStart(2, '0')}.000Z info main sync pass ${from + index} ok in 120 ms (notebook ‹notebook›)`,
+  );
+
+/**
+ * The body a filed bug report with many log lines has: `.github/scripts/feedback-logs.test.mjs`
+ * passes it through the Linear intake. Written again with `PENMOSS_WRITE_CONTRACTS=1`.
+ */
+const INTAKE_FIXTURE = fileURLToPath(
+  new URL('../../../.github/scripts/fixtures/feedback-logs-body.txt', import.meta.url),
+);
+
+describe('a bug report’s anonymised logs (PEN-137)', () => {
+  const base = {
+    description: 'It broke after a sync.',
+    screenshots: [],
+    context,
+    client: 'mac' as const,
+    version: '0.40 (400)',
+    submissionId: '01JBXYZ0000000000000000000',
+  };
+
+  it('come as a collapsed block after the context and before the footer', () => {
+    const body = feedbackIssueBody({ ...base, logs: logLines(3) });
+    const context = body.indexOf('<summary>Captured Context</summary>');
+    const logs = body.indexOf('<details>\n<summary>Anonymised Logs (3 lines)</summary>');
+    const footer = body.indexOf('Sent from Penmoss Mac');
+    expect(context).toBeGreaterThan(0);
+    expect(logs).toBeGreaterThan(context);
+    expect(footer).toBeGreaterThan(logs);
+    expect(body).toContain(`\`\`\`text\n${logLines(3).join('\n')}\n\`\`\`\n\n</details>`);
+  });
+
+  it('are left out when there are none', () => {
+    expect(feedbackIssueBody({ ...base, logs: [] })).toBe(feedbackIssueBody(base));
+  });
+
+  it('keep the body inside the intake’s limit, cutting the oldest lines first', () => {
+    const lines = logLines(2000);
+    const body = feedbackIssueBody({ ...base, logs: lines });
+    expect(body.length).toBeLessThanOrEqual(INTAKE_BODY_LIMIT);
+    const kept = /<summary>Anonymised Logs \((\d+) lines\)<\/summary>/.exec(body);
+    const count = Number(kept?.[1]);
+    expect(count).toBeGreaterThan(100);
+    expect(count).toBeLessThan(2000);
+    // The newest lines are kept, whole.
+    expect(body).toContain(`${lines.at(-1)!}\n\`\`\``);
+    expect(body).not.toContain(`${lines[0]!}\n`);
+  });
+
+  it('is the body the intake test reads', () => {
+    const body = feedbackIssueBody({ ...base, logs: logLines(2000) });
+    if (process.env['PENMOSS_WRITE_CONTRACTS'] === '1') writeFileSync(INTAKE_FIXTURE, body);
+    expect(readFileSync(INTAKE_FIXTURE, 'utf8')).toBe(body);
   });
 });
 

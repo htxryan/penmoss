@@ -283,6 +283,55 @@ describe('fileFeedback (the device files with its own token, A1010)', () => {
   });
 });
 
+describe('a bug report’s logs (PEN-137)', () => {
+  const lines = [
+    '2026-11-19T11:54:16.525Z info main sync pass ok in 120 ms',
+    '2026-11-19T11:54:17.001Z warn page token ghp_abcdefghijklmnopqrstuvwxyz0123456789 seen',
+  ];
+
+  it('files them as a collapsed block before the footer, secrets removed again', async () => {
+    const { fake, github, ledger } = setup();
+    const answer = await fileFeedback({
+      github,
+      ledger,
+      payload: payload({ logs: lines }),
+      screenshots: [],
+      client: 'mac',
+    });
+    expect(answer.status).toBe(201);
+    const body = fake.issues[0]!.body;
+    const block = body.indexOf('<summary>Anonymised Logs (2 lines)</summary>');
+    expect(block).toBeGreaterThan(body.indexOf('<summary>Captured Context</summary>'));
+    expect(body.indexOf('Sent from Penmoss Mac')).toBeGreaterThan(block);
+    expect(body).toContain(lines[0]);
+    expect(body).not.toContain('ghp_');
+  });
+
+  it('attaches none to a feature request', async () => {
+    const { fake, github, ledger } = setup();
+    await fileFeedback({
+      github,
+      ledger,
+      payload: payload({ type: 'feature', logs: lines }),
+      screenshots: [],
+      client: 'mac',
+    });
+    expect(fake.issues[0]!.body).not.toContain('Anonymised Logs');
+  });
+
+  it('refuses logs that are not lines of text, or past the form’s maximums', async () => {
+    const { fake, github, ledger } = setup();
+    const send = (logs: unknown) =>
+      fileFeedback({ github, ledger, payload: payload({ logs }), screenshots: [], client: 'mac' });
+    expect((await send('one line')).status).toBe(400);
+    expect((await send([1, 2])).status).toBe(400);
+    expect((await send(['two\nlines'])).status).toBe(413);
+    expect((await send(Array.from({ length: 2001 }, () => 'x'))).status).toBe(413);
+    expect((await send(['x'.repeat(41 * 1024)])).status).toBe(413);
+    expect(fake.calls).toHaveLength(0);
+  });
+});
+
 describe('checkToken (said when the token is saved, A1012)', () => {
   it('names the account when the token can reach the repository', async () => {
     const { github } = setup();

@@ -40,16 +40,14 @@ export interface AppFacts {
 }
 
 export interface WhereFacts {
-  /** The path, ids kept, never a query string or fragment. */
-  readonly route: string;
+  /** What kind of screen it is ("note", "settings (appearance)"), never its path (PEN-137, O5). */
   readonly screen: string;
   /** Panels and dialogs open behind the form (Info, Version history, Settings…). */
   readonly panels: readonly string[];
   /** How the form was opened (palette, menu, key, button, Mac menu). */
   readonly openedFrom: string;
   readonly sidebar: string;
-  readonly selectedFolder: string | null;
-  /** Opened on a git notebook's note (A826, A828, A889): the route is its kind only. */
+  /** Opened on a git notebook's note (A826, A828, A889). */
   readonly git?: boolean;
 }
 
@@ -67,15 +65,13 @@ export interface SyncFacts {
   readonly lastError: string | null;
 }
 
+/**
+ * The open note's metadata: counts and states, never what names it (its id, title, folder,
+ * notebook or tags: the server era's rows, gone with PEN-137's O5).
+ */
 export interface NoteFacts {
   /** A git notebook's note (A889): only its counts and states are sent. */
   readonly source?: 'git';
-  readonly id: string;
-  readonly title: string;
-  readonly folder: string;
-  /** Its notebook's name; blank for a git notebook's note, which is named by kind only (A889). */
-  readonly notebook?: string;
-  readonly tags: readonly string[];
   readonly created: string | null;
   readonly updated: number | null;
   readonly kind: string | null;
@@ -101,9 +97,14 @@ export interface ContextFacts {
   /**
    * For redaction only, never sent: note titles and folder names (removed from error text), and
    * the text of every note this window holds open, the open one first (an error quoting any of
-   * them is dropped).
+   * them is dropped). `logNames` is what a bug report's logs are scrubbed of besides (scrub #2,
+   * PEN-137): those names, the notes' tags, file paths and attachment names, the notebooks'.
    */
-  readonly private: { readonly names: readonly string[]; readonly noteTexts: readonly string[] };
+  readonly private: {
+    readonly names: readonly string[];
+    readonly noteTexts: readonly string[];
+    readonly logNames?: readonly string[];
+  };
 }
 
 const iso = (ms: number | null | undefined) =>
@@ -143,12 +144,10 @@ export function buildContext(facts: ContextFacts): FeedbackContext {
             ['Git notebook', GIT_NOTICE],
           ]
         : [
-            ['Route', where.route],
             ['Screen', where.screen],
             ['Open panel', where.panels.length > 0 ? where.panels.join(', ') : 'none'],
             ['Opened from', where.openedFrom],
             ['Sidebar', where.sidebar],
-            ['Selected folder', where.selectedFolder ?? 'top level'],
           ],
     ),
     fieldGroup('sync', [
@@ -182,12 +181,7 @@ export function buildContext(facts: ContextFacts): FeedbackContext {
   } else if (note) {
     groups.push(
       fieldGroup('note', [
-        ['Id', note.id],
-        ['Title', note.title || 'Untitled'],
         ['Kind', note.kind],
-        ['Folder', note.folder || 'top level'],
-        ['Notebook', note.notebook ?? null],
-        ['Tags', note.tags.length > 0 ? note.tags.map((tag) => `#${tag}`).join(', ') : 'none'],
         ['Created', note.created],
         ['Updated', iso(note.updated)],
         ['Words', note.words],
