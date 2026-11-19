@@ -51,8 +51,10 @@ export function parseConsentFile(raw: unknown): ConsentFile {
       ? value.install
       : newInstallId();
   const consent = value.consent === 'yes' || value.consent === 'no' ? value.consent : null;
-  const number = (key: string): number | null =>
-    typeof value[key] === 'number' && Number.isFinite(value[key]) ? (value[key] as number) : null;
+  const number = (key: string): number | null => {
+    const item = value[key];
+    return typeof item === 'number' && Number.isFinite(item) ? item : null;
+  };
   return {
     v: 1,
     consent,
