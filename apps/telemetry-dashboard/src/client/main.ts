@@ -15,6 +15,7 @@ import {
   stackedColumns,
   tree,
   type BarRow,
+  type BarColumn,
   type Series,
   type TreeNode,
 } from './charts';
@@ -35,6 +36,10 @@ interface LegendItem {
 interface CardSpec {
   readonly id: string;
   readonly title: string;
+  /** A count shown beside the title ("Never Used 412"). */
+  readonly count?: number;
+  /** A body other than a chart (Never Used's chips): shown, with its table behind Table. */
+  readonly custom?: HTMLElement;
   readonly note?: string;
   /** Draws the chart at a width; null for a card that is only its table. */
   readonly chart: ((width: number) => SVGSVGElement) | null;
@@ -65,6 +70,90 @@ const CLIENT_LABELS: Record<string, string> = {
   mcp: 'MCP',
 };
 const ACTOR_LABELS: Record<string, string> = { person: 'Person', agent: 'Agent', script: 'Script' };
+/** The MCP clients' fixed list (core's AGENT_CLIENTS), as people name them. */
+const AGENT_CLIENT_LABELS: Record<string, string> = {
+  'claude-code': 'Claude Code',
+  'claude-desktop': 'Claude Desktop',
+  codex: 'Codex',
+  cursor: 'Cursor',
+  vscode: 'VS Code',
+  windsurf: 'Windsurf',
+  zed: 'Zed',
+  gemini: 'Gemini',
+  goose: 'Goose',
+  cline: 'Cline',
+  continue: 'Continue',
+  penmoss: 'Penmoss',
+  other: 'Other Agent',
+};
+/** Who ran a CLI command or MCP tool: an agent client by name, else the actor. */
+const agentLabel = (key: string) => AGENT_CLIENT_LABELS[key] ?? ACTOR_LABELS[key] ?? titled(key);
+/** The first run's screens (FIRSTRUN_STEPS), as the funnel names them. */
+const FIRSTRUN_LABELS: Record<string, string> = {
+  welcome: 'Welcome',
+  goal: 'Choose a Goal',
+  way: 'Choose a Way',
+  github: 'Sign In with GitHub',
+  accounts: 'Choose an Account',
+  create: 'Create a Repository',
+  list: 'Choose a Repository',
+  branch: 'Choose a Branch',
+  repo: 'Open a Repository',
+  folder: 'Choose a Folder',
+  url: 'Enter a Git URL',
+  'git-missing': 'Git Missing',
+  name: 'Name the Notebook',
+  setup: 'Set Up',
+  consent: 'Consent Answered',
+};
+const STEP_RESULT_LABELS: Record<string, string> = { done: 'Done', back: 'Back', failed: 'Failed' };
+/** A CLI command's or MCP tool's results, in order: blue, then orange, aqua, and the rest. */
+const RESULTS = [
+  { key: 'ok', label: 'OK', color: 'var(--s1)' },
+  { key: 'invalid', label: 'Invalid', color: 'var(--s2)' },
+  { key: 'not_found', label: 'Not Found', color: 'var(--s3)' },
+  { key: 'conflict', label: 'Conflict', color: 'var(--s4)' },
+  { key: 'failed', label: 'Failed', color: 'var(--s5)' },
+] as const;
+
+/** Words kept lower case inside a Title Case label (A938). */
+const SHORT_WORDS = new Set([
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'but',
+  'nor',
+  'as',
+  'at',
+  'by',
+  'for',
+  'from',
+  'in',
+  'into',
+  'of',
+  'on',
+  'per',
+  'to',
+  'with',
+]);
+
+/** An id ("git-missing", "notFound") as a Title Case label ("Git Missing", "Not Found"). */
+function titled(id: string): string {
+  const words = id
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[\s_.-]+/)
+    .filter(Boolean)
+    .map((word) => word.toLowerCase());
+  return words
+    .map((word, i) =>
+      i > 0 && i < words.length - 1 && SHORT_WORDS.has(word)
+        ? word
+        : word[0]!.toUpperCase() + word.slice(1),
+    )
+    .join(' ');
+}
 const SOURCE_LABELS: Record<string, string> = {
   key: 'Key',
   palette: 'Palette',
@@ -211,12 +300,16 @@ function tableElement(spec: TableSpec, caption: string): HTMLTableElement {
   cap.textContent = caption;
   table.append(cap);
   const head = table.createTHead().insertRow();
-  for (const column of spec.columns) {
+  spec.columns.forEach((column, i) => {
     const th = document.createElement('th');
     th.scope = 'col';
     th.textContent = column;
+    // A column of figures has its heading over them, at the right.
+    if (spec.rows.length > 0 && spec.rows.every((row) => typeof row[i] === 'number')) {
+      th.className = 'num';
+    }
     head.append(th);
-  }
+  });
   const body = table.createTBody();
   for (const row of spec.rows) {
     const tr = body.insertRow();
@@ -246,6 +339,12 @@ function card(spec: CardSpec): HTMLElement {
   const title = document.createElement('h2');
   title.textContent = spec.title;
   title.id = `card-${spec.id}`;
+  if (spec.count !== undefined) {
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = spec.count.toLocaleString('en-GB');
+    title.append(' ', count);
+  }
   section.setAttribute('aria-labelledby', title.id);
   head.append(title);
   if (spec.note) {
@@ -271,13 +370,16 @@ function card(spec: CardSpec): HTMLElement {
   }
   const body = document.createElement('div');
   body.className = 'chart-body';
-  body.hidden = spec.chart === null && !spec.empty;
+  const drawn = spec.chart !== null || spec.custom !== undefined;
+  body.hidden = !drawn && !spec.empty;
   section.append(body);
   if (spec.empty) {
     const empty = document.createElement('p');
     empty.className = 'empty';
     empty.textContent = 'Nothing in this period.';
     body.append(empty);
+  } else if (spec.custom) {
+    body.append(spec.custom);
   } else if (spec.chart) {
     const draw = spec.chart;
     let drawnAt = 0;
@@ -294,11 +396,11 @@ function card(spec: CardSpec): HTMLElement {
   }
   const tableHolder = document.createElement('div');
   tableHolder.className = 'table-holder';
-  tableHolder.hidden = spec.chart !== null;
+  tableHolder.hidden = drawn;
   tableHolder.append(tableElement(spec.table, spec.title));
   const tools = document.createElement('footer');
   tools.className = 'tools';
-  if (spec.chart) {
+  if (drawn) {
     const toggle = button(
       'Table',
       () => {
@@ -332,12 +434,13 @@ function card(spec: CardSpec): HTMLElement {
   return section;
 }
 
-function tiles(items: readonly { label: string; value: number; hero?: boolean }[]): HTMLElement {
+/** Figures in a row of tiles, every number the same size. */
+function tiles(items: readonly { label: string; value: number }[]): HTMLElement {
   const list = document.createElement('dl');
   list.className = 'tiles';
   for (const item of items) {
     const tile = document.createElement('div');
-    tile.className = item.hero ? 'tile hero' : 'tile';
+    tile.className = 'tile';
     const label = document.createElement('dt');
     label.textContent = item.label;
     const value = document.createElement('dd');
@@ -354,6 +457,10 @@ function tiles(items: readonly { label: string; value: number; hero?: boolean }[
 interface Answer {
   readonly today: string;
   readonly filters: { days: number };
+  /** When the answer was made (ms), the newest event received (ms), the rollup's last day. */
+  readonly asOf?: number;
+  readonly receivedAt?: number | null;
+  readonly rolledUpThrough?: string | null;
   readonly [key: string]: unknown;
 }
 
@@ -407,9 +514,9 @@ function overview(answer: Answer): HTMLElement[] {
   const versions = rowsOf(answer, 'versions');
   return [
     tiles([
-      { label: 'Active Today', value: totals.today ?? 0 },
-      { label: 'Active in the Last 7 Days', value: totals.last7 ?? 0, hero: true },
-      { label: 'Active in the Last 30 Days', value: totals.last30 ?? 0 },
+      { label: 'Active Installs Today', value: totals.today ?? 0 },
+      { label: 'Active Installs, Last 7 Days', value: totals.last7 ?? 0 },
+      { label: 'Active Installs, Last 30 Days', value: totals.last30 ?? 0 },
     ]),
     card({
       id: 'weekly-active',
@@ -429,22 +536,15 @@ function overview(answer: Answer): HTMLElement[] {
     card({
       id: 'top-versions',
       title: 'Top Versions',
-      chart: (width) =>
-        bars(
-          {
-            label: 'Installs by version',
-            unit: 'installs',
-            series: [{ key: 'installs', label: 'Installs', color: 'var(--s1)' }],
-            rows: versions.map((row) => ({
-              label: String(row['version']),
-              parts: [Number(row['installs'])],
-            })),
-          },
-          width,
-        ),
+      note: 'Installs active in the period, by version and client.',
+      chart: null,
       table: {
-        columns: ['Version', 'Installs'],
-        rows: versions.map((row) => [String(row['version']), Number(row['installs'])]),
+        columns: ['Version', 'Client', 'Installs'],
+        rows: versions.map((row) => [
+          String(row['version']),
+          CLIENT_LABELS[String(row['client'])] ?? titled(String(row['client'])),
+          Number(row['installs']),
+        ]),
       },
       empty: versions.length === 0,
     }),
@@ -463,44 +563,62 @@ function commands(answer: Answer): HTMLElement[] {
     label: SOURCE_LABELS[s] ?? s,
     color: slot(sources.indexOf(s)),
   }));
-  const commandRows: BarRow[] = names.map((name) => {
+  const top = names.map((name) => {
     const own = rows.filter((row) => row['name'] === name);
+    const parts = used.map((s) =>
+      own.filter((row) => sourceOf(row) === s).reduce((sum, row) => sum + Number(row['runs']), 0),
+    );
     return {
-      label: name,
-      parts: used.map((s) =>
-        own.filter((row) => sourceOf(row) === s).reduce((sum, row) => sum + Number(row['runs']), 0),
-      ),
-      note: `run on ${formatNumber(Number(own[0]?.['installs'] ?? 0))} installs`,
+      name,
+      parts,
+      runs: parts.reduce((sum, n) => sum + n, 0),
+      installs: Number(own[0]?.['installs'] ?? 0),
     };
   });
+  const commandRows: BarRow[] = top.map(({ name, parts }) => ({ label: name, parts }));
+  const installsColumn: BarColumn = {
+    label: 'Installs',
+    values: top.map(({ installs }) => formatNumber(installs)),
+  };
   const shortcuts = rowsOf(answer, 'shortcuts').slice(0, 25);
   const unused = rowsOf(answer, 'unused');
+  const chips = document.createElement('ul');
+  chips.className = 'chips';
+  chips.setAttribute('aria-label', 'Never Used Names');
+  for (const row of unused) {
+    const chip = document.createElement('li');
+    chip.className = 'chip';
+    chip.textContent = eventLabel(`${String(row['kind'])}:${String(row['name'])}`);
+    chips.append(chip);
+  }
   return [
     card({
       id: 'top-commands',
       title: 'Top 25 Commands',
-      note: 'Runs, split by where each was run from.',
+      note: 'Runs, split by where each was run from, and how many installs ran it.',
       chart: (width) =>
         bars(
-          { label: 'Top 25 commands by runs', unit: 'runs', series: legend, rows: commandRows },
+          {
+            label: 'Top 25 commands by runs',
+            unit: 'runs',
+            series: legend,
+            rows: commandRows,
+            columns: [installsColumn],
+            totalLabel: 'Runs',
+          },
           width,
         ),
       legend,
       table: {
-        columns: ['Command', 'Source', 'Runs', 'Installs'],
-        rows: rows.map((row) => [
-          String(row['name']),
-          SOURCE_LABELS[sourceOf(row)] ?? '',
-          Number(row['runs']),
-          Number(row['installs']),
-        ]),
+        columns: ['Command', 'Runs', 'Installs', ...legend.map((s) => s.label)],
+        rows: top.map(({ name, runs, installs, parts }) => [name, runs, installs, ...parts]),
       },
       empty: rows.length === 0,
     }),
     card({
       id: 'shortcuts',
       title: 'Shortcuts',
-      note: "Each combination's share of its command's runs.",
+      note: "Each combination's share of its command's runs, its default, and how many installs rebound it.",
       chart: (width) =>
         bars(
           {
@@ -511,8 +629,20 @@ function commands(answer: Answer): HTMLElement[] {
             rows: shortcuts.map((row) => ({
               label: `${String(row['name'])} · ${String(row['keys'])}`,
               parts: [Number(row['key_share'])],
-              note: `${formatNumber(Number(row['key_runs']))} runs · ${formatNumber(Number(row['rebound_installs']))} installs set their own`,
+              note: `${formatNumber(Number(row['key_runs']))} runs`,
             })),
+            columns: [
+              {
+                label: 'Default',
+                width: 104,
+                values: shortcuts.map((row) => String(row['default_keys'] || 'None')),
+              },
+              {
+                label: 'Rebound',
+                values: shortcuts.map((row) => formatNumber(Number(row['rebound_installs']))),
+              },
+            ],
+            totalLabel: 'Key Share',
           },
           width,
         ),
@@ -520,15 +650,17 @@ function commands(answer: Answer): HTMLElement[] {
         columns: [
           'Command',
           'Keys',
+          'Default Keys',
           'Key Runs',
           'All Runs',
           'Key Share %',
           'Installs',
-          'Installs That Rebound It',
+          'Rebound',
         ],
         rows: shortcuts.map((row) => [
           String(row['name']),
           String(row['keys']),
+          String(row['default_keys'] || 'None'),
           Number(row['key_runs']),
           Number(row['all_runs']),
           Number(row['key_share']),
@@ -541,12 +673,15 @@ function commands(answer: Answer): HTMLElement[] {
     card({
       id: 'never-used',
       title: 'Never Used',
-      note: `${unused.length.toLocaleString('en-GB')} catalogued names nobody used in this period.`,
+      count: unused.length,
+      note: 'Catalogued commands, controls, screens, dialogs, menus, settings, CLI commands and MCP tools nobody used in this period.',
       chart: null,
+      custom: chips,
       table: {
         columns: ['Kind', 'Name'],
-        rows: unused.map((row) => [String(row['kind']), String(row['name'])]),
+        rows: unused.map((row) => [titled(String(row['kind'])), String(row['name'])]),
       },
+      empty: unused.length === 0,
     }),
   ];
 }
@@ -554,8 +689,9 @@ function commands(answer: Answer): HTMLElement[] {
 function firstRun(answer: Answer): HTMLElement[] {
   const steps = rowsOf(answer, 'steps');
   const order = distinct(steps, 'step');
+  const stepLabel = (step: unknown) => FIRSTRUN_LABELS[String(step)] ?? titled(String(step));
   const totals = order.map((step) => ({
-    label: step,
+    label: stepLabel(step),
     value: steps
       .filter((row) => row['step'] === step)
       .reduce((sum, row) => sum + Number(row['installs']), 0),
@@ -571,7 +707,7 @@ function firstRun(answer: Answer): HTMLElement[] {
       table: {
         columns: ['Step', 'Client', 'Installs', 'Finished the Step'],
         rows: steps.map((row) => [
-          String(row['step']),
+          stepLabel(row['step']),
           CLIENT_LABELS[String(row['client'])] ?? '',
           Number(row['installs']),
           Number(row['done']),
@@ -590,7 +726,13 @@ function firstRun(answer: Answer): HTMLElement[] {
             unit: 'installs',
             series: [{ key: 'installs', label: 'Installs', color: 'var(--s2)' }],
             rows: gaveUp.map((row) => ({
-              label: [row['step'], row['result'], row['error']].filter(Boolean).join(' · '),
+              label: [
+                stepLabel(row['step']),
+                STEP_RESULT_LABELS[String(row['result'])] ?? '',
+                row['error'] ? titled(String(row['error'])) : '',
+              ]
+                .filter(Boolean)
+                .join(' · '),
               parts: [Number(row['installs'])],
             })),
           },
@@ -599,10 +741,10 @@ function firstRun(answer: Answer): HTMLElement[] {
       table: {
         columns: ['Step', 'Client', 'Result', 'Error', 'Installs'],
         rows: gaveUp.map((row) => [
-          String(row['step']),
+          stepLabel(row['step']),
           CLIENT_LABELS[String(row['client'])] ?? '',
-          String(row['result']),
-          String(row['error']),
+          STEP_RESULT_LABELS[String(row['result'])] ?? '',
+          row['error'] ? titled(String(row['error'])) : '',
           Number(row['installs']),
         ]),
       },
@@ -612,12 +754,13 @@ function firstRun(answer: Answer): HTMLElement[] {
 }
 
 function paths(answer: Answer): HTMLElement[] {
-  const options = (answer['options'] as string[] | undefined) ?? [];
+  const options = (answer['options'] as { event: string; events: number }[] | undefined) ?? [];
+  const events = options.map((option) => option.event);
   const picker = document.createElement('div');
   picker.className = 'picker';
   const label = document.createElement('label');
   label.htmlFor = 'start';
-  label.textContent = 'Start Event';
+  label.textContent = 'Start From';
   const input = document.createElement('input');
   input.id = 'start';
   input.type = 'search';
@@ -627,18 +770,28 @@ function paths(answer: Answer): HTMLElement[] {
   input.spellcheck = false;
   const list = document.createElement('datalist');
   list.id = 'start-options';
+  // Each catalogued event, the most frequent first, with how often it occurred in the period.
   for (const option of options) {
     const node = document.createElement('option');
-    node.value = option;
+    node.value = option.event;
+    node.label = `${eventLabel(option.event)} · ${option.events.toLocaleString('en-GB')} ${
+      option.events === 1 ? 'time' : 'times'
+    }`;
     list.append(node);
   }
+  const chosen = options.find((option) => option.event === state.start);
+  const occurrences = document.createElement('span');
+  occurrences.className = 'occurrences';
+  occurrences.textContent = chosen
+    ? `${chosen.events.toLocaleString('en-GB')} ${chosen.events === 1 ? 'time' : 'times'} in the period`
+    : '';
   input.addEventListener('change', () => {
-    if (options.includes(input.value) && input.value !== state.start) {
+    if (events.includes(input.value) && input.value !== state.start) {
       state.start = input.value;
       void render();
     }
   });
-  picker.append(label, input, list);
+  picker.append(label, input, list, occurrences);
 
   const root = answer['tree'] as TreeNode | null;
   const flat: Cell[][] = [];
@@ -757,7 +910,7 @@ function platforms(answer: Answer): HTMLElement[] {
         columns: ['Client', 'Size Class', 'Installs'],
         rows: sizes.map((row) => [
           CLIENT_LABELS[String(row['client'])] ?? '',
-          String(row['size_class']),
+          titled(String(row['size_class'])),
           Number(row['installs']),
         ]),
       },
@@ -783,29 +936,31 @@ function agents(answer: Answer): HTMLElement[] {
   const keys = [...shown, ...(byCalls.length > shown.length ? ['other'] : [])];
   const legend = keys.map((k, i) => ({
     key: k,
-    label: ACTOR_LABELS[k] ?? (k === 'other' ? 'Other' : k),
+    label: k === 'other' && !shown.includes('other') ? 'Others' : agentLabel(k),
     color: k === 'other' ? 'var(--other)' : slot(i),
   }));
+  const kindLabel = (kind: unknown) => (kind === 'tool' ? 'MCP' : 'CLI');
   const names = distinct(rows, 'name').map((name) => ({
     name,
     kind: String(rows.find((row) => row['name'] === name)?.['kind']),
   }));
   const nameRows: BarRow[] = names.map(({ name, kind }) => ({
-    label: `${kind === 'tool' ? 'MCP' : 'CLI'} · ${name}`,
+    label: `${kindLabel(kind)} · ${name}`,
     parts: keys.map((k) =>
       rows
         .filter((row) => row['name'] === name && agentOf(row) === k)
         .reduce((s, row) => s + Number(row['calls']), 0),
     ),
   }));
-  const rates: BarRow[] = names.map(({ name, kind }) => {
-    const own = rows.filter((row) => row['name'] === name);
-    const calls = own.reduce((s, row) => s + Number(row['calls']), 0);
-    const ok = own.reduce((s, row) => s + Number(row['ok']), 0);
+  // Each command or tool, by agent client: the share of its calls that ended in each result.
+  const share = (part: number, calls: number) =>
+    calls ? Math.round((1000 * part) / calls) / 10 : 0;
+  const rateRows = rows.map((row) => {
+    const calls = Number(row['calls']);
     return {
-      label: `${kind === 'tool' ? 'MCP' : 'CLI'} · ${name}`,
-      parts: [calls ? Math.round((1000 * ok) / calls) / 10 : 0],
-      note: `${formatNumber(ok)} of ${formatNumber(calls)} calls`,
+      label: `${kindLabel(row['kind'])} · ${String(row['name'])} · ${agentLabel(String(row['agent']))}`,
+      calls,
+      counts: RESULTS.map((result) => Number(row[result.key] ?? 0)),
     };
   });
   return [
@@ -826,35 +981,46 @@ function agents(answer: Answer): HTMLElement[] {
         ),
       legend,
       table: {
-        columns: ['Kind', 'Name', 'Agent', 'Calls', 'Succeeded', 'Installs'],
+        columns: ['Kind', 'Name', 'Agent', 'Calls', 'Installs'],
         rows: rows.map((row) => [
-          String(row['kind']),
+          kindLabel(row['kind']),
           String(row['name']),
-          String(row['agent']),
+          agentLabel(String(row['agent'])),
           Number(row['calls']),
-          Number(row['ok']),
           Number(row['installs']),
         ]),
       },
       empty: rows.length === 0,
     }),
     card({
-      id: 'success-rates',
-      title: 'Success Rate',
+      id: 'result-rates',
+      title: 'Result Rates',
+      note: 'How each CLI command and MCP tool ended, by agent client: its share of the calls.',
       chart: (width) =>
         bars(
           {
-            label: 'Success rate',
-            unit: 'succeeded',
+            label: 'Result rates by agent client',
+            unit: 'of the calls',
             suffix: '%',
-            series: [{ key: 'ok', label: 'Succeeded', color: 'var(--s3)' }],
-            rows: rates,
+            series: RESULTS,
+            rows: rateRows.map((row) => ({
+              label: row.label,
+              parts: row.counts.map((count) => share(count, row.calls)),
+            })),
+            columns: [{ label: 'Calls', values: rateRows.map((row) => formatNumber(row.calls)) }],
+            totalLabel: 'Results',
+            showTotal: false,
           },
           width,
         ),
+      legend: RESULTS,
       table: {
-        columns: ['Name', 'Succeeded %'],
-        rows: rates.map((row) => [row.label, row.parts[0] ?? 0]),
+        columns: ['Name', 'Calls', ...RESULTS.map((result) => `${result.label} %`)],
+        rows: rateRows.map((row) => [
+          row.label,
+          row.calls,
+          ...row.counts.map((count) => share(count, row.calls)),
+        ]),
       },
       empty: rows.length === 0,
     }),
@@ -887,7 +1053,7 @@ function health(answer: Answer): HTMLElement[] {
   return [
     tiles([
       { label: 'Batches', value: sum('batches') },
-      { label: 'Events Accepted', value: sum('accepted'), hero: true },
+      { label: 'Events Accepted', value: sum('accepted') },
       { label: 'Events Dropped', value: sum('dropped') },
       { label: 'Forgets', value: sum('forgets') },
     ]),
@@ -939,7 +1105,7 @@ function health(answer: Answer): HTMLElement[] {
         columns: ['Client', 'Result', 'Took', 'Passes', 'Installs'],
         rows: sync.map((row) => [
           CLIENT_LABELS[String(row['client'])] ?? '',
-          String(row['result']),
+          SYNC_LABELS[String(row['result'])] ?? titled(String(row['result'])),
           String(row['took']),
           Number(row['passes']),
           Number(row['installs']),
@@ -948,6 +1114,33 @@ function health(answer: Answer): HTMLElement[] {
       empty: sync.length === 0,
     }),
   ];
+}
+
+/** "19 Nov, 17:58 UTC" from ms. */
+function stamp(ms: number): string {
+  return `${new Date(ms).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  })} UTC`;
+}
+
+/** How fresh the view is: when the answer was made, the newest event, and the rollup's day. */
+function freshnessLine(answer: Answer): HTMLElement {
+  const line = document.createElement('p');
+  line.className = 'freshness';
+  line.dataset['testid'] = 'freshness';
+  const parts = [
+    `Data as of ${stamp(answer.asOf ?? Date.now())}`,
+    answer.receivedAt ? `newest event ${stamp(answer.receivedAt)}` : 'no events yet',
+    answer.rolledUpThrough
+      ? `rollups through ${shortDay(answer.rolledUpThrough)}`
+      : 'no rollups yet',
+  ];
+  line.textContent = `${parts.join(' · ')}. Answers are kept up to 5 minutes.`;
+  return line;
 }
 
 const RENDERERS: Record<ViewName, (answer: Answer) => HTMLElement[]> = {
@@ -989,7 +1182,7 @@ async function render(): Promise<void> {
     range.className = 'range';
     const first = daysOf(answer.today, answer.filters.days)[0] ?? answer.today;
     range.textContent = `${shortDay(first)} to ${shortDay(answer.today)} (UTC)`;
-    main.replaceChildren(heading, range, ...RENDERERS[state.view](answer));
+    main.replaceChildren(heading, range, freshnessLine(answer), ...RENDERERS[state.view](answer));
     status.textContent = '';
   } catch (error) {
     if (ticket !== rendering) return;

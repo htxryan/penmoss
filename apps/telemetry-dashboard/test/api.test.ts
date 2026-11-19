@@ -60,11 +60,16 @@ describe('each view', () => {
       new Set(['mac', 'android', 'cli', 'mcp']),
     );
     expect(new Set(data.actors.map((row) => row['actor']))).toEqual(new Set(['person', 'agent']));
-    // Ten installs ran 1.3.0 earlier in the month; six run 1.4.0 now.
-    expect(data.versions.slice(0, 2)).toEqual([
-      { version: '1.3.0', installs: 10 },
-      { version: '1.4.0', installs: 6 },
-    ]);
+    // Ten installs ran 1.3.0 earlier in the month, eight Macs and two phones; each row is a
+    // version on a client (a Mac's CLI and MCP server count as their own clients).
+    for (const row of data.versions)
+      expect(Object.keys(row).sort()).toEqual(['client', 'installs', 'version']);
+    const of = (version: string, client: string) =>
+      data.versions.find((row) => row['version'] === version && row['client'] === client)?.[
+        'installs'
+      ];
+    expect(Number(of('1.3.0', 'mac')) + Number(of('1.3.0', 'android'))).toBe(10);
+    expect(data.versions[0]).toMatchObject({ version: '1.3.0', installs: 8 });
   });
 
   it('commands: top commands by source, shortcuts and the never-used', async () => {
@@ -73,8 +78,13 @@ describe('each view', () => {
     );
     expect(data.commands[0]).toMatchObject({ name: 'note.new' });
     expect(new Set(data.commands.map((row) => row['name'])).size).toBeLessThanOrEqual(25);
+    // Two Macs rebound New Note; its default comes from the shortcut map every client shares.
     expect(data.shortcuts.find((row) => row['keys'] === 'Mod+Alt+N')).toMatchObject({
       rebound_installs: 2,
+      default_keys: 'Alt+N',
+    });
+    expect(data.shortcuts.find((row) => row['name'] === 'app.palette')).toMatchObject({
+      default_keys: 'Mod+K',
     });
     expect(data.unused.length).toBeGreaterThan(10);
   });
@@ -89,8 +99,14 @@ describe('each view', () => {
   });
 
   it('paths: the catalogue to start from, then a tree three deep with shares', async () => {
-    const empty = await view<{ options: string[]; tree: unknown }>('/api/paths?days=30');
-    expect(empty.options).toContain('command:app.palette');
+    const empty = await view<{ options: { event: string; events: number }[]; tree: unknown }>(
+      '/api/paths?days=30',
+    );
+    // Every catalogued event, with how often it occurred in the period, the most frequent first.
+    const counts = empty.options.map((option) => option.events);
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+    expect(empty.options.find((o) => o.event === 'command:app.palette')!.events).toBeGreaterThan(0);
+    expect(empty.options.find((o) => o.event === 'command:app.graph')!.events).toBe(0);
     expect(empty.tree).toBeNull();
     const data = await view<{
       tree: {
@@ -126,6 +142,23 @@ describe('each view', () => {
     expect(new Set(data.agents.map((row) => row['agent']))).toEqual(
       new Set(['claude-code', 'codex', 'agent', 'person']),
     );
+    // Every call ended in exactly one result.
+    for (const row of data.agents) {
+      const results = ['ok', 'invalid', 'not_found', 'conflict', 'failed'].map((key) =>
+        Number(row[key]),
+      );
+      expect(results.reduce((sum, n) => sum + n, 0)).toBe(row['calls']);
+    }
+    expect(data.agents.some((row) => Number(row['ok']) < Number(row['calls']))).toBe(true);
+  });
+
+  it('every view says how fresh it is: when it was made, the newest event, the rollup', async () => {
+    const data = await view<{ asOf: number; receivedAt: number; rolledUpThrough: string }>(
+      '/api/health?days=7',
+    );
+    expect(data.asOf).toBe(NOW);
+    expect(data.receivedAt).toBeGreaterThan(NOW - 2 * 86_400_000);
+    expect(data.rolledUpThrough).toBe('2026-11-18');
   });
 
   it('health: the ingest counts per day and the write cap', async () => {
@@ -154,7 +187,7 @@ describe('the filters', () => {
     );
     expect(alpha.totals['today']).toBe(3);
     const version = await view<{ versions: Rows }>('/api/overview?days=30&version=1.3.2');
-    expect(version.versions.map((row) => row['version'])).toEqual(['1.3.2']);
+    expect(new Set(version.versions.map((row) => row['version']))).toEqual(new Set(['1.3.2']));
   });
 
   it('refuse anything not on their lists, and any other parameter: no SQL gets in', async () => {

@@ -6,7 +6,7 @@
  * anything else is the page's static files. It only reads: GET and HEAD, nothing else.
  */
 import type { AccessEnv, AccessVerifier } from './access';
-import { BadRequest, VIEWS, readFilters, viewData, type View } from './api';
+import { BadRequest, VIEWS, freshness, readFilters, viewData, type View } from './api';
 
 export interface DashboardEnv extends AccessEnv {
   readonly DB: D1Database;
@@ -67,11 +67,18 @@ async function api(
     });
   }
   const now = deps.now();
+  const [data, fresh] = await Promise.all([
+    viewData(env.DB, view as View, filters, now),
+    freshness(env.DB, now),
+  ]);
   const body = JSON.stringify({
     view,
     filters,
     today: new Date(now).toISOString().slice(0, 10),
-    ...(await viewData(env.DB, view as View, filters, now)),
+    // When this answer was made (it is cached up to CACHE_SECONDS), the newest event, the rollup.
+    asOf: now,
+    ...fresh,
+    ...data,
   });
   if (deps.cache) {
     const stored = new Response(body, {

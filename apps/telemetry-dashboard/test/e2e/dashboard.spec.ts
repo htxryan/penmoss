@@ -56,6 +56,35 @@ async function openView(page: Page, name: string): Promise<void> {
   await expect(page.locator('main')).not.toHaveAttribute('aria-busy', 'true');
 }
 
+/** Lets the recording dwell on what was just checked. */
+const hold = (page: Page) => page.waitForTimeout(2000);
+
+/**
+ * The tooltip, shown for `hovered`, covers neither it nor the axis labels: the chart's area
+ * below its plot (the x axis's labels) and left of it (the y axis's, or a bar chart's labels).
+ */
+async function expectTipClear(
+  page: Page,
+  chart: ReturnType<Page['locator']>,
+  hovered: { x: number; y: number; width: number; height: number } | null,
+  plot: { left: number; bottom: number },
+): Promise<void> {
+  const tip = (await page.getByRole('tooltip').boundingBox())!;
+  const box = (await chart.boundingBox())!;
+  const overlaps = (a: typeof tip, b: typeof tip) =>
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  const xAxis = {
+    x: box.x,
+    y: box.y + box.height - plot.bottom,
+    width: box.width,
+    height: plot.bottom,
+  };
+  const yAxis = { x: box.x, y: box.y, width: plot.left, height: box.height };
+  expect(overlaps(tip, xAxis), 'the tooltip covers the x axis').toBe(false);
+  expect(overlaps(tip, yAxis), 'the tooltip covers the labels at the left').toBe(false);
+  if (hovered) expect(overlaps(tip, hovered), 'the tooltip covers what it describes').toBe(false);
+}
+
 /** Hover, Table and CSV on the chart card `title`. */
 async function checkCard(page: Page, title: string): Promise<void> {
   const card = page.getByRole('region', { name: title, exact: true });
@@ -123,7 +152,7 @@ test('the filters narrow every view, and the API refuses what is not on their li
   dashboard,
 }) => {
   await page.goto(`${dashboard.url}/#overview`);
-  const today = page.locator('.tile', { hasText: 'Active Today' }).locator('dd');
+  const today = page.locator('.tile', { hasText: 'Active Installs Today' }).locator('dd');
   await expect(today).toHaveText('10');
   await page.getByLabel('Client', { exact: true }).selectOption('android');
   await expect(today).toHaveText('2');
@@ -133,9 +162,11 @@ test('the filters narrow every view, and the API refuses what is not on their li
   await page.getByLabel('Channel', { exact: true }).selectOption('');
   await expect(page.getByLabel('Version', { exact: true }).locator('option')).toHaveCount(5);
   await page.getByLabel('Version', { exact: true }).selectOption('1.3.2');
-  await expect(page.getByRole('region', { name: 'Top Versions' }).locator('tbody tr')).toHaveCount(
-    1,
-  );
+  const versions = page.getByRole('region', { name: 'Top Versions' }).locator('tbody tr');
+  await expect(versions.first().locator('td').first()).toHaveText('1.3.2');
+  for (const cell of await versions.locator('td:first-child').allTextContents()) {
+    expect(cell).toBe('1.3.2');
+  }
   const bad = await page.request.get(`${dashboard.url}/api/overview?client=ios`, {
     headers: { 'cf-access-jwt-assertion': dashboard.token },
   });
@@ -152,12 +183,60 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
   await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 
   // Overview (AC30): the tiles, weekly actives by client, the actor split, top versions.
+  await expect(page.getByText('Signed in through Cloudflare Access')).toBeVisible();
+  await expect(page.getByTestId('freshness')).toContainText(/^Data as of .+ UTC · newest event/);
+  await expect(page.getByTestId('freshness')).toContainText('rollups through');
+  const tiles = page.locator('.tile');
+  await expect(tiles.locator('dt')).toHaveText([
+    'Active Installs Today',
+    'Active Installs, Last 7 Days',
+    'Active Installs, Last 30 Days',
+  ]);
   await expect(
-    page.locator('.tile', { hasText: 'Active in the Last 7 Days' }).locator('dd'),
+    page.locator('.tile', { hasText: 'Active Installs, Last 7 Days' }).locator('dd'),
   ).toHaveText('10');
-  for (const title of ['Weekly Active Installs by Client', 'Events by Actor', 'Top Versions']) {
+  // Every tile's number is the same size.
+  const sizes = await tiles
+    .locator('dd')
+    .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).fontSize));
+  expect(new Set(sizes).size).toBe(1);
+  await hold(page);
+  for (const title of ['Weekly Active Installs by Client', 'Events by Actor']) {
     await checkCard(page, title);
   }
+  // Top Versions is a table: Version, Client, Installs.
+  const topVersions = page.getByRole('region', { name: 'Top Versions' });
+  await topVersions.scrollIntoViewIfNeeded();
+  await expect(topVersions.getByRole('table').locator('thead th')).toHaveText([
+    'Version',
+    'Client',
+    'Installs',
+  ]);
+  await expect(topVersions.getByRole('table')).toContainText('Mac');
+  await expect(
+    topVersions.getByRole('button', { name: 'Download CSV: Top Versions' }),
+  ).toBeVisible();
+  await hold(page);
+  // A day's tooltip sits beside its line, over neither axis's labels.
+  const weekly = page.getByRole('region', { name: 'Weekly Active Installs by Client' });
+  await weekly.scrollIntoViewIfNeeded();
+  const weeklyChart = weekly.locator('svg.chart');
+  const weeklyBox = (await weeklyChart.boundingBox())!;
+  for (const at of [0.15, 0.85]) {
+    await page.mouse.move(weeklyBox.x + weeklyBox.width * at, weeklyBox.y + weeklyBox.height - 40);
+    await expect(page.getByRole('tooltip')).toBeVisible();
+    await expectTipClear(page, weeklyChart, null, { left: 44, bottom: 26 });
+  }
+  // The actor split's column: the tooltip covers neither the column nor the axes.
+  const actors = page.getByRole('region', { name: 'Events by Actor' }).locator('svg.chart');
+  await actors.scrollIntoViewIfNeeded();
+  const column = actors.locator('path.mark').last();
+  const columnBox = (await column.boundingBox())!;
+  await page.mouse.move(columnBox.x + columnBox.width / 2, columnBox.y + columnBox.height / 2);
+  await expect(page.getByRole('tooltip')).toBeVisible();
+  await expectTipClear(page, actors, columnBox, { left: 44, bottom: 26 });
+  await hold(page);
+  await page.mouse.move(0, 0);
   await expect(
     page.getByRole('list', { name: 'Weekly Active Installs by Client Legend' }),
   ).toContainText('Android');
@@ -166,24 +245,66 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
   await openView(page, 'Commands & Shortcuts');
   for (const title of ['Top 25 Commands', 'Shortcuts']) await checkCard(page, title);
   await expect(page.getByRole('list', { name: 'Top 25 Commands Legend' })).toContainText('Palette');
-  const neverUsed = page.getByRole('region', { name: 'Never Used' });
-  await expect(neverUsed.getByRole('table')).toContainText('app.graph');
+  // Top 25 Commands has its Installs column beside the runs.
+  const topCommands = page.getByRole('region', { name: 'Top 25 Commands', exact: true });
+  await topCommands.scrollIntoViewIfNeeded();
+  await expect(topCommands.locator('svg.chart .col-head')).toHaveText(['Installs', 'Runs']);
+  await hold(page);
+  // Shortcuts: each combination's default and how many installs rebound it.
+  const shortcuts = page.getByRole('region', { name: 'Shortcuts', exact: true });
+  await shortcuts.scrollIntoViewIfNeeded();
+  await expect(shortcuts.locator('svg.chart .col-head')).toHaveText([
+    'Default',
+    'Rebound',
+    'Key Share',
+  ]);
+  await expect(shortcuts.locator('svg.chart')).toContainText('Alt+N');
+  await hold(page);
+  // Never Used: chips, counted in the heading.
+  const neverUsed = page.getByRole('region', { name: /^Never Used [\d,]+$/ });
+  await neverUsed.scrollIntoViewIfNeeded();
+  await expect(neverUsed.getByRole('heading', { level: 2 })).toHaveText(/^Never Used [\d,]+$/);
+  const chips = neverUsed.getByRole('list', { name: 'Never Used Names' });
+  await expect(chips).toContainText('app.graph');
+  const count = Number((await neverUsed.locator('h2 .count').textContent())!.replaceAll(',', ''));
+  await expect(chips.locator('li')).toHaveCount(count);
+  await hold(page);
 
   // First Run and Paths (AC32): the funnel narrows; a path under 5 sessions never shows.
   await openView(page, 'First Run');
   for (const title of ['First Run Funnel', 'Where Installs Gave Up']) await checkCard(page, title);
-  await expect(page.getByRole('region', { name: 'First Run Funnel' }).locator('svg')).toContainText(
-    'welcome',
-  );
+  const funnel = page.getByRole('region', { name: 'First Run Funnel' });
+  await funnel.scrollIntoViewIfNeeded();
+  for (const step of ['Welcome', 'Choose a Goal', 'Sign In with GitHub', 'Consent Answered']) {
+    await expect(funnel.locator('svg')).toContainText(step);
+  }
+  await expect(funnel.locator('svg')).not.toContainText('welcome');
+  await hold(page);
   await openView(page, 'Paths');
-  await expect(page.getByLabel('Start Event')).toHaveValue('command:app.palette');
+  await expect(page.getByLabel('Start From')).toHaveValue('command:app.palette');
+  // The field's options say how often each event occurred, the most frequent first.
+  await expect(page.locator('.picker .occurrences')).toHaveText(/^[\d,]+ times in the period$/);
+  const labels = await page
+    .locator('#start-options option')
+    .evaluateAll((nodes) => nodes.slice(0, 3).map((node) => (node as HTMLOptionElement).label));
+  for (const label of labels) expect(label).toMatch(/ · [\d,]+ times?$/);
   await checkCard(page, 'What Comes After app.palette');
   const paths = page.getByRole('region', { name: 'What Comes After app.palette' });
   await expect(paths.locator('svg')).toContainText('note.new');
   await expect(paths).not.toContainText('app.trash');
-  await page.getByLabel('Start Event').fill('command:note.new');
-  await page.getByLabel('Start Event').press('Enter');
-  await page.getByLabel('Start Event').blur();
+  // Each node has room round its label: 10px inside its box.
+  const node = paths.locator('g.node').nth(1);
+  const [boxRect, labelRect] = await Promise.all([
+    node.locator('rect').boundingBox(),
+    node.locator('text.node-label').boundingBox(),
+  ]);
+  expect(labelRect!.x - boxRect!.x).toBeGreaterThanOrEqual(9);
+  expect(labelRect!.y - boxRect!.y).toBeGreaterThanOrEqual(5);
+  await paths.scrollIntoViewIfNeeded();
+  await hold(page);
+  await page.getByLabel('Start From').fill('command:note.new');
+  await page.getByLabel('Start From').press('Enter');
+  await page.getByLabel('Start From').blur();
   await expect(page.getByRole('region', { name: 'What Comes After note.new' })).toBeVisible();
 
   // Platforms and Agents (AC33).
@@ -191,13 +312,56 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
   for (const title of ['Clients and OS Versions', 'Version Adoption', 'Window Size Classes']) {
     await checkCard(page, title);
   }
+  // A bar's tooltip sits above its row, clear of the bar and of the labels.
+  const os = page.getByRole('region', { name: 'Clients and OS Versions' }).locator('svg.chart');
+  await os.scrollIntoViewIfNeeded();
+  const row = os.locator('rect.hit-area').nth(1);
+  const rowBox = (await row.boundingBox())!;
+  await page.mouse.move(rowBox.x + rowBox.width * 0.7, rowBox.y + rowBox.height / 2);
+  await expect(page.getByRole('tooltip')).toBeVisible();
+  const label = (await os.locator('text.label').first().boundingBox())!;
+  await expectTipClear(page, os, rowBox, {
+    left: label.x + label.width - (await os.boundingBox())!.x,
+    bottom: 0,
+  });
+  // Version adoption's crosshair: beside the line, inside the plot.
+  const adoption = page.getByRole('region', { name: 'Version Adoption' }).locator('svg.chart');
+  await adoption.scrollIntoViewIfNeeded();
+  const adoptionBox = (await adoption.boundingBox())!;
+  await page.mouse.move(
+    adoptionBox.x + adoptionBox.width * 0.5,
+    adoptionBox.y + adoptionBox.height - 30,
+  );
+  await expect(page.getByRole('tooltip')).toBeVisible();
+  await expectTipClear(page, adoption, null, { left: 44, bottom: 26 });
+  await hold(page);
+  await page.mouse.move(0, 0);
   await openView(page, 'Agents');
-  for (const title of ['Events by Actor', 'CLI Commands and MCP Tools by Agent', 'Success Rate']) {
+  for (const title of ['Events by Actor', 'CLI Commands and MCP Tools by Agent', 'Result Rates']) {
     await checkCard(page, title);
   }
-  await expect(
-    page.getByRole('list', { name: 'CLI Commands and MCP Tools by Agent Legend' }),
-  ).toContainText('claude-code');
+  // Legends name agent clients as people do, never by their ids.
+  const agentLegend = page.getByRole('list', {
+    name: 'CLI Commands and MCP Tools by Agent Legend',
+  });
+  await agentLegend.scrollIntoViewIfNeeded();
+  await expect(agentLegend).toContainText('Claude Code');
+  await expect(agentLegend).toContainText('Codex');
+  await expect(agentLegend).not.toContainText('claude-code');
+  await hold(page);
+  // Result rates: each CLI command and MCP tool by agent client, with its calls' results.
+  const rates = page.getByRole('region', { name: 'Result Rates' });
+  await rates.scrollIntoViewIfNeeded();
+  await expect(rates.getByRole('list', { name: 'Result Rates Legend' }).locator('li')).toHaveText([
+    'OK',
+    'Invalid',
+    'Not Found',
+    'Conflict',
+    'Failed',
+  ]);
+  await expect(rates.locator('svg.chart')).toContainText('MCP · ');
+  await expect(rates.locator('svg.chart')).toContainText('Claude Code');
+  await hold(page);
 
   // Health.
   await openView(page, 'Health');

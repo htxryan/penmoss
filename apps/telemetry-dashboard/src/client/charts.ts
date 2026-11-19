@@ -70,8 +70,68 @@ function tipElement(): HTMLDivElement {
   return tip;
 }
 
-/** Shows the tooltip near (x, y) in the viewport: a title, then each value before its label. */
-export function showTip(x: number, y: number, title: string, lines: readonly TipLine[]): void {
+/**
+ * Where a tooltip goes, so it never covers what it describes or the axis labels:
+ * - `beside`: a day's mark between viewport x `beside[0]` and `beside[1]` (a crosshair, or a
+ *   column's sides), inside `plot` (the plot area, without the axes); the tooltip sits to its
+ *   right, or its left, kept within the plot so the axes' labels stay clear.
+ * - `avoid`: a row or a node; the tooltip sits above it (below when there's no room), and no
+ *   further left than `left` (a bar chart's labels end there).
+ */
+export type Placement =
+  | { readonly beside: readonly [number, number]; readonly plot: DOMRect }
+  | { readonly avoid: DOMRect; readonly left?: number };
+
+const GAP = 10;
+const EDGE = 8;
+
+const clamp = (value: number, low: number, high: number) =>
+  Math.max(low, Math.min(value, Math.max(low, high)));
+
+/** Where the tooltip's top left corner goes for a pointer at (x, y). */
+export function tipPosition(
+  x: number,
+  y: number,
+  size: { width: number; height: number },
+  viewport: { width: number; height: number },
+  place?: Placement,
+): { left: number; top: number } {
+  const { width, height } = size;
+  const right = viewport.width - EDGE - width;
+  const bottom = viewport.height - EDGE - height;
+  if (place && 'beside' in place) {
+    const { plot } = place;
+    const after = place.beside[1] + GAP;
+    const before = place.beside[0] - GAP - width;
+    const left =
+      after + width <= Math.min(plot.right, viewport.width - EDGE)
+        ? after
+        : before >= Math.max(plot.left, EDGE)
+          ? before
+          : clamp(after, EDGE, right);
+    const top = clamp(y - height / 2, plot.top, plot.bottom - height);
+    return { left, top: clamp(top, EDGE, bottom) };
+  }
+  if (place) {
+    const { avoid } = place;
+    const above = avoid.top - GAP - height;
+    const top = above >= EDGE ? above : avoid.bottom + GAP;
+    const left = clamp(x - width / 2, Math.max(EDGE, place.left ?? EDGE), right);
+    return { left, top: clamp(top, EDGE, bottom) };
+  }
+  const left = clamp(x + 14, EDGE, right);
+  const top = y + 14 + height > viewport.height - EDGE ? y - height - 14 : y + 14;
+  return { left, top: Math.max(EDGE, top) };
+}
+
+/** Shows the tooltip for (x, y) in the viewport: a title, then each value before its label. */
+export function showTip(
+  x: number,
+  y: number,
+  title: string,
+  lines: readonly TipLine[],
+  place?: Placement,
+): void {
   const node = tipElement();
   node.replaceChildren();
   const head = document.createElement('div');
@@ -95,19 +155,29 @@ export function showTip(x: number, y: number, title: string, lines: readonly Tip
     node.append(row);
   }
   node.hidden = false;
-  const { width, height } = node.getBoundingClientRect();
-  const left = Math.min(Math.max(8, x + 14), window.innerWidth - width - 8);
-  const top = y + 14 + height > window.innerHeight - 8 ? y - height - 14 : y + 14;
+  const box = node.getBoundingClientRect();
+  const { left, top } = tipPosition(
+    x,
+    y,
+    { width: box.width, height: box.height },
+    { width: window.innerWidth, height: window.innerHeight },
+    place,
+  );
   node.style.left = `${left}px`;
-  node.style.top = `${Math.max(8, top)}px`;
+  node.style.top = `${top}px`;
 }
 
 export function hideTip(): void {
   if (tip) tip.hidden = true;
 }
 
-/** Hover and keyboard focus on `target` both show the same tooltip. */
-function hoverable(target: SVGElement, title: string, lines: () => readonly TipLine[]): void {
+/** Hover and keyboard focus on `target` both show the same tooltip, placed by `place`. */
+function hoverable(
+  target: SVGElement,
+  title: string,
+  lines: () => readonly TipLine[],
+  place: () => Placement = () => ({ avoid: target.getBoundingClientRect() }),
+): void {
   target.setAttribute('tabindex', '0');
   target.setAttribute(
     'aria-label',
@@ -115,14 +185,41 @@ function hoverable(target: SVGElement, title: string, lines: () => readonly TipL
   );
   target.classList.add('hit');
   target.addEventListener('pointermove', (event) =>
-    showTip(event.clientX, event.clientY, title, lines()),
+    showTip(event.clientX, event.clientY, title, lines(), place()),
   );
   target.addEventListener('pointerleave', hideTip);
   target.addEventListener('focus', () => {
     const box = target.getBoundingClientRect();
-    showTip(box.left + box.width / 2, box.top, title, lines());
+    showTip(box.left + box.width / 2, box.top + box.height / 2, title, lines(), place());
   });
   target.addEventListener('blur', hideTip);
+}
+
+/** The plot area of `chart` (inside its axes) in the viewport. */
+function plotRect(chart: SVGSVGElement, frame: Frame): DOMRect {
+  const box = chart.getBoundingClientRect();
+  return new DOMRect(
+    box.left + frame.left,
+    box.top + frame.top,
+    plotWidth(frame),
+    plotHeight(frame),
+  );
+}
+
+/** A tooltip beside the mark between chart x `from` and `to`, within the plot. */
+function besideAt(chart: SVGSVGElement, frame: Frame, from: number, to = from): () => Placement {
+  return () => {
+    const left = chart.getBoundingClientRect().left;
+    return { beside: [left + from, left + to], plot: plotRect(chart, frame) };
+  };
+}
+
+/** A tooltip above (or below) `target`, starting no further left than chart x `from`. */
+function aboveFrom(chart: SVGSVGElement, target: SVGElement, from: number): () => Placement {
+  return () => ({
+    avoid: target.getBoundingClientRect(),
+    left: chart.getBoundingClientRect().left + from,
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -293,7 +390,7 @@ function crosshair(
         label: s.label,
         color: s.color,
       }));
-    hoverable(hit, shortDay(day), lines);
+    hoverable(hit, shortDay(day), lines, besideAt(chart, frame, x(i)));
     const show = () =>
       layer.replaceChildren(
         svg('line', {
@@ -357,14 +454,20 @@ export function stackedColumns(spec: TimeChart, width: number): SVGSVGElement {
       height: plotHeight(frame),
       class: 'hit-area',
     });
-    hoverable(hit, shortDay(day), () => [
-      ...spec.series.map((s) => ({
-        value: fullNumber(s.values[i] ?? 0),
-        label: s.label,
-        color: s.color,
-      })),
-      { value: fullNumber(totals[i] ?? 0), label: 'Total' },
-    ]);
+    hoverable(
+      hit,
+      shortDay(day),
+      () => [
+        ...spec.series.map((s) => ({
+          value: fullNumber(s.values[i] ?? 0),
+          label: s.label,
+          color: s.color,
+        })),
+        { value: fullNumber(totals[i] ?? 0), label: 'Total' },
+      ],
+      // Beside the column, clear of its bar.
+      besideAt(chart, frame, x(i) - barWidth / 2, x(i) + barWidth / 2),
+    );
     chart.append(hit);
   });
   return chart;
@@ -408,6 +511,15 @@ export interface BarRow {
   readonly note?: string;
 }
 
+export interface BarColumn {
+  /** Its heading, over the column. */
+  readonly label: string;
+  /** One value per row, as shown. */
+  readonly values: readonly string[];
+  /** How wide it is, in px (72 by default). */
+  readonly width?: number;
+}
+
 export interface BarsSpec {
   readonly label: string;
   readonly series: readonly Pick<Series, 'key' | 'label' | 'color'>[];
@@ -416,18 +528,30 @@ export interface BarsSpec {
   readonly unit: string;
   /** "%" when the values are shares. */
   readonly suffix?: string;
+  /** Columns of figures at the right, after the bars (left out on a narrow card). */
+  readonly columns?: readonly BarColumn[];
+  /** The heading over the bars' totals, when there are columns ("Runs"). */
+  readonly totalLabel?: string;
+  /** False to leave the total off the bar's tip (shares that always add up to 100%). */
+  readonly showTotal?: boolean;
 }
+
+/** Below this width a bar chart leaves its extra columns to the table. */
+const COLUMNS_FROM = 520;
 
 /** Rows of horizontal bars, each split into its series, the total at the tip. */
 export function bars(spec: BarsSpec, width: number): SVGSVGElement {
   const rowHeight = 28;
   const labelWidth = Math.min(200, Math.max(96, Math.round(width * 0.36)));
+  const columns = width >= COLUMNS_FROM ? (spec.columns ?? []) : [];
+  const columnsWidth = columns.reduce((sum, column) => sum + (column.width ?? 72), 0);
+  const head = columns.length > 0 ? 22 : 0;
   const frame: Frame = {
     width,
-    height: spec.rows.length * rowHeight + 8,
+    height: spec.rows.length * rowHeight + 8 + head,
     left: labelWidth + 8,
-    right: 56,
-    top: 4,
+    right: 56 + columnsWidth,
+    top: 4 + head,
     bottom: 4,
   };
   const chart = root(frame, spec.label);
@@ -444,6 +568,19 @@ export function bars(spec: BarsSpec, width: number): SVGSVGElement {
       class: 'baseline',
     }),
   );
+  // The columns' right edges, and their headings.
+  const edges: number[] = [];
+  let edge = width - columnsWidth;
+  for (const column of columns) {
+    edge += column.width ?? 72;
+    edges.push(edge);
+    chart.append(
+      svg('text', { x: edge - 4, y: 14, class: 'col-head', 'text-anchor': 'end' }, [column.label]),
+    );
+  }
+  if (columns.length > 0 && spec.totalLabel) {
+    chart.append(svg('text', { x: frame.left + 6, y: 14, class: 'col-head' }, [spec.totalLabel]));
+  }
   spec.rows.forEach((row, r) => {
     const yMid = frame.top + r * rowHeight + rowHeight / 2;
     const label = svg(
@@ -473,11 +610,22 @@ export function bars(spec: BarsSpec, width: number): SVGSVGElement {
       );
       left += w;
     });
-    chart.append(
-      svg('text', { x: left + 6, y: yMid + 4, class: 'value' }, [
-        `${formatNumber(Math.round((totals[r] ?? 0) * 10) / 10)}${spec.suffix ?? ''}`,
-      ]),
-    );
+    if (spec.showTotal !== false) {
+      chart.append(
+        svg('text', { x: left + 6, y: yMid + 4, class: 'value' }, [
+          `${formatNumber(Math.round((totals[r] ?? 0) * 10) / 10)}${spec.suffix ?? ''}`,
+        ]),
+      );
+    }
+    columns.forEach((column, c) => {
+      chart.append(
+        svg(
+          'text',
+          { x: (edges[c] ?? width) - 4, y: yMid + 4, class: 'value', 'text-anchor': 'end' },
+          [column.values[r] ?? ''],
+        ),
+      );
+    });
     const hit = svg('rect', {
       x: 0,
       y: frame.top + r * rowHeight,
@@ -485,17 +633,28 @@ export function bars(spec: BarsSpec, width: number): SVGSVGElement {
       height: rowHeight,
       class: 'hit-area',
     });
-    hoverable(hit, row.label, () => [
-      ...(spec.series.length > 1
-        ? spec.series.map((s, i) => ({
-            value: `${fullNumber(row.parts[i] ?? 0)}${spec.suffix ?? ''}`,
-            label: s.label,
-            color: s.color,
-          }))
-        : []),
-      { value: `${fullNumber(totals[r] ?? 0)}${spec.suffix ?? ''}`, label: spec.unit },
-      ...(row.note ? [{ value: '', label: row.note }] : []),
-    ]);
+    hoverable(
+      hit,
+      row.label,
+      () => [
+        ...(spec.series.length > 1
+          ? spec.series.map((s, i) => ({
+              value: `${fullNumber(row.parts[i] ?? 0)}${spec.suffix ?? ''}`,
+              label: s.label,
+              color: s.color,
+            }))
+          : []),
+        ...(spec.showTotal !== false
+          ? [{ value: `${fullNumber(totals[r] ?? 0)}${spec.suffix ?? ''}`, label: spec.unit }]
+          : []),
+        ...(spec.columns ?? []).map((column) => ({
+          value: column.values[r] ?? '',
+          label: column.label,
+        })),
+        ...(row.note ? [{ value: '', label: row.note }] : []),
+      ],
+      aboveFrom(chart, hit, frame.left),
+    );
     chart.append(hit);
   });
   return chart;
@@ -512,7 +671,7 @@ export function funnel(
   width: number,
 ): SVGSVGElement {
   const rowHeight = 30;
-  const labelWidth = Math.min(140, Math.max(84, Math.round(width * 0.26)));
+  const labelWidth = Math.min(180, Math.max(110, Math.round(width * 0.34)));
   const frame: Frame = {
     width,
     height: spec.steps.length * rowHeight + 8,
@@ -547,14 +706,19 @@ export function funnel(
       ]),
     );
     const hit = svg('rect', { x: 0, y: y - 5, width, height: rowHeight, class: 'hit-area' });
-    hoverable(hit, step.label, () => [
-      { value: fullNumber(step.value), label: 'installs reached it' },
-      {
-        value: first ? `${Math.round((100 * step.value) / first)}%` : '–',
-        label: 'of those who started',
-      },
-      ...(i > 0 ? [{ value: `${drop}%`, label: 'dropped since the step before' }] : []),
-    ]);
+    hoverable(
+      hit,
+      step.label,
+      () => [
+        { value: fullNumber(step.value), label: 'installs reached it' },
+        {
+          value: first ? `${Math.round((100 * step.value) / first)}%` : '–',
+          label: 'of those who started',
+        },
+        ...(i > 0 ? [{ value: `${drop}%`, label: 'dropped since the step before' }] : []),
+      ],
+      aboveFrom(chart, hit, frame.left),
+    );
     chart.append(hit);
   });
   return chart;
@@ -577,10 +741,13 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
   const count = (node: TreeNode): number =>
     1 + node.children.reduce((sum, child) => sum + count(child), 0);
   const outline = width < 560;
-  const rowHeight = outline ? 38 : 40;
+  // Each node is a box with 10px of padding round 13px label and 12px value lines.
+  const boxHeight = outline ? 34 : 44;
+  const rowHeight = boxHeight + (outline ? 8 : 10);
+  const pad = 10;
   const columnWidth = (width - 8) / 4;
   const indent = 18;
-  const nodeWidth = outline ? 0 : Math.max(60, columnWidth - 18);
+  const nodeWidth = outline ? 0 : Math.max(60, columnWidth - 20);
   const rows = outline ? count(spec.root) : leaves(spec.root);
   const frame: Frame = {
     width,
@@ -627,29 +794,31 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
     box.append(
       svg('rect', {
         x,
-        y: y - 15,
+        y: y - boxHeight / 2,
         width: boxWidth,
-        height: 30,
-        rx: 4,
+        height: boxHeight,
+        rx: 6,
         class: node.event === 'end' ? 'node-box end' : 'node-box',
       }),
     );
     if (outline) {
       // One line: the event, then its share at the right end.
       box.append(
-        svg('text', { x: x + 8, y: y + 4, class: 'node-label' }, [
-          truncate(eventLabel(node.event), boxWidth - 110),
+        svg('text', { x: x + pad, y: y + 5, class: 'node-label' }, [
+          truncate(eventLabel(node.event), boxWidth - 2 * pad - 110, LABEL_CHAR),
         ]),
-        svg('text', { x: x + boxWidth - 8, y: y + 4, class: 'node-value', 'text-anchor': 'end' }, [
-          value,
-        ]),
+        svg(
+          'text',
+          { x: x + boxWidth - pad, y: y + 4, class: 'node-value', 'text-anchor': 'end' },
+          [value],
+        ),
       );
     } else {
       box.append(
-        svg('text', { x: x + 6, y: y - 2, class: 'node-label' }, [
-          truncate(eventLabel(node.event), nodeWidth - 10),
+        svg('text', { x: x + pad, y: y - 3, class: 'node-label' }, [
+          truncate(eventLabel(node.event), nodeWidth - 2 * pad, LABEL_CHAR),
         ]),
-        svg('text', { x: x + 6, y: y + 10, class: 'node-value' }, [value]),
+        svg('text', { x: x + pad, y: y + 14, class: 'node-value' }, [value]),
       );
     }
     const trail = [...path, eventLabel(node.event)];
@@ -662,7 +831,7 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
     chart.append(box);
     let childTop = top;
     for (const child of node.children) {
-      const from = outline ? { x: x + indent / 2, y: y + 15 } : { x: x + nodeWidth, y };
+      const from = outline ? { x: x + indent / 2, y: y + boxHeight / 2 } : { x: x + nodeWidth, y };
       place(child, level + 1, childTop, from, trail);
       childTop += leaves(child) * rowHeight;
     }
@@ -681,8 +850,11 @@ export function eventLabel(event: string): string {
   return kind === 'command' ? name : `${name} (${kind})`;
 }
 
-/** `text` cut to about `width` pixels of 12px type, with an ellipsis. */
-function truncate(text: string, width: number): string {
-  const fits = Math.max(4, Math.floor(width / 6.6));
+/** About how wide a character of a node's 13px label is, in px. */
+const LABEL_CHAR = 7.2;
+
+/** `text` cut to about `width` pixels of 12px type (or `char` px a character), with an ellipsis. */
+function truncate(text: string, width: number, char = 6.6): string {
+  const fits = Math.max(4, Math.floor(width / char));
   return text.length <= fits ? text : `${text.slice(0, fits - 1)}…`;
 }

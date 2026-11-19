@@ -14,6 +14,7 @@ import agents from '../queries/agents.sql';
 import commands from '../queries/commands.sql';
 import feedback from '../queries/feedback.sql';
 import firstrun from '../queries/firstrun.sql';
+import freshness from '../queries/freshness.sql';
 import gaveUp from '../queries/gave-up.sql';
 import health from '../queries/health.sql';
 import next from '../queries/next.sql';
@@ -21,6 +22,7 @@ import platforms from '../queries/platforms.sql';
 import settings from '../queries/settings.sql';
 import shortcuts from '../queries/shortcuts.sql';
 import sizes from '../queries/sizes.sql';
+import starts from '../queries/starts.sql';
 import sync from '../queries/sync.sql';
 import unused from '../queries/unused.sql';
 import versions from '../queries/versions.sql';
@@ -35,6 +37,7 @@ export const NAMED_QUERIES = {
   commands,
   feedback,
   firstrun,
+  freshness,
   'gave-up': gaveUp,
   health,
   next,
@@ -42,6 +45,7 @@ export const NAMED_QUERIES = {
   settings,
   shortcuts,
   sizes,
+  starts,
   sync,
   unused,
   versions,

@@ -150,16 +150,56 @@ describe('what they say', () => {
     expect(rows.find((row) => row.depth === 3)).toBeDefined();
   });
 
-  it('agents splits MCP tools by agent client and counts the successes', async () => {
-    const rows = await runQuery<{ kind: string; agent: string; calls: number; ok: number }>(
-      env.DB,
-      'agents',
-      ALL,
-    );
+  it('agents splits MCP tools by agent client and counts each result', async () => {
+    type AgentRow = Record<'ok' | 'invalid' | 'not_found' | 'conflict' | 'failed', number> & {
+      kind: string;
+      agent: string;
+      calls: number;
+    };
+    const rows = await runQuery<AgentRow>(env.DB, 'agents', ALL);
     const agents = new Set(rows.filter((row) => row.kind === 'tool').map((row) => row.agent));
     expect(agents).toEqual(new Set(['claude-code', 'codex']));
-    for (const row of rows) expect(row.ok).toBeLessThanOrEqual(row.calls);
+    // Every call has exactly one result; a CLI exit maps to the same five.
+    for (const row of rows) {
+      expect(row.ok + row.invalid + row.not_found + row.conflict + row.failed).toBe(row.calls);
+    }
     expect(rows.some((row) => row.ok < row.calls)).toBe(true);
+  });
+
+  it('versions splits each version by client', async () => {
+    const rows = await runQuery<{ version: string; client: string; installs: number }>(
+      env.DB,
+      'versions',
+      ALL,
+    );
+    const mac = rows.find((row) => row.version === '1.3.0' && row.client === 'mac');
+    expect(mac?.installs).toBe(8);
+    expect(new Set(rows.map((row) => row.client))).toEqual(
+      new Set(['mac', 'android', 'cli', 'mcp']),
+    );
+  });
+
+  it('starts counts each event in the period, the most frequent first', async () => {
+    const rows = await runQuery<{ kind: string; name: string; events: number }>(
+      env.DB,
+      'starts',
+      ALL,
+    );
+    const counts = rows.map((row) => row.events);
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+    expect(
+      rows.find((row) => row.kind === 'command' && row.name === 'app.palette')?.events,
+    ).toBeGreaterThan(0);
+  });
+
+  it('freshness says when the newest event arrived and how far the rollup reached', async () => {
+    const [row] = await runQuery<{ received_at: number; rolled_up_through: string }>(
+      env.DB,
+      'freshness',
+      ALL,
+    );
+    expect(row!.received_at).toBeGreaterThan(0);
+    expect(row!.rolled_up_through).toBe(dayOf(NOW - 86_400_000));
   });
 
   it('unused lists catalogued names nothing ran', async () => {

@@ -17,6 +17,12 @@ import {
   isCatalogued,
 } from '@penmoss/core/analytics';
 import { runQuery, type QueryName, type QueryParams } from '@penmoss/telemetry/queries';
+import shortcutsContract from '../../android/contract/shortcuts-v1.json';
+
+/** Each command's default combinations, from the shortcut map every client shares. */
+export const DEFAULT_KEYS: ReadonlyMap<string, readonly string[]> = new Map(
+  shortcutsContract.commands.map((command) => [command.id, command.keys]),
+);
 
 export const DAYS = [7, 30, 90, 365, 395] as const;
 /** First Run and Paths read events, not rollups: at most this many days. */
@@ -146,7 +152,7 @@ export async function viewData(
         run('actors'),
         run('versions'),
       ]);
-      return { totals: totals[0] ?? {}, active, actors, versions: versions.slice(0, 10) };
+      return { totals: totals[0] ?? {}, active, actors, versions: versions.slice(0, 20) };
     }
     case 'commands': {
       const [commands, shortcuts, unused] = await Promise.all([
@@ -154,7 +160,14 @@ export async function viewData(
         run('shortcuts'),
         run('unused'),
       ]);
-      return { commands, shortcuts, unused };
+      return {
+        commands,
+        shortcuts: shortcuts.map((row) => ({
+          ...row,
+          default_keys: (DEFAULT_KEYS.get(String(row['name'])) ?? []).join(' or '),
+        })),
+        unused,
+      };
     }
     case 'firstrun': {
       const [steps, gaveUp] = await Promise.all([run('firstrun', raw), run('gave-up', raw)]);
@@ -166,9 +179,14 @@ export async function viewData(
       };
     }
     case 'paths': {
-      const options = Object.entries(CATALOGUE).flatMap(([kind, names]) =>
-        names.map((name) => `${kind}:${name}`),
+      // Every catalogued event, with how often it occurred in the period, most first.
+      const seen = new Map(
+        (await run('starts', raw)).map((row) => [`${row['kind']}:${row['name']}`, row['events']]),
       );
+      const options = Object.entries(CATALOGUE)
+        .flatMap(([kind, names]) => names.map((name) => `${kind}:${name}`))
+        .map((event) => ({ event, events: Number(seen.get(event) ?? 0) }))
+        .sort((a, b) => b.events - a.events);
       if (!filters.start) return { ...raw, options, tree: null };
       const [startKind = '', startName = ''] = filters.start.split(/:(.*)/s);
       const rows = await run('next', { ...raw, startKind, startName });
@@ -203,7 +221,28 @@ export async function viewData(
         channel: '',
         version: '',
       });
-      return { versions: versions.map((row) => row['version']) };
+      return { versions: [...new Set(versions.map((row) => row['version']))] };
     }
   }
+}
+
+/** When the newest event arrived (ms, or null) and the last day the nightly rollup reached. */
+export async function freshness(
+  db: D1Database,
+  now: number,
+): Promise<{ receivedAt: number | null; rolledUpThrough: string | null }> {
+  const [row] = await runQuery<Row>(db, 'freshness', {
+    days: 1,
+    client: '',
+    actor: '',
+    channel: '',
+    version: '',
+    today: todayOf(now),
+  });
+  const received = row?.['received_at'];
+  const rolled = row?.['rolled_up_through'];
+  return {
+    receivedAt: typeof received === 'number' ? received : null,
+    rolledUpThrough: typeof rolled === 'string' ? rolled : null,
+  };
 }
