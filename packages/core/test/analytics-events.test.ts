@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   CATALOGUE,
+  CLI_FLAGS,
   CLICK_NAMES,
   isCatalogued,
   SETTING_NAMES,
@@ -351,6 +352,19 @@ describe('eventProblem', () => {
       'prop flags value',
     );
     expect(eventProblem({ ...cli, props: { exit: ['OK'] } })).toBe('prop exit value');
+  });
+
+  it('takes only the CLI’s own flag names, never another lower-case word', () => {
+    const cli = VALID.cli;
+    const flags = (list: unknown) => eventProblem({ ...cli, props: { ...cli.props, flags: list } });
+    expect(flags(['json', 'notebook', 'no-sync', 'help'])).toBeNull();
+    expect(flags([])).toBeNull();
+    for (const word of ['zebracanary', 'zebracanary-title-q7', 'my-secret', 'toString', 'Json']) {
+      expect(flags([word]), word).toBe('prop flags value');
+      expect(flags(['json', word]), word).toBe('prop flags value');
+    }
+    for (const name of CLI_FLAGS) expect(name).toMatch(/^[a-z][a-z0-9-]{0,31}$/);
+    expect(new Set(CLI_FLAGS).size).toBe(CLI_FLAGS.length);
   });
 
   it('refuses a prop named after one of Object’s own', () => {

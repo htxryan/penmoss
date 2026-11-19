@@ -819,6 +819,67 @@ export const CLI_NAMES: readonly string[] = [
   'version',
 ];
 
+/**
+ * The CLI's flag names (packages/cli/src: every command's flags, the notebook commands' and the
+ * global ones). A `cli` event's `flags` names only these, never a value or a word typed after
+ * `--`; `packages/cli/test/analytics.test.ts` checks every flag a command takes is here.
+ */
+export const CLI_FLAGS: readonly string[] = [
+  'after',
+  'agent',
+  'all',
+  'allow-empty',
+  'alt',
+  'append',
+  'author-email',
+  'author-name',
+  'base',
+  'before',
+  'body',
+  'branch',
+  'channel',
+  'client',
+  'date',
+  'dir',
+  'folder',
+  'force',
+  'forget',
+  'full',
+  'git-author',
+  'heading',
+  'help',
+  'json',
+  'limit',
+  'merge',
+  'mode',
+  'name',
+  'no-sign',
+  'no-sync',
+  'notebook',
+  'parents',
+  'print',
+  'recent',
+  'remove',
+  'replace',
+  'reset',
+  'restore',
+  'revert',
+  'save',
+  'scope',
+  'section',
+  'sign',
+  'state',
+  'tag',
+  'tags',
+  'text',
+  'token',
+  'token-user',
+  'version',
+  'wait',
+  'weekly',
+  'with',
+];
+
 /** The local MCP server's tools (packages/git-notebook/src/local/tools/definitions.ts). */
 export const TOOL_NAMES: readonly string[] = [
   'search_notes',

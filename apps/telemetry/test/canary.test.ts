@@ -36,10 +36,11 @@ const KINDS: Record<string, { name: string; props: Record<string, unknown> }> = 
   dialog: { name: 'search', props: { action: 'open', open: '<1s' } },
   click: { name: 'privacy.share.on', props: { state: 'on' } },
   menu: { name: 'copy', props: { source: 'menubar' } },
+  setting: { name: 'theme.mode', props: { value: 'dark' } },
   firstrun: { name: 'github', props: { result: 'failed', error: 'auth' } },
   feedback: { name: 'sent', props: { type: 'bug', priority: 2, screenshots: '1' } },
   sync: { name: 'pass', props: { result: 'ok', took: '<1s', changed: '2–4' } },
-  cli: { name: 'search', props: { exit: 'OK', took: '<1s', tty: true } },
+  cli: { name: 'search', props: { flags: ['json'], exit: 'OK', took: '<1s', tty: true } },
   tool: { name: 'search_notes', props: { agentClient: 'codex', result: 'ok', took: '<1s' } },
 };
 
@@ -62,6 +63,9 @@ function attempts(text: string): Record<string, unknown>[] {
   }
   events.push({ ...BASE, kind: 'command', name: 'app.palette', props: { keys: `Mod+${text}` } });
   events.push({ ...BASE, kind: 'cli', name: 'search', props: { flags: [`--${text}`] } });
+  // A flag's name and a setting's word are each from a list, so a lower-case word is refused too.
+  events.push({ ...BASE, kind: 'cli', name: 'search', props: { flags: ['json', text] } });
+  events.push({ ...BASE, kind: 'setting', name: 'timeZone', props: { value: text } });
   return events;
 }
 

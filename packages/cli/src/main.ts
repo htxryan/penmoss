@@ -79,7 +79,7 @@ export const NOTEBOOK_COMMANDS: ReadonlySet<string> = new Set([
 /** Reads sync first only; every other command syncs before its change too, and after it. */
 const SYNC_FIRST: ReadonlySet<string> = new Set(['search', 'cat', 'ls', 'open']);
 
-const NOTEBOOK_FLAGS: readonly FlagSpec[] = [
+export const NOTEBOOK_FLAGS: readonly FlagSpec[] = [
   {
     name: 'notebook',
     type: 'string',
@@ -96,7 +96,7 @@ const NOTEBOOK_FLAGS: readonly FlagSpec[] = [
 const flagsOf = (command: Command): readonly FlagSpec[] =>
   NOTEBOOK_COMMANDS.has(command.name) ? [...command.flags, ...NOTEBOOK_FLAGS] : command.flags;
 
-const GLOBAL_FLAGS: readonly FlagSpec[] = [
+export const GLOBAL_FLAGS: readonly FlagSpec[] = [
   {
     name: 'json',
     type: 'boolean',

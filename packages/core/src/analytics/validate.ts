@@ -5,7 +5,7 @@
  * names, a normalised key combination or one of the words a setting may be (SETTING_VALUES).
  */
 import { AGENT_CLIENTS } from './actors';
-import { isCatalogued, isSettingWord } from './catalogue';
+import { CLI_FLAGS, isCatalogued, isSettingWord } from './catalogue';
 import {
   ACTORS,
   BATCH_VERSION,
@@ -43,14 +43,13 @@ export const KEYS_PATTERN =
   /^(?:(?:Mod|Ctrl|Alt|Shift|Meta|Cmd|Option)\+){0,4}(?:[A-Z0-9]|F\d{1,2}|[\x5B\]\\;',./`=-]|Enter|Escape|Tab|Space|Backspace|Delete|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown)$/;
 const keys: Check = (value) => typeof value === 'string' && KEYS_PATTERN.test(value);
 
-/** A CLI flag's name, never its value. */
-export const FLAG_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
 /** The most flags a CLI event names. */
 export const MAX_FLAGS = 16;
+/** A list of the CLI's own flag names (CLI_FLAGS), never a value or any other word. */
 const flags: Check = (value) =>
   Array.isArray(value) &&
   value.length <= MAX_FLAGS &&
-  value.every((flag) => typeof flag === 'string' && FLAG_PATTERN.test(flag));
+  value.every((flag) => typeof flag === 'string' && CLI_FLAGS.includes(flag));
 
 /** The largest whole number a setting's value may be. */
 export const MAX_SETTING_NUMBER = 10_000_000;
@@ -92,7 +91,7 @@ export const FIRSTRUN_ERRORS = [
 /**
  * What a prop may hold, as data (the Kotlin twin reads it from `analytics-v1.json`): one of a
  * list; a boolean; a count or a duration bucket; a key combination (KEYS_PATTERN); a list of
- * flag names (FLAG_PATTERN, at most MAX_FLAGS); a setting's value (`settingValue`, by the
+ * the CLI's flag names (CLI_FLAGS, at most MAX_FLAGS); a setting's value (`settingValue`, by the
  * event's name); or a catalogued screen.
  */
 export type PropSpec =

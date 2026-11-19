@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  CLI_FLAGS,
   CLI_NAMES,
   eventProblem,
   isCatalogued,
@@ -24,7 +25,7 @@ import { AnalyticsStore, wireEvent } from '@penmoss/core/analytics/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToolRecorder } from '../src/analytics';
 import type { FlagSpec } from '../src/args';
-import { COMMANDS, NOTEBOOK_COMMANDS } from '../src/main';
+import { COMMANDS, GLOBAL_FLAGS, NOTEBOOK_COMMANDS, NOTEBOOK_FLAGS } from '../src/main';
 import type { AnalyticsIo } from '../src/io';
 import { channelOf, macosVersionOf, nodeAnalytics } from '../src/node-analytics';
 import { HANDSHAKE, machine as machineAt, MemoryHosts, rpc, testRoot } from './support/machine';
@@ -623,6 +624,17 @@ describe('the catalogue knows every command, flag and exit (AC15)', () => {
         expect(eventProblem(event), `${command.name}: ${flags.join(', ')}`).toBeNull();
       }
     }
+  });
+
+  it('the catalogue lists every flag a command takes, and no flag none takes', () => {
+    const taken = new Set(
+      COMMANDS.flatMap((command) => [
+        ...command.flags,
+        ...(NOTEBOOK_COMMANDS.has(command.name) ? NOTEBOOK_FLAGS : []),
+        ...GLOBAL_FLAGS,
+      ]).map((flag) => flag.name),
+    );
+    expect([...taken].sort()).toEqual([...CLI_FLAGS].sort());
   });
 });
 
