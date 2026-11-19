@@ -70,6 +70,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.HistoryAuthor
 import app.penmoss.engine.api.NoteVersion
 import app.penmoss.engine.api.VersionDetail
@@ -131,7 +133,7 @@ fun HistoryScreen(
                 TopAppBar(
                     title = { Text("Version History") },
                     navigationIcon = {
-                        IconButton(onClick = { if (detailShown) open = false else onBack() }) {
+                        IconButton(onClick = trackedClick("nav.back") { if (detailShown) open = false else onBack() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     },
@@ -170,17 +172,19 @@ fun HistoryScreen(
     }
     ui.confirming?.let { confirming ->
         val whenOf = ui.history?.versions?.firstOrNull { it.id == confirming }?.createdAt?.takeIf { it > 0 }
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = onDismissConfirm,
             title = { Text("Restore This Version?") },
             text = { Text("The note goes back to how it was ${shortWhen(whenOf)}, as a new change. Edits made since stay in a version of their own.") },
             confirmButton = {
-                TextButton(onClick = { onRestore(confirming) }, modifier = Modifier.testTag("confirmRestore")) { Text("Restore") }
+                TextButton(onClick = trackedClick("history.restore.confirm", tracked.done { onRestore(confirming) }), modifier = Modifier.testTag("confirmRestore")) { Text("Restore") }
             },
-            dismissButton = { TextButton(onClick = onDismissConfirm) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = trackedClick("history.restore.cancel", onDismissConfirm)) { Text("Cancel") } },
         )
     }
     if (ui.conflicts.isNotEmpty()) {
+        val tracked = rememberTrackedDialog("revertConflicts")
         AlertDialog(
             onDismissRequest = onConflictsDismissed,
             title = { Text("Some Changes Overlapped") },
@@ -201,7 +205,7 @@ fun HistoryScreen(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = onConflictsDismissed) { Text("OK") } },
+            confirmButton = { TextButton(onClick = trackedClick("history.conflicts.ok", tracked.done(onConflictsDismissed))) { Text("OK") } },
         )
     }
 }
@@ -278,7 +282,7 @@ private fun NowRow(ui: HistoryUi, about: Boolean, onAbout: () -> Unit, onSaveNow
             overflow = TextOverflow.Ellipsis,
         )
         TextButton(
-            onClick = onSaveNow,
+            onClick = trackedClick("history.save-version", onSaveNow),
             enabled = !ui.busy && ui.history != null,
             modifier = Modifier.testTag("saveVersion"),
             contentPadding = PaddingValues(horizontal = 8.dp),
@@ -287,7 +291,7 @@ private fun NowRow(ui: HistoryUi, about: Boolean, onAbout: () -> Unit, onSaveNow
             Spacer(Modifier.width(6.dp))
             Text("Save Version", maxLines = 1, softWrap = false)
         }
-        IconButton(onClick = onAbout, modifier = Modifier.testTag("historyAbout").semantics { selected = about }) {
+        IconButton(onClick = trackedClick("history.about", onAbout), modifier = Modifier.testTag("historyAbout").semantics { selected = about }) {
             Glyph("info", "About Versions", 20)
         }
     }
@@ -301,7 +305,7 @@ private fun VersionRow(entry: NoteVersion, selected: Boolean, onOpen: () -> Unit
     Row(
         Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
             .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-            .clickable(role = Role.Button, onClick = onOpen)
+            .clickable(role = Role.Button, onClick = trackedClick("history.version", onOpen))
             .padding(start = 16.dp, end = 16.dp)
             .testTag("history-${entry.id}"),
         verticalAlignment = Alignment.CenterVertically,
@@ -371,7 +375,7 @@ private fun VersionScreen(
     Column(Modifier.fillMaxSize().testTag("historyDetail")) {
         HorizontalDivider()
         Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack, modifier = Modifier.testTag("historyBack"), contentPadding = PaddingValues(start = 8.dp, end = 12.dp)) {
+            TextButton(onClick = trackedClick("history.view.back", onBack), modifier = Modifier.testTag("historyBack"), contentPadding = PaddingValues(start = 8.dp, end = 12.dp)) {
                 Glyph("chevron-left", null, 20)
                 Spacer(Modifier.width(4.dp))
                 Text("Versions", maxLines = 1, softWrap = false)
@@ -379,7 +383,7 @@ private fun VersionScreen(
             Spacer(Modifier.weight(1f))
             if (detail != null) {
                 IconButton(
-                    onClick = { onToggleWhole(!ui.showWhole) },
+                    onClick = trackedClick("history.view.mode") { onToggleWhole(!ui.showWhole) },
                     modifier = Modifier.testTag("historyToggleWhole"),
                 ) {
                     if (ui.showWhole) Glyph("file-diff", "Show Changes", 20) else Glyph("file-text", "Show Whole Version", 20)
@@ -438,7 +442,7 @@ private fun VersionScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Button(
-                onClick = onAskRestore,
+                onClick = trackedClick("history.view.restore", onAskRestore),
                 enabled = !ui.busy,
                 modifier = Modifier.weight(1f).testTag("restoreVersion").semantics { contentDescription = "Restore This Version" },
                 contentPadding = PaddingValues(horizontal = 8.dp),
@@ -446,14 +450,14 @@ private fun VersionScreen(
             // Not on a move to Trash or its restore: Trash undoes those (N7, A654, A1575).
             if (revertible(version)) {
                 OutlinedButton(
-                    onClick = onRevert,
+                    onClick = trackedClick("history.view.revert", onRevert),
                     enabled = !ui.busy,
                     modifier = Modifier.weight(1f).testTag("revertVersion").semantics { contentDescription = "Revert This Edit" },
                     contentPadding = PaddingValues(horizontal = 8.dp),
                 ) { Action("undo-2", "Revert") }
             }
             OutlinedButton(
-                onClick = { detail?.let(onCopy) },
+                onClick = trackedClick("history.view.copy") { detail?.let(onCopy) },
                 enabled = detail != null,
                 modifier = Modifier.weight(1f).testTag("copyVersion").semantics { contentDescription = "Copy Text" },
                 contentPadding = PaddingValues(horizontal = 8.dp),

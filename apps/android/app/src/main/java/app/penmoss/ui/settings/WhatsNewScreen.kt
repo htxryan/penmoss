@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import app.penmoss.updates.NotesBlock
 import app.penmoss.updates.NotesView
 import app.penmoss.updates.noteLine
@@ -50,7 +51,7 @@ fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Un
                 view.current?.let { Block(it, "whatsNewCurrent") }
                 if (view.earlier.isNotEmpty()) {
                     OutlinedButton(
-                        onClick = { earlier = !earlier },
+                        onClick = trackedClick("settings.updates.whats-new.earlier") { earlier = !earlier },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("whatsNewEarlierToggle"),
                     ) { Text(if (earlier) "Hide Earlier Versions" else "Earlier Versions") }
                     if (earlier) {
@@ -92,7 +93,7 @@ private fun VersionCard(version: String) {
 private fun Missing(text: String, onOpenReleases: () -> Unit) {
     Help(text, Modifier.testTag("whatsNewMissing"))
     Row(Modifier.padding(horizontal = 8.dp)) {
-        TextButton(onClick = onOpenReleases, modifier = Modifier.testTag("whatsNewReleases")) { Text("Open Releases on GitHub") }
+        TextButton(onClick = trackedClick("settings.whats-new.open-releases", onOpenReleases), modifier = Modifier.testTag("whatsNewReleases")) { Text("Open Releases on GitHub") }
     }
 }
 

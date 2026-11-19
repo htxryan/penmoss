@@ -48,6 +48,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.CharacterEntry
 import app.penmoss.engine.settings.Characters
 import app.penmoss.engine.settings.GlyphSearch
@@ -140,8 +142,10 @@ fun CharacterPicker(
                 }
         }
     }
+    val tracked = rememberTrackedDialog("symbolPicker")
     val pick = { glyph: String ->
         if (refusal(glyph) == null) {
+            tracked.done()
             recents.add(glyph)
             onPick(glyph)
         }
@@ -161,7 +165,7 @@ fun CharacterPicker(
                         style = MaterialTheme.roles.dialogTitle,
                         modifier = Modifier.weight(1f).semantics { heading() },
                     )
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Close") }
+                    IconButton(onClick = trackedClick("dialog.close", onDismiss)) { Icon(Icons.Default.Close, contentDescription = "Close") }
                 }
                 OutlinedTextField(
                     value = query,
@@ -204,7 +208,7 @@ fun CharacterPicker(
                                         .size(48.dp)
                                         .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, RectangleShape)
                                         .border(1.dp, if (chosen) MaterialTheme.colorScheme.primary else Color.Transparent, RectangleShape)
-                                        .selectable(selected = chosen, enabled = refused == null, role = Role.Button) { pick(cell.glyph) }
+                                        .selectable(selected = chosen, enabled = refused == null, role = Role.Button, onClick = trackedClick("symbol-picker.symbol") { pick(cell.glyph) })
                                         .testTag("character-${cell.glyph}")
                                         .semantics { contentDescription = if (refused != null) "${cell.label}, $refused" else cell.label },
                                     contentAlignment = Alignment.Center,

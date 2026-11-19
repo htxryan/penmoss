@@ -51,6 +51,8 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.CommentDraft
 import app.penmoss.editor.CommentsState
 import app.penmoss.editor.NoteComments
@@ -196,7 +198,7 @@ internal fun CommentsSheet(
                         style = MaterialTheme.typography.titleLarge,
                     )
                     if (draft == null) {
-                        TextButton(onClick = onNewComment, enabled = editable, modifier = Modifier.testTag("commentNew")) {
+                        TextButton(onClick = trackedClick("comments.new", onNewComment), enabled = editable, modifier = Modifier.testTag("commentNew")) {
                             Text("New Comment")
                         }
                     }
@@ -206,7 +208,7 @@ internal fun CommentsSheet(
             if (draft == null) {
                 item {
                     TextButton(
-                        onClick = onNewNoteComment,
+                        onClick = trackedClick("comments.new-note", onNewNoteComment),
                         enabled = editable,
                         modifier = Modifier.padding(start = 12.dp).testTag("commentNewNote"),
                     ) { Text("Add Note Comment") }
@@ -237,13 +239,13 @@ internal fun CommentsSheet(
                 Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = filter == ThreadStatus.OPEN,
-                        onClick = { filter = ThreadStatus.OPEN },
+                        onClick = trackedClick("comments.filter.open") { filter = ThreadStatus.OPEN },
                         label = { Text("Open ${state.open}") },
                         modifier = Modifier.testTag("commentsOpen"),
                     )
                     FilterChip(
                         selected = filter == ThreadStatus.RESOLVED,
-                        onClick = { filter = ThreadStatus.RESOLVED },
+                        onClick = trackedClick("comments.filter.resolved") { filter = ThreadStatus.RESOLVED },
                         label = { Text("Resolved ${state.resolved}") },
                         modifier = Modifier.testTag("commentsResolved"),
                     )
@@ -299,17 +301,18 @@ internal fun CommentsSheet(
         )
     }
     deleting?.let { threadId ->
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { deleting = null },
             title = { Text("Delete this thread?") },
             text = { Text("Its comments are deleted on every device. To keep them, resolve it instead.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = trackedClick("comments.thread.delete.confirm", tracked.done {
                     deleting = null
                     onDeleteThread(threadId)
-                }, modifier = Modifier.testTag("commentDeleteConfirm")) { Text("Delete") }
+                }), modifier = Modifier.testTag("commentDeleteConfirm")) { Text("Delete") }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = trackedClick("comments.thread.delete.cancel") { deleting = null }) { Text("Cancel") } },
         )
     }
 }
@@ -372,7 +375,7 @@ private fun Composer(
         )
         // Send to has its own line: a session's name can be long, and on a phone it squeezed
         // Comment into a narrow column with no label (A1096).
-        TextButton(onClick = onSendTo, modifier = Modifier.testTag("commentDraftSendTo")) {
+        TextButton(onClick = trackedClick("comments.send-to", onSendTo), modifier = Modifier.testTag("commentDraftSendTo")) {
             Text(
                 target?.let { "Send to ${it.label}" } ?: "Send to…",
                 maxLines = 2,
@@ -380,9 +383,9 @@ private fun Composer(
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onCancel, modifier = Modifier.testTag("commentCancel")) { Text("Cancel") }
+            TextButton(onClick = trackedClick("comments.composer.cancel", onCancel), modifier = Modifier.testTag("commentCancel")) { Text("Cancel") }
             Button(
-                onClick = { if (onCreate(body)) body = "" },
+                onClick = trackedClick("comments.new.send") { if (onCreate(body)) body = "" },
                 enabled = NoteComments.usable(body) != null,
                 modifier = Modifier.testTag("commentCreate"),
             ) { Text("Comment") }
@@ -421,7 +424,7 @@ private fun ThreadCard(
         Column(
             Modifier
                 .fillMaxWidth()
-                .selectable(selected = active, onClick = onSelect, role = Role.Button)
+                .selectable(selected = active, onClick = trackedClick("comments.quote", onSelect), role = Role.Button)
                 .testTag("commentQuote-${thread.id}"),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -439,7 +442,7 @@ private fun ThreadCard(
         }
         // Not sent (the session is gone, A1062): pick another, as the Mac offers.
         if (editable && NoteComments.sendAgain(thread)) {
-            TextButton(onClick = onSendTo, modifier = Modifier.testTag("commentSendAgain-${thread.id}")) { Text("Send to again") }
+            TextButton(onClick = trackedClick("comments.send-again", onSendTo), modifier = Modifier.testTag("commentSendAgain-${thread.id}")) { Text("Send to again") }
         }
         thread.comments.forEachIndexed { index, comment ->
             if (index > 0) HorizontalDivider()
@@ -479,17 +482,17 @@ private fun ThreadCard(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (thread.status == ThreadStatus.OPEN) {
                     TextButton(
-                        onClick = { if (onReply(reply)) reply = "" },
+                        onClick = trackedClick("comments.reply.send") { if (onReply(reply)) reply = "" },
                         enabled = NoteComments.usable(reply) != null,
                         modifier = Modifier.testTag("commentSendReply-${thread.id}"),
                     ) { Text("Reply") }
-                    TextButton(onClick = { onStatus(ThreadStatus.RESOLVED) }, modifier = Modifier.testTag("commentResolve-${thread.id}")) { Text("Resolve") }
+                    TextButton(onClick = trackedClick("comments.resolve") { onStatus(ThreadStatus.RESOLVED) }, modifier = Modifier.testTag("commentResolve-${thread.id}")) { Text("Resolve") }
                 } else {
-                    TextButton(onClick = { onStatus(ThreadStatus.OPEN) }, modifier = Modifier.testTag("commentReopen-${thread.id}")) { Text("Reopen") }
+                    TextButton(onClick = trackedClick("comments.reopen") { onStatus(ThreadStatus.OPEN) }, modifier = Modifier.testTag("commentReopen-${thread.id}")) { Text("Reopen") }
                 }
-                TextButton(onClick = onSendTo, modifier = Modifier.testTag("commentSendTo-${thread.id}")) { Text("Send to…") }
+                TextButton(onClick = trackedClick("comments.send-to", onSendTo), modifier = Modifier.testTag("commentSendTo-${thread.id}")) { Text("Send to…") }
                 // The web's name for it (T39 pass 3, A909).
-                TextButton(onClick = onDeleteThread, modifier = Modifier.testTag("commentDeleteThread-${thread.id}")) { Text("Delete Thread") }
+                TextButton(onClick = trackedClick("comments.thread.delete", onDeleteThread), modifier = Modifier.testTag("commentDeleteThread-${thread.id}")) { Text("Delete Thread") }
             }
         }
     }
@@ -533,9 +536,9 @@ private fun CommentItem(
                 modifier = Modifier.fillMaxWidth().testTag("commentEditBody-${comment.id}"),
             )
             Row {
-                TextButton(onClick = onCancelEdit) { Text("Cancel") }
+                TextButton(onClick = trackedClick("comments.edit.cancel", onCancelEdit)) { Text("Cancel") }
                 TextButton(
-                    onClick = { onEdit(body.text) },
+                    onClick = trackedClick("comments.edit.save") { onEdit(body.text) },
                     enabled = NoteComments.usable(body.text) != null,
                     modifier = Modifier.testTag("commentSave-${comment.id}"),
                 ) { Text("Save") }
@@ -554,11 +557,11 @@ private fun CommentItem(
             if (actions) {
                 Row {
                     if (NoteComments.canEdit(comment)) {
-                        TextButton(onClick = onStartEdit, modifier = Modifier.testTag("commentEdit-${comment.id}")) { Text("Edit") }
+                        TextButton(onClick = trackedClick("comments.edit", onStartEdit), modifier = Modifier.testTag("commentEdit-${comment.id}")) { Text("Edit") }
                     }
                     if (canDelete) {
                         // An agent's comment removed is its undo (A779).
-                        TextButton(onClick = onDelete, modifier = Modifier.testTag("commentDelete-${comment.id}")) {
+                        TextButton(onClick = trackedClick("comments.remove", onDelete), modifier = Modifier.testTag("commentDelete-${comment.id}")) {
                             Text(if (comment.author.agent) "Remove" else "Delete")
                         }
                     }
@@ -584,6 +587,7 @@ internal fun SendToDialog(
     onPick: (CommentTarget?) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val tracked = rememberTrackedDialog("sendTo")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Send to…") },
@@ -594,7 +598,7 @@ internal fun SendToDialog(
                     item {
                         Column {
                             Text(problem, style = MaterialTheme.typography.bodyMedium)
-                            TextButton(onClick = onRetry) { Text("Try Again") }
+                            TextButton(onClick = trackedClick("comments.send-to.retry", onRetry)) { Text("Try Again") }
                         }
                     }
                 }
@@ -604,7 +608,8 @@ internal fun SendToDialog(
                         selected = current == null,
                         dimmed = false,
                         tag = "sendToNone",
-                    ) { onPick(null) }
+                        onClick = tracked.done { onPick(null) },
+                    )
                 }
                 val offered = ui.sessions?.offered
                 if (offered != null && offered.isEmpty()) {
@@ -618,20 +623,18 @@ internal fun SendToDialog(
                 }
                 items(offered.orEmpty(), key = { "session-${it.key}" }) { session ->
                     val selected = current?.writer == session.writer && current.session == session.key
-                    TargetRow(sessionRow(session, now), selected, dimmed = !session.active, tag = "sendTo-${session.key}") {
-                        onPick(targetOf(session))
-                    }
+                    TargetRow(sessionRow(session, now), selected, dimmed = !session.active, tag = "sendTo-${session.key}", onClick = tracked.done { onPick(targetOf(session)) })
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        confirmButton = { TextButton(onClick = trackedClick("dialog.close", onDismiss)) { Text("Close") } },
     )
 }
 
 @Composable
 private fun TargetRow(title: String, selected: Boolean, dimmed: Boolean, tag: String, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onClick).testTag(tag),
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = trackedClick("comments.send-to.pick", onClick)).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = null)

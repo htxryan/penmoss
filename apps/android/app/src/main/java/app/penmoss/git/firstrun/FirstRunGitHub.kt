@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import app.penmoss.feedback.SignInState
 import app.penmoss.ui.common.roles
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -195,7 +196,7 @@ internal fun GitHubAccess(
                             style = MaterialTheme.roles.pageTitle,
                         )
                         app.penmoss.ui.common.IconButton(
-                            onClick = { deps.copy(state.userCode) },
+                            onClick = trackedClick("settings.github.sign-in.copy-code") { deps.copy(state.userCode) },
                             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).testTag("github-signin-copy"),
                         ) { LucideGlyph("copy", contentDescription = "Copy Code") }
                     }

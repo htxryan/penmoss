@@ -40,6 +40,7 @@ fun TipIconButton(
         tooltip = { PlainTooltip { Text(label) } },
         state = rememberTooltipState(),
     ) {
+        // untracked: a pass-through; every caller of TipIconButton passes its own trackedClick
         IconButton(onClick = onClick, enabled = enabled, modifier = modifier) {
             val drawn = @Composable {
                 Icon(icon, contentDescription = said, tint = if (tint == Color.Unspecified) LocalContentColor.current else tint)

@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.WebPictureSetting
 
 /** A size for people, as core's `formatBytes`: `512 B`, `1.5 KB`, `20 MB`. */
@@ -73,13 +75,13 @@ fun StorageScreen(
                 )
             },
             trailingContent = {
-                TextButton(onClick = { clearing = true }, enabled = (use?.webPictures ?: 0) > 0, modifier = Modifier.testTag("clearWebPictures")) {
+                TextButton(onClick = trackedClick("settings.storage.clear-web-pictures") { clearing = true }, enabled = (use?.webPictures ?: 0) > 0, modifier = Modifier.testTag("clearWebPictures")) {
                     Text("Clear…")
                 }
             },
         )
         GroupTitle("Load Pictures From the Web", Modifier.settingRow("load-pictures-from-the-web"))
-        Segments(WEB_PICTURE_CHOICES, webPictures.key, enabled = true, tag = "webPictures") { key ->
+        Segments(WEB_PICTURE_CHOICES, webPictures.key, enabled = true, tag = "webPictures", event = "settings.storage.web-pictures") { key ->
             WebPictureSetting.entries.firstOrNull { it.key == key }?.let(onWebPictures)
         }
         Help(
@@ -89,17 +91,18 @@ fun StorageScreen(
         )
     }
     if (clearing) {
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { clearing = false },
             title = { Text("Clear Pictures From the Web?") },
             text = { Text("Penmoss fetches each one again the next time a note shows it. Your notes and their own files stay as they are.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = trackedClick("settings.storage.clear-web-pictures.confirm", tracked.done {
                     clearing = false
                     onClearWebPictures()
-                }, modifier = Modifier.testTag("confirmClearWebPictures")) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+                }), modifier = Modifier.testTag("confirmClearWebPictures")) { Text("Clear", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { clearing = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = trackedClick("settings.storage.clear-web-pictures.cancel") { clearing = false }) { Text("Cancel") } },
         )
     }
 }

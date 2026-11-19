@@ -1,6 +1,9 @@
 package app.penmoss.feedback
 
 import androidx.compose.foundation.BorderStroke
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.trackedToggle
 import app.penmoss.ui.common.SQUARE
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Image
@@ -151,16 +154,19 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
     fun problem(field: FeedbackValidation.Field) = problems.firstOrNull { it.field == field }?.message
     val editing = ui.phase == FeedbackFormModel.Phase.Editing
     var discarding by rememberSaveable { mutableStateOf(false) }
+    // The form by name (PEN-137), as the web's dialog: done once the report is sent, queued or refused.
+    val form = rememberTrackedDialog("feedback")
+    if (ui.phase != FeedbackFormModel.Phase.Editing && ui.phase != FeedbackFormModel.Phase.Sending) form.done()
     Scaffold(
         modifier = Modifier.imePadding(),
         topBar = {
             TopAppBar(
                 title = { Text("Send Feedback") },
                 navigationIcon = {
-                    IconButton(onClick = actions.close, modifier = Modifier.testTag("feedbackClose")) { Icon(Icons.Default.Close, contentDescription = "Close") }
+                    IconButton(onClick = trackedClick("feedback.close", actions.close), modifier = Modifier.testTag("feedbackClose")) { Icon(Icons.Default.Close, contentDescription = "Close") }
                 },
                 actions = {
-                    TextButton(onClick = actions.send, enabled = editing, modifier = Modifier.testTag("feedbackSend")) { Text("Send") }
+                    TextButton(onClick = trackedClick("feedback.send", actions.send), enabled = editing, modifier = Modifier.testTag("feedbackSend")) { Text("Send") }
                 },
             )
         },
@@ -183,7 +189,7 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
                 FeedbackType.entries.forEachIndexed { index, type ->
                     SegmentedButton(
                         selected = ui.draft.type == type.wire,
-                        onClick = { actions.type(type) },
+                        onClick = trackedClick("feedback.type") { actions.type(type) },
                         enabled = editing,
                         shape = SegmentedButtonDefaults.itemShape(index, FeedbackType.entries.size, SQUARE),
                         modifier = Modifier.testTag("type-${type.wire}"),
@@ -197,7 +203,7 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
                 for (priority in FeedbackPriority.all) {
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                            .selectable(selected = ui.draft.priority == priority, enabled = editing, role = Role.RadioButton) { actions.priority(priority) }
+                            .selectable(selected = ui.draft.priority == priority, enabled = editing, role = Role.RadioButton, onClick = trackedClick("feedback.priority") { actions.priority(priority) })
                             .testTag("priority-$priority"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -248,23 +254,24 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
             if (ui.draft.type == FeedbackType.BUG.wire) AnonymisedLogs(ui, actions, editing)
 
             if (editing) {
-                OutlinedButton(onClick = { discarding = true }, modifier = Modifier.testTag("feedbackDiscard")) { Text("Discard Draft") }
+                OutlinedButton(onClick = trackedClick("feedback.discard") { discarding = true }, modifier = Modifier.testTag("feedbackDiscard")) { Text("Discard Draft") }
             }
             Spacer(Modifier.size(24.dp))
         }
     }
     if (discarding) {
+        val confirm = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { discarding = false },
             title = { Text("Discard this draft?") },
             text = { Text("Its title, description and screenshots are deleted from this phone.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = trackedClick("feedback.discard.confirm", confirm.done {
                     discarding = false
                     actions.discard()
-                }, modifier = Modifier.testTag("confirmDiscardDraft")) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+                }), modifier = Modifier.testTag("confirmDiscardDraft")) { Text("Discard", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { discarding = false }) { Text("Keep It") } },
+            dismissButton = { TextButton(onClick = trackedClick("feedback.discard.cancel") { discarding = false }) { Text("Keep It") } },
         )
     }
 }
@@ -304,9 +311,9 @@ private fun Status(ui: FeedbackUi, actions: FeedbackActions) {
                 style = MaterialTheme.typography.bodyMedium,
             )
             when (ui.phase) {
-                FeedbackFormModel.Phase.Editing -> TextButton(onClick = actions.dismissNotice) { Text("OK") }
+                FeedbackFormModel.Phase.Editing -> TextButton(onClick = trackedClick("feedback.notice.dismiss", actions.dismissNotice)) { Text("OK") }
                 is FeedbackFormModel.Phase.Queued, is FeedbackFormModel.Phase.Failed ->
-                    TextButton(onClick = actions.close, modifier = Modifier.testTag("feedbackDone")) { Text("Close") }
+                    TextButton(onClick = trackedClick("feedback.outcome.close", actions.close), modifier = Modifier.testTag("feedbackDone")) { Text("Close") }
                 else -> Unit
             }
         }
@@ -315,9 +322,9 @@ private fun Status(ui: FeedbackUi, actions: FeedbackActions) {
 
 /** A toolbar button: its label drawn, its name for TalkBack, a 48 dp target. */
 @Composable
-private fun ToolButton(label: AnnotatedString, name: String, enabled: Boolean, onClick: () -> Unit) {
+private fun ToolButton(label: AnnotatedString, name: String, enabled: Boolean, event: String, onClick: () -> Unit) {
     TextButton(
-        onClick = onClick,
+        onClick = trackedClick(event, onClick),
         enabled = enabled,
         modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { contentDescription = name }.testTag("tool-$name"),
     ) { Text(label, fontFamily = FontFamily.Monospace) }
@@ -356,7 +363,7 @@ private fun Description(description: String, editing: Boolean, problem: String?,
         listOf("Write" to false, "Preview" to true).forEachIndexed { index, (label, preview) ->
             SegmentedButton(
                 selected = previewing == preview,
-                onClick = { previewing = preview },
+                onClick = trackedClick(if (preview) "feedback.description.preview" else "feedback.description.write") { previewing = preview },
                 shape = SegmentedButtonDefaults.itemShape(index, 2, SQUARE),
                 modifier = Modifier.testTag(if (preview) "descriptionPreview" else "descriptionWrite"),
             ) { Text(label) }
@@ -368,16 +375,16 @@ private fun Description(description: String, editing: Boolean, problem: String?,
     }
     val tools = editing
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("markdownToolbar")) {
-        ToolButton(buildAnnotatedString { pushStyle(SpanStyle(fontWeight = FontWeight.Bold)); append("B") }, "Bold", tools) { apply(MarkdownToolbar::bold) }
-        ToolButton(buildAnnotatedString { pushStyle(SpanStyle(fontStyle = FontStyle.Italic)); append("I") }, "Italic", tools) { apply(MarkdownToolbar::italic) }
-        ToolButton(AnnotatedString("•"), "Bulleted List", tools) { apply(MarkdownToolbar::bullets) }
-        ToolButton(AnnotatedString("1."), "Numbered List", tools) { apply(MarkdownToolbar::numbered) }
-        ToolButton(AnnotatedString("⇥"), "Indent", tools) { apply(MarkdownToolbar::indent) }
-        ToolButton(AnnotatedString("⇤"), "Outdent", tools) { apply(MarkdownToolbar::outdent) }
-        ToolButton(AnnotatedString("🔗"), "Link", tools) { apply(MarkdownToolbar::link) }
-        ToolButton(AnnotatedString("<>"), "Inline Code", tools) { apply(MarkdownToolbar::code) }
-        ToolButton(AnnotatedString("{ }"), "Code Block", tools) { apply(MarkdownToolbar::codeBlock) }
-        ToolButton(AnnotatedString("❝"), "Quote", tools) { apply(MarkdownToolbar::quote) }
+        ToolButton(buildAnnotatedString { pushStyle(SpanStyle(fontWeight = FontWeight.Bold)); append("B") }, "Bold", tools, event = "feedback.format") { apply(MarkdownToolbar::bold) }
+        ToolButton(buildAnnotatedString { pushStyle(SpanStyle(fontStyle = FontStyle.Italic)); append("I") }, "Italic", tools, event = "feedback.format") { apply(MarkdownToolbar::italic) }
+        ToolButton(AnnotatedString("•"), "Bulleted List", tools, event = "feedback.format") { apply(MarkdownToolbar::bullets) }
+        ToolButton(AnnotatedString("1."), "Numbered List", tools, event = "feedback.format") { apply(MarkdownToolbar::numbered) }
+        ToolButton(AnnotatedString("⇥"), "Indent", tools, event = "feedback.format") { apply(MarkdownToolbar::indent) }
+        ToolButton(AnnotatedString("⇤"), "Outdent", tools, event = "feedback.format") { apply(MarkdownToolbar::outdent) }
+        ToolButton(AnnotatedString("🔗"), "Link", tools, event = "feedback.format.link") { apply(MarkdownToolbar::link) }
+        ToolButton(AnnotatedString("<>"), "Inline Code", tools, event = "feedback.format") { apply(MarkdownToolbar::code) }
+        ToolButton(AnnotatedString("{ }"), "Code Block", tools, event = "feedback.format") { apply(MarkdownToolbar::codeBlock) }
+        ToolButton(AnnotatedString("❝"), "Quote", tools, event = "feedback.format") { apply(MarkdownToolbar::quote) }
     }
     OutlinedTextField(
         value = value,
@@ -476,7 +483,7 @@ private fun Screenshots(ui: FeedbackUi, actions: FeedbackActions, editing: Boole
         val ticked = ui.captureFile != null
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                .toggleable(value = ticked, enabled = editing && ui.capture != null, role = Role.Checkbox) { actions.capture(it) }
+                .toggleable(value = ticked, enabled = editing && ui.capture != null, role = Role.Checkbox, onValueChange = trackedToggle("feedback.screenshot.include") { actions.capture(it) })
                 .testTag("feedbackCapture"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -492,19 +499,19 @@ private fun Screenshots(ui: FeedbackUi, actions: FeedbackActions, editing: Boole
             Thumbnail(actions.image(shot.file), actions, "Screenshot $n${if (shot.capture) ", the screen behind" else ""}")
             Spacer(Modifier.width(8.dp))
             Text("Screenshot $n", Modifier.weight(1f))
-            IconButton(onClick = { actions.move(index, -1) }, enabled = editing && index > 0) {
+            IconButton(onClick = trackedClick("feedback.screenshot.earlier") { actions.move(index, -1) }, enabled = editing && index > 0) {
                 Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move screenshot $n up")
             }
-            IconButton(onClick = { actions.move(index, 1) }, enabled = editing && index < shots.size - 1) {
+            IconButton(onClick = trackedClick("feedback.screenshot.later") { actions.move(index, 1) }, enabled = editing && index < shots.size - 1) {
                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move screenshot $n down")
             }
-            IconButton(onClick = { actions.remove(index) }, enabled = editing) {
+            IconButton(onClick = trackedClick("feedback.screenshot.remove") { actions.remove(index) }, enabled = editing) {
                 Icon(Icons.Default.Delete, contentDescription = "Remove screenshot $n")
             }
         }
     }
     OutlinedButton(
-        onClick = actions.pickImages,
+        onClick = trackedClick("feedback.screenshot.add", actions.pickImages),
         enabled = editing && shots.size < FeedbackLimits.SCREENSHOTS,
         modifier = Modifier.testTag("feedbackAddImages"),
     ) { Text("Add from Photos") }
@@ -527,7 +534,7 @@ private fun CapturedContext(ui: FeedbackUi, actions: FeedbackActions, editing: B
     HorizontalDivider()
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp)
-            .toggleable(value = open, role = Role.Button) { open = it }
+            .toggleable(value = open, role = Role.Button, onValueChange = trackedToggle("feedback.context.preview") { open = it })
             .semantics { stateDescription = if (open) "Shown" else "Hidden" }
             .testTag("contextToggle"),
         verticalAlignment = Alignment.CenterVertically,
@@ -546,7 +553,7 @@ private fun CapturedContext(ui: FeedbackUi, actions: FeedbackActions, editing: B
         val title = group.group?.title ?: group.id
         Row(
             Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                .toggleable(value = included, enabled = editing, role = Role.Checkbox) { actions.omit(group.id, !it) }
+                .toggleable(value = included, enabled = editing, role = Role.Checkbox, onValueChange = trackedToggle("feedback.context.group") { actions.omit(group.id, !it) })
                 .testTag("group-${group.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {

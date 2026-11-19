@@ -33,6 +33,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.trackedToggle
 import app.penmoss.ui.common.Button
 import app.penmoss.ui.common.FilledTonalButton
 import app.penmoss.ui.common.TextButton
@@ -96,12 +99,12 @@ fun NotebookPage(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitMessage").semantics { liveRegion = LiveRegionMode.Polite },
                 color = MaterialTheme.colorScheme.error,
             )
-            TextButton(onClick = actions.onDismissMessage, Modifier.padding(horizontal = 8.dp)) { Text("OK") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.message.dismiss", actions.onDismissMessage), Modifier.padding(horizontal = 8.dp)) { Text("OK") }
         }
         val index = NotebookTab.ALL.indexOfFirst { it.first == shown }.coerceAtLeast(0)
         PrimaryTabRow(selectedTabIndex = index, modifier = Modifier.testTag("notebookTabs")) {
             NotebookTab.ALL.forEachIndexed { at, (key, label) ->
-                Tab(selected = at == index, onClick = { shown = key }, text = { Text(label) }, modifier = Modifier.testTag("notebookTab-$key"))
+                Tab(selected = at == index, onClick = trackedClick("settings.git-notebooks.tab") { shown = key }, text = { Text(label) }, modifier = Modifier.testTag("notebookTab-$key"))
             }
         }
         when (NotebookTab.ALL[index].first) {
@@ -152,7 +155,7 @@ private fun StatusRow(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActi
         },
         supportingContent = { Text(repositoryLine(view)) },
         trailingContent = {
-            FilledTonalButton(onClick = { actions.onSyncNow(view.localId) }, enabled = !busy, modifier = Modifier.testTag("gitSync-${view.localId}")) {
+            FilledTonalButton(onClick = trackedClick("settings.git-notebooks.sync-now") { actions.onSyncNow(view.localId) }, enabled = !busy, modifier = Modifier.testTag("gitSync-${view.localId}")) {
                 Text(if (busy) "Syncing…" else "Sync Now")
             }
         },
@@ -166,7 +169,7 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
     var copying by rememberSaveable(id) { mutableStateOf(false) }
     StatusRow(row, ui, actions)
     Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-        Button(onClick = { actions.onOpen(id) }, Modifier.testTag("gitOpen-$id")) { Text("Open Notebook") }
+        Button(onClick = trackedClick("settings.git-notebooks.open") { actions.onOpen(id) }, Modifier.testTag("gitOpen-$id")) { Text("Open Notebook") }
     }
     ListItem(
         headlineContent = { Text("Name") },
@@ -184,7 +187,7 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
         ListItem(
             headlineContent = { Text("Settings") },
             supportingContent = { Text("Copy from or to other notebooks") },
-            trailingContent = { TextButton(onClick = { copying = true }, Modifier.testTag("gitCopySettingsOpen-$id")) { Text("Copy Settings…") } },
+            trailingContent = { TextButton(onClick = trackedClick("settings.git-notebooks.copy-settings.open") { copying = true }, Modifier.testTag("gitCopySettingsOpen-$id")) { Text("Copy Settings…") } },
         )
     }
     if (copying && ui.rows.size > 1) {
@@ -201,7 +204,7 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
         headlineContent = { Text("Primary Notebook") },
         supportingContent = { Text(if (primary) "Journal and captures go here" else "Journal and captures go to another notebook") },
         trailingContent = {
-            if (primary) PrimaryChip() else TextButton(onClick = { actions.onJournal(id) }, Modifier.testTag("gitMakePrimary-$id")) { Text("Make Primary") }
+            if (primary) PrimaryChip() else TextButton(onClick = trackedClick("settings.git-notebooks.make-primary") { actions.onJournal(id) }, Modifier.testTag("gitMakePrimary-$id")) { Text("Make Primary") }
         },
     )
     Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -218,7 +221,7 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
                 "${copies.words().replaceFirstChar { it.uppercase() }}. Android cleared this notebook’s storage on the phone; once a sync reaches the repository, what git lacks of them comes back as notes of their own.",
                 Modifier.padding(0.dp).testTag("gitWaiting-$id"),
             )
-            TextButton(onClick = { actions.onSaveUnrecovered(id) }, Modifier.testTag("gitWaitingSave-$id")) { Text("Save Their Text") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.waiting.save") { actions.onSaveUnrecovered(id) }, Modifier.testTag("gitWaitingSave-$id")) { Text("Save Their Text") }
         }
         if (row.storageKept == false) {
             Help(
@@ -229,7 +232,7 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
         if (row.status?.code == "purge_unconfirmed" || row.purges != null) Purges(row, actions)
     }
     HorizontalDivider(Modifier.padding(top = 8.dp))
-    TextButton(onClick = onRemove, Modifier.padding(horizontal = 8.dp).testTag("gitRemove-$id")) {
+    TextButton(onClick = trackedClick("settings.git-notebooks.remove", onRemove), Modifier.padding(horizontal = 8.dp).testTag("gitRemove-$id")) {
         Text("Remove from This Phone…", color = MaterialTheme.colorScheme.error)
     }
 }
@@ -250,7 +253,7 @@ private fun SyncTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAction
         headlineContent = { Text("Wi-Fi Only") },
         supportingContent = { Text("In the background, sync this notebook only on Wi-Fi.") },
         trailingContent = { Switch(checked = view.wifiOnly, onCheckedChange = null) },
-        modifier = Modifier.testTag("gitWifi-$id").toggleable(value = view.wifiOnly, role = Role.Switch) { actions.onWifiOnly(id, it) },
+        modifier = Modifier.testTag("gitWifi-$id").toggleable(value = view.wifiOnly, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.wifi-only") { actions.onWifiOnly(id, it) }),
     )
     var push by rememberSaveable(id) { mutableStateOf(view.pushDelayS.toString()) }
     var pull by rememberSaveable(id) { mutableStateOf(view.pullEveryMin.toString()) }
@@ -277,7 +280,7 @@ private fun SyncTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAction
     val pullMin = pull.toIntOrNull()
     if (pushS != view.pushDelayS || pullMin != view.pullEveryMin) {
         TextButton(
-            onClick = { if (pushS != null && pullMin != null) actions.onCadence(id, pushS, pullMin) },
+            onClick = trackedClick("settings.git-notebooks.cadence.save") { if (pushS != null && pullMin != null) actions.onCadence(id, pushS, pullMin) },
             enabled = pushS != null && pullMin != null,
             modifier = Modifier.padding(horizontal = 8.dp).testTag("gitCadenceSave-$id"),
         ) { Text("Save the Cadence") }
@@ -305,8 +308,8 @@ private fun GitTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { actions.onToken(id, token); token = "" }, enabled = token.isNotEmpty(), modifier = Modifier.testTag("gitTokenSave-$id")) { Text("Save Token") }
-            if (view.hasToken) TextButton(onClick = { actions.onToken(id, null) }, Modifier.testTag("gitTokenForget-$id")) { Text("Forget Token") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.token.save") { actions.onToken(id, token); token = "" }, enabled = token.isNotEmpty(), modifier = Modifier.testTag("gitTokenSave-$id")) { Text("Save Token") }
+            if (view.hasToken) TextButton(onClick = trackedClick("settings.git-notebooks.token.forget") { actions.onToken(id, null) }, Modifier.testTag("gitTokenForget-$id")) { Text("Forget Token") }
         }
     }
     GroupTitle("Commits")
@@ -316,7 +319,7 @@ private fun GitTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions
             Text("Sign every commit from this phone with its signing key (SSH), as a branch that requires signed commits needs. If it cannot sign, the sync stops: never an unsigned commit.")
         },
         trailingContent = { Switch(checked = view.signCommits, onCheckedChange = null) },
-        modifier = Modifier.testTag("gitSign-$id").toggleable(value = view.signCommits, role = Role.Switch) { actions.onSignCommits(id, it) },
+        modifier = Modifier.testTag("gitSign-$id").toggleable(value = view.signCommits, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.sign-commits") { actions.onSignCommits(id, it) }),
     )
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SigningKey(ui, actions)
@@ -341,7 +344,7 @@ private fun GitTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         )
         if (authorName != view.author?.name.orEmpty() || authorEmail != view.author?.email.orEmpty()) {
-            TextButton(onClick = { actions.onAuthor(id, authorName, authorEmail) }, Modifier.testTag("gitAuthorSave-$id")) {
+            TextButton(onClick = trackedClick("settings.git-notebooks.author.save") { actions.onAuthor(id, authorName, authorEmail) }, Modifier.testTag("gitAuthorSave-$id")) {
                 Text("Save the Commit Name and Email")
             }
         }
@@ -358,6 +361,7 @@ private fun RemoveDialog(row: GitRow, actions: GitNotebooksActions, onDismiss: (
     LaunchedEffect(row.view.localId) { counted = actions.unpushed(row.view.localId) }
     val pending = counted ?: row.status?.pending?.size?.takeIf { it > 0 }
     val old = row.oldCopies?.takeIf { it.total > 0 }
+    val tracked = rememberTrackedDialog("confirm")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Remove ${row.view.name}?") },
@@ -374,7 +378,7 @@ private fun RemoveDialog(row: GitRow, actions: GitNotebooksActions, onDismiss: (
                     Modifier.testTag("gitRemoveWords"),
                 )
                 if (old != null) {
-                    TextButton(onClick = { actions.onSaveUnrecovered(row.view.localId) }, Modifier.testTag("gitRemoveSave")) { Text("Save Their Text First") }
+                    TextButton(onClick = trackedClick("settings.git-notebooks.remove.save-text") { actions.onSaveUnrecovered(row.view.localId) }, Modifier.testTag("gitRemoveSave")) { Text("Save Their Text First") }
                 }
             }
         },
@@ -382,10 +386,10 @@ private fun RemoveDialog(row: GitRow, actions: GitNotebooksActions, onDismiss: (
             // Changes not pushed (or not known yet): Push First, as on the Mac (T39 pass 3 review, A913).
             val unpushed = pending != 0
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (unpushed) TextButton(onClick = onPushFirst, Modifier.testTag("gitRemovePushFirst")) { Text("Push First") }
-                TextButton(onClick = onRemove, Modifier.testTag("gitRemoveConfirm")) { Text(if (unpushed) "Remove Anyway" else "Remove") }
+                if (unpushed) TextButton(onClick = trackedClick("settings.git-notebooks.remove.push-first", onPushFirst), Modifier.testTag("gitRemovePushFirst")) { Text("Push First") }
+                TextButton(onClick = trackedClick(if (unpushed) "settings.git-notebooks.remove.anyway" else "settings.git-notebooks.remove.confirm", tracked.done(onRemove)), Modifier.testTag("gitRemoveConfirm")) { Text(if (unpushed) "Remove Anyway" else "Remove") }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = trackedClick("settings.git-notebooks.remove.keep", onDismiss)) { Text("Cancel") } },
     )
 }

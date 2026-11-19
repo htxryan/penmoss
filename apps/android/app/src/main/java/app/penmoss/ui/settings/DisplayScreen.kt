@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.trackedToggle
 import app.penmoss.engine.settings.SidebarLayout
 import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.home.HomeActions
@@ -73,7 +75,7 @@ fun DisplayScreen(
         }
         Help("A hidden shortcut still works from Search and a keyboard. Search always shows.")
         GroupTitle("Shortcuts on Home", Modifier.settingRow("shortcuts-on-home"), deviceOnly = true)
-        for (choice in choices) Toggle(choice.label, null, choice.shown, enabled, "display-${choice.key}") { onChange(choice.key, it) }
+        for (choice in choices) Toggle(choice.label, null, choice.shown, enabled, "display-${choice.key}", event = "settings.sidebar.item") { onChange(choice.key, it) }
         GroupTitle("Sections", Modifier.settingRow("sections"), deviceOnly = true)
         Help("Drag a section by its handle to move it.")
         val home = layout.order.filter { it in HomeLayout.HOME_SECTIONS }
@@ -102,7 +104,7 @@ fun DisplayScreen(
                             // Its own switch, not the row's: the row holds the drag handle and the stepper too.
                             Switch(
                                 checked = shown,
-                                onCheckedChange = { onSectionHidden(section, !it) },
+                                onCheckedChange = trackedToggle("settings.sidebar.section.show") { onSectionHidden(section, !it) },
                                 enabled = enabled,
                                 modifier = Modifier.testTag("display-section-$section").semantics { contentDescription = "Show ${SidebarLayout.NAMES.getValue(section)}" },
                             )
@@ -110,7 +112,7 @@ fun DisplayScreen(
                     },
                 )
                 if (section == SidebarLayout.QUICK_ACCESS) {
-                    Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.settingRow("show-notebook-names").padding(start = 40.dp)) {
+                    Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.settingRow("show-notebook-names").padding(start = 40.dp), event = "settings.sidebar.show-notebook-names") {
                         onQuickAccessNotebook(it)
                     }
                     Toggle(
@@ -120,6 +122,7 @@ fun DisplayScreen(
                         enabled,
                         "display-quickAccessInDrawer",
                         Modifier.settingRow("quick-access-in-sidebar").padding(start = 40.dp),
+                        event = "settings.sidebar.notes-in-sidebar",
                     ) { onQuickAccessInDrawer(it) }
                 }
             }
@@ -156,12 +159,12 @@ private fun HomePreview(ui: HomeUi) {
 
 /** A switch as a whole row, so TalkBack reads one control with its name. */
 @Composable
-private fun Toggle(label: String, supporting: String?, on: Boolean, enabled: Boolean, tag: String, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
+private fun Toggle(label: String, supporting: String?, on: Boolean, enabled: Boolean, tag: String, modifier: Modifier = Modifier, event: String, onChange: (Boolean) -> Unit) {
     ListItem(
         headlineContent = { Text(label) },
         supportingContent = supporting?.let { { Text(it, style = MaterialTheme.typography.bodySmall) } },
         trailingContent = { Switch(checked = on, onCheckedChange = null, enabled = enabled) },
-        modifier = modifier.testTag(tag).toggleable(value = on, enabled = enabled, role = Role.Switch, onValueChange = onChange),
+        modifier = modifier.testTag(tag).toggleable(value = on, enabled = enabled, role = Role.Switch, onValueChange = trackedToggle(event, onChange)),
     )
 }
 
@@ -169,13 +172,13 @@ private fun Toggle(label: String, supporting: String?, on: Boolean, enabled: Boo
 @Composable
 private fun RecentStepper(count: Int, enabled: Boolean, onRecentCount: (Int) -> Unit) {
     TextButton(
-        onClick = { onRecentCount(count - 1) },
+        onClick = trackedClick("settings.sidebar.recent-count.fewer") { onRecentCount(count - 1) },
         enabled = enabled && count > SidebarLayout.RECENT_MIN,
         modifier = Modifier.testTag("recentFewer").semantics { contentDescription = "Fewer Notes in Recent Notes" },
     ) { Text("−") }
     Text("$count", Modifier.testTag("display-recentCount"))
     TextButton(
-        onClick = { onRecentCount(count + 1) },
+        onClick = trackedClick("settings.sidebar.recent-count.more") { onRecentCount(count + 1) },
         enabled = enabled && count < SidebarLayout.RECENT_MAX,
         modifier = Modifier.testTag("recentMore").semantics { contentDescription = "More Notes in Recent Notes" },
     ) { Text("+") }

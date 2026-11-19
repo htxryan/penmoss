@@ -4,6 +4,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.keys.FolderCommands
 import app.penmoss.ui.home.FolderScreen
 import kotlinx.coroutines.Dispatchers
@@ -101,6 +103,7 @@ fun FolderSheet(
     onNewNoteHere: (() -> Unit)? = null,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tracked = rememberTrackedDialog("folderMenu")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Text(
             name.ifBlank { "Untitled folder" },
@@ -111,25 +114,25 @@ fun FolderSheet(
         )
         Box(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Column(Modifier.fillMaxWidth()) {
-                onNewNoteHere?.let { FolderSheetAction("New Note Here", "folderAction-newNote", it) }
+                onNewNoteHere?.let { FolderSheetAction("New Note Here", "folderAction-newNote", event = "tree.folder-menu.new-note", tracked.done(it)) }
                 // The web's name for it, beside New Note Here (T53 item 12).
-                FolderSheetAction("New Folder Here", "folderAction-subfolder", onNewSubfolder)
-                FolderSheetAction("Rename", "folderAction-rename", onRename)
-                FolderSheetAction("Move to…", "folderAction-move", onMove)
+                FolderSheetAction("New Folder Here", "folderAction-subfolder", event = "tree.folder-menu.new-folder", tracked.done(onNewSubfolder))
+                FolderSheetAction("Rename", "folderAction-rename", event = "tree.folder-menu.rename", tracked.done(onRename))
+                FolderSheetAction("Move to…", "folderAction-move", event = "tree.folder-menu.move", tracked.done(onMove))
                 // The web's names, with "…" for what asks first (T39 pass 3, A891).
-                FolderSheetAction("Delete Folder…", "folderAction-delete", onDelete)
+                FolderSheetAction("Delete Folder…", "folderAction-delete", event = "tree.folder-menu.delete", tracked.done(onDelete))
             }
         }
     }
 }
 
 @Composable
-private fun FolderSheetAction(text: String, tag: String, onClick: () -> Unit) {
+private fun FolderSheetAction(text: String, tag: String, event: String, onClick: () -> Unit) {
     Text(
         text,
         Modifier
             .fillMaxWidth()
-            .combinedClickable(role = Role.Button, onClick = onClick)
+            .combinedClickable(role = Role.Button, onClick = trackedClick(event, onClick))
             .padding(horizontal = 24.dp, vertical = 16.dp)
             .testTag(tag),
         style = MaterialTheme.typography.bodyLarge,
@@ -148,6 +151,7 @@ fun NewFolderDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) =
 @Composable
 fun FolderNameDialog(title: String, initial: String = "", onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable { mutableStateOf(initial) }
+    val tracked = rememberTrackedDialog("folderName")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -158,15 +162,20 @@ fun FolderNameDialog(title: String, initial: String = "", onConfirm: (String) ->
                 modifier = Modifier.fillMaxWidth().testTag("folderNameField"),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (name.isNotBlank()) onConfirm(name.trim()) }),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (name.isNotBlank()) {
+                        tracked.done()
+                        onConfirm(name.trim())
+                    }
+                }),
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name.trim()) }, enabled = name.isNotBlank(), modifier = Modifier.testTag("folderNameSave")) {
+            TextButton(onClick = trackedClick("tree.folder-name.save", tracked.done { onConfirm(name.trim()) }), enabled = name.isNotBlank(), modifier = Modifier.testTag("folderNameSave")) {
                 Text("Save")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = trackedClick("tree.folder-name.cancel", onDismiss)) { Text("Cancel") } },
     )
 }
 
@@ -193,14 +202,15 @@ internal fun folderDeleteText(notes: Int, subfolders: Int, destination: String?)
 /** Deletes a folder (T40 P4, NT4): says what goes, what moves up and that Trash keeps it. */
 @Composable
 fun FolderDeleteDialog(name: String, notes: Int, subfolders: Int, destination: String?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val tracked = rememberTrackedDialog("confirm")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete “${name.ifBlank { "Untitled folder" }}”?") },
         text = { Text(folderDeleteText(notes, subfolders, destination)) },
         confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.testTag("folderDeleteConfirm")) { Text("Delete Folder") }
+            TextButton(onClick = trackedClick("tree.delete-folder.confirm", tracked.done(onConfirm)), modifier = Modifier.testTag("folderDeleteConfirm")) { Text("Delete Folder") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = trackedClick("tree.delete-folder.cancel", onDismiss)) { Text("Cancel") } },
     )
 }
 
@@ -219,7 +229,7 @@ private fun SortChoice(mode: String, label: String, current: String, onPick: (St
     DropdownMenuItem(
         text = { Text(label) },
         leadingIcon = { RadioButton(selected = current == mode, onClick = null) },
-        onClick = { onPick(mode) },
+        onClick = trackedClick("tree.sort-order.choose") { onPick(mode) },
         // The order in use is said as chosen, as the web's menuitemradio is checked (T52 item 10).
         modifier = Modifier.testTag("sort-$mode").semantics {
             role = Role.RadioButton
@@ -246,7 +256,7 @@ fun BreadcrumbBar(path: List<FolderItem>, onOpenFolder: (String?) -> Unit, modif
                 .combinedClickable(
                     role = Role.Button,
                     onClickLabel = "Open Folder",
-                    onClick = { onOpenFolder(path.lastOrNull()?.id) },
+                    onClick = trackedClick("note.breadcrumb") { onOpenFolder(path.lastOrNull()?.id) },
                     onLongClickLabel = if (path.isNotEmpty()) "Choose a Level" else null,
                     onLongClick = if (path.isNotEmpty()) {
                         { levels = true }
@@ -265,7 +275,7 @@ fun BreadcrumbBar(path: List<FolderItem>, onOpenFolder: (String?) -> Unit, modif
             for (level in path) {
                 DropdownMenuItem(
                     text = { Text(level.name.ifBlank { "Untitled folder" }) },
-                    onClick = {
+                    onClick = trackedClick("note.breadcrumb.level") {
                         levels = false
                         onOpenFolder(level.id)
                     },

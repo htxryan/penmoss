@@ -45,6 +45,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.git.AddResult
 import app.penmoss.engine.git.GitRefusal
 import app.penmoss.ui.common.roles
@@ -164,11 +166,11 @@ internal fun CreateRepo(
             Column(Modifier.selectableGroup()) {
                 for (each in owners) {
                     Row(
-                        Modifier.fillMaxWidth().selectable(each.login == owner, role = Role.RadioButton) {
+                        Modifier.fillMaxWidth().selectable(each.login == owner, role = Role.RadioButton, onClick = trackedClick("firstrun.option") {
                             owner = each.login
                             problem = null
                             taken = false
-                        }.padding(vertical = 4.dp).testTag("first-run-create-owner-${each.login}"),
+                        }).padding(vertical = 4.dp).testTag("first-run-create-owner-${each.login}"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(each.login == owner, onClick = null)
@@ -270,7 +272,7 @@ private fun RepoRow(repo: GitHubRepo, loaded: RepoRead?, added: Set<String>, onR
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable(enabled = repo.canPush, role = Role.Button) { onRepo(repo) }
+                .clickable(enabled = repo.canPush, role = Role.Button, onClick = trackedClick("firstrun.repo") { onRepo(repo) })
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -411,6 +413,7 @@ internal fun RepoPicked(
                         val id = each.notebook!!.id
                         Option(each.path, each.notebook.name, folderWords(each.path), "first-run-pick-notebook", chip = if (id in added) "Already Added" else null, enabled = id !in added)
                     },
+                    event = "firstrun.notebook",
                 ) { pick = it }
                 if (!rootIsNotebook) Link("Start Another Notebook in a Folder", "first-run-start-another", "folder-plus", onFolder)
             }
@@ -592,7 +595,7 @@ internal fun FolderPick(
                 placeholder = { Text("Filter Folders") },
                 leadingIcon = { LucideGlyph("search", null, 20.dp) },
                 trailingIcon = if (filter.isEmpty()) null else ({
-                    Box(Modifier.size(44.dp).clickable(role = Role.Button, onClickLabel = "Clear Filter") { filter = "" }.testTag("first-run-folder-clear"), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(44.dp).clickable(role = Role.Button, onClickLabel = "Clear Filter", onClick = trackedClick("firstrun.folder.clear-filter") { filter = "" }).testTag("first-run-folder-clear"), contentAlignment = Alignment.Center) {
                         LucideGlyph("x", "Clear Filter", 20.dp)
                     }
                 }),
@@ -603,9 +606,9 @@ internal fun FolderPick(
                 Modifier
                     .size(56.dp)
                     .border(1.dp, colours.outlineVariant)
-                    .clickable(enabled = shown == null, role = Role.Button, onClickLabel = if (anyOpen) "Collapse All" else "Expand All") {
+                    .clickable(enabled = shown == null, role = Role.Button, onClickLabel = if (anyOpen) "Collapse All" else "Expand All", onClick = trackedClick("firstrun.folder.expand-all") {
                         open = if (anyOpen) emptySet() else children.keys.filter { it.isNotEmpty() }.toSet()
-                    }
+                    })
                     .testTag("first-run-folder-all"),
                 contentAlignment = Alignment.Center,
             ) { LucideGlyph(if (anyOpen) "chevrons-down-up" else "chevrons-up-down", if (anyOpen) "Collapse All" else "Expand All", 20.dp) }
@@ -613,7 +616,7 @@ internal fun FolderPick(
         if (notebooks.isNotEmpty()) {
             androidx.compose.material3.FilterChip(
                 selected = onlyNotebooks,
-                onClick = { onlyNotebooks = !onlyNotebooks },
+                onClick = trackedClick("firstrun.folder.only-notebooks") { onlyNotebooks = !onlyNotebooks },
                 label = { Text("Notebooks (${notebooks.size})", maxLines = 1, softWrap = false) },
                 leadingIcon = { LucideGlyph("notebook", null, 16.dp) },
                 shape = androidx.compose.ui.graphics.RectangleShape,
@@ -676,6 +679,7 @@ internal fun FolderPick(
 private fun NewFolderDialog(inside: String, onDismiss: () -> Unit, onMake: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var problem by remember { mutableStateOf<String?>(null) }
+    val tracked = rememberTrackedDialog("newFolder")
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("New Folder in ${folderWords(inside)}") },
@@ -689,7 +693,12 @@ private fun NewFolderDialog(inside: String, onDismiss: () -> Unit, onMake: (Stri
         confirmButton = {
             Plain("Add Folder", "first-run-new-folder-add", "folder-plus") {
                 val words = folderNameProblem(name)
-                if (words != null) problem = words else onMake(name.trim())
+                if (words != null) {
+                    problem = words
+                } else {
+                    tracked.done()
+                    onMake(name.trim())
+                }
             }
         },
         dismissButton = { Plain("Cancel", "first-run-new-folder-cancel", "x", onClick = onDismiss) },
@@ -705,7 +714,7 @@ private fun RootRow(repo: String, selected: Boolean, onSelect: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(44.dp)
-            .selectable(selected, role = Role.RadioButton, onClick = onSelect)
+            .selectable(selected, role = Role.RadioButton, onClick = trackedClick("firstrun.folder", onSelect))
             .background(if (selected) colours.primary.copy(alpha = 0.18f) else androidx.compose.ui.graphics.Color.Transparent)
             .padding(start = 8.dp, end = 10.dp)
             .testTag("first-run-folder-option"),
@@ -752,7 +761,7 @@ private fun FolderRow(
         }
         Box(
             Modifier.width(30.dp).fillMaxHeight().then(
-                if (expanded != null) Modifier.clickable(role = Role.Button, onClickLabel = if (expanded) "Collapse" else "Expand", onClick = onToggle).testTag("first-run-folder-toggle") else Modifier,
+                if (expanded != null) Modifier.clickable(role = Role.Button, onClickLabel = if (expanded) "Collapse" else "Expand", onClick = trackedClick("firstrun.folder.toggle", onToggle)).testTag("first-run-folder-toggle") else Modifier,
             ),
             contentAlignment = Alignment.Center,
         ) {
@@ -766,7 +775,7 @@ private fun FolderRow(
             Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .then(if (notebook == null) Modifier.selectable(selected, role = Role.RadioButton, onClick = onSelect) else Modifier)
+                .then(if (notebook == null) Modifier.selectable(selected, role = Role.RadioButton, onClick = trackedClick("firstrun.folder", onSelect)) else Modifier)
                 .background(if (selected) accent.copy(alpha = 0.18f) else androidx.compose.ui.graphics.Color.Transparent)
                 .padding(start = 4.dp, end = 10.dp)
                 .testTag(if (notebook != null) "first-run-folder-notebook" else "first-run-folder-option")
@@ -964,7 +973,7 @@ internal fun AccountSwitcher(
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
             .background(MaterialTheme.colorScheme.surfaceBright)
-            .clickable(role = Role.Button, onClickLabel = "Change GitHub Account") { open = true }
+            .clickable(role = Role.Button, onClickLabel = "Change GitHub Account", onClick = trackedClick("firstrun.account.open") { open = true })
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag("first-run-account-switcher"),
         verticalAlignment = Alignment.CenterVertically,
@@ -978,6 +987,12 @@ internal fun AccountSwitcher(
         LucideGlyph("chevron-down", contentDescription = null, size = 20.dp)
     }
     if (open) {
+        val tracked = rememberTrackedDialog("accounts")
+        // A row picked: the sheet did its job, and closes.
+        val close = {
+            tracked.done()
+            open = false
+        }
         androidx.compose.material3.ModalBottomSheet(onDismissRequest = { open = false }, modifier = Modifier.testTag("first-run-account-sheet")) {
             Text(
                 "GitHub Account",
@@ -985,24 +1000,9 @@ internal fun AccountSwitcher(
                 style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            val sheetRow = @Composable { tag: String, selected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-                        .clickable(role = Role.Button) {
-                            open = false
-                            onClick()
-                        }
-                        .padding(horizontal = 22.dp, vertical = 12.dp)
-                        .testTag(tag),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) { content() }
-            }
             for (account in accounts) {
                 val current = account.login == login
-                sheetRow("first-run-switch-${account.login.orEmpty()}", current, { if (!current) onPick(account) }) {
+                SheetRow("first-run-switch-${account.login.orEmpty()}", current, event = "firstrun.account", onClose = close, onClick = { if (!current) onPick(account) }) {
                     AccountInitial(account.login)
                     Column(Modifier.weight(1f)) {
                         Text(account.login ?: "Token (Account Not Named)", style = MaterialTheme.roles.rowLabel)
@@ -1017,19 +1017,19 @@ internal fun AccountSwitcher(
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             onAdd?.let { add ->
-                sheetRow("first-run-switch-add", false, add) {
+                SheetRow("first-run-switch-add", false, event = "firstrun.account.add", onClose = close, onClick = add) {
                     LucideGlyph("user-plus", contentDescription = null)
                     Text("Add Another Account", style = MaterialTheme.roles.rowLabel)
                 }
             }
             onManage?.let { manage ->
-                sheetRow("first-run-switch-manage", false, manage) {
+                SheetRow("first-run-switch-manage", false, event = "firstrun.account.manage", onClose = close, onClick = manage) {
                     LucideGlyph("settings", contentDescription = null)
                     Text("Manage GitHub Accounts", style = MaterialTheme.roles.rowLabel)
                 }
             }
             onRefresh?.let { refresh ->
-                sheetRow("first-run-refresh", false, refresh) {
+                SheetRow("first-run-refresh", false, event = "firstrun.account.refresh", onClose = close, onClick = refresh) {
                     LucideGlyph("refresh-cw", contentDescription = null)
                     Text("Refresh Repositories", style = MaterialTheme.roles.rowLabel)
                 }
@@ -1037,6 +1037,24 @@ internal fun AccountSwitcher(
             androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 16.dp))
         }
     }
+}
+
+/** One row of the account sheet: [onClose] closes the sheet, then [onClick] runs; counted as [event]. */
+@Composable
+private fun SheetRow(tag: String, selected: Boolean, event: String, onClose: () -> Unit, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(role = Role.Button, onClick = trackedClick(event) {
+                onClose()
+                onClick()
+            })
+            .padding(horizontal = 22.dp, vertical = 12.dp)
+            .testTag(tag),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) { content() }
 }
 
 /** An account's first letter on a square of colour, so two accounts tell apart at a glance. */

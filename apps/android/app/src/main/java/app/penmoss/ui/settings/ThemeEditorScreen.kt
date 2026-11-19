@@ -82,6 +82,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.Colour
 import app.penmoss.engine.settings.Contrast
 import app.penmoss.engine.settings.ContrastCheck
@@ -167,14 +169,14 @@ fun ThemeEditorScreen(
                 navigationIcon = { BackButton(onBack) },
                 actions = {
                     if (theme != null) {
-                        IconButton(onClick = { menu = true }, Modifier.testTag("themeMenu")) {
+                        IconButton(onClick = trackedClick("theme-editor.menu") { menu = true }, Modifier.testTag("themeMenu")) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More Options")
                         }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(
                                 text = { Text("Duplicate") },
                                 enabled = enabled,
-                                onClick = {
+                                onClick = trackedClick("theme-editor.duplicate") {
                                     menu = false
                                     onDuplicate(theme)
                                 },
@@ -183,7 +185,7 @@ fun ThemeEditorScreen(
                             DropdownMenuItem(
                                 text = { Text("Delete This Theme", color = MaterialTheme.colorScheme.error) },
                                 enabled = enabled,
-                                onClick = {
+                                onClick = trackedClick("theme-editor.delete") {
                                     menu = false
                                     confirmDelete = true
                                 },
@@ -217,7 +219,7 @@ fun ThemeEditorScreen(
                     listOf("light" to "Light", "dark" to "Dark").forEachIndexed { index, (value, label) ->
                         SegmentedButton(
                             selected = variant == value,
-                            onClick = { variant = value },
+                            onClick = trackedClick("theme-editor.variant") { variant = value },
                             shape = SegmentedButtonDefaults.itemShape(index, 2, SQUARE),
                             modifier = Modifier.testTag("variant-$value"),
                         ) { Text(label) }
@@ -261,21 +263,22 @@ fun ThemeEditorScreen(
             )
         }
         if (confirmDelete) {
+            val tracked = rememberTrackedDialog("confirm")
             AlertDialog(
                 onDismissRequest = { confirmDelete = false },
                 title = { Text("Delete “${theme.text("name")}” on every device?") },
                 text = { Text("Devices showing it go back to the theme it was based on.") },
                 confirmButton = {
                     TextButton(
-                        onClick = {
+                        onClick = trackedClick("theme-editor.delete.confirm", tracked.done {
                             confirmDelete = false
                             dirty = false
                             onDelete(theme)
-                        },
+                        }),
                         modifier = Modifier.testTag("confirmDelete"),
                     ) { Text("Delete Theme", color = MaterialTheme.colorScheme.error) }
                 },
-                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep It") } },
+                dismissButton = { TextButton(onClick = trackedClick("theme-editor.delete.cancel") { confirmDelete = false }) { Text("Keep It") } },
             )
         }
     }
@@ -335,7 +338,7 @@ private fun ContrastSummary(problems: List<ContrastCheck>, variant: String, chec
             color = if (problems.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
         )
         if (problems.size > 4) {
-            TextButton(onClick = { all = !all }, Modifier.testTag("contrastAll")) { Text(if (all) "Show Fewer" else "Show All ${problems.size}") }
+            TextButton(onClick = trackedClick("theme-editor.contrast.show-all") { all = !all }, Modifier.testTag("contrastAll")) { Text(if (all) "Show Fewer" else "Show All ${problems.size}") }
         }
     }
 }
@@ -364,7 +367,7 @@ private fun ColourRow(key: String, label: String, hex: String, failing: List<Con
         } else {
             null
         },
-        modifier = Modifier.testTag("colour-$key").clickable(enabled = enabled, onClickLabel = "Change $label", onClick = onOpen),
+        modifier = Modifier.testTag("colour-$key").clickable(enabled = enabled, onClickLabel = "Change $label", onClick = trackedClick("theme-editor.colour", onOpen)),
     )
 }
 
@@ -389,7 +392,7 @@ private fun FontField(key: String, label: String, stack: String, fonts: List<The
             for (font in choices) {
                 DropdownMenuItem(
                     text = { Text(font.label) },
-                    onClick = {
+                    onClick = trackedClick("theme-editor.font") {
                         open = false
                         onFont(font.stack)
                     },
@@ -440,6 +443,7 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
         value = v
         hexText = hex
     }
+    val tracked = rememberTrackedDialog("colourPicker")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding().imePadding().testTag("colourSheet")) {
             Text(label, style = MaterialTheme.typography.titleMedium)
@@ -485,7 +489,7 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
                 for (pick in quickPicks) {
                     val chosen = pick.hex == current
                     Surface(
-                        onClick = { setHex(pick.hex) },
+                        onClick = trackedClick("theme-editor.colour.quick-pick") { setHex(pick.hex) },
                         shape = CircleShape,
                         color = colourOf(pick.hex),
                         border = BorderStroke(if (chosen) 3.dp else 1.dp, if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
@@ -497,8 +501,8 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
                 }
             }
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                Button(onClick = { onPick(current) }, enabled = Colour.isHex(hexText), modifier = Modifier.testTag("useColour")) { Text("Use Colour") }
+                TextButton(onClick = trackedClick("theme-editor.colour.cancel", onDismiss)) { Text("Cancel") }
+                Button(onClick = trackedClick("theme-editor.colour.use", tracked.done { onPick(current) }), enabled = Colour.isHex(hexText), modifier = Modifier.testTag("useColour")) { Text("Use Colour") }
             }
         }
     }

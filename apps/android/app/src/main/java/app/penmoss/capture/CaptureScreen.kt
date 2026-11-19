@@ -52,6 +52,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.TrackedDialog
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.CaptureRequest
 
 /** What the capture sheet shows. */
@@ -118,6 +121,8 @@ fun CaptureScreen(
     onNotebook: (String) -> Unit = {},
 ) {
     val focus = remember { FocusRequester() }
+    // The sheet is the capture dialog (the web's `capture`): Save is what it is for.
+    val sheet = rememberTrackedDialog("capture")
     BackHandler(onBack = onCancel)
     val screen = LocalConfiguration.current
     val short = screen.screenHeightDp < SHORT_SCREEN_DP && screen.screenWidthDp >= ROW_SCREEN_DP
@@ -139,7 +144,7 @@ fun CaptureScreen(
             shadowElevation = 8.dp,
         ) {
             if (short && ui.hasNotebook) {
-                ShortSheet(ui, focus, onText, onDestination, onSave, onCancel, onNotebook)
+                ShortSheet(ui, focus, sheet, onText, onDestination, onSave, onCancel, onNotebook)
                 return@Surface
             }
             Column(
@@ -150,8 +155,8 @@ fun CaptureScreen(
                 if (!ui.hasNotebook) {
                     Text(NO_NOTEBOOK, style = MaterialTheme.typography.bodyMedium)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onCancel) { Text("Cancel") }
-                        Button(onClick = onOpenApp, Modifier.testTag("captureOpenApp")) { Text("Open Penmoss") }
+                        TextButton(onClick = trackedClick("capture.cancel", onCancel)) { Text("Cancel") }
+                        Button(onClick = trackedClick("capture.open-app", onOpenApp), Modifier.testTag("captureOpenApp")) { Text("Open Penmoss") }
                     }
                     return@Column
                 }
@@ -185,18 +190,19 @@ fun CaptureScreen(
                 }
                 ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    CancelAndSave(ui, onSave, onCancel)
+                    CancelAndSave(ui, sheet, onSave, onCancel)
                 }
             }
         }
     }
     if (ui.discarding) {
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = onKeepEditing,
             title = { Text("Discard this capture?") },
             text = { Text("What you typed here has not been saved.") },
-            confirmButton = { TextButton(onClick = onDiscard, Modifier.testTag("captureDiscard")) { Text("Discard") } },
-            dismissButton = { TextButton(onClick = onKeepEditing, Modifier.testTag("captureKeepEditing")) { Text("Keep Editing") } },
+            confirmButton = { TextButton(onClick = trackedClick("capture.discard", tracked.done(onDiscard)), Modifier.testTag("captureDiscard")) { Text("Discard") } },
+            dismissButton = { TextButton(onClick = trackedClick("capture.keep-editing", onKeepEditing), Modifier.testTag("captureKeepEditing")) { Text("Keep Editing") } },
         )
     }
     // The keyboard comes up at once: a capture from the tile is typed straight away.
@@ -228,6 +234,7 @@ private const val ROW_CONTROLS_DP = 430f
 private fun ShortSheet(
     ui: CaptureUi,
     focus: FocusRequester,
+    sheet: TrackedDialog,
     onText: (String) -> Unit,
     onDestination: (String) -> Unit,
     onSave: () -> Unit,
@@ -258,7 +265,7 @@ private fun ShortSheet(
                         Destinations(ui, onDestination)
                     }
                 }
-                CancelAndSave(ui, onSave, onCancel)
+                CancelAndSave(ui, sheet, onSave, onCancel)
             }
             NotebookChoice(ui, onNotebook)
             if (!oneRow) {
@@ -286,14 +293,14 @@ private fun ShortSheet(
 private fun Destinations(ui: CaptureUi, onDestination: (String) -> Unit) {
     FilterChip(
         selected = ui.destination == CaptureRequest.DAILY,
-        onClick = { onDestination(CaptureRequest.DAILY) },
+        onClick = trackedClick("capture.destination") { onDestination(CaptureRequest.DAILY) },
         label = { Text("Today’s Note") },
         modifier = Modifier.testTag("captureDaily"),
         enabled = !ui.busy,
     )
     FilterChip(
         selected = ui.destination == CaptureRequest.INBOX,
-        onClick = { onDestination(CaptureRequest.INBOX) },
+        onClick = trackedClick("capture.destination") { onDestination(CaptureRequest.INBOX) },
         label = { Text("New Note in Inbox") },
         modifier = Modifier.testTag("captureInbox"),
         enabled = !ui.busy,
@@ -311,7 +318,7 @@ private fun NotebookChoice(ui: CaptureUi, onNotebook: (String) -> Unit) {
     val chosen = ui.notebooks.firstOrNull { it.key == ui.notebook }
     Box {
         TextButton(
-            onClick = { open = true },
+            onClick = trackedClick("capture.notebook-menu") { open = true },
             enabled = !ui.busy,
             modifier = Modifier.testTag("captureNotebook").semantics { stateDescription = chosen?.name ?: "none chosen" },
         ) {
@@ -324,7 +331,7 @@ private fun NotebookChoice(ui: CaptureUi, onNotebook: (String) -> Unit) {
             for (each in ui.notebooks) {
                 DropdownMenuItem(
                     text = { Text(each.name) },
-                    onClick = {
+                    onClick = trackedClick("capture.notebook") {
                         open = false
                         onNotebook(each.key)
                     },
@@ -336,10 +343,10 @@ private fun NotebookChoice(ui: CaptureUi, onNotebook: (String) -> Unit) {
 }
 
 @Composable
-private fun CancelAndSave(ui: CaptureUi, onSave: () -> Unit, onCancel: () -> Unit) {
-    TextButton(onClick = onCancel, enabled = !ui.busy) { Text("Cancel") }
+private fun CancelAndSave(ui: CaptureUi, sheet: TrackedDialog, onSave: () -> Unit, onCancel: () -> Unit) {
+    TextButton(onClick = trackedClick("capture.cancel", onCancel), enabled = !ui.busy) { Text("Cancel") }
     Button(
-        onClick = onSave,
+        onClick = trackedClick("capture.save", sheet.done(onSave)),
         enabled = !ui.busy && ui.notebook != null && (ui.text.isNotBlank() || ui.pictures > 0),
         modifier = Modifier.testTag("captureSave"),
     ) { Text(if (ui.busy) "Saving…" else "Save") }

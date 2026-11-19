@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 
 /** The widest a snackbar grows; past it, its text wraps (PEN-63). */
 val SNACKBAR_MAX_WIDTH = 380.dp
@@ -137,14 +138,14 @@ fun PenmossSnackbar(data: SnackbarData, modifier: Modifier = Modifier) {
                 )
                 visuals.actionLabel?.let { label ->
                     TextButton(
-                        onClick = { data.performAction() },
+                        onClick = trackedClick("toast.action") { data.performAction() },
                         colors = ButtonDefaults.textButtonColors(contentColor = colours.action),
                     ) {
                         Text(label, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 if (visuals.withDismissAction) {
-                    IconButton(onClick = { data.dismiss() }) {
+                    IconButton(onClick = trackedClick("toast.dismiss") { data.dismiss() }) {
                         Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = colours.muted)
                     }
                 }

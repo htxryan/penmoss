@@ -33,6 +33,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.FontSettings
 import app.penmoss.ui.common.interfaceFontFamily
 import kotlin.math.roundToInt
@@ -58,12 +60,12 @@ internal fun FontsGroup(fonts: FontsUi, enabled: Boolean) {
     ListItem(
         headlineContent = { Text("Interface Font") },
         supportingContent = { Text(FontSettings.label(fonts.interfaceFont)) },
-        modifier = Modifier.settingRow("interface-font").testTag("font-interface").clickable(enabled = enabled, role = Role.Button) { choosing = INTERFACE },
+        modifier = Modifier.settingRow("interface-font").testTag("font-interface").clickable(enabled = enabled, role = Role.Button, onClick = trackedClick("settings.appearance.interface-font") { choosing = INTERFACE }),
     )
     ListItem(
         headlineContent = { Text("Note Font") },
         supportingContent = { Text(FontSettings.label(fonts.noteFont)) },
-        modifier = Modifier.settingRow("note-font").testTag("font-note").clickable(enabled = enabled, role = Role.Button) { choosing = NOTE },
+        modifier = Modifier.settingRow("note-font").testTag("font-note").clickable(enabled = enabled, role = Role.Button, onClick = trackedClick("settings.appearance.note-font") { choosing = NOTE }),
     )
     // The size moves as it is dragged and is stored once let go, so a drag sends one change.
     var size by rememberSaveable { mutableFloatStateOf(fonts.noteSize.toFloat()) }
@@ -113,6 +115,7 @@ private fun FontDialog(title: String, current: String, onPick: (String) -> Unit,
     var custom by rememberSaveable { mutableStateOf(currentCustom != null) }
     var family by rememberSaveable { mutableStateOf(currentCustom.orEmpty()) }
     val problem = FontSettings.familyProblem(family)
+    val tracked = rememberTrackedDialog("fontPicker")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -125,13 +128,13 @@ private fun FontDialog(title: String, current: String, onPick: (String) -> Unit,
                         leadingContent = { RadioButton(selected = selected, onClick = null) },
                         modifier = Modifier
                             .testTag("font-preset-$key")
-                            .selectable(selected = selected, role = Role.RadioButton) { onPick(key) },
+                            .selectable(selected = selected, role = Role.RadioButton, onClick = trackedClick("settings.appearance.font.preset", tracked.done { onPick(key) })),
                     )
                 }
                 ListItem(
                     headlineContent = { Text("Custom…") },
                     leadingContent = { RadioButton(selected = custom, onClick = null) },
-                    modifier = Modifier.testTag("font-preset-custom").selectable(selected = custom, role = Role.RadioButton) { custom = true },
+                    modifier = Modifier.testTag("font-preset-custom").selectable(selected = custom, role = Role.RadioButton, onClick = trackedClick("settings.appearance.font.custom") { custom = true }),
                 )
                 if (custom) {
                     OutlinedTextField(
@@ -154,12 +157,12 @@ private fun FontDialog(title: String, current: String, onPick: (String) -> Unit,
         confirmButton = {
             if (custom) {
                 TextButton(
-                    onClick = { onPick(FontSettings.CUSTOM_PREFIX + family.trim()) },
+                    onClick = trackedClick("settings.appearance.font.use-custom", tracked.done { onPick(FontSettings.CUSTOM_PREFIX + family.trim()) }),
                     enabled = problem == null,
                     modifier = Modifier.testTag("font-custom-use"),
                 ) { Text("Use This Font") }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = trackedClick("settings.appearance.font.cancel", onDismiss)) { Text("Cancel") } },
     )
 }

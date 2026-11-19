@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.ui.common.PenmossSnackbar
 
@@ -90,7 +91,7 @@ fun AgentActivityScreen(
             ui.problem?.let { problem ->
                 item {
                     Help(problem, Modifier.testTag("activityProblem"))
-                    Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { OutlinedButton(onClick = onRetry) { Text("Try Again") } }
+                    Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { OutlinedButton(onClick = trackedClick("settings.agent-activity.retry", onRetry)) { Text("Try Again") } }
                 }
             }
             val items = ui.items
@@ -113,20 +114,21 @@ private fun FilterMenu(
     selected: Boolean,
     label: String,
     options: List<Pair<String, String>>,
+    event: String,
     onPick: (String) -> Unit,
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     Box {
         FilterChip(
             selected = selected,
-            onClick = { open = true },
+            onClick = trackedClick("settings.agent-activity.filter.open") { open = true },
             label = { Text(label) },
             trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
             modifier = Modifier.testTag(tag).semantics { contentDescription = "$what: $label" },
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             for ((id, name) in options) {
-                DropdownMenuItem(text = { Text(name) }, onClick = {
+                DropdownMenuItem(text = { Text(name) }, onClick = trackedClick(event) {
                     open = false
                     onPick(id)
                 }, modifier = Modifier.testTag("$tag-$id"))
@@ -141,13 +143,13 @@ private fun Filters(ui: AgentActivityUi, items: List<ActivityItem>, onFilter: (S
     val notebooks = listOf("all" to "All Notebooks") + ui.notebooks
     val agents = listOf("all" to "All Agents") + activityAgents(items.map { it.entry })
     FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterMenu("activityNotebook", "Notebook", ui.notebook != "all", notebooks.firstOrNull { it.first == ui.notebook }?.second ?: "All Notebooks", notebooks) {
+        FilterMenu("activityNotebook", "Notebook", ui.notebook != "all", notebooks.firstOrNull { it.first == ui.notebook }?.second ?: "All Notebooks", notebooks, event = "settings.agent-activity.filter.notebook") {
             onFilter(it, ui.agent, ui.group)
         }
-        FilterMenu("activityAgent", "Agent", ui.agent != "all", agents.firstOrNull { it.first == ui.agent }?.second ?: "All Agents", agents) {
+        FilterMenu("activityAgent", "Agent", ui.agent != "all", agents.firstOrNull { it.first == ui.agent }?.second ?: "All Agents", agents, event = "settings.agent-activity.filter.agent") {
             onFilter(ui.notebook, it, ui.group)
         }
-        FilterMenu("activityGroup", "Changes", ui.group != "all", ACTIVITY_GROUPS.firstOrNull { it.first == ui.group }?.second ?: "All Changes", ACTIVITY_GROUPS) {
+        FilterMenu("activityGroup", "Changes", ui.group != "all", ACTIVITY_GROUPS.firstOrNull { it.first == ui.group }?.second ?: "All Changes", ACTIVITY_GROUPS, event = "settings.agent-activity.filter.changes") {
             onFilter(ui.notebook, ui.agent, it)
         }
     }
@@ -166,7 +168,7 @@ private fun ActivityRow(item: ActivityItem, now: Long, enabled: Boolean, onUndo:
         }
         if (entry.undoneAt == null) {
             TextButton(
-                onClick = onUndo,
+                onClick = trackedClick("settings.agent-activity.undo", onUndo),
                 enabled = enabled,
                 // Said with what it undoes, as the web's button (aria-describedby).
                 modifier = Modifier.testTag("undo-${item.key}").semantics { contentDescription = "Undo: ${entry.summary}" },

@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.penmoss.NotebookGraph
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.settings.BackButton
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -191,20 +193,20 @@ fun GitHubScreen(
                             app.penmoss.ui.common.TipIconButton(
                                 androidx.compose.material.icons.Icons.Default.MoreVert,
                                 "Options for ${named(account.login)}",
-                                onClick = { menu = true },
+                                onClick = trackedClick("settings.github.account-menu") { menu = true },
                                 modifier = Modifier.testTag("githubAccountMenu-$key"),
                             )
                             androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                 if (!account.primary) {
                                     androidx.compose.material3.DropdownMenuItem(
                                         text = { Text("Use for Send Feedback") },
-                                        onClick = { menu = false; onMakePrimary(account.login) },
+                                        onClick = trackedClick("settings.github.make-primary") { menu = false; onMakePrimary(account.login) },
                                         modifier = Modifier.testTag("githubMakePrimary"),
                                     )
                                 }
                                 androidx.compose.material3.DropdownMenuItem(
                                     text = { Text("Sign Out") },
-                                    onClick = { menu = false; signingOut = key },
+                                    onClick = trackedClick("settings.github.sign-out") { menu = false; signingOut = key },
                                     modifier = Modifier.testTag("githubSignOut"),
                                 )
                             }
@@ -225,8 +227,8 @@ fun GitHubScreen(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // The code first, then GitHub's page (Ryan's Android feedback, 15 Nov 2026).
-                        app.penmoss.ui.common.Button(onClick = { onOpenGitHub(signIn.userCode, signIn.verificationUri) }, Modifier.testTag("githubSignInOpen")) { Labelled("external-link", "Copy Code and Open GitHub") }
-                        TextButton(onClick = onCancelSignIn, Modifier.testTag("githubSignInCancel")) { Labelled("x", "Cancel") }
+                        app.penmoss.ui.common.Button(onClick = trackedClick("settings.github.sign-in.copy-code") { onOpenGitHub(signIn.userCode, signIn.verificationUri) }, Modifier.testTag("githubSignInOpen")) { Labelled("external-link", "Copy Code and Open GitHub") }
+                        TextButton(onClick = trackedClick("settings.github.sign-in.cancel", onCancelSignIn), Modifier.testTag("githubSignInCancel")) { Labelled("x", "Cancel") }
                     }
                 }
                 else -> {
@@ -240,11 +242,11 @@ fun GitHubScreen(
                     }
                     Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (canSignIn) {
-                            app.penmoss.ui.common.Button(onClick = onSignIn, Modifier.testTag("githubSignIn")) {
+                            app.penmoss.ui.common.Button(onClick = trackedClick("settings.github.sign-in.start", onSignIn), Modifier.testTag("githubSignIn")) {
                                 if (accounts.isEmpty()) Labelled("log-in", "Sign In with GitHub") else Labelled("user-plus", "Add Account")
                             }
                         }
-                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.settingRow("github-token").testTag("githubUseToken")) { Labelled("key-round", if (accounts.isEmpty()) "Use a Token Instead…" else "Add with a Token…") }
+                        app.penmoss.ui.common.OutlinedButton(onClick = trackedClick("settings.github.token.open", onToken), Modifier.settingRow("github-token").testTag("githubUseToken")) { Labelled("key-round", if (accounts.isEmpty()) "Use a Token Instead…" else "Add with a Token…") }
                     }
                     if (accounts.isNotEmpty()) {
                         Text(
@@ -275,7 +277,7 @@ fun GitHubScreen(
                     )
                 },
                 trailingContent = if (onSendFeedback != null) ({ Text("›", style = MaterialTheme.typography.titleMedium) }) else null,
-                modifier = (if (onSendFeedback != null) Modifier.clickable(role = Role.Button, onClick = onSendFeedback) else Modifier).settingRow("send-feedback").testTag("githubSendFeedback"),
+                modifier = (if (onSendFeedback != null) Modifier.clickable(role = Role.Button, onClick = trackedClick("settings.github.send-feedback", onSendFeedback)) else Modifier).settingRow("send-feedback").testTag("githubSendFeedback"),
             )
             Text(
                 "A notebook’s own repository uses the token typed on its Git tab, or the account it was added with.",
@@ -288,6 +290,7 @@ fun GitHubScreen(
     }
     signingOut?.let { key ->
         val account = accounts.firstOrNull { it.login.orEmpty() == key }
+        val confirm = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { signingOut = null },
             title = { Text("Sign Out of ${named(account?.login)}?") },
@@ -300,12 +303,12 @@ fun GitHubScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = trackedClick("settings.github.sign-out.confirm", confirm.done {
                     signingOut = null
                     onSignOut(account?.login)
-                }, Modifier.testTag("githubSignOutConfirm")) { Text("Sign Out") }
+                }), Modifier.testTag("githubSignOutConfirm")) { Text("Sign Out") }
             },
-            dismissButton = { TextButton(onClick = { signingOut = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = trackedClick("settings.github.sign-out.cancel") { signingOut = null }) { Text("Cancel") } },
         )
     }
 }
@@ -435,28 +438,29 @@ fun FeedbackOutboxList(
             )
             Row(Modifier.padding(horizontal = 8.dp)) {
                 // Retry once refused; Send now while it waits, as on the web.
-                TextButton(onClick = { onRetry(row.id) }, modifier = Modifier.testTag("feedbackRetry")) {
+                TextButton(onClick = trackedClick(if (row.state == FeedbackOutboxEntity.FAILED) "feedback-outbox.retry" else "feedback-outbox.send-now") { onRetry(row.id) }, modifier = Modifier.testTag("feedbackRetry")) {
                     Text(if (row.state == FeedbackOutboxEntity.FAILED) "Retry" else "Send Now")
                 }
                 if (row.state == FeedbackOutboxEntity.FAILED) {
-                    TextButton(onClick = { onEdit(row.id) }, modifier = Modifier.testTag("feedbackEdit")) { Text("Edit") }
+                    TextButton(onClick = trackedClick("feedback-outbox.edit") { onEdit(row.id) }, modifier = Modifier.testTag("feedbackEdit")) { Text("Edit") }
                 }
-                TextButton(onClick = { discarding = row.id }, modifier = Modifier.testTag("feedbackDiscardQueued")) { Text("Discard") }
+                TextButton(onClick = trackedClick("feedback-outbox.discard") { discarding = row.id }, modifier = Modifier.testTag("feedbackDiscardQueued")) { Text("Discard") }
             }
         }
     }
     discarding?.let { id ->
+        val confirm = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { discarding = null },
             title = { Text("Discard this feedback?") },
             text = { Text("It is deleted from this phone and never sent.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = trackedClick("feedback-outbox.discard.confirm", confirm.done {
                     discarding = null
                     onDiscard(id)
-                }, modifier = Modifier.testTag("confirmDiscardQueued")) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+                }), modifier = Modifier.testTag("confirmDiscardQueued")) { Text("Discard", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { discarding = null }) { Text("Keep It") } },
+            dismissButton = { TextButton(onClick = trackedClick("feedback-outbox.discard.cancel") { discarding = null }) { Text("Keep It") } },
         )
     }
 }

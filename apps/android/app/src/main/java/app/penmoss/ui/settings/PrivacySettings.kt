@@ -43,6 +43,7 @@ import app.penmoss.analytics.AnalyticsFormat
 import app.penmoss.analytics.EventState
 import app.penmoss.analytics.LimitSpec
 import app.penmoss.analytics.Limits
+import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedId
 import app.penmoss.ui.common.OutlinedTextField
@@ -194,10 +195,11 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
         HorizontalDivider()
         ListItem(
             headlineContent = { Text(AnalyticsCopy.text("privacy.policy.label"), color = MaterialTheme.colorScheme.primary) },
-            modifier = Modifier.testTag("privacyPolicy").clickable(role = Role.Button, onClick = actions.onPolicy),
+            modifier = Modifier.testTag("privacyPolicy").clickable(role = Role.Button, onClick = trackedClick("privacy.policy", actions.onPolicy)),
         )
     }
     if (forgetAsk) {
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = {
                 app.penmoss.analytics.Analytics.click("privacy.forget.cancel")
@@ -207,10 +209,10 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
             text = { Text(AnalyticsCopy.text("forget.body", "id" to shortId(ui.install))) },
             confirmButton = {
                 TextButton(
-                    onClick = trackedClick("privacy.forget.confirm") {
+                    onClick = trackedClick("privacy.forget.confirm", tracked.done {
                         forgetAsk = false
                         actions.onForget()
-                    },
+                    }),
                     modifier = Modifier.testTag("confirmForget"),
                 ) { Text(AnalyticsCopy.text("confirm.delete.button"), color = MaterialTheme.colorScheme.error) }
             },
@@ -269,25 +271,25 @@ private fun AdvancedLimits(limits: Limits, actions: PrivacyActions) {
     }
     val ask = asking
     if (ask != null) {
-        val cancel: () -> Unit = {
-            app.penmoss.analytics.Analytics.click("privacy.limits.cancel")
+        val back: () -> Unit = {
             asking = null
             restore += 1
         }
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
-            onDismissRequest = cancel,
+            onDismissRequest = trackedClick("privacy.limits.cancel", back),
             title = { Text(pruneTitle(ask.preview)) },
             text = { Text(AnalyticsCopy.text("prune.body", "reason" to pruneReason(limits, ask))) },
             confirmButton = {
                 TextButton(
-                    onClick = trackedClick("privacy.limits.confirm") {
+                    onClick = trackedClick("privacy.limits.confirm", tracked.done {
                         asking = null
                         save(ask.limits, ask.key, actions)
-                    },
+                    }),
                     modifier = Modifier.testTag("confirmPrune"),
                 ) { Text(AnalyticsCopy.text("confirm.delete.button"), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = cancel, modifier = Modifier.testTag("cancelPrune")) { Text(AnalyticsCopy.text("confirm.cancel.button")) } },
+            dismissButton = { TextButton(onClick = trackedClick("privacy.limits.cancel", back), modifier = Modifier.testTag("cancelPrune")) { Text(AnalyticsCopy.text("confirm.cancel.button")) } },
             modifier = Modifier.testTag("pruneDialog"),
         )
     }

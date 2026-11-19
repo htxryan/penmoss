@@ -30,6 +30,7 @@ import app.penmoss.analytics.AnalyticsCopy
 import app.penmoss.analytics.AnalyticsFormat
 import app.penmoss.analytics.EventEntity
 import app.penmoss.analytics.EventState
+import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedId
 import app.penmoss.ui.common.TextButton
 import java.time.Instant
@@ -81,7 +82,7 @@ fun AnalyticsDataScreen(
                 navigationIcon = { BackButton(onBack) },
                 actions = {
                     if (onCopyJson != null) {
-                        TextButton(onClick = app.penmoss.analytics.trackedClick("privacy.data.copy-json", onCopyJson), modifier = Modifier.testTag("viewerCopyJson").trackedId("privacy.data.copy-json")) {
+                        TextButton(onClick = trackedClick("privacy.data.copy-json", onCopyJson), modifier = Modifier.testTag("viewerCopyJson").trackedId("privacy.data.copy-json")) {
                             Text(AnalyticsCopy.text("viewer.copyJson.button"))
                         }
                     }
@@ -103,10 +104,7 @@ fun AnalyticsDataScreen(
                     for (choice in choices) {
                         FilterChip(
                             selected = filter == choice,
-                            onClick = {
-                                app.penmoss.analytics.Analytics.click("privacy.data.filter-state")
-                                onFilter(choice)
-                            },
+                            onClick = trackedClick("privacy.data.filter-state") { onFilter(choice) },
                             label = { Text(choice?.label ?: AnalyticsCopy.text("viewer.filter.all.label")) },
                             modifier = Modifier.testTag("viewerFilter-${choice?.wire ?: "all"}"),
                         )

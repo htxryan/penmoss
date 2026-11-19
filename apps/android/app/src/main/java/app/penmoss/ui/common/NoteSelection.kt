@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
+import app.penmoss.analytics.trackedClick
 import app.penmoss.data.NoteStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -143,23 +144,23 @@ fun SelectionBar(
     TopAppBar(
         modifier = modifier.testTag("selectionBar"),
         navigationIcon = {
-            IconButton(onClick = onClose, modifier = Modifier.testTag("selectionClose")) { Icon(Icons.Default.Close, contentDescription = "Cancel Selection") }
+            IconButton(onClick = trackedClick("selection.close", onClose), modifier = Modifier.testTag("selectionClose")) { Icon(Icons.Default.Close, contentDescription = "Cancel Selection") }
         },
         title = {
             // Read out as notes are added or taken out.
             Text("${picked.size} selected", Modifier.testTag("selectionCount").semantics { liveRegion = LiveRegionMode.Polite })
         },
         actions = {
-            IconButton(onClick = onMove, modifier = Modifier.testTag("selectionMove")) { Icon(FolderIcon, contentDescription = "Move $name to a folder") }
-            IconButton(onClick = onTrash, modifier = Modifier.testTag("selectionTrash")) { Icon(Icons.Default.Delete, contentDescription = "Move $name to Trash") }
+            IconButton(onClick = trackedClick("selection.move", onMove), modifier = Modifier.testTag("selectionMove")) { Icon(FolderIcon, contentDescription = "Move $name to a folder") }
+            IconButton(onClick = trackedClick("selection.trash", onTrash), modifier = Modifier.testTag("selectionTrash")) { Icon(Icons.Default.Delete, contentDescription = "Move $name to Trash") }
             if (picked.size == 1) {
                 var more by remember { mutableStateOf(false) }
-                IconButton(onClick = { more = true }, modifier = Modifier.testTag("selectionMore")) { Icon(Icons.Default.MoreVert, contentDescription = "More Actions") }
+                IconButton(onClick = trackedClick("selection.more") { more = true }, modifier = Modifier.testTag("selectionMore")) { Icon(Icons.Default.MoreVert, contentDescription = "More Actions") }
                 DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
                     if (onNewNoteHere != null) {
                         DropdownMenuItem(
                             text = { Text("New Note Here") },
-                            onClick = {
+                            onClick = trackedClick("selection.more.new-note") {
                                 more = false
                                 onNewNoteHere()
                             },
@@ -169,7 +170,7 @@ fun SelectionBar(
                     if (onNewFolderHere != null) {
                         DropdownMenuItem(
                             text = { Text("New Folder Here") },
-                            onClick = {
+                            onClick = trackedClick("selection.more.new-folder") {
                                 more = false
                                 onNewFolderHere()
                             },
@@ -179,7 +180,7 @@ fun SelectionBar(
                     if (onNewNoteHere != null || onNewFolderHere != null) HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Rename") },
-                        onClick = {
+                        onClick = trackedClick("selection.more.rename") {
                             more = false
                             onRename()
                         },
@@ -188,7 +189,7 @@ fun SelectionBar(
                     if (onCopyAgentReference != null) {
                         DropdownMenuItem(
                             text = { Text("Copy Agent Reference") },
-                            onClick = {
+                            onClick = trackedClick("selection.more.copy-agent-reference") {
                                 more = false
                                 onCopyAgentReference()
                             },

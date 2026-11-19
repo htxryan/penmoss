@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import kotlinx.coroutines.launch
 
 /*
@@ -98,10 +99,13 @@ fun SyncStateDot(dot: SyncDot, modifier: Modifier = Modifier) {
         Box(
             modifier
                 .minimumInteractiveComponentSize()
-                .clickable(onClickLabel = if (dot.onStopped != null) "Open the Notebook’s Sync" else "Show Sync State") {
-                    val stopped = dot.onStopped
-                    if (stopped != null) stopped() else scope.launch { tip.show() }
-                }
+                .clickable(
+                    onClickLabel = if (dot.onStopped != null) "Open the Notebook’s Sync" else "Show Sync State",
+                    onClick = trackedClick("home.sync-dot") {
+                        val stopped = dot.onStopped
+                        if (stopped != null) stopped() else scope.launch { tip.show() }
+                    },
+                )
                 .semantics {
                     contentDescription = dot.words
                     role = Role.Button

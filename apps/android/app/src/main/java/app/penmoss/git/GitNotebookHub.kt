@@ -569,6 +569,10 @@ class GitNotebookHub(
 
     /** Settings → cadence and Wi-Fi only; the open page follows at once. */
     suspend fun update(localId: String, pushDelayS: Int? = null, pullEveryMin: Int? = null, wifiOnly: Boolean? = null) {
+        // Recorded by name (PEN-137), with the value chosen, never the notebook.
+        pushDelayS?.let { app.penmoss.analytics.SettingEvents.recordValue("git.pushAfter", it) }
+        pullEveryMin?.let { app.penmoss.analytics.SettingEvents.recordValue("git.pullEvery", it) }
+        wifiOnly?.let { app.penmoss.analytics.SettingEvents.recordValue("git.wifiOnly", it) }
         val view = notebooks.update(localId, pushDelayS, pullEveryMin, wifiOnly)
         sources[localId]?.opened()?.setCadence(view.pushDelayS, view.pullEveryMin)
         scheduleWork()
@@ -576,6 +580,7 @@ class GitNotebookHub(
 
     /** Sign commits, per notebook (#172, A921): on makes this phone's key first if it has none. */
     suspend fun setSignCommits(localId: String, on: Boolean) {
+        app.penmoss.analytics.SettingEvents.recordValue("git.signCommits", on)
         notebooks.setSignCommits(localId, on)
         refresh()
     }

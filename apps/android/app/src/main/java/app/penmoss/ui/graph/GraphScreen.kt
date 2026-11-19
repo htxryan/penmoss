@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.ui.common.OutlinedTextField
@@ -226,7 +227,7 @@ fun GraphScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
             )
         },
@@ -257,7 +258,7 @@ fun GraphScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp)
-                                .clickable {
+                                .clickable(onClick = trackedClick("graph.result") {
                                     query = ""
                                     focus.clearFocus()
                                     // A local graph centres on the note picked; with every note
@@ -265,7 +266,7 @@ fun GraphScreen(
                                     val wasLocal = scope is GraphScope.Local
                                     centre = match.id
                                     if (!wasLocal) feed?.focus(match.id)
-                                }
+                                })
                                 .padding(vertical = 12.dp)
                                 .testTag("graphResult-${match.id}"),
                             maxLines = 1,
@@ -281,7 +282,7 @@ fun GraphScreen(
             ) {
                 FilterChip(
                     selected = scope !is GraphScope.Local,
-                    onClick = {
+                    onClick = trackedClick("graph.scope.all") {
                         local = false
                         large = false
                     },
@@ -291,7 +292,7 @@ fun GraphScreen(
                 FilterChip(
                     selected = scope is GraphScope.Local,
                     enabled = around != null,
-                    onClick = { local = true },
+                    onClick = trackedClick("graph.scope.local") { local = true },
                     label = {
                         Text(
                             around?.let { "Around “${model?.titleOf(it)}”" } ?: "This Note",
@@ -305,7 +306,7 @@ fun GraphScreen(
                     for (value in GraphProtocol.DEPTHS) {
                         FilterChip(
                             selected = depth == value,
-                            onClick = { depth = value },
+                            onClick = trackedClick("graph.depth") { depth = value },
                             label = { Text(if (value == 1) "1 link" else "$value links") },
                             modifier = Modifier.testTag("graphDepth-$value"),
                         )
@@ -324,7 +325,7 @@ fun GraphScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     TextButton(
-                        onClick = {
+                        onClick = trackedClick("graph.show-all") {
                             local = false
                             large = false
                         },
@@ -390,7 +391,7 @@ private fun GraphView(
             Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Graph unavailable", Modifier.testTag("graphGone"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(
-                    onClick = {
+                    onClick = trackedClick("graph.reload") {
                         gone = false
                         made++
                     },

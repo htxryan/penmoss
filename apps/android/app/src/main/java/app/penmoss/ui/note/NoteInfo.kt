@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.NotebookGraph
+import app.penmoss.analytics.trackedClick
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -289,7 +290,7 @@ internal fun InfoButton(linked: Int, onClick: () -> Unit) {
         tooltip = { PlainTooltip { Text("Info") } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.testTag("noteInfo").semantics { contentDescription = description }) {
+        IconButton(onClick = trackedClick("note.info", onClick), modifier = Modifier.testTag("noteInfo").semantics { contentDescription = description }) {
             BadgedBox(badge = { if (linked > 0) Badge { Text(if (linked > 99) "99+" else linked.toString()) } }) {
                 Icon(SettingsIcons.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -373,7 +374,7 @@ internal fun InfoSheet(
                         else -> tags.forEach { tag -> Text("#$tag", Modifier.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium) }
                     }
                     if (canTag) {
-                        AssistChip(onClick = onTags, label = { Text("Edit Tags…") }, modifier = Modifier.testTag("infoEditTags"))
+                        AssistChip(onClick = trackedClick("note.info.edit-tags", onTags), label = { Text("Edit Tags…") }, modifier = Modifier.testTag("infoEditTags"))
                     }
                 }
             }
@@ -476,7 +477,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
         item { EmptyLine(if (first) "Looking for links…" else "No other notes link here yet.", "noLinkedMentions") }
     }
     items(linked, key = { "linked-${it.id}" }) { entry ->
-        Column(Modifier.fillMaxWidth().clickable { onOpen(entry.id) }.heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("linked-${entry.id}")) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = trackedClick("note.backlinks.linked") { onOpen(entry.id) }).heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("linked-${entry.id}")) {
             Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             for (mention in entry.mentions) {
                 Text(
@@ -492,7 +493,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
         item { EmptyLine(if (first) "" else "No other notes mention this title.", "noUnlinkedMentions") }
     }
     items(unlinked, key = { "unlinked-${it.id}" }) { entry ->
-        Column(Modifier.fillMaxWidth().clickable { onOpen(entry.id) }.heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("unlinked-${entry.id}")) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = trackedClick("note.backlinks.unlinked") { onOpen(entry.id) }).heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("unlinked-${entry.id}")) {
             Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             Text(
                 buildAnnotatedString {

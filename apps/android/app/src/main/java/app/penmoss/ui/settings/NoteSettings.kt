@@ -96,6 +96,7 @@ fun NoteSettingsScreen(
                 if (fullWidth) "full" else "theme",
                 enabled,
                 "width",
+                event = "settings.note.width",
             ) { onFullWidth(it == "full") }
             Help("The theme’s is $editorWidth rem. Kept on this phone. A phone already uses its whole width; this shows on a tablet or an unfolded phone. A hardware keyboard’s Toggle Full-Width Notes changes it too.")
         }

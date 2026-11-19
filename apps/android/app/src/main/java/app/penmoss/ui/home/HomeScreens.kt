@@ -95,6 +95,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.EmptyMessage
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.FolderRowView
@@ -121,7 +122,7 @@ import androidx.compose.ui.semantics.contentDescription
 
 @Composable
 private fun BackButton(onBack: () -> Unit) {
-    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
 }
 
 /**
@@ -317,26 +318,26 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                     if (ui.reordering) {
                         BackButton { actions.onReorder(false) }
                     } else {
-                        TipIconButton(Icons.Default.Menu, "Open Menu", onClick = { drawerScope.launch { drawer.open() } }, modifier = Modifier.testTag("homeMenu"))
+                        TipIconButton(Icons.Default.Menu, "Open Menu", onClick = trackedClick("sidebar.drawer.open") { drawerScope.launch { drawer.open() } }, modifier = Modifier.testTag("homeMenu"))
                     }
                 },
                 actions = {
                     if (ui.reordering) {
-                        TextButton(onClick = { actions.onReorder(false) }, modifier = Modifier.testTag("reorderDone")) { Text("Done") }
+                        TextButton(onClick = trackedClick("tree.reorder.done") { actions.onReorder(false) }, modifier = Modifier.testTag("reorderDone")) { Text("Done") }
                     } else {
                         // Pull to refresh as a button, for TalkBack, Switch Access and anyone who doesn't pull.
-                        TipIconButton(Icons.Default.Refresh, "Sync Now", onClick = pull, enabled = !pulled, modifier = Modifier.testTag("homeSyncNow"))
+                        TipIconButton(Icons.Default.Refresh, "Sync Now", onClick = trackedClick("home.sync-now", pull), enabled = !pulled, modifier = Modifier.testTag("homeSyncNow"))
                         // Sort moved to the notebook's heading, beside New Folder and Trash (T52 item 10).
                         // No gear: Settings is the drawer's (item 17, A1614).
                         var more by remember { mutableStateOf(false) }
                         var sorting by remember { mutableStateOf(false) }
                         // New Folder and Reorder Folders act on the notes list; the other pages have no ⋮.
                         if (notesPage) Box {
-                            TipIconButton(Icons.Default.MoreVert, "More Options", onClick = { more = true }, modifier = Modifier.testTag("homeMore"))
+                            TipIconButton(Icons.Default.MoreVert, "More Options", onClick = trackedClick("tree.more") { more = true }, modifier = Modifier.testTag("homeMore"))
                             DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
                                 DropdownMenuItem(
                                     text = { Text("New Folder") },
-                                    onClick = {
+                                    onClick = trackedClick("tree.more.new-folder") {
                                         more = false
                                         actions.onNewFolder()
                                     },
@@ -345,7 +346,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                 // The notebook heading's actions (T52 item 10), now the heading is the title (A1613).
                                 DropdownMenuItem(
                                     text = { Text("Sort Order…") },
-                                    onClick = {
+                                    onClick = trackedClick("tree.more.sort-order") {
                                         more = false
                                         sorting = true
                                     },
@@ -354,7 +355,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                 if (ui.sortMode == "manual") {
                                     DropdownMenuItem(
                                         text = { Text("Reorder Folders") },
-                                        onClick = {
+                                        onClick = trackedClick("tree.more.reorder") {
                                             more = false
                                             actions.onReorder(true)
                                         },
@@ -370,7 +371,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
         },
         floatingActionButton = {
             if (!ui.reordering) {
-                FloatingActionButton(onClick = actions.onNewNote) { Icon(Icons.Default.Add, contentDescription = "New Note") }
+                FloatingActionButton(onClick = trackedClick("tree.new-note", actions.onNewNote)) { Icon(Icons.Default.Add, contentDescription = "New Note") }
             }
         },
     ) { padding ->
@@ -531,7 +532,8 @@ private fun QuickAccessRow(
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         menu = true
                     },
-                ) { onOpen(note.id) }
+                    onClick = trackedClick("sidebar.quick-access.note") { onOpen(note.id) },
+                )
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
             Text(note.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -547,9 +549,9 @@ private fun QuickAccessRow(
             }
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text("Remove from Quick Access") }, onClick = { menu = false; onRemove() }, modifier = Modifier.testTag("quickAccessRemove"))
-            if (onMoveUp != null) DropdownMenuItem(text = { Text("Move Up") }, onClick = { menu = false; onMoveUp() }, modifier = Modifier.testTag("quickAccessMoveUp"))
-            if (onMoveDown != null) DropdownMenuItem(text = { Text("Move Down") }, onClick = { menu = false; onMoveDown() }, modifier = Modifier.testTag("quickAccessMoveDown"))
+            DropdownMenuItem(text = { Text("Remove from Quick Access") }, onClick = trackedClick("sidebar.quick-access.remove") { menu = false; onRemove() }, modifier = Modifier.testTag("quickAccessRemove"))
+            if (onMoveUp != null) DropdownMenuItem(text = { Text("Move Up") }, onClick = trackedClick("sidebar.quick-access.move-up") { menu = false; onMoveUp() }, modifier = Modifier.testTag("quickAccessMoveUp"))
+            if (onMoveDown != null) DropdownMenuItem(text = { Text("Move Down") }, onClick = trackedClick("sidebar.quick-access.move-down") { menu = false; onMoveDown() }, modifier = Modifier.testTag("quickAccessMoveDown"))
         }
     }
 }
@@ -600,7 +602,7 @@ private fun CapturesNotice(waiting: Int, refused: Int, why: String?, onRefused: 
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
         )
-        TextButton(onClick = onRefused, Modifier.padding(horizontal = 4.dp).testTag("capturesRefusedOpen")) {
+        TextButton(onClick = trackedClick("home.captures-refused.open", onRefused), Modifier.padding(horizontal = 4.dp).testTag("capturesRefusedOpen")) {
             Text(if (refused == 1) "See It" else "See Them")
         }
     }
@@ -668,23 +670,23 @@ fun FolderScreen(
                 navigationIcon = { BackButton(onBack = { if (reordering) onReorder(false) else onBack() }) },
                 actions = {
                     if (reordering) {
-                        TextButton(onClick = { onReorder(false) }, modifier = Modifier.testTag("reorderDone")) { Text("Done") }
+                        TextButton(onClick = trackedClick("tree.reorder.done") { onReorder(false) }, modifier = Modifier.testTag("reorderDone")) { Text("Done") }
                     } else {
                         Box {
-                            IconButton(onClick = { sorting = true }, modifier = Modifier.testTag("folderSort")) {
+                            IconButton(onClick = trackedClick("folders.sort-order") { sorting = true }, modifier = Modifier.testTag("folderSort")) {
                                 Icon(SettingsIcons.Sort, contentDescription = "Sort Order")
                             }
                             SortMenu(expanded = sorting, current = sortMode, onPick = { sorting = false; onSort(it) }, onDismiss = { sorting = false })
                         }
                         Box {
-                            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("folderMore")) {
+                            IconButton(onClick = trackedClick("folders.more") { menu = true }, modifier = Modifier.testTag("folderMore")) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "More Options")
                             }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                 if (onNewNoteIn != null) {
                                     DropdownMenuItem(
                                         text = { Text("New Note in…") },
-                                        onClick = {
+                                        onClick = trackedClick("folders.more.new-note-in") {
                                             menu = false
                                             onNewNoteIn()
                                         },
@@ -692,7 +694,7 @@ fun FolderScreen(
                                 }
                                 DropdownMenuItem(
                                     text = { Text("New Folder") },
-                                    onClick = {
+                                    onClick = trackedClick("tree.folder-menu.new-folder") {
                                         menu = false
                                         onNewFolder()
                                     },
@@ -700,7 +702,7 @@ fun FolderScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Rename Folder") },
-                                    onClick = {
+                                    onClick = trackedClick("tree.folder-menu.rename") {
                                         menu = false
                                         onRenameFolder()
                                     },
@@ -708,7 +710,7 @@ fun FolderScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Move to…") },
-                                    onClick = {
+                                    onClick = trackedClick("folders.more.move") {
                                         menu = false
                                         onMoveFolderTo()
                                     },
@@ -717,7 +719,7 @@ fun FolderScreen(
                                 if (sortMode == "manual") {
                                     DropdownMenuItem(
                                         text = { Text("Reorder") },
-                                        onClick = {
+                                        onClick = trackedClick("folders.more.reorder") {
                                             menu = false
                                             onReorder(true)
                                         },
@@ -726,7 +728,7 @@ fun FolderScreen(
                                 }
                                 DropdownMenuItem(
                                     text = { Text("Delete Folder…") },
-                                    onClick = {
+                                    onClick = trackedClick("tree.folder-menu.delete") {
                                         menu = false
                                         onDeleteFolder()
                                     },
@@ -740,7 +742,7 @@ fun FolderScreen(
         },
         floatingActionButton = {
             if (onNewNote != null && !reordering) {
-                FloatingActionButton(onClick = onNewNote) { Icon(Icons.Default.Add, contentDescription = "New Note in This Folder") }
+                FloatingActionButton(onClick = trackedClick("tree.folder-row.new-note", onNewNote)) { Icon(Icons.Default.Add, contentDescription = "New Note in This Folder") }
             }
         },
     ) { padding ->
@@ -786,7 +788,7 @@ fun CenteredMessage(text: String?, busy: Boolean = false, action: Pair<String, (
             )
         }
         if (action != null) {
-            FilledTonalButton(onClick = action.second, Modifier.padding(top = 24.dp).testTag("messageAction")) { Text(action.first) }
+            FilledTonalButton(onClick = trackedClick("note.load.retry", action.second), Modifier.padding(top = 24.dp).testTag("messageAction")) { Text(action.first) }
         }
     }
 }
@@ -820,18 +822,19 @@ internal fun HomeShortcutRow(
     @Composable
     fun Lucide(name: String, label: String, tag: String, onClick: () -> Unit) {
         val glyph = lucide?.icon(name) ?: return
+        // untracked: a pass-through; both callers below give it their own trackedClick
         TipIconButton(LucideAssets.vector(glyph), label, onClick = onClick, modifier = Modifier.testTag(tag))
     }
     // Six 48dp targets fit a 320dp phone with no gap between them (each icon is 24dp in its 48);
     // with more shown, the row scrolls sideways rather than squeeze them.
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp).testTag("homeShortcuts")) {
-        TipIconButton(SettingsIcons.Search, "Search", onClick = onSearch, modifier = Modifier.testTag("homeSearch"))
-        if (shortcuts.tags) TipIconButton(SettingsIcons.Tag, "Tags", onClick = onTags, modifier = Modifier.testTag("homeTagsShortcut"))
-        if (shortcuts.today) TipIconButton(SettingsIcons.Today, "Today", onClick = onToday, modifier = Modifier.testTag("homeToday"))
-        if (shortcuts.thisWeek) TipIconButton(SettingsIcons.Week, "This Week", onClick = onThisWeek, modifier = Modifier.testTag("homeThisWeek"))
-        if (shortcuts.journal) Lucide("book-open", "Journal", "homeJournal", onJournal)
-        if (shortcuts.graph) TipIconButton(SettingsIcons.Graph, "Graph", onClick = onGraph, modifier = Modifier.testTag("homeGraph"))
-        if (shortcuts.commands) TipIconButton(SettingsIcons.Command, "Commands", onClick = onCommands, modifier = Modifier.testTag("homeCommands"))
-        if (shortcuts.capture) Lucide("zap", "Capture", "homeCapture", onCapture)
+        TipIconButton(SettingsIcons.Search, "Search", onClick = trackedClick("home.shortcut.search", onSearch), modifier = Modifier.testTag("homeSearch"))
+        if (shortcuts.tags) TipIconButton(SettingsIcons.Tag, "Tags", onClick = trackedClick("home.shortcut.tags", onTags), modifier = Modifier.testTag("homeTagsShortcut"))
+        if (shortcuts.today) TipIconButton(SettingsIcons.Today, "Today", onClick = trackedClick("home.shortcut.today", onToday), modifier = Modifier.testTag("homeToday"))
+        if (shortcuts.thisWeek) TipIconButton(SettingsIcons.Week, "This Week", onClick = trackedClick("home.shortcut.this-week", onThisWeek), modifier = Modifier.testTag("homeThisWeek"))
+        if (shortcuts.journal) Lucide("book-open", "Journal", "homeJournal", trackedClick("home.shortcut.journal", onJournal))
+        if (shortcuts.graph) TipIconButton(SettingsIcons.Graph, "Graph", onClick = trackedClick("home.shortcut.graph", onGraph), modifier = Modifier.testTag("homeGraph"))
+        if (shortcuts.commands) TipIconButton(SettingsIcons.Command, "Commands", onClick = trackedClick("home.shortcut.commands", onCommands), modifier = Modifier.testTag("homeCommands"))
+        if (shortcuts.capture) Lucide("zap", "Capture", "homeCapture", trackedClick("home.shortcut.capture", onCapture))
     }
 }

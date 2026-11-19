@@ -26,6 +26,9 @@ class AnalyticsCatalogue(
 
     fun names(kind: String): Set<String> = names[kind].orEmpty()
 
+    /** Whether [value] is one of the words setting [name] may be (core's `isSettingWord`). */
+    fun isWord(name: String, value: String): Boolean = settingWords[name]?.contains(value) == true
+
     /** Why an event is not valid, or null when it is (core's `eventProblem`). */
     fun problem(event: AnalyticsEvent): String? {
         if (!AnalyticsFormat.SESSION.matches(event.session)) return "session"
