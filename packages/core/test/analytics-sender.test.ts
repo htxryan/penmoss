@@ -11,6 +11,7 @@ import {
   SEND_EVERY_MS,
   STATES,
   type AnalyticsEvent,
+  type StateCode,
 } from '../src/analytics/events';
 import {
   ANALYTICS_BASE,
@@ -92,7 +93,11 @@ afterEach(() => {
   store.close();
 });
 
-function seed(n: number, state = STATES.waiting, overrides: Partial<AnalyticsEvent> = {}) {
+function seed(
+  n: number,
+  state: StateCode = STATES.waiting,
+  overrides: Partial<AnalyticsEvent> = {},
+) {
   store.insert(Array.from({ length: n }, (_, i) => ({ event: ev(i, overrides), state })));
 }
 

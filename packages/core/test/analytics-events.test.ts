@@ -351,6 +351,13 @@ describe('eventProblem', () => {
     expect(eventProblem({ ...cli, props: { exit: ['OK'] } })).toBe('prop exit value');
   });
 
+  it('refuses a prop named after one of Object’s own', () => {
+    for (const key of ['constructor', 'toString', 'hasOwnProperty', 'valueOf', '__proto__']) {
+      const props = JSON.parse(`{"${key}": "Zebracanary Title Q7"}`) as Record<string, string>;
+      expect(eventProblem(event({ props })), key).toBe(`prop ${key}`);
+    }
+  });
+
   it('refuses props its kind does not allow', () => {
     expect(eventProblem(event({ props: { title: 'x' } }))).toBe('prop title');
     expect(eventProblem({ ...VALID.click, props: { source: 'key' } })).toBe('prop source');

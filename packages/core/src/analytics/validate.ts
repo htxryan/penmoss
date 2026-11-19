@@ -40,17 +40,24 @@ export const KEYS_PATTERN =
 const keys: Check = (value) => typeof value === 'string' && KEYS_PATTERN.test(value);
 
 /** A CLI flag's name, never its value. */
-const FLAG_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
+export const FLAG_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
+/** The most flags a CLI event names. */
+export const MAX_FLAGS = 16;
 const flags: Check = (value) =>
   Array.isArray(value) &&
-  value.length <= 16 &&
+  value.length <= MAX_FLAGS &&
   value.every((flag) => typeof flag === 'string' && FLAG_PATTERN.test(flag));
 
 /** A setting's value: an enum-like token, a boolean, a bucket or a small whole number. */
-const SETTING_TOKEN = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,31}$/;
+export const SETTING_TOKEN = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,31}$/;
+/** The largest whole number a setting's value may be. */
+export const MAX_SETTING_NUMBER = 10_000_000;
 const settingValue: Check = (value) =>
   typeof value === 'boolean' ||
-  (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 10_000_000) ||
+  (typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= MAX_SETTING_NUMBER) ||
   (typeof value === 'string' && (SETTING_TOKEN.test(value) || count(value)));
 
 const screenKind: Check = (value) => typeof value === 'string' && isCatalogued('screen', value);
@@ -76,49 +83,95 @@ export const FIRSTRUN_ERRORS = [
   'other',
 ] as const;
 
+/**
+ * What a prop may hold, as data (the Kotlin twin reads it from `analytics-v1.json`): one of a
+ * list; a boolean; a count or a duration bucket; a key combination (KEYS_PATTERN); a list of
+ * flag names (FLAG_PATTERN, at most MAX_FLAGS); a setting's value; or a catalogued screen.
+ */
+export type PropSpec =
+  | { readonly type: 'enum'; readonly values: readonly (string | number | boolean)[] }
+  | { readonly type: 'bool' | 'count' | 'duration' | 'keys' | 'flags' | 'setting' | 'screen' };
+
+const enumOf = (values: readonly (string | number | boolean)[]): PropSpec => ({
+  type: 'enum',
+  values,
+});
+const BOOL: PropSpec = { type: 'bool' };
+const COUNT: PropSpec = { type: 'count' };
+const TOOK: PropSpec = { type: 'duration' };
+
 /** Each kind's props: the only keys allowed, and what each may hold. */
-const PROPS: Readonly<Record<EventKind, Readonly<Record<string, Check>>>> = {
+export const PROP_SPECS: Readonly<Record<EventKind, Readonly<Record<string, PropSpec>>>> = {
   app: {
-    notebooks: count,
-    notes: count,
-    agents: bool,
-    theme: oneOf([...BUILTIN_THEMES, 'custom']),
-    active: took,
+    notebooks: COUNT,
+    notes: COUNT,
+    agents: BOOL,
+    theme: enumOf([...BUILTIN_THEMES, 'custom']),
+    active: TOOK,
   },
   command: {
-    source: oneOf(['key', 'palette', 'button', 'menu', 'tray', 'hotkey', 'editor', 'other']),
-    keys,
-    custom: bool,
-    ran: bool,
+    source: enumOf(['key', 'palette', 'button', 'menu', 'tray', 'hotkey', 'editor', 'other']),
+    keys: { type: 'keys' },
+    custom: BOOL,
+    ran: BOOL,
   },
-  screen: { from: screenKind },
-  dialog: { action: oneOf(['open', 'done', 'cancel']), open: took },
-  click: { state: oneOf(['on', 'off']) },
-  menu: { source: oneOf(['menubar', 'tray', 'context']) },
-  setting: { value: settingValue, changed: oneOf([true]) },
-  firstrun: { result: oneOf(['done', 'back', 'failed']), error: oneOf(FIRSTRUN_ERRORS) },
+  screen: { from: { type: 'screen' } },
+  dialog: { action: enumOf(['open', 'done', 'cancel']), open: TOOK },
+  click: { state: enumOf(['on', 'off']) },
+  menu: { source: enumOf(['menubar', 'tray', 'context']) },
+  setting: { value: { type: 'setting' }, changed: enumOf([true]) },
+  firstrun: { result: enumOf(['done', 'back', 'failed']), error: enumOf(FIRSTRUN_ERRORS) },
   feedback: {
-    type: oneOf(['bug', 'feature']),
-    priority: oneOf([1, 2, 3, 4]),
-    screenshots: count,
-    logs: bool,
-    groupsLeftOut: count,
+    type: enumOf(['bug', 'feature']),
+    priority: enumOf([1, 2, 3, 4]),
+    screenshots: COUNT,
+    logs: BOOL,
+    groupsLeftOut: COUNT,
   },
   sync: {
-    result: oneOf(['ok', 'conflict', 'offline', 'failed']),
-    took,
-    changed: count,
+    result: enumOf(['ok', 'conflict', 'offline', 'failed']),
+    took: TOOK,
+    changed: COUNT,
   },
-  cli: { flags, exit: oneOf(CLI_EXITS), took, tty: bool },
+  cli: { flags: { type: 'flags' }, exit: enumOf(CLI_EXITS), took: TOOK, tty: BOOL },
   tool: {
-    agentClient: oneOf(AGENT_CLIENTS),
-    result: oneOf(['ok', 'invalid', 'notFound', 'conflict', 'failed']),
-    took,
+    agentClient: enumOf(AGENT_CLIENTS),
+    result: enumOf(['ok', 'invalid', 'notFound', 'conflict', 'failed']),
+    took: TOOK,
   },
 };
 
-const VERSION_PATTERN = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9.]{1,20})?$/;
-const OS_VERSION_PATTERN = /^\d{1,4}(?:\.\d{1,4})?$/;
+function checkOf(spec: PropSpec): Check {
+  switch (spec.type) {
+    case 'enum':
+      return oneOf(spec.values);
+    case 'bool':
+      return bool;
+    case 'count':
+      return count;
+    case 'duration':
+      return took;
+    case 'keys':
+      return keys;
+    case 'flags':
+      return flags;
+    case 'setting':
+      return settingValue;
+    case 'screen':
+      return screenKind;
+  }
+}
+
+const PROPS: Readonly<Record<string, Readonly<Record<string, Check>>>> = Object.fromEntries(
+  Object.entries(PROP_SPECS).map(([kind, props]) => [
+    kind,
+    Object.fromEntries(Object.entries(props).map(([key, spec]) => [key, checkOf(spec)])),
+  ]),
+);
+
+/** An app's version (`1.4.0`, `1.4.0-alpha.3`) and an OS version cut to major.minor. */
+export const VERSION_PATTERN = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9.]{1,20})?$/;
+export const OS_VERSION_PATTERN = /^\d{1,4}(?:\.\d{1,4})?$/;
 
 /** Why `event` is not a valid event, or null when it is. */
 export function eventProblem(event: unknown): string | null {
@@ -159,9 +212,10 @@ export function eventProblem(event: unknown): string | null {
   if (typeof value.name !== 'string' || !isCatalogued(kind, value.name)) return 'name';
   const props = value.props;
   if (!props || typeof props !== 'object' || Array.isArray(props)) return 'props';
-  const checks = PROPS[kind];
+  const checks = PROPS[kind]!;
   for (const [key, item] of Object.entries(props)) {
-    const check = checks[key];
+    // Own keys only: `constructor` or `toString` must not find Object's own.
+    const check = Object.hasOwn(checks, key) ? checks[key] : undefined;
     if (!check) return `prop ${key}`;
     if (!check(item)) return `prop ${key} value`;
   }
