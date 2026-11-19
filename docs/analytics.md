@@ -1,6 +1,6 @@
 # Usage analytics and local logs
 
-How Penmoss records usage, sends it with consent, and keeps scrubbed logs (PEN-137; decisions A-NEW-1 to A-NEW-12 in [`decisions.md`](decisions.md)). What a person sees is in the user docs: [Usage data](../site/src/content/docs/docs/help/usage-data.md) and [Send feedback](../site/src/content/docs/docs/help/feedback.md).
+How Penmoss records usage, sends it with consent, and keeps scrubbed logs (PEN-137; decisions A1635 to A1646 in [`decisions.md`](decisions.md)). What a person sees is in the user docs: [Usage data](../site/src/content/docs/docs/help/usage-data.md) and [Send feedback](../site/src/content/docs/docs/help/feedback.md).
 
 ## The model
 
