@@ -73,13 +73,46 @@ describe('readConsentFile', () => {
     expect(readConsentFile(path)).toMatchObject({ consent: 'no', install: file.install });
   });
 
-  it('reads a file that is not JSON as a fresh one, leaving the file alone', () => {
+  it('writes a fresh file over one that is not JSON, so every reader agrees on one ID', () => {
     mkdirSync(home, { recursive: true });
-    writeFileSync(path, '{ not json');
+    writeFileSync(path, '{ not json', { mode: 0o644 });
     const file = readConsentFile(path);
     expect(file.consent).toBeNull();
     expect(file.install).toMatch(INSTALL_PATTERN);
-    expect(readFileSync(path, 'utf8')).toBe('{ not json');
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual(file);
+    expect(mode(path)).toBe(0o600);
+    expect(readdirSync(home)).toEqual(['analytics.json']);
+    // Another process (or this one again) reads the same ID now.
+    expect(readConsentFile(path)).toEqual(file);
+    expect(readConsentFile(path).install).toBe(file.install);
+  });
+
+  it('writes an ID into a file that has none, keeping its answer', () => {
+    mkdirSync(home, { recursive: true });
+    for (const broken of [
+      { consent: 'yes', answeredAt: 5, sharingSince: 5 },
+      { consent: 'no', install: 'not-an-id' },
+      null,
+      [],
+      '"a string"',
+    ]) {
+      writeFileSync(path, typeof broken === 'string' ? broken : JSON.stringify(broken));
+      const file = readConsentFile(path);
+      expect(file.install).toMatch(INSTALL_PATTERN);
+      expect(readConsentFile(path).install, JSON.stringify(broken)).toBe(file.install);
+      if (broken && !Array.isArray(broken) && typeof broken === 'object') {
+        expect(file.consent).toBe(broken.consent);
+      }
+    }
+  });
+
+  it('leaves a good file as it is when reading it', () => {
+    writeConsentFile(answer(newConsentFile(), 'no', 5, '1.4.0'), path);
+    const before = readFileSync(path, 'utf8');
+    const written = statSync(path).mtimeMs;
+    readConsentFile(path);
+    expect(readFileSync(path, 'utf8')).toBe(before);
+    expect(statSync(path).mtimeMs).toBe(written);
   });
 
   it('reads a file it may not open as a fresh one, without throwing', () => {

@@ -24,21 +24,41 @@ export function eventsPath(env?: Readonly<Record<string, string | undefined>>): 
   return join(penmossHome(env), 'analytics', 'events.db');
 }
 
-/** The file's contents, or a fresh one (written, so its id holds) when there is none. */
+/**
+ * The file's contents. When there is none, or it is there but unreadable as a consent file (not
+ * JSON, or without a valid install id), a fresh one is written in its place (atomically), so
+ * every process that reads it next agrees on one install id instead of each making its own. A
+ * file this process may not open is left alone, and so is one it cannot write over: then the
+ * fresh id lives for this process only.
+ */
 export function readConsentFile(path: string = consentPath()): ConsentFile {
+  let text: string;
   try {
-    return parseConsentFile(JSON.parse(readFileSync(path, 'utf8')));
+    text = readFileSync(path, 'utf8');
   } catch (error) {
     const fresh = newConsentFile();
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      try {
-        writeConsentFile(fresh, path);
-      } catch {
-        // A read-only home: the id lives for this process only.
-      }
-    }
-    return fresh;
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? kept(fresh, path) : fresh;
   }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return kept(newConsentFile(), path);
+  }
+  const file = parseConsentFile(raw);
+  const install = (raw as { install?: unknown } | null)?.install;
+  // parseConsentFile made a new id: the file has none it can keep, so this one is written.
+  return install === file.install ? file : kept(file, path);
+}
+
+/** Writes `file` in place of a missing or broken one, so the next reader finds its id. */
+function kept(file: ConsentFile, path: string): ConsentFile {
+  try {
+    writeConsentFile(file, path);
+  } catch {
+    // A read-only home: the id lives for this process only.
+  }
+  return file;
 }
 
 export function writeConsentFile(file: ConsentFile, path: string = consentPath()): void {
