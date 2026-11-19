@@ -281,6 +281,10 @@
       "mac": "You’re offline, so nothing was deleted. Try again when you’re online.",
       "android": "You’re offline, so nothing was deleted. Try again when you’re online."
     },
+    "forget.failed": {
+      "mac": "Penmoss’s server didn’t answer, so nothing was deleted. Try again later.",
+      "android": "Penmoss’s server didn’t answer, so nothing was deleted. Try again later."
+    },
     "forget.done": {
       "mac": "Your shared data was deleted, and this Mac has a new ID.",
       "android": "Your shared data was deleted, and this phone has a new ID."

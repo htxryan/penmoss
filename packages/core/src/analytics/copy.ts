@@ -87,6 +87,7 @@ export const ANALYTICS_COPY = {
   'forget.body':
     'Penmoss’s server deletes everything this {device} shared under ID {id}, and this {device} gets a new ID. The record on this {device} stays.',
   'forget.offline': 'You’re offline, so nothing was deleted. Try again when you’re online.',
+  'forget.failed': 'Penmoss’s server didn’t answer, so nothing was deleted. Try again later.',
   'forget.done': 'Your shared data was deleted, and this {device} has a new ID.',
   'prune.events.title': 'Delete {count} Events?',
   'prune.logs.title': 'Delete {size} of Logs?',
