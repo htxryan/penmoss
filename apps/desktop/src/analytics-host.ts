@@ -11,7 +11,7 @@
  * tests run it in-process over a `MessageChannel`.
  */
 import type { AnalyticsEvent, Limits, PageQuery, StateCode } from '@penmoss/core/analytics';
-import type { AnalyticsStore } from '@penmoss/core/analytics/node';
+import { PRUNE_BATCH, type AnalyticsStore } from '@penmoss/core/analytics/node';
 
 /** An event to insert, with the state it was recorded in. */
 export interface Inserted {
@@ -64,7 +64,7 @@ export interface HostOptions {
   /** Prune this often (ms); and once, `firstPruneMs` after starting. */
   readonly pruneEveryMs?: number;
   readonly firstPruneMs?: number;
-  /** Rows per prune batch. */
+  /** Rows per prune batch (core's PRUNE_BATCH unless a test says). */
   readonly pruneBatch?: number;
   readonly now?: () => number;
   /** Told of a failure that is kept from main (a busy database, a prune that failed). */
@@ -221,7 +221,7 @@ export class StoreHost {
   async prune(limits: EventLimits = this.limits, now = this.now()): Promise<number> {
     while (this.pruning) await this.pruning.catch(() => 0);
     const running = this.store.prune(limits, now, {
-      batch: this.options.pruneBatch ?? 5000,
+      batch: this.options.pruneBatch ?? PRUNE_BATCH,
       between: () => {
         this.flush();
         return yieldNow();

@@ -10,6 +10,7 @@
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
+    "budgets": "PENMOSS_BUDGETS=1 vitest run",
     "e2e": "playwright test"
   },
   "devDependencies": {
