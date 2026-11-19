@@ -57,9 +57,10 @@ class PrivacySettingsTest {
             }
             val screen = OnScreen(scenario)
             val row = screen.tagged("section-privacy")
-            screen.reveal(row, margin = 400f)
-            val rows = listOf("section-storage", "section-github", "section-whatsnew", "section-privacy").map { screen.tagged(it) }
-            assertEquals(rows.sortedBy { it.boundsInWindow.top }, rows)
+            screen.reveal(row, margin = 900f)
+            val tags = listOf("section-storage", "section-github", "section-whatsnew", "section-privacy")
+            val tops = screen.layoutTops(tags)
+            assertEquals(tops.toString(), tops.sorted(), tops)
             screen.text("Privacy")
             screen.text("Sharing · 255 Events")
             SystemClock.sleep(2_000)

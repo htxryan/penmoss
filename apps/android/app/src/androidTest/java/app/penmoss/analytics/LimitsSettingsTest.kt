@@ -72,8 +72,12 @@ class LimitsSettingsTest {
                 screen.text("Up to 2 MB of logs on this phone (at most 400 MB)")
                 screen.text("A bug report attaches the last 24 hours, at most 300 lines and 16 KB.")
                 // Reset to Defaults is at the foot, below every field.
-                val reset = screen.tagged("limitsReset")
-                assertTrue(Limits.SPECS.all { screen.top(screen.tagged("limit-${it.key}")) < screen.top(reset) })
+                val tops = screen.layoutTops(Limits.SPECS.map { "limit-${it.key}" } + "limitsReset")
+                assertTrue(tops.toString(), tops.dropLast(1).all { it < tops.last() })
+                // Bug Reports and Reset to Defaults in sight for the proof.
+                screen.reveal(screen.text("Bug Reports"), margin = 40f)
+                screen.text("Attach Logs from the Last")
+                screen.tagged("limitsReset")
                 SystemClock.sleep(2_000)
                 ProofShot.take()
             }

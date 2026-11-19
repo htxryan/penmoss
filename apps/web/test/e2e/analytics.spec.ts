@@ -314,6 +314,18 @@ test.describe('Settings → Privacy', () => {
     const cutoff = Date.now() - 3 * 86_400_000;
     expect(saved.events.filter((event) => event.at < cutoff)).toEqual([]);
     expect(saved.events.length).toBeLessThan(before);
+
+    // Reset to Defaults puts the field back (raising deletes nothing, so it doesn't ask).
+    await advanced.getByTestId('privacy-limits-reset').click();
+    await expect(field).toHaveValue('7');
+    await expect(days.getByTestId('privacy-limit-default')).toHaveCount(0);
+    expect((await fake(page)).limits['events.days']).toBe(7);
+    // Lowered again, the field shows it.
+    await field.fill('3');
+    await field.press('Enter');
+    await expect(advanced.getByRole('alertdialog')).toHaveCount(0);
+    await expect(days.getByTestId('privacy-limit-default')).toHaveText('Default: 7');
+    await expect(field).toHaveValue('3');
     await days.scrollIntoViewIfNeeded();
     await holdForProof(page, 2_000);
     expect(errors).toEqual([]);

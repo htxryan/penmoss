@@ -29,6 +29,53 @@ class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
 
     fun texts(): List<String> = nodes().flatMap { it.texts() }
 
+    private companion object {
+        /** How long a finder waits for its node to appear before it scrolls to look for it. */
+        const val SEEK_AFTER_MS = 1_000L
+    }
+
+    /** Every node in the tree, laid out or not, on screen or scrolled off it. */
+    private fun allNodes(): List<SemanticsNode> {
+        instrumentation.waitForIdleSync()
+        var found = emptyList<SemanticsNode>()
+        scenario.onActivity { activity -> found = ScreenTree.nodes(activity.window.decorView) }
+        return found
+    }
+
+    /**
+     * The first on-screen node that [match]es. A node scrolled out of sight is scrolled into it,
+     * and when nothing matches, a lazy list is moved on a screen, so the next look finds a row it
+     * hadn't composed yet; past its end it goes back to the top.
+     */
+    private fun seek(since: Long, match: (SemanticsNode) -> Boolean): SemanticsNode? {
+        nodes().firstOrNull(match)?.let { return it }
+        // A moment first for what is still loading, then go looking for it.
+        if (SystemClock.uptimeMillis() - since < SEEK_AFTER_MS) return null
+        val hidden = allNodes().firstOrNull(match)
+        if (hidden != null) {
+            reveal(hidden)
+            return nodes().firstOrNull(match)
+        }
+        page()
+        return null
+    }
+
+    /** Moves the tallest vertical list down a screen, or back to its top once at its end. */
+    private fun page() {
+        val lists = allNodes().filter {
+            it.config.getOrNull(SemanticsProperties.VerticalScrollAxisRange) != null &&
+                it.config.getOrNull(SemanticsActions.ScrollBy) != null && it.boundsInWindow.height > 0f
+        }
+        val list = lists.maxByOrNull { it.boundsInWindow.height } ?: return
+        scenario.onActivity {
+            val range = list.config[SemanticsProperties.VerticalScrollAxisRange]
+            val by = if (range.value() < range.maxValue()) list.boundsInWindow.height * 0.6f else -1_000_000f
+            list.config[SemanticsActions.ScrollBy].action?.invoke(0f, by)
+        }
+        instrumentation.waitForIdleSync()
+        SystemClock.sleep(200)
+    }
+
     fun <T : Any> waitFor(what: String, timeoutMs: Long = 30_000, read: () -> T?): T {
         val deadline = SystemClock.uptimeMillis() + timeoutMs
         do {
@@ -38,9 +85,18 @@ class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
         throw AssertionError("no $what on screen; it shows ${texts()}")
     }
 
-    fun tagged(tag: String): SemanticsNode = waitFor("[$tag]") { nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag } }
+    /** The node tagged [tag], scrolled into sight. */
+    fun tagged(tag: String): SemanticsNode = SystemClock.uptimeMillis().let { since -> waitFor("[$tag]") { seek(since) { it.config.getOrNull(SemanticsProperties.TestTag) == tag } } }
 
-    fun text(text: String): SemanticsNode = waitFor("“$text”") { nodes().firstOrNull { text in it.texts() } }
+    /** The node that says [text], scrolled into sight. */
+    fun text(text: String): SemanticsNode =
+        SystemClock.uptimeMillis().let { since -> waitFor("“$text”") { seek(since) { text in it.texts() } } }
+
+    /** Where each tagged node sits in one layout, scrolled into sight or not: to compare their order. */
+    fun layoutTops(tags: List<String>): List<Float> {
+        val all = allNodes()
+        return tags.map { tag -> (all.firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag } ?: throw AssertionError("no [$tag] laid out; it shows ${texts()}")).positionInWindow.y }
+    }
 
     fun has(text: String): Boolean = nodes().any { text in it.texts() }
 
@@ -71,14 +127,30 @@ class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
         instrumentation.waitForIdleSync()
     }
 
-    /** Scrolls [node]'s scrolling parent so it sits near the top of the screen. */
+    /**
+     * Scrolls [node]'s scrolling parents so it sits near the top of the screen ([margin] below
+     * the parent's top), and in sight along a row that scrolls sideways.
+     */
     fun reveal(node: SemanticsNode, margin: Float = 160f) {
         scenario.onActivity {
             var at: SemanticsNode? = node.parent
-            while (at != null && at.config.getOrNull(SemanticsActions.ScrollBy) == null) at = at.parent
-            val parent = at ?: return@onActivity
-            val by = node.boundsInWindow.top - parent.boundsInWindow.top - margin
-            parent.config[SemanticsActions.ScrollBy].action?.invoke(0f, by)
+            while (at != null) {
+                val scroll = at.config.getOrNull(SemanticsActions.ScrollBy)
+                if (scroll != null) {
+                    val sideways = at.config.getOrNull(SemanticsProperties.HorizontalScrollAxisRange) != null &&
+                        at.config.getOrNull(SemanticsProperties.VerticalScrollAxisRange) == null
+                    if (sideways) {
+                        val left = node.positionInWindow.x - at.boundsInWindow.left
+                        val right = left + node.size.width - at.boundsInWindow.width
+                        val by = if (left < 0f) left - 48f else if (right > 0f) right + 48f else 0f
+                        if (by != 0f) scroll.action?.invoke(by, 0f)
+                    } else {
+                        scroll.action?.invoke(0f, node.positionInWindow.y - at.boundsInWindow.top - margin)
+                        break
+                    }
+                }
+                at = at.parent
+            }
         }
         instrumentation.waitForIdleSync()
         SystemClock.sleep(300)

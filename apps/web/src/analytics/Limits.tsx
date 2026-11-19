@@ -225,33 +225,36 @@ function LimitField({
   readonly analytics: DesktopAnalytics;
 }) {
   const id = useId();
-  const [text, setText] = useState(shown(saved));
+  // What is typed and not yet saved; null shows the saved value, so a change from elsewhere
+  // (Reset to Defaults, a terminal) always reaches the field.
+  const [draft, setDraft] = useState<string | null>(null);
   const [refused, setRefused] = useState(false);
   const [asking, setAsking] = useState<(Pruning & { readonly value: number }) | null>(null);
   /** A commit in flight, or a question open: leaving the field commits nothing more. */
   const working = useRef(false);
-  // The saved value as main has it (a terminal may change it meanwhile).
+  // The saved value as main has it (a terminal may change it meanwhile): it replaces any draft.
   const [held, setHeld] = useState(saved);
   if (held !== saved) {
     setHeld(saved);
-    setText(shown(saved));
+    setDraft(null);
     setRefused(false);
   }
+  const text = draft ?? shown(saved);
 
   const save = async (value: number) => {
     await analytics.setLimits({ [spec.key]: value }).catch(() => null);
     record('setting', `privacy.limits.${spec.key}`, { value });
   };
   const commit = async () => {
-    if (working.current) return;
-    const value = typed(text);
+    if (working.current || draft === null) return;
+    const value = typed(draft);
     if (value === null || value < spec.min || value > spec.max) {
       setRefused(true);
       return;
     }
     setRefused(false);
     if (value === saved) {
-      setText(shown(saved));
+      setDraft(null);
       return;
     }
     working.current = true;
@@ -268,6 +271,7 @@ function LimitField({
         return;
       }
       await save(value);
+      setDraft(null);
     } finally {
       if (!waits) working.current = false;
     }
@@ -296,7 +300,7 @@ function LimitField({
           aria-describedby={`${id}-range`}
           data-testid={`privacy-limit-${spec.key}`}
           onChange={(event) => {
-            setText(event.target.value);
+            setDraft(event.target.value);
             if (refused) setRefused(false);
           }}
           onKeyDown={(event) => {
@@ -328,13 +332,13 @@ function LimitField({
         <PruneConfirm
           asking={asking}
           onCancel={() => {
-            setText(shown(saved));
+            setDraft(null);
             settle();
           }}
           onConfirm={() => {
             const value = asking.value;
             settle();
-            void save(value);
+            void save(value).then(() => setDraft(null));
           }}
         />
       ) : null}
