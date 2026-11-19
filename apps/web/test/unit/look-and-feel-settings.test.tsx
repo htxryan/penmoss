@@ -299,7 +299,7 @@ describe('Settings → Symbols (PEN-146, Show the Keys)', () => {
     expect(restore.disabled).toBe(true);
     expect(ids()).toEqual([
       'symbols',
-      'add-a-symbol',
+      'add-a-symbol-or-list-item',
       'change-their-shortcuts',
       'restore-defaults',
     ]);
@@ -307,15 +307,46 @@ describe('Settings → Symbols (PEN-146, Show the Keys)', () => {
 
   it('moves a symbol with Alt+↓ and says its new place and key', () => {
     render(<SymbolsSettings />);
-    const first = DEFAULT_SYMBOLS[0]!.glyph;
-    const second = DEFAULT_SYMBOLS[1]!.glyph;
-    altKey(byTest('symbol-glyph-1'), 'ArrowDown');
-    const stored = settings()['symbols.list'] as Array<{ glyph: string }>;
-    expect(stored.slice(0, 2).map((symbol) => symbol.glyph)).toEqual([second, first]);
+    // Slot 1 is the Checkbox (A1632); ★ and ? follow it.
+    const first = DEFAULT_SYMBOLS[1]!.glyph;
+    const second = DEFAULT_SYMBOLS[2]!.glyph;
+    altKey(byTest('symbol-glyph-2'), 'ArrowDown');
+    const stored = settings()['symbols.list'] as Array<{ glyph?: string; kind?: string }>;
+    expect(stored[0]).toEqual({ kind: 'checkbox' });
+    expect(stored.slice(1, 3).map((symbol) => symbol.glyph)).toEqual([second, first]);
     expect(byTest('symbols-notice').textContent).toMatch(
-      new RegExp(`^${first} is now symbol 2, .+2\\.$`),
+      new RegExp(`^${first} is now symbol 3, .+3\\.$`),
     );
     expect(byTest('symbols-count').textContent).toBe(`${DEFAULT_SYMBOLS.length} of 9`);
+  });
+});
+
+describe('Settings → Symbols: list items (A1632)', () => {
+  it('shows the Checkbox row with what it does, and adds list items from the Add menu', () => {
+    render(<SymbolsSettings />);
+    const first = host.querySelector<HTMLElement>('[data-testid="symbol-row"]')!;
+    expect(first.dataset['kind']).toBe('checkbox');
+    expect(first.textContent).toContain('Checkbox');
+    expect(first.textContent).toContain('☐ → ☑ → no box');
+    // No glyph or colour to choose for it.
+    expect(host.querySelector('[data-testid="symbol-glyph-1"]')).toBeNull();
+    expect(host.querySelector('[data-testid="symbol-colour-1"]')).toBeNull();
+
+    click(byTest('symbol-add'));
+    expect(byTest<HTMLButtonElement>('symbol-add-checkbox').disabled).toBe(true);
+    click(byTest('symbol-add-bullet'));
+    const stored = settings()['symbols.list'] as Array<Record<string, string>>;
+    expect(stored.at(-1)).toEqual({ kind: 'bullet' });
+    expect(byTest('symbols-notice').textContent).toBe('Added Bulleted List Item as symbol 7.');
+
+    click(byTest('symbol-remove-1'));
+    expect((settings()['symbols.list'] as Array<Record<string, string>>)[0]).toEqual({
+      glyph: '★',
+      name: 'Important',
+      colour: 'calloutWarning',
+    });
+    click(byTest('symbol-add'));
+    expect(byTest<HTMLButtonElement>('symbol-add-checkbox').disabled).toBe(false);
   });
 });
 
@@ -359,4 +390,93 @@ describe('Settings → Appearance (PEN-146, Live Preview Studio)', () => {
     expect(host.querySelector('[data-testid="theme-editor"]')).toBeNull();
     expect(byTest('theme-customize').textContent).toBe('Customize Penmoss copy…');
   });
+});
+
+// A1633: Appearance, Sidebar and Note are two tabs, Settings and Preview, as Android's
+// Appearance is (A1619). Settings opens first; the preview is on its own tab, with no Enlarge.
+describe('Settings and Preview tabs (A1633)', () => {
+  const key = (element: Element, k: string) =>
+    act(() => {
+      element.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+    });
+
+  const cases: ReadonlyArray<{
+    readonly page: string;
+    readonly tabs: string;
+    readonly preview: string;
+    readonly draw: () => void;
+  }> = [
+    {
+      page: 'Sidebar',
+      tabs: 'sidebar-tabs',
+      preview: 'sidebar-preview',
+      draw: () => render(<SidebarSettings />),
+    },
+    {
+      page: 'Note',
+      tabs: 'note-tabs',
+      preview: 'note-preview',
+      draw: () => render(<NoteSettings />),
+    },
+    {
+      page: 'Appearance',
+      tabs: 'appearance-tabs',
+      preview: 'app-preview',
+      draw: () =>
+        render(
+          <ThemeProvider
+            controller={
+              new ThemeController({
+                root: {
+                  style: { colorScheme: '', setProperty: () => undefined },
+                  setAttribute: () => undefined,
+                },
+                storage: null,
+                systemDark: { matches: false, subscribe: () => () => undefined },
+              })
+            }
+          >
+            <AppearanceSettings />
+          </ThemeProvider>,
+        ),
+    },
+  ];
+
+  for (const { page, tabs, preview, draw } of cases) {
+    it(`${page}: opens on Settings, and Preview holds the preview`, () => {
+      draw();
+      const list = byTest(tabs);
+      expect(list.getAttribute('role')).toBe('tablist');
+      expect(list.getAttribute('aria-label')).toBe(page);
+      const settingsTab = byTest(`${tabs}-settings`);
+      const previewTab = byTest(`${tabs}-preview`);
+      expect([settingsTab.textContent, previewTab.textContent]).toEqual(['Settings', 'Preview']);
+      expect(settingsTab.getAttribute('aria-selected')).toBe('true');
+      expect(previewTab.tabIndex).toBe(-1);
+      const settingsPanel = byTest(`${tabs}-settings-panel`);
+      const previewPanel = byTest(`${tabs}-preview-panel`);
+      expect(settingsPanel.hidden).toBe(false);
+      expect(previewPanel.hidden).toBe(true);
+      // The preview is on its tab, not beside the controls, and opens no dialog: the tab is the
+      // larger view.
+      expect(previewPanel.contains(byTest(preview))).toBe(true);
+      expect(settingsPanel.querySelector('[data-setting]')).not.toBeNull();
+      expect(host.querySelector('.preview-zoom-button')).toBeNull();
+
+      click(previewTab);
+      expect(previewTab.getAttribute('aria-selected')).toBe('true');
+      expect(settingsPanel.hidden).toBe(true);
+      expect(previewPanel.hidden).toBe(false);
+      expect(previewPanel.getAttribute('aria-labelledby')).toBe(previewTab.id);
+
+      // ← and → move between the tabs, and the focus with them.
+      key(previewTab, 'ArrowRight');
+      expect(settingsTab.getAttribute('aria-selected')).toBe('true');
+      expect(document.activeElement).toBe(settingsTab);
+      key(settingsTab, 'End');
+      expect(previewPanel.hidden).toBe(false);
+      key(previewTab, 'Home');
+      expect(settingsPanel.hidden).toBe(false);
+    });
+  }
 });

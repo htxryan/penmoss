@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import app.penmoss.ui.common.IconButton
@@ -93,15 +95,46 @@ fun SymbolsScreen(
         return problem
     }
     SectionScreen("Symbols", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
-        Help(modifier = Modifier.settingRow("symbols"), text = "Type a symbol at the start of a line to mark it, as plain text (★ Call the bank), so agents and the repository see it too. Up to ${LineSymbols.MAX}. Changes sync to your other devices.")
+        Help(modifier = Modifier.settingRow("symbols"), text = "Type a symbol at the start of a line to mark it, as plain text (★ Call the bank), so agents and the repository see it too. Checkbox and list items are symbols too: their key turns the line into one. Up to ${LineSymbols.MAX}. Changes sync to your other devices.")
         ReorderableColumn(
             items = symbols.mapIndexed { index, symbol -> index to symbol },
-            key = { (_, symbol) -> symbol.glyph },
-            name = { (_, symbol) -> symbol.glyph },
+            key = { (_, symbol) -> symbol.kind?.let { "kind:$it" } ?: symbol.glyph },
+            name = { (_, symbol) -> symbol.call },
             enabled = enabled,
-            onMove = { from, to -> change(symbols.movedTo(from, to), "${symbols[from].glyph} is now symbol ${to + 1}.") },
+            onMove = { from, to -> change(symbols.movedTo(from, to), "${symbols[from].call} is now symbol ${to + 1}.") },
             modifier = Modifier.testTag("symbolList"),
         ) { (index, symbol), _, handle ->
+            val kind = symbol.kind
+            if (kind != null) {
+                // A list item (A1632): no glyph or colour to choose, only its place and key.
+                ListItem(
+                    leadingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            handle()
+                            Box(
+                                Modifier.size(40.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant).testTag("symbol-glyph-$index"),
+                                contentAlignment = Alignment.Center,
+                            ) { Text(symbol.glyph, style = MaterialTheme.typography.titleLarge, maxLines = 1) }
+                        }
+                    },
+                    headlineContent = { Text(symbol.name, Modifier.testTag("symbol-colour-label-$index")) },
+                    supportingContent = {
+                        Text(
+                            "${keys.getOrNull(index) ?: "No key"} · ${kindDoes(kind)}",
+                            Modifier.testTag("symbol-key-$index"),
+                        )
+                    },
+                    trailingContent = {
+                        IconButton(
+                            onClick = { change(symbols.filterIndexed { at, _ -> at != index }, "Removed ${symbol.name}. Your lists stay as they are.") },
+                            enabled = enabled,
+                            modifier = Modifier.testTag("symbol-delete-$index"),
+                        ) { Icon(Icons.Default.Close, contentDescription = "Remove ${symbol.name}") }
+                    },
+                    modifier = Modifier.testTag("symbol-row-$index"),
+                )
+                return@ReorderableColumn
+            }
             ListItem(
                 leadingContent = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -142,11 +175,37 @@ fun SymbolsScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedButton(
-                onClick = { editing = symbols.size },
-                enabled = enabled && symbols.size < LineSymbols.MAX,
-                modifier = Modifier.testTag("symbol-add"),
-            ) { Text("+ Add a Symbol") }
+            // Add ▾ (A1632): a symbol, or a list item the list does not have yet.
+            Box {
+                var adding by remember { mutableStateOf(false) }
+                OutlinedButton(
+                    onClick = { adding = true },
+                    enabled = enabled && symbols.size < LineSymbols.MAX,
+                    modifier = Modifier.testTag("symbol-add"),
+                ) { Text("+ Add ▾") }
+                DropdownMenu(expanded = adding, onDismissRequest = { adding = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Symbol") },
+                        onClick = {
+                            adding = false
+                            editing = symbols.size
+                        },
+                        modifier = Modifier.testTag("symbol-add-symbol"),
+                    )
+                    for ((kind, _, name) in LineSymbols.KINDS) {
+                        val there = symbols.any { it.kind == kind }
+                        DropdownMenuItem(
+                            text = { Text(if (there) "$name (In the List)" else name) },
+                            enabled = !there,
+                            onClick = {
+                                adding = false
+                                change(symbols + LineSymbols.kindSymbol(kind), "Added $name as symbol ${symbols.size + 1}.")
+                            },
+                            modifier = Modifier.testTag("symbol-add-$kind"),
+                        )
+                    }
+                }
+            }
             Text("${symbols.size} of ${LineSymbols.MAX}", Modifier.testTag("symbol-count"), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(Modifier.padding(horizontal = 8.dp)) {
@@ -154,7 +213,7 @@ fun SymbolsScreen(
             TextButton(
                 onClick = {
                     onReset()
-                    said = "Restored " + LineSymbols.DEFAULTS.joinToString(" ") { it.glyph } + "."
+                    said = "Restored " + LineSymbols.DEFAULTS.joinToString(" ") { it.call } + "."
                 },
                 enabled = enabled && custom,
                 modifier = Modifier.settingRow("restore-default-symbols").testTag("symbol-reset"),
@@ -193,6 +252,13 @@ fun SymbolsScreen(
             onDismiss = { editing = null },
         )
     }
+}
+
+/** What a list item's key does (A1632), as its row says. */
+internal fun kindDoes(kind: String): String = when (kind) {
+    "checkbox" -> "☐ → ☑ → no box"
+    "bullet" -> "Line ⇄ bulleted item"
+    else -> "Line ⇄ numbered item"
 }
 
 /** What a symbol's row says in place of its colour for an emoji, in its own colours (A1588). */

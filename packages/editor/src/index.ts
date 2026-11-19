@@ -99,6 +99,7 @@ export {
   setLineSymbols,
   symbolPickerOpen,
   toggleLineSymbol,
+  toggleListItem,
   toggleSymbolIn,
   type SymbolSource,
 } from './extensions/line-symbols';

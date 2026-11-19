@@ -89,7 +89,7 @@ Android shows tags as before and keeps their descriptions when it syncs; describ
 
 Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Open in New Tab**, **Open in New Window** or **Remove from Quick Access**. A note's right-click menu in your notebooks' tree starts with the same two Open items. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
 
-On Android, the menu (☰) has a **Quick Access** page. To have the notes themselves in the menu instead, each one tap away, turn on **Settings → Home → Notes in the Sidebar**. It is your phones' setting alone.
+On Android, the menu (☰) has a **Quick Access** page. To have the notes themselves in the menu instead, each one tap away, turn on **Settings → Home → Notes in the Sidebar**. It is your phones' setting alone. **Settings → Home** has two tabs, as Appearance has: **Settings** holds its switches, and **Preview** shows Home's row of shortcuts and the menu's sidebar as they will look.
 
 Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick Access is one list for all your devices, and a pinned tab belongs to the window it is in. A tab's right-click menu has **Pin to Quick Access**, and dragging a tab onto Quick Access pins its note; neither pins the tab.
 
@@ -100,7 +100,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The sidebar
 
-**Settings → Sidebar** (**Sidebar Settings** in the command palette) shows your sidebar itself, made small, beside its settings, and it changes as you change them:
+**Settings → Sidebar** (**Sidebar Settings** in the command palette) has two tabs. **Settings**, which it opens on, holds the settings below; **Preview** shows your sidebar itself at its real size, and it changes as you change them:
 
 - **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
 - **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.
@@ -109,7 +109,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The note in Settings
 
-**Settings → Note** shows the note you opened last, made small, beside its settings, and under it **Fonts at Real Size**: a note's title, headings, text and code at the size Penmoss draws them, each with its font and size. The preview changes as you change these settings:
+**Settings → Note** has two tabs. **Settings**, which it opens on, holds the settings below. **Preview** shows the note you opened last, as large as the page allows, and under it **Fonts at Real Size**: a note's title, headings, text and code at the size Penmoss draws them, each with its font and size. The preview changes as you change these settings:
 
 - **Layout**: **Note Width**, the theme's width or **Full Window**, and **Note Panel**, whether a note's panel starts **Closed** or **Open** (marked **This Mac**, as it is kept on each device). Each note then remembers its own.
 - **Title Bar Buttons**: which of Full Width, Markdown Source, the two copies, Copy Agent Reference, Pin to Quick Access, Open in New Window, Move to Folder and Move to Trash have a button at the end of the tab strip (beside the title in a note window). Each is also in the note's ⋯ menu.

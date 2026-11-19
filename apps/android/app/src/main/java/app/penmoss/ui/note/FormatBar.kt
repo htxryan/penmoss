@@ -206,13 +206,18 @@ private fun SymbolButton(state: FormatState, symbols: List<LineSymbol>, onSymbol
             symbols.forEachIndexed { index, symbol ->
                 val on = index in state.symbols
                 // Symbols go by their glyph, not a name (T51, A940): the row is the glyph in its colour.
+                // A list item shows its glyph and its name, "☐ Checkbox" (A1632).
                 DropdownMenuItem(
                     text = {
-                        Text(
-                            symbol.glyph,
-                            color = symbolColour(symbol.colour),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
+                        if (symbol.kind != null) {
+                            Text("${symbol.glyph}  ${symbol.name}", style = MaterialTheme.typography.titleMedium)
+                        } else {
+                            Text(
+                                symbol.glyph,
+                                color = symbolColour(symbol.colour),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
                     },
                     trailingIcon = if (on) {
                         { Icon(EditorIcons.Tick, contentDescription = null, modifier = Modifier.size(20.dp)) }

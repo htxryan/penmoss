@@ -44,6 +44,14 @@ export function revealSetting(root: HTMLElement | null, id: string, done: () => 
       else done();
       return;
     }
+    // On a page with Settings and Preview tabs (A1633), a row on the tab not shown: show its tab.
+    const panel = row.closest<HTMLElement>('[role="tabpanel"][hidden]');
+    if (panel) {
+      root?.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(panel.id)}"]`)?.click();
+      if (++tries < 60) frame = requestAnimationFrame(find);
+      else done();
+      return;
+    }
     row.scrollIntoView?.({ block: 'center' });
     row.setAttribute('data-found', '');
     const control = row.querySelector<HTMLElement>(

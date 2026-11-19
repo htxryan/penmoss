@@ -35,6 +35,8 @@ Old links still work: Settings → Display opens Sidebar, and Settings → Statu
 
 ## Look and Feel
 
+Appearance, Sidebar and Note each have two tabs: **Settings**, which the page opens on, holds the settings below, and **Preview** shows what they change, as large as the page allows. Searching for a setting opens its page on the Settings tab. On Android, Appearance and Home have the same two tabs.
+
 ### Appearance
 
 | Setting                   | What it does                                                                                                                                                      |
@@ -68,7 +70,7 @@ Old links still work: Settings → Display opens Sidebar, and Settings → Statu
 
 ### Symbols
 
-The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour (an emoji keeps its own colours, so its colour can't be changed), their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add a Symbol** (up to nine) and **Restore Defaults**.
+The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour (an emoji keeps its own colours, so its colour can't be changed), their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add** (a symbol, the Checkbox, a Bulleted List Item or a Numbered List Item; up to nine in all) and **Restore Defaults**.
 
 ## Writing
 
@@ -151,7 +153,7 @@ Open Settings from the **☰** menu. Each screen's title is large at the top and
 | Group         | Screen             | What it holds                                                                                                                      |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts, note width) and **Preview** (the app, fonts at real size)   |
-| Look and Feel | Home               | Shortcuts on Home, the order of the sections, Notes in Recent Notes, Show Notebook Names and Notes in the Sidebar for Quick Access |
+| Look and Feel | Home               | Two tabs: **Settings** (shortcuts, sections, Recent Notes, Quick Access) and **Preview** (Home's shortcuts and the menu's sidebar) |
 | Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                            |
 | Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                     |
 | Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                |

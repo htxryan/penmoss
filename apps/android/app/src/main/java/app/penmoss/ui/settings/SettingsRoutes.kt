@@ -560,7 +560,7 @@ internal fun NavGraphBuilder.settingsRoutes(host: SettingsHost) {
     // This phone's storage (T40 P8; PEN-146), apart from any notebook's sync.
     composable(SettingsRoutes.STORAGE) { entry -> StorageRoute(device, onBack = back(entry)) }
     // Home's shortcuts and sections, synced with the Mac's sidebar (T42, A576; T40 ST12, A650).
-    composable(SettingsRoutes.DISPLAY) { entry -> DisplayRoute(device, onBack = back(entry)) }
+    composable(SettingsRoutes.DISPLAY) { entry -> DisplayRoute(device, onBack = back(entry), notebook = host.notebook) }
     // The line symbols, synced with the Mac's (T44, ST13, A747).
     composable(SettingsRoutes.SYMBOLS) { entry ->
         SymbolsRoute(device, onShortcuts = { nav.open(CommandRoutes.SHORTCUTS) }, onBack = back(entry))

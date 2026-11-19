@@ -1,7 +1,8 @@
 /*
- * Settings → Look and Feel (PEN-146): Appearance, Sidebar, Note and Symbols. Each page is its
- * controls in groups of rows beside a live preview of what they change; on a narrow window (the
- * page's own width under 40rem) the preview goes under the controls. Every colour is a token.
+ * Settings → Look and Feel (PEN-146): Appearance, Sidebar, Note and Symbols. Appearance, Sidebar
+ * and Note are two tabs, Settings (the controls in groups of rows) and Preview (a live preview of
+ * what they change, A1633). The theme editor is its controls beside its preview; on a narrow
+ * window (the page's own width under 40rem) the preview goes under them. Every colour is a token.
  */
 .lf-page {
   container-type: inline-size;
@@ -16,8 +17,99 @@
   margin-top: 1rem;
 }
 
-.lf-split-narrow {
-  --lf-preview: 16rem;
+/*
+ * Settings and Preview (A1633), as Android's Appearance draws them (A1619): two tabs across the
+ * page under its header, each with its icon, a line above and below and one between. The one
+ * shown has the page's background and the accent under it; the other is darker. They hold still
+ * under the pinned header while the page scrolls under them.
+ */
+.lf-tabs {
+  --lf-tab-off: color-mix(in oklab, var(--pm-bg), var(--pm-shadow-color) 5%);
+
+  position: sticky;
+  z-index: 3;
+  top: calc(var(--pm-hit) + 1px);
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  margin-top: 1rem;
+  border-block: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+}
+
+:root[data-mode='dark'] .lf-tabs {
+  --lf-tab-off: color-mix(in oklab, var(--pm-bg), var(--pm-shadow-color) 25%);
+}
+
+.lf-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: var(--pm-hit);
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--lf-tab-off);
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: var(--pm-text-item);
+  font-weight: var(--pm-weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lf-tab + .lf-tab {
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.lf-tab:hover {
+  color: var(--pm-fg);
+}
+
+.lf-tab[aria-selected='true'] {
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+}
+
+.lf-tab[aria-selected='true']::after {
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--pm-accent);
+  content: '';
+}
+
+.lf-tab:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.lf-tabpanel {
+  min-width: 0;
+  margin-top: 1rem;
+}
+
+.lf-tabpanel[hidden] {
+  display: none;
+}
+
+/* The Preview tab: a line naming what it shows, then the preview as large as the page allows. */
+.lf-preview-panel {
+  --preview-zoom-height: calc(100vh - 16rem);
+
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lf-preview-panel > .lf-help {
+  margin: 0;
+  font-size: var(--pm-text-help);
+}
+
+.lf-preview-panel .app-preview {
+  margin: 0 auto;
 }
 
 .lf-controls {
@@ -461,12 +553,15 @@
 }
 
 /*
- * Settings → Sidebar's preview (A1564): the sidebar itself, at its own width and scaled down to
- * the column, cut off at a height with its foot fading out, as a window's sidebar runs on.
+ * Settings → Sidebar's preview (A1564): the sidebar itself, at its real size and own width on the
+ * Preview tab (A1633), cut off at a height with its foot fading out, as a window's sidebar runs on.
  */
 .lf-sidebar-preview {
   display: block;
-  max-height: min(34rem, calc(100vh - 14rem));
+  width: max-content;
+  max-width: 100%;
+  max-height: min(40rem, calc(100vh - 16rem));
+  margin-inline: auto;
   padding: 0;
   background: var(--pm-sidebar);
   mask-image: linear-gradient(to bottom, currentcolor 85%, transparent);
@@ -499,6 +594,27 @@
   width: 9.5rem;
 }
 
+/* A list item's row (A1632): its icon where a glyph goes, then its name and what it does. */
+.symbol-row .symbol-kind-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: var(--pm-control);
+}
+
+.symbol-row .symbol-kind-name {
+  flex: none;
+  width: 9.5rem;
+}
+
+.symbol-row .symbol-kind-does {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
 /* An emoji's colour can't be changed (A1588): the note beside its disabled colour. */
 .symbol-row .symbol-colour-note {
   flex: 0 1 auto;
@@ -513,6 +629,12 @@
 .symbol-foot {
   flex-wrap: wrap;
   gap: 0.5rem 0.75rem;
+}
+
+/* Add ▾ opens from the button's left edge: the column clips what hangs left of it (A1632). */
+.symbol-foot .menu {
+  right: auto;
+  left: 0;
 }
 
 .symbol-foot > .lf-help {
@@ -715,13 +837,6 @@
   padding: 1rem;
   overflow: auto;
   background: var(--pm-bg);
-}
-
-.lf-sidebar-preview.large {
-  width: max-content;
-  max-height: none;
-  margin-inline: auto;
-  mask-image: none;
 }
 
 .badge-preview-places.large {

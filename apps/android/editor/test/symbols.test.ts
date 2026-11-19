@@ -90,6 +90,7 @@ function at(host: EditorHost, needle: string): number {
 }
 
 describe('line symbols on the phone (T44, A747)', () => {
+  // By default ⌃1 is the Checkbox (A1632); the glyphs ★ ? ! 💡 → are slots 2–6.
   it('toggles a symbol on every selected line as one undo step, and says which they have', () => {
     vi.useFakeTimers();
     const { host, sent, editor } = opened([paragraph('Call the bank'), paragraph('Pay rent')]);
@@ -97,15 +98,15 @@ describe('line symbols on the phone (T44, A747)', () => {
     vi.runOnlyPendingTimers();
     expect(states(sent).at(-1)).toMatchObject({ symbols: [], canSymbol: true });
 
-    host.handle(message({ type: 'symbol', index: 0 }));
+    host.handle(message({ type: 'symbol', index: 1 }));
     expect(lines(host)).toEqual(['★ Call the bank', '★ Pay rent']);
-    host.handle(message({ type: 'symbol', index: 2 }));
+    host.handle(message({ type: 'symbol', index: 3 }));
     expect(lines(host)).toEqual(['★ ! Call the bank', '★ ! Pay rent']);
     vi.runOnlyPendingTimers();
-    expect(states(sent).at(-1)).toMatchObject({ symbols: [0, 2], canSymbol: true });
+    expect(states(sent).at(-1)).toMatchObject({ symbols: [1, 3], canSymbol: true });
 
     // Again: every line has it, so it goes from all of them.
-    host.handle(message({ type: 'symbol', index: 0 }));
+    host.handle(message({ type: 'symbol', index: 1 }));
     expect(lines(host)).toEqual(['! Call the bank', '! Pay rent']);
     // Each toggle is its own undo step.
     undoCommand(editor.state, editor.view.dispatch);
@@ -120,7 +121,7 @@ describe('line symbols on the phone (T44, A747)', () => {
     select(editor.view, at(host, 'let') + 1);
     vi.runOnlyPendingTimers();
     expect(states(sent).at(-1)).toMatchObject({ symbols: [], canSymbol: false });
-    host.handle(message({ type: 'symbol', index: 0 }));
+    host.handle(message({ type: 'symbol', index: 1 }));
     expect(lines(host)).toEqual(['let x = 1;']);
   });
 
@@ -142,9 +143,9 @@ describe('line symbols on the phone (T44, A747)', () => {
     select(editor.view, at(host, 'Budget') + 2);
     vi.runOnlyPendingTimers();
     expect(states(sent).at(-1)).toMatchObject({ symbols: [], canSymbol: true });
-    host.handle(message({ type: 'symbol', index: 3 }));
+    host.handle(message({ type: 'symbol', index: 4 }));
     vi.runOnlyPendingTimers();
-    expect(states(sent).at(-1)).toMatchObject({ symbols: [3], canSymbol: true });
+    expect(states(sent).at(-1)).toMatchObject({ symbols: [4], canSymbol: true });
     expect(editor.state.doc.textBetween(0, editor.state.doc.content.size, '|')).toMatch(
       /^Plan\|💡 Budget/,
     );
