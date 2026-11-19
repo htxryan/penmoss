@@ -278,12 +278,42 @@
         "(/var/log/x.log)"
       ],
       "expected": [
-        "‹path› c.md",
+        "‹path›",
         "‹path› and ‹path› alone",
         "‹path›:‹path›",
         "‹path›",
         "not/a/path and /api/v1 stays",
         "(‹path›)"
+      ]
+    },
+    {
+      "name": "paths with spaces",
+      "known": {},
+      "input": [
+        "open /Users/a/My Notes/b c.md failed",
+        "/Users/a/Work Notes/Plans for Q3.md saved",
+        "cd /Users/a/Library/Application Support/Penmoss/logs now",
+        "C:\\Users\\a\\My Notes\\b c.txt done",
+        "~/My Notes/x y.md ok",
+        "/Users/a/b c",
+        "/Users/a/b.md and c.txt",
+        "/Users/a/x copied to /Users/b/y",
+        "read /Users/a/notes dir failed to open file.md",
+        "/Users/a/dir not found, see log.txt",
+        "wrote /Users/a/x.json in 3 ms"
+      ],
+      "expected": [
+        "open ‹path› failed",
+        "‹path› saved",
+        "cd ‹path› now",
+        "‹path› done",
+        "‹path› ok",
+        "‹path› c",
+        "‹path› and c.txt",
+        "‹path› copied to ‹path›",
+        "read ‹path› dir failed to open file.md",
+        "‹path› not found, see log.txt",
+        "wrote ‹path› in 3 ms"
       ]
     },
     {

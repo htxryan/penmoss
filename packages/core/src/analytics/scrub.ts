@@ -9,7 +9,7 @@
  *   or fragment;
  * - the GitHub login → ‹login›; notebook names → ‹notebook-N›; their branches → ‹branch›; names
  *   known to scrub #2 → ‹name›;
- * - absolute and home paths → ‹path›;
+ * - absolute and home paths → ‹path›, with the spaces in a folder's or a file's name (below);
  * - quoted text → ‹text›;
  * - ULIDs, UUIDs and long hex ids → ‹id-N›.
  *
@@ -53,6 +53,53 @@ const QUOTED = /"[^"\n]{1,400}"|“[^”\n]{1,400}”|‘[^’\n]{1,400}’|'[^'
 /** Absolute paths (Unix, home, Windows); a path runs to whitespace or a closing delimiter. */
 const PATH =
   /(?:~|\$HOME|%USERPROFILE%)(?:[/\\][^\s"'<>|:;,)\]}]*)?|(?<![\w./])\/(?:Users|home|private|var|tmp|Volumes|opt|data|storage|sdcard|mnt|etc|root|Library|Applications|System|usr)(?:\/[^\s"'<>|:;,)\]}]*)*|\b[A-Za-z]:\\[^\s"'<>|:;,)\]}]*/g;
+/**
+ * A path with spaces (`/Users/a/My Notes/b c.md`): PATH stops at the first space, so the words
+ * after it are read on, a few at a time, while the path so far has no file extension. Of the next
+ * PATH_SPACE_WORDS words (each one space, then no space or delimiter), the first that holds a
+ * `/` or `\` (`Notes/b`) or ends in an extension (`c.md`) ends the stretch taken, with every word
+ * before it; then it looks again. A word that starts another path (`/`, `\`, `~`, `$HOME`,
+ * `%USERPROFILE%`, `C:\`) stops it: two paths are never joined. Words that hold neither are left
+ * (`/Users/a/b c` keeps ` c`), so a path's ordinary following words stay.
+ */
+export const PATH_SPACE_WORDS = 3;
+const PATH_WORDS = new RegExp(`^(?: [^\\s"'<>|:;,)\\]}]+){1,${PATH_SPACE_WORDS}}`);
+const PATH_START = /^(?:[/\\~]|\$HOME|%USERPROFILE%|[A-Za-z]:\\)/;
+const EXTENSION = /\.[A-Za-z][A-Za-z0-9]{0,7}$/;
+const SEPARATOR = /[/\\]/;
+
+/** Where the path PATH found at `start`…`end` really ends, its spaced words read on. */
+function pathEnd(text: string, start: number, end: number): number {
+  let at = end;
+  while (!EXTENSION.test(text.slice(start, at))) {
+    const words = PATH_WORDS.exec(text.slice(at))?.[0].slice(1).split(' ') ?? [];
+    let taken = -1;
+    for (const [index, word] of words.entries()) {
+      if (PATH_START.test(word)) break;
+      if (SEPARATOR.test(word) || EXTENSION.test(word)) {
+        taken = index;
+        break;
+      }
+    }
+    if (taken < 0) break;
+    at += words.slice(0, taken + 1).reduce((length, word) => length + 1 + word.length, 0);
+  }
+  return at;
+}
+
+/** Every path in `text` → ‹path›, with its spaced words (pathEnd). */
+function replacePaths(text: string): string {
+  let out = '';
+  let from = 0;
+  for (const match of text.matchAll(PATH)) {
+    const start = match.index;
+    if (start < from) continue;
+    out += `${text.slice(from, start)}‹path›`;
+    from = pathEnd(text, start, start + match[0].length);
+  }
+  return out + text.slice(from);
+}
+
 const ULID = /\b[0-7][0-9A-HJKMNP-TV-Z]{25}\b/gi;
 const UUID = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g;
 const HEX_ID = /\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{12,}\b/gi;
@@ -172,7 +219,7 @@ export function createScrubber(known: ScrubKnown = {}): Scrubber {
     out = out.replace(SSH_REPO, (match) => (match.includes('@') ? repoLabel(match) : match));
     out = out.replace(EMAIL, '‹email›');
     for (const [pattern, replace] of known_patterns) out = out.replace(pattern, replace);
-    out = out.replace(PATH, '‹path›');
+    out = replacePaths(out);
     out = out.replace(QUOTED, '‹text›');
     out = out.replace(UUID, idLabel);
     out = out.replace(ULID, idLabel);

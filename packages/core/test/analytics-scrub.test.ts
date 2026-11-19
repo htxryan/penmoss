@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createScrubber,
   MIN_KNOWN_NAME,
+  PATH_SPACE_WORDS,
   scrubLogLine,
   type ScrubKnown,
 } from '../src/analytics/scrub';
@@ -229,6 +230,29 @@ describe('scrub #1 (written to the log)', () => {
     expect(scrubLogLine('PATH /usr/local/bin:/opt/homebrew/bin')).toBe('PATH ‹path›:‹path›');
   });
 
+  it('takes the spaces in a path’s folder and file names, and leaves the words after it', () => {
+    expect(scrubLogLine('/Users/a/b c.md')).toBe('‹path›');
+    expect(scrubLogLine('open /Users/a/My Notes/b c.md failed')).toBe('open ‹path› failed');
+    expect(scrubLogLine('cd /Users/a/Library/Application Support/Penmoss/logs now')).toBe(
+      'cd ‹path› now',
+    );
+    expect(scrubLogLine('C:\\Users\\a\\My Notes\\b c.txt done')).toBe('‹path› done');
+    expect(scrubLogLine('~/My Notes/x y.md ok')).toBe('‹path› ok');
+    // A path that ends in an extension ends there; words with no / and no extension stay.
+    expect(scrubLogLine('/Users/a/b.md and c.txt')).toBe('‹path› and c.txt');
+    expect(scrubLogLine('wrote /Users/a/x.json in 3 ms')).toBe('wrote ‹path› in 3 ms');
+    expect(scrubLogLine('/Users/a/b c')).toBe('‹path› c');
+    // Two paths are never joined, and a delimiter or more than PATH_SPACE_WORDS words stop it.
+    expect(scrubLogLine('/Users/a/x copied to /Users/b/y')).toBe('‹path› copied to ‹path›');
+    expect(scrubLogLine('/Users/a/dir not found, see log.txt')).toBe(
+      '‹path› not found, see log.txt',
+    );
+    expect(PATH_SPACE_WORDS).toBe(3);
+    expect(scrubLogLine('read /Users/a/notes dir failed to open file.md')).toBe(
+      'read ‹path› dir failed to open file.md',
+    );
+  });
+
   it('numbers notebooks by the order it was told them', () => {
     const scrub = createScrubber({ notebooks: ['Work Notes', 'Home'] });
     expect(scrub.line('synced Home and Work Notes, then work notes')).toBe(
@@ -340,6 +364,23 @@ const CASE_INPUTS: ReadonlyArray<Omit<ScrubCase, 'expected'>> = [
       'C:\\Users\\a\\b.txt',
       'not/a/path and /api/v1 stays',
       '(/var/log/x.log)',
+    ],
+  },
+  {
+    name: 'paths with spaces',
+    known: {},
+    input: [
+      'open /Users/a/My Notes/b c.md failed',
+      '/Users/a/Work Notes/Plans for Q3.md saved',
+      'cd /Users/a/Library/Application Support/Penmoss/logs now',
+      'C:\\Users\\a\\My Notes\\b c.txt done',
+      '~/My Notes/x y.md ok',
+      '/Users/a/b c',
+      '/Users/a/b.md and c.txt',
+      '/Users/a/x copied to /Users/b/y',
+      'read /Users/a/notes dir failed to open file.md',
+      '/Users/a/dir not found, see log.txt',
+      'wrote /Users/a/x.json in 3 ms',
     ],
   },
   {
