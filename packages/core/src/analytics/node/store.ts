@@ -10,7 +10,7 @@
  */
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DatabaseSync, type StatementSync } from 'node:sqlite';
+import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import {
   STATES,
   STATE_NAMES,
@@ -23,6 +23,19 @@ import type { Limits } from '../limits';
 import type { Page, PageQuery, StoredEvent } from '../viewer';
 
 export type { ClientFilter, Cursor, Page, PageQuery, StoredEvent } from '../viewer';
+
+/**
+ * `node:sqlite`, loaded when a store is first opened, never at import: a bundle (the CLI's)
+ * would otherwise hoist the import to its top, so every command would load SQLite (and print
+ * Node's ExperimentalWarning), and a Node without it could not start the CLI at all. Throws
+ * where there is no `node:sqlite`.
+ */
+export function sqliteModule(): typeof import('node:sqlite') {
+  const loaded = process.getBuiltinModule?.('node:sqlite') as
+    typeof import('node:sqlite') | undefined;
+  if (!loaded?.DatabaseSync) throw new Error('node:sqlite is not available');
+  return loaded;
+}
 
 const SCHEMA_VERSION = '1';
 
@@ -92,7 +105,7 @@ interface Row {
 }
 
 function fromRow(row: Row): StoredEvent {
-  let props: AnalyticsEvent['props'] = {};
+  let props: AnalyticsEvent['props'];
   try {
     props = JSON.parse(row.props) as AnalyticsEvent['props'];
   } catch {
@@ -120,8 +133,9 @@ function fromRow(row: Row): StoredEvent {
 
 /** The event as it goes in a batch: the stored fields only. */
 export function wireEvent(event: StoredEvent): AnalyticsEvent {
-  const { id: _id, state: _state, sentAt: _sentAt, ...wire } = event;
-  return wire;
+  const wire: Record<string, unknown> = { ...event };
+  for (const key of ['id', 'state', 'sentAt']) delete wire[key];
+  return wire as unknown as AnalyticsEvent;
 }
 
 const DAY = 86_400_000;
@@ -137,7 +151,7 @@ export class AnalyticsStore {
   /** Opens (and makes) the database at `path`; `:memory:` for tests. */
   static open(path: string): AnalyticsStore {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    const db = new DatabaseSync(path, { timeout: 2000 });
+    const db = new (sqliteModule().DatabaseSync)(path, { timeout: 2000 });
     // auto_vacuum must be set before the first table; it is a no-op on an existing database.
     db.exec('PRAGMA auto_vacuum = INCREMENTAL');
     if (path !== ':memory:') db.exec('PRAGMA journal_mode = WAL');
