@@ -31,16 +31,28 @@ class PenmossApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // The app's own log (PEN-137): scrubbed, rotated and aged on this phone, whatever the answer below.
+        app.penmoss.log.PenmossLog.install(this)
         // Usage analytics (PEN-137): recorded on this phone whatever the answer, sent only with it.
         val analytics = runCatching {
-            app.penmoss.analytics.AnalyticsWork.create(this, okhttp3.OkHttpClient(), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default))
+            app.penmoss.analytics.AnalyticsWork.create(
+                this,
+                okhttp3.OkHttpClient(),
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default),
+                onLimits = app.penmoss.log.PenmossLog::applyLimits,
+            )
         }.getOrNull()
         app.penmoss.analytics.Analytics.install(analytics)
         graph = DeviceGraph(this, analytics = analytics)
         analytics?.let { service ->
             app.penmoss.analytics.Analytics.record("app", "launch")
-            graph.scope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { service.prune() } }
+            graph.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { service.followLimits() }
+                runCatching { service.prune() }
+            }
         }
+        // What scrub #1 knows: the GitHub login, the notebooks' names, repositories and branches.
+        graph.followLogNames()
         // What the Penmoss server's sign-in and sync left on a phone that had them (T59, A1041).
         ServerLeftovers.forget(this)
         graph.followJournalSettings()

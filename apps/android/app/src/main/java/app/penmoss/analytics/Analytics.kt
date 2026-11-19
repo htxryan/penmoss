@@ -172,12 +172,17 @@ class AnalyticsService(
         return outcome
     }
 
-    /** New limits: saved, then what falls outside them pruned at once. */
+    /** New limits: saved, then what falls outside them (events and logs) pruned at once. */
     suspend fun setLimits(limits: Limits) {
         consent.setLimits(limits)
         _state.value = consent.now()
         onLimits(limits)
         store.prune(limits, now())
+    }
+
+    /** The limits in force, told to [onLimits] once they are read (the log writer follows them). */
+    suspend fun followLimits() {
+        onLimits(stateNow().limits)
     }
 
     /** Prunes to the limits in force (hourly, and at start). */

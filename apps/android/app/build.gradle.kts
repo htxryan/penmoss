@@ -310,6 +310,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.metrics.performance)
-    androidTestImplementation(libs.espresso.intents)
     androidTestImplementation(libs.okhttp.mockwebserver)
 }

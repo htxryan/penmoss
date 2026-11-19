@@ -293,6 +293,26 @@ class DeviceGraph(
      */
     val onlineAgain = OnlineAgain {}
 
+    /**
+     * Tells the log's scrubber (PEN-137, scrub #1) the names it replaces: the GitHub login and each
+     * notebook's name, repository and branch, as the notebooks on this phone change.
+     */
+    fun followLogNames() {
+        scope.launch {
+            val hub = gitIfAny ?: return@launch
+            hub.list.collect { views ->
+                app.penmoss.log.PenmossLog.known(
+                    app.penmoss.feedback.ErrorScrub.Known(
+                        login = runCatching { githubToken.login() }.getOrNull(),
+                        notebooks = views.map { it.name },
+                        repositories = views.flatMap { listOf(it.remote, it.repository) },
+                        branches = views.map { it.branch },
+                    ),
+                )
+            }
+        }
+    }
+
     /** The app came to the front: feedback that waited goes, and the Journal notebook pulls the device's settings. */
     fun cameToFront() {
         sendFeedbackSoon()

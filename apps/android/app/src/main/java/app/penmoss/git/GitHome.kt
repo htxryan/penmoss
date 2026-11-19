@@ -73,12 +73,6 @@ fun NotebooksHome(
                 val loaded by graph.git.loaded.collectAsStateWithLifecycle()
                 // A notebook being set up keeps the first run on screen until its first sync (A1406).
                 var held by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-                // A phone with notebooks from before the usage question is asked it once, before Home (PEN-137, AC9).
-                val analytics = graph.analytics
-                val consent = analytics?.state?.collectAsStateWithLifecycle()?.value
-                val asking = analytics != null && views.isNotEmpty() && !held && consent?.answered != true
-                val scope = rememberCoroutineScope()
-                var answering by remember { mutableStateOf(false) }
                 when {
                     // Until the list is read, an empty one says nothing: no first run flashes past.
                     !loaded -> androidx.compose.foundation.layout.Box(
@@ -93,26 +87,10 @@ fun NotebooksHome(
                             if (localId != null) GitNotebookActivity.open(context, localId)
                         },
                     )
-                    // Until the answer is read, nothing: neither the question nor Home flashes past.
-                    asking && consent == null -> androidx.compose.foundation.layout.Box(
-                        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-                    )
-                    asking && analytics != null -> app.penmoss.git.firstrun.ConsentStep(
-                        lastStep = false,
-                        busy = answering,
-                        onAnswer = { answer ->
-                            answering = true
-                            scope.launch {
-                                runCatching { analytics.answer(answer, app.penmoss.BuildConfig.VERSION_NAME) }
-                                answering = false
-                            }
-                        },
-                        openUrl = { url ->
-                            runCatching {
-                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                            }
-                        },
-                    )
+                    // A phone with notebooks from before the usage question is asked it once, before Home (PEN-137, AC9).
+                    else -> app.penmoss.git.firstrun.ConsentGate(graph.analytics, openUrl = { url ->
+                        runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                    }) { when {
                     land -> {
                         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                         androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -136,6 +114,7 @@ fun NotebooksHome(
                         onSettings = { nav.open(app.penmoss.ui.settings.SettingsRoutes.HOME) },
                         onAddNotebook = { nav.open(app.penmoss.ui.settings.SettingsRoutes.addNotebook(home = true)) },
                     )
+                    } }
                 }
             }
             settingsRoutes(SettingsHost(graph, nav, context))

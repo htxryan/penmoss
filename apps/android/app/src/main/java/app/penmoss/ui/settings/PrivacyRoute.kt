@@ -89,7 +89,7 @@ internal fun PrivacyRoute(device: DeviceGraph, onViewData: () -> Unit, onBack: (
                     forgetting = false
                 }
             },
-            onShareLog = { PrivacyLogs.share(context, device) },
+            onShareLog = { scope.launch { PrivacyLogs.share(context, device) } },
             preview = { next ->
                 val service = analytics
                 LimitsPreview(

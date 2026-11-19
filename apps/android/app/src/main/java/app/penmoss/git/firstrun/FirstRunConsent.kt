@@ -8,7 +8,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
@@ -78,5 +88,37 @@ private fun Points(title: String, lines: List<String>, tag: String) {
                 Text(line, style = MaterialTheme.roles.body)
             }
         }
+    }
+}
+
+/**
+ * Home, once the usage question is answered (PEN-137, AC9): a phone that had notebooks before the
+ * question existed is asked it once, as a full screen, before [content]; nothing shows until the
+ * answer is read, so neither flashes past. Without analytics (tests) it is [content] alone.
+ */
+@Composable
+fun ConsentGate(analytics: app.penmoss.analytics.AnalyticsService?, openUrl: (String) -> Unit, content: @Composable () -> Unit) {
+    if (analytics == null) {
+        content()
+        return
+    }
+    val consent by analytics.state.collectAsState()
+    val scope = rememberCoroutineScope()
+    var answering by remember { mutableStateOf(false) }
+    when {
+        consent == null -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+        consent?.answered != true -> ConsentStep(
+            lastStep = false,
+            busy = answering,
+            onAnswer = { answer ->
+                answering = true
+                scope.launch {
+                    runCatching { analytics.answer(answer, app.penmoss.BuildConfig.VERSION_NAME) }
+                    answering = false
+                }
+            },
+            openUrl = openUrl,
+        )
+        else -> content()
     }
 }
