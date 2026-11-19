@@ -20,7 +20,7 @@ import {
   type StateName,
 } from '../events';
 import type { Limits } from '../limits';
-import type { Page, PageQuery, StoredEvent } from '../viewer';
+import type { Cursor, Page, PageQuery, StoredEvent } from '../viewer';
 
 export type { ClientFilter, Cursor, Page, PageQuery, StoredEvent } from '../viewer';
 
@@ -341,6 +341,13 @@ export class AnalyticsStore {
     ).all(...args, ...keyArgs, limit) as unknown as Row[];
     const events = rows.map(fromRow);
     return { events, total, newer: query.before ? this.newerThan(where, args, events[0]) : 0 };
+  }
+
+  /** The place of the event with this id, for paging from it (`penmoss analytics show --before`). */
+  cursor(id: number): Cursor | null {
+    const row = this.statement('SELECT at, id FROM events WHERE id = ?').get(id) as
+      Cursor | undefined;
+    return row ? { at: row.at, id: row.id } : null;
   }
 
   private newerThan(
