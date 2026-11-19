@@ -10,7 +10,12 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { STATES, type AnalyticsEvent, type StateCode } from '../src/analytics/events';
-import { AnalyticsStore, wireEvent, type StoredEvent } from '../src/analytics/node/store';
+import {
+  AnalyticsStore,
+  wireEvent,
+  type PruneStep,
+  type StoredEvent,
+} from '../src/analytics/node/store';
 
 const DAY = 86_400_000;
 const NOW = Date.parse('2026-11-19T12:00:00.000Z');
@@ -314,16 +319,21 @@ describe('limits', () => {
     expect(store.outside({ 'events.days': 360, 'events.max': 800_000 }, NOW)).toBe(0);
   });
 
-  it('prunes by age, oldest first, a batch at a time, yielding between batches', async () => {
-    let yields = 0;
+  it('prunes by age, oldest first, a batch at a time, yielding after every step', async () => {
+    const steps: PruneStep[] = [];
     const removed = await store.prune({ 'events.days': 7, 'events.max': 800_000 }, NOW, {
       batch: 30,
-      between: () => {
-        yields += 1;
+      between: (step) => {
+        steps.push(step);
       },
     });
     expect(removed).toBe(200);
-    expect(yields).toBe(6);
+    // Seven DELETEs (six of 30 and one of 20), a checkpoint after every fourth and one after the
+    // last, then the vacuum a slice at a time, each slice checkpointed.
+    const deletes = (n: number) => Array.from({ length: n }, () => 'delete');
+    expect(steps.slice(0, 9)).toEqual([...deletes(4), 'checkpoint', ...deletes(3), 'checkpoint']);
+    expect(new Set(steps.slice(9))).toEqual(new Set(['vacuum', 'checkpoint']));
+    expect(steps.filter((step) => step === 'delete')).toHaveLength(7);
     expect(store.size()).toBe(800);
     expect(store.page({ limit: 1000 }).events.at(-1)!.seq).toBe(200);
   });
@@ -350,13 +360,21 @@ describe('limits', () => {
     const order: string[] = [];
     await store.prune({ 'events.days': 1, 'events.max': 800_000 }, NOW, {
       batch: 400,
-      between: async () => {
-        order.push('yield');
+      between: async (step) => {
+        order.push(step);
         await new Promise((resolve) => setTimeout(resolve, 1));
         order.push('resumed');
       },
     });
-    expect(order).toEqual(['yield', 'resumed', 'yield', 'resumed']);
+    expect(order.slice(0, 6)).toEqual([
+      'delete',
+      'resumed',
+      'delete',
+      'resumed',
+      'checkpoint',
+      'resumed',
+    ]);
+    expect(order.filter((_, i) => i % 2 === 1).every((each) => each === 'resumed')).toBe(true);
     expect(store.size()).toBe(200);
   });
 });

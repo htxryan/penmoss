@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { STATES, type AnalyticsEvent, type StateCode } from '../src/analytics/events';
-import { AnalyticsStore, PRUNE_BATCH } from '../src/analytics/node/store';
+import { AnalyticsStore, PRUNE_BATCH, type PruneStep } from '../src/analytics/node/store';
 
 const SLACK = process.env['CI'] ? 2 : 1;
 const EVENTS = 800_000;
@@ -140,28 +140,41 @@ describe('the usage record at 800,000 events', () => {
     expect(best(3, () => store.outside(limits, NOW))).toBeLessThan(100 * SLACK);
   });
 
-  it('prunes 800,000 to 5,000 in under 30 s, a batch at a time in under 16 ms', async () => {
-    const batches: number[] = [];
+  it('prunes 800,000 to 5,000 in under 30 s, every delete, checkpoint and vacuum step short', async () => {
+    const steps: Array<{ step: PruneStep; ms: number }> = [];
     let last = performance.now();
     const started = last;
     const removed = await store.prune({ 'events.days': 360, 'events.max': 5000 }, NOW, {
-      between: () => {
+      between: (step) => {
         const now = performance.now();
-        batches.push(now - last);
+        steps.push({ step, ms: now - last });
         last = now;
       },
     });
     const total = performance.now() - started;
     expect(removed).toBe(EVENTS - 5000);
     expect(store.size()).toBe(5000);
-    expect(batches).toHaveLength(Math.ceil((EVENTS - 5000) / PRUNE_BATCH));
+    const of = (kind: PruneStep) => steps.filter(({ step }) => step === kind).map(({ ms }) => ms);
+    expect(of('delete')).toHaveLength(Math.ceil((EVENTS - 5000) / PRUNE_BATCH));
+    expect(of('checkpoint').length).toBeGreaterThan(0);
+    expect(of('vacuum').length).toBeGreaterThan(0);
     expect(total).toBeLessThan(30_000 * SLACK);
-    // Each batch is one DELETE and its commit, off the main thread (the Mac's worker, or the
-    // CLI between commands): the plan's 16 ms. A batch that also writes a WAL checkpoint back is
-    // slower, so the slowest one has a looser ceiling.
-    const sorted = [...batches].sort((a, b) => a - b);
-    const p95 = sorted[Math.floor(sorted.length * 0.95)]!;
-    expect(p95, `p95 of ${batches.length} batches`).toBeLessThan(16 * SLACK);
-    expect(sorted.at(-1)!, 'the slowest batch').toBeLessThan(50 * SLACK);
+    // Each step runs alone between yields, off the main thread (the Mac's worker, or the CLI
+    // between commands): a batch's DELETE and its commit, a checkpoint of the few pages written
+    // since the last, or a slice of the vacuum. The plan's 16 ms holds for nearly all of them;
+    // the slowest of each kind has the looser ceiling the one-off stalls of CI's disk need, and
+    // the message names the slowest steps, so a failure says which kind it was.
+    const slowest = [...steps].sort((a, b) => b.ms - a.ms).slice(0, 5);
+    const named = slowest.map(({ step, ms }) => `${step} ${ms.toFixed(1)} ms`).join(', ');
+    for (const kind of ['delete', 'checkpoint', 'vacuum'] as const) {
+      const sorted = of(kind).sort((a, b) => a - b);
+      const p95 = sorted[Math.floor(sorted.length * 0.95)]!;
+      expect(p95, `p95 of ${sorted.length} ${kind} steps (slowest: ${named})`).toBeLessThan(
+        16 * SLACK,
+      );
+      expect(sorted.at(-1)!, `the slowest ${kind} step (slowest: ${named})`).toBeLessThan(
+        50 * SLACK,
+      );
+    }
   }, 120_000);
 });
