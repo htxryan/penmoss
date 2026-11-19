@@ -83,6 +83,9 @@ android {
         // penmoss.githubApi / penmoss.githubUploads in local.properties; a release build never does.
         buildConfigField("String", "GITHUB_API", "\"${local.getProperty("penmoss.githubApi") ?: ""}\"")
         buildConfigField("String", "GITHUB_UPLOADS", "\"${local.getProperty("penmoss.githubUploads") ?: ""}\"")
+        // Usage analytics' endpoint (PEN-137): Penmoss's own ingest Worker; a debug build may
+        // point at another with penmoss.analyticsUrl in local.properties, and tests set their own.
+        buildConfigField("String", "ANALYTICS_URL", "\"${local.getProperty("penmoss.analyticsUrl") ?: "https://t.penmoss.app"}\"")
     }
 
     signingConfigs {
@@ -112,6 +115,7 @@ android {
         release {
             buildConfigField("String", "GITHUB_API", "\"\"")
             buildConfigField("String", "GITHUB_UPLOADS", "\"\"")
+            buildConfigField("String", "ANALYTICS_URL", "\"https://t.penmoss.app\"")
             // Not minified until a release build has run on the Pixel (A285).
             isMinifyEnabled = false
             // The public APK with the sideload key (P8), else Play's upload key.
@@ -284,6 +288,9 @@ dependencies {
     implementation(libs.webkit)
     implementation(libs.coroutines.android)
     implementation(libs.work.runtime)
+    implementation(libs.datastore.preferences)
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
@@ -295,6 +302,7 @@ dependencies {
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.espresso.core)
+    testImplementation(libs.paging.testing)
     debugImplementation(libs.compose.ui.test.manifest)
 
     androidTestImplementation(platform(libs.compose.bom))
@@ -302,4 +310,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.metrics.performance)
+    androidTestImplementation(libs.espresso.intents)
+    androidTestImplementation(libs.okhttp.mockwebserver)
 }
