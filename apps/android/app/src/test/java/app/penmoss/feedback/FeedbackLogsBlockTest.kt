@@ -35,14 +35,14 @@ class FeedbackLogsBlockTest {
     @Test
     fun theOldestLinesGoUntilTheBlockFits() {
         val lines = (0 until 5_000).map { "2026-11-19T11:54:16.525Z info line $it ${"x".repeat(40)}" }
-        val kept = FeedbackLogs.fit(lines, others = 10_000)
+        val kept = FeedbackLogs.linesThatFit(lines, others = 10_000)
         assertTrue(kept.isNotEmpty())
         assertEquals(lines.last(), kept.last())
         assertTrue(FeedbackLogs.block(kept).length + 2 <= 60_000 - 10_000 - 400)
         // One more of the dropped lines would not fit: exactly as core's one-at-a-time loop.
         val oneMore = lines.subList(lines.size - kept.size - 1, lines.size)
         assertTrue(FeedbackLogs.block(oneMore).length + 2 > 60_000 - 10_000 - 400)
-        assertEquals(lines.takeLast(3), FeedbackLogs.fit(lines.takeLast(3), others = 100))
+        assertEquals(lines.takeLast(3), FeedbackLogs.linesThatFit(lines.takeLast(3), others = 100))
     }
 
     @Test

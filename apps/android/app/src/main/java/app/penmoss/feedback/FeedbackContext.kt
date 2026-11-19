@@ -169,7 +169,7 @@ object FeedbackMarkdown {
         if (logs.isNotEmpty()) {
             // The rest of the body, and the blank lines around the block.
             val others = (parts + footer).joinToString("\n\n").length + 3
-            val block = FeedbackLogs.block(FeedbackLogs.fit(logs, others))
+            val block = FeedbackLogs.block(FeedbackLogs.linesThatFit(logs, others))
             if (block.isNotEmpty()) parts += block
         }
         parts += footer

@@ -53,7 +53,7 @@ object FeedbackLogs {
     }
 
     /** The lines that fit when the rest of the body is [others] characters long: the oldest go first. */
-    fun fit(lines: List<String>, others: Int, limit: Int = INTAKE_BODY_LIMIT): List<String> {
+    fun linesThatFit(lines: List<String>, others: Int, limit: Int = INTAKE_BODY_LIMIT): List<String> {
         val room = limit - others - 400
         var from = 0
         while (from < lines.size && block(lines.subList(from, lines.size)).length + 2 > room) {

@@ -177,6 +177,10 @@ describe('the captured context (A791)', () => {
     expect(field('where', 'Screen')).toBe('note (in its own window)');
     expect(field('where', 'Open panel')).toBe('Info, Version history');
     expect(field('where', 'Opened from')).toBe('menu');
+    // The screen's kind stands where the route and the selected folder were (O5).
+    expect(field('where', 'Sidebar')).toBe('none on this screen');
+    expect(field('where', 'Route')).toBeUndefined();
+    expect(field('where', 'Selected folder')).toBeUndefined();
     expect(field('sync', 'Sync')).toBe('syncing');
     expect(field('sync', 'Folders socket')).toBeUndefined();
     expect(field('sync', 'Image uploads waiting')).toBeUndefined();
@@ -186,6 +190,13 @@ describe('the captured context (A791)', () => {
     expect(field('sync', 'Last sync error')).toBe(
       'stopped (notes): 1 note could not sync: ‹name› is too large',
     );
+    // The note by kind, dates and counts, never by its id, title, folder or tags (O5).
+    expect(field('note', 'Kind')).toBe('note');
+    expect(field('note', 'Updated')).toBe('2026-10-27T15:00:00.000Z');
+    expect(field('note', 'Id')).toBeUndefined();
+    expect(field('note', 'Title')).toBeUndefined();
+    expect(field('note', 'Folder')).toBeUndefined();
+    expect(field('note', 'Tags')).toBeUndefined();
     expect(field('note', 'Created')).toBe('2026-10-20T09:00:00-05:00');
     expect(field('note', 'Words')).toBe('13');
     expect(field('note', 'Attachments')).toBe('1');

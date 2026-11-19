@@ -220,7 +220,7 @@ tasks:
       - pnpm run deploy
 
   dashboard:e2e:
-    desc: "Usage analytics' dashboard in headless Chromium (PEN-137): every view over a fixture D1 behind a stand-in for Access; `task e2e` and `task proof:web` run the same spec as apps/web's dashboard project"
+    desc: "Usage analytics' dashboard in headless Chromium (PEN-137): every view over a fixture D1 behind a stand-in for Access; a whole `task e2e` and `task proof:web` run the same spec as apps/web's dashboard project"
     dir: apps/telemetry-dashboard
     cmds:
       - pnpm exec playwright test --config test/e2e/playwright.config.ts {{.CLI_ARGS}}
@@ -320,9 +320,11 @@ tasks:
   e2e:run:
     # Two passes (A1139): every spec but the timed ones, several at once, then the timed ones
     # (@perf, @budget) alone, so the others' load never skews their numbers. A pass with
-    # nothing to run passes.
+    # nothing to run passes. The usage dashboard's spec (PEN-137) runs as its own pass in a
+    # whole run, and must find its tests; `task dashboard:e2e -- …` runs it alone.
     cmds:
-      - pnpm --filter @penmoss/web exec playwright test --project=chromium --project=dashboard --pass-with-no-tests {{.CLI_ARGS}}
+      - pnpm --filter @penmoss/web exec playwright test --project=chromium --pass-with-no-tests {{.CLI_ARGS}}
+      - '[ -n "{{.CLI_ARGS}}" ] || pnpm --filter @penmoss/web exec playwright test --project=dashboard'
       - pnpm --filter @penmoss/web exec playwright test --project=timed --pass-with-no-tests {{.CLI_ARGS}}
 
   budgets:

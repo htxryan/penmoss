@@ -95,6 +95,18 @@ class FeedbackContextTest {
             assertFalse("$row is a row", context.groups.any { group -> group.rows.any { it[0] == row } })
         }
         assertFalse(markdown.contains("Shopping list"))
+        // The screen and the note by kind, with counts and states: what the server era's rows left.
+        val whereRows = groups.getValue("where").rows.associate { it[0] to it[1] }
+        assertEquals("note", whereRows["Screen"])
+        assertEquals("none", whereRows["Open panel"])
+        assertEquals("the note's ⋮ menu", whereRows["Opened from"])
+        assertEquals("a git notebook", whereRows["Source"])
+        assertEquals("a git notebook", note["Source"])
+        assertEquals("no", note["In Trash"])
+        // No history: its authors and dates are the notebook's, and its summaries quote the note.
+        assertFalse(markdown.contains("Pixel 9"))
+        assertFalse(markdown.contains("Claude Code"))
+        assertFalse(markdown.contains("Projects"))
         assertEquals("17", note["Words"])
         assertEquals("${body.length}", note["Characters"])
         assertEquals("1", note["Backlinks"])
