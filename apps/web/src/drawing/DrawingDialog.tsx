@@ -22,6 +22,7 @@ import { macWindowStore, useMacWindowState } from '../desktop/mac-window';
 import { historyPlace } from '../router';
 import './drawing.css';
 import { drawingSvg, type DrawingResult } from './scene';
+import { useTrackedDialog } from '../analytics/dialog';
 
 /** Where the window goes once the drawing is kept: the bar's Back or Forward. */
 export type DrawingStep = 'back' | 'forward';
@@ -63,6 +64,7 @@ export function DrawingDialog({
   commands,
 }: DrawingDialogProps) {
   const dark = useDark();
+  const tracked = useTrackedDialog('drawing');
   const api = useRef<ExcalidrawImperativeAPI | null>(null);
   const [saving, setSaving] = useState(false);
   /** How many shapes the scene has, shown to assistive technology and read by tests. */
@@ -88,6 +90,7 @@ export function DrawingDialog({
         const appState = excalidraw.getAppState();
         const files = excalidraw.getFiles();
         const scene = serializeAsJSON(elements, appState, files, 'local');
+        tracked.done();
         onDone({ scene, svg: await drawingSvg(elements, appState, files) }, step);
       } catch (error) {
         setSaving(false);
@@ -96,7 +99,7 @@ export function DrawingDialog({
         );
       }
     },
-    [initial, onDone, onError, saving],
+    [initial, onDone, onError, saving, tracked],
   );
 
   /** A drawing is named as the slash menu names it. */

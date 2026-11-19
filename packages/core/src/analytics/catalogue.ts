@@ -280,6 +280,16 @@ export const DIALOG_NAMES: readonly string[] = [
   'capture',
   'calendar',
   'shareSheet',
+  // The page's other dialogs and pickers (PEN-137).
+  'folderPicker',
+  'themePicker',
+  'timeZone',
+  'iconPicker',
+  'previewZoom',
+  'version',
+  'tabs',
+  'allTabs',
+  'drawing',
 ];
 
 /** The Mac's native menu roles, and the tray's and the menu bar's own items. */

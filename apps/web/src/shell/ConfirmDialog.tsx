@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useTrackedDialog } from '../analytics/dialog';
 
 /**
  * A modal confirm (`dialog.confirm`), open while mounted: a native `<dialog>` shown with
@@ -23,6 +24,7 @@ export function ConfirmDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const tracked = useTrackedDialog('confirm');
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
@@ -42,6 +44,7 @@ export function ConfirmDialog({
         method="dialog"
         onSubmit={(event) => {
           event.preventDefault();
+          tracked.done();
           onSubmit();
         }}
       >

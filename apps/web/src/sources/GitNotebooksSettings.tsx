@@ -84,6 +84,7 @@ import {
 import './sources.css';
 import './notebook-settings.css';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { withoutRecording } from '../analytics/track';
 
 const when = (at: number | null) =>
   at === null
@@ -641,7 +642,7 @@ function CopySettingsPanel({
   const targets = target ? [target] : others;
   const copy = () => {
     const changed = targets.reduce(
-      (sum, each) => sum + copySettings(source.workspace, each.workspace),
+      (sum, each) => sum + withoutRecording(() => copySettings(source.workspace, each.workspace)),
       0,
     );
     const where = target ? target.name : 'the other notebooks';

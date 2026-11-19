@@ -5,6 +5,7 @@ import { DialogClose } from '../shell/DialogClose';
 import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
 import { usePickerList } from '../shell/picker-list';
 import type { FolderChoice } from './model';
+import { useTrackedDialog } from '../analytics/dialog';
 
 export interface FolderPickerProps {
   /** The note's title, for the dialog's name ("3 notes" for several). */
@@ -43,6 +44,7 @@ export function FolderPicker({
   action = 'Move here',
   options,
 }: FolderPickerProps) {
+  const tracked = useTrackedDialog('folderPicker');
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(() =>
     Math.max(
@@ -61,7 +63,9 @@ export function FolderPicker({
   }, [choices, query]);
 
   const choose = (choice: FolderChoice | undefined) => {
-    if (choice) onChoose(choice.id);
+    if (!choice) return;
+    tracked.done();
+    onChoose(choice.id);
   };
   const picker = usePickerList({
     items,

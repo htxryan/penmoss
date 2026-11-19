@@ -24,6 +24,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { DialogClose } from './DialogClose';
+import { useTrackedDialog } from '../analytics/dialog';
 import { devicePref, useDevicePref } from './device-pref';
 import {
   cellLabel,
@@ -149,6 +150,7 @@ export function IconPicker({
   readonly onClose: () => void;
 }) {
   const id = useId();
+  const tracked = useTrackedDialog('iconPicker');
   const [tab, setTab] = useState<PickerTab>(initialTab ?? tabs[0] ?? 'icons');
   const [query, setQuery] = useState('');
   // The active cell; null: the chosen one (or the first) until a key, the pointer or a search
@@ -278,6 +280,7 @@ export function IconPicker({
     setRecent(
       [cell.value, ...recent.filter((each) => keyOf(tab, each) !== key)].slice(0, RECENT_MAX),
     );
+    tracked.done();
     onClose();
   };
 

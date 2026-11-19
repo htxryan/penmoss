@@ -6,6 +6,7 @@ import type { Theme } from '@penmoss/ui/theme';
 import { useEffect, useMemo, useState } from 'react';
 import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import { useThemeController } from './hooks';
+import { useTrackedDialog } from '../analytics/dialog';
 
 export interface ThemePickerProps {
   readonly themes: readonly Theme[];
@@ -21,6 +22,7 @@ export interface ThemePickerProps {
  */
 export function ThemePicker({ themes, currentId, onChoose, onClose }: ThemePickerProps) {
   const controller = useThemeController();
+  const tracked = useTrackedDialog('themePicker');
   const [query, setQuery] = useState('');
   const start = Math.max(
     0,
@@ -39,6 +41,7 @@ export function ThemePicker({ themes, currentId, onChoose, onClose }: ThemePicke
 
   const choose = (theme: Theme | null | undefined) => {
     if (!theme) return;
+    tracked.done();
     onChoose(theme.id);
   };
   const picker = usePickerList({

@@ -46,6 +46,7 @@ import { useFit } from './fit';
 import { authorName, time } from './format';
 import { AuthorMark } from './parts';
 import type { HistoryDetail, HistorySource, HistoryVersion } from './source';
+import { useTrackedDialog } from '../analytics/dialog';
 
 type Side = 'left' | 'right';
 
@@ -307,6 +308,7 @@ export function VersionView({
 
   // Esc closes it from anywhere in it or in the panel, before the panel's own Esc closes the
   // panel. Not from elsewhere: a menu or the palette over it takes its own Esc.
+  const tracked = useTrackedDialog('version');
   const closeRef = useRef(onClose);
   useLayoutEffect(() => {
     closeRef.current = onClose;
@@ -464,7 +466,10 @@ export function VersionView({
             aria-label="Restore This Version"
             data-tip="Restore This Version"
             disabled={busy}
-            onClick={onRestore}
+            onClick={() => {
+              tracked.done();
+              onRestore();
+            }}
           >
             <Icon name="history" />
             <span className="history-action-word">Restore</span>

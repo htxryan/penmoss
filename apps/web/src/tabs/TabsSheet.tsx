@@ -7,6 +7,7 @@ import { facePath, useTabFaces, type TabFace } from './describe';
 import { useTabs, useTabsState } from './hooks';
 import { sheet } from './sheet';
 import { shownTabCount } from './state';
+import { useTrackedDialog } from '../analytics/dialog';
 
 /**
  * The narrow window's tabs (700 px and narrower, AC13, A1502): the strip is hidden, and the app
@@ -69,6 +70,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
   const faces = useTabFaces(state, badgeLook);
   const commands = useCommands();
   const panel = useRef<HTMLDivElement>(null);
+  const tracked = useTrackedDialog('tabs');
   useEffect(() => {
     panel.current?.querySelector<HTMLElement>('[aria-current="true"], button')?.focus();
   }, []);
@@ -117,6 +119,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
                 aria-current={face.active ? 'true' : undefined}
                 data-testid="tabs-sheet-tab"
                 onClick={() => {
+                  tracked.done();
                   tabs.activate(face.id);
                   onClose();
                 }}
