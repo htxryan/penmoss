@@ -64,6 +64,7 @@ object AnalyticsCopy {
         "forget.title" to "Delete Your Shared Data?",
         "forget.body" to "Penmoss’s server deletes everything this phone shared under ID {id}, and this phone gets a new ID. The record on this phone stays.",
         "forget.offline" to "You’re offline, so nothing was deleted. Try again when you’re online.",
+        "forget.failed" to "Penmoss’s server didn’t answer, so nothing was deleted. Try again later.",
         "forget.done" to "Your shared data was deleted, and this phone has a new ID.",
         "prune.events.title" to "Delete {count} Events?",
         "prune.logs.title" to "Delete {size} of Logs?",

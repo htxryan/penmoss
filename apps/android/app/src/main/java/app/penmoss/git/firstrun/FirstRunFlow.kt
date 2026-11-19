@@ -71,6 +71,9 @@ sealed interface Screen {
     data object Url : Screen
     data class Name(val place: Place) : Screen
     data class SetUp(val setup: Setup) : Screen
+
+    /** The usage question (PEN-137): the first run's last step, after the notebook is set up. */
+    data class Consent(val localId: String?) : Screen
 }
 
 /** GitHub as the flow knows it once a sign-in answered. */

@@ -86,6 +86,13 @@
       "keys": []
     },
     {
+      "id": "app.privacy",
+      "title": "Privacy Settings",
+      "area": "General",
+      "scope": "global",
+      "keys": []
+    },
+    {
       "id": "app.sendFeedback",
       "title": "Send Feedback",
       "area": "General",

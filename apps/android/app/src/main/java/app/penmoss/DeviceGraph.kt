@@ -75,6 +75,11 @@ class DeviceGraph(
     },
     /** The git notebooks' hub (T50 G7): the app's own, made on first use; tests give one with stand-in pages and keys. */
     makeHub: ((DeviceGraph) -> app.penmoss.git.GitNotebookHub)? = null,
+    /**
+     * Usage analytics (PEN-137): the record on this phone, the answer and the sender. The app's is
+     * made by `PenmossApp`; null in tests that give none, where nothing is recorded or asked.
+     */
+    val analytics: app.penmoss.analytics.AnalyticsService? = null,
 ) {
     private val appContext = context.applicationContext
 

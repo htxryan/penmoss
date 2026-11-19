@@ -103,6 +103,9 @@ object SettingsIcons {
     /** Settings → GitHub (PEN-146): a person, signed in or not. */
     val Account = icon("GitHub", circle(12f, 8.5f, 3.5f) + "M5 19.5a7 7 0 0 1 14 0")
 
+    /** Settings → Privacy (PEN-137, N15): the web's `shield`, an outline shield with a tick. */
+    val Shield = icon("Privacy", "M12 3.5 19 6v5.5c0 4.4-2.9 7.6-7 9-4.1-1.4-7-4.6-7-9V6zM8.8 12.2l2.3 2.3 4.2-4.5")
+
     /** A row's drag handle (PEN-146): two columns of dots. */
     val Drag = icon("Drag", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01")
 

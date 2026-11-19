@@ -63,6 +63,8 @@ internal fun Frame(
     name: String,
     title: String,
     step: Int? = null,
+    /** In the step bar's place of "Step n of 3", every bar filled: the consent's "Last Step" (PEN-137). */
+    stepLabel: String? = null,
     back: (() -> Unit)? = null,
     /** Cancel in Back's place: the flow's first screen when Add Notebook opened it (A1562). */
     cancel: (() -> Unit)? = null,
@@ -79,6 +81,13 @@ internal fun Frame(
     strip: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
+    // Each step is recorded by its kind (PEN-137): `firstrun.<name>`, never what it holds.
+    androidx.compose.runtime.LaunchedEffect(name) {
+        val catalogue = app.penmoss.analytics.AnalyticsCatalogue.bundled
+        // A screen's variant ("repo-empty") is its step's kind ("repo").
+        val kind = "firstrun.$name".takeIf { catalogue.has("screen", it) } ?: "firstrun.${name.substringBefore('-')}"
+        app.penmoss.analytics.Analytics.screen(kind)
+    }
     // The screen draws its own background, so its text takes the colour on it: without this,
     // words with no colour of their own were black on dark (Ryan, on his phone).
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
@@ -98,6 +107,7 @@ internal fun Frame(
                 // The welcome's words sit a third of the way down.
                 if (centered) Spacer(Modifier.height(96.dp))
                 if (step != null) StepBar(step)
+                if (stepLabel != null) StepBar(3, stepLabel)
                 above?.invoke()
                 Text(
                     title,
@@ -142,11 +152,11 @@ internal fun Frame(
     }
 }
 
-/** "Step n of 3" and its three bars. */
+/** "Step n of 3" (or [label]) and its three bars. */
 @Composable
-private fun StepBar(step: Int) {
+private fun StepBar(step: Int, label: String = "Step $step of 3") {
     Column(Modifier.fillMaxWidth().testTag("first-run-step-bar"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Step $step of 3", style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (each in 1..3) {
                 Box(

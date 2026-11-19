@@ -37,6 +37,7 @@ internal fun runSearchAction(id: String, to: ActionTargets): Boolean {
         "app.settings" -> to.open(SettingsRoutes.HOME)
         "app.gitNotebooks" -> to.open(app.penmoss.ui.keys.CommandRoutes.GIT_NOTEBOOKS)
         "app.status" -> to.open(app.penmoss.ui.keys.CommandRoutes.ABOUT)
+        "app.privacy" -> to.open(SettingsRoutes.PRIVACY)
         "app.sendFeedback" -> to.feedback()
         "app.home" -> to.home()
         // Every note's graph, as Home's ⋮ → Graph opens it (T40 P7, LK7).

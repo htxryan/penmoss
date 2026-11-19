@@ -60,7 +60,7 @@ fun NoteCommands(
     val commands = LocalAppCommands.current
     DisposableEffect(commands, controller) {
         commands.editorOpen = true
-        controller.onCommand = { id -> commands.run(id) }
+        controller.onCommand = { id -> commands.run(id, source = "editor") }
         onDispose {
             commands.editorOpen = false
             controller.onCommand = {}

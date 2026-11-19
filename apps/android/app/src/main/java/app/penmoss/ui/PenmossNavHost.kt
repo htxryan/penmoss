@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -23,6 +24,14 @@ internal const val NAV_MS = 300
  */
 @Composable
 internal fun PenmossNavHost(nav: NavHostController, startDestination: String, builder: NavGraphBuilder.() -> Unit) {
+    // Each screen shown is recorded by its kind, never its route or an id (PEN-137).
+    androidx.compose.runtime.DisposableEffect(nav) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            app.penmoss.analytics.Analytics.screen(app.penmoss.analytics.ScreenKinds.of(destination.route))
+        }
+        nav.addOnDestinationChangedListener(listener)
+        onDispose { nav.removeOnDestinationChangedListener(listener) }
+    }
     // With Remove animations on (Accessibility, or animations off in Developer options), screens
     // change at once instead of sliding (T40 P9, PL14, A498).
     if (reducedMotion(LocalContext.current)) {

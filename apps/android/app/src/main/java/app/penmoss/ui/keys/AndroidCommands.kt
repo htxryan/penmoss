@@ -45,6 +45,8 @@ object AndroidCommands {
         // T50 G7 (D43, A856): Settings → Git notebooks, as on the Mac (#155).
         "app.gitNotebooks" to Coverage.Native(ANYWHERE),
         "app.status" to Coverage.Native(ANYWHERE),
+        // Settings → Privacy (PEN-137): usage data, the record, the ID and the logs.
+        "app.privacy" to Coverage.Native(ANYWHERE),
         // T64 (A1112): the Mac app updates itself; a phone updates from where it was installed.
         "app.checkForUpdates" to Coverage.NotHere("The Mac app updates itself from GitHub Releases; the phone updates from where it was installed."),
         // In-app feedback (T49, D41): the screen behind is captured, then the form opens.

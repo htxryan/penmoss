@@ -329,7 +329,7 @@ fun NoteRoute(
                     symbols = note.symbols,
                     onSymbol = controller::toggleSymbol,
                     // Settings → Symbols, as the web picker's Edit symbols… (T44, A747).
-                    onEditSymbols = { appCommands.run("app.symbols") },
+                    onEditSymbols = { appCommands.run("app.symbols", source = "button") },
                 )
             }
         }
