@@ -374,6 +374,9 @@ if (!app.isPackaged) {
       // T76: the embedding service's process id (the suite kills it) and its status.
       meaningPid: () => meaning?.pid() ?? null,
       meaningStatus: () => meaning?.status() ?? null,
+      // PEN-137: send what waits now (not in a minute), and where the log file is.
+      analyticsSend: () => analytics.sendNow(),
+      logFile: () => logFile.path,
     },
   });
 }
