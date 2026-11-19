@@ -23,6 +23,13 @@ describe('Icon (T36)', () => {
     expect(renderToStaticMarkup(<Icon name="gear" />)).toContain('<circle cx="12" cy="12"');
   });
 
+  // PEN-137 (N15): Settings → Privacy's shield, with its tick.
+  it('has a shield with a tick', () => {
+    expect(ICON_NAMES).toContain('shield');
+    const html = renderToStaticMarkup(<Icon name="shield" />);
+    expect(html.match(/<path /g)).toHaveLength(2);
+  });
+
   it('takes a size and a class', () => {
     const html = renderToStaticMarkup(<Icon name="search" size={20} className="lg" />);
     expect(html).toContain('class="i lg"');

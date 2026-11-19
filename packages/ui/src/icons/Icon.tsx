@@ -292,6 +292,13 @@ const PATHS = {
       <circle cx="9" cy="17" r="2" />
     </>
   ),
+  // Settings → Privacy (PEN-137, N15): an outline shield with a tick; Android's SettingsIcons too.
+  shield: (
+    <>
+      <path d="M12 3.5 19 6v5.5c0 4.4-2.9 7.6-7 9-4.1-1.4-7-4.6-7-9V6z" />
+      <path d="m8.8 12.2 2.3 2.3 4.2-4.5" />
+    </>
+  ),
   // T44: line symbols (Settings → Symbols, the phone's symbol button).
   star: <path d="m12 3.8 2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z" />,
   sun: (
