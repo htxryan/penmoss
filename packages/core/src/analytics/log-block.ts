@@ -37,6 +37,10 @@ export function reportLines(lines: readonly string[], limits: Limits, now: numbe
     kept.push(line);
     bytes += size;
   }
+  // Continuation lines whose own line was left out (too old, or past a limit) go with it.
+  if (kept.some((each) => lineTime(each) !== null)) {
+    while (kept.length > 0 && lineTime(kept.at(-1)!) === null) kept.pop();
+  }
   return kept.reverse();
 }
 
