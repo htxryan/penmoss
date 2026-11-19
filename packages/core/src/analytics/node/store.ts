@@ -80,11 +80,16 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 
 /**
  * Rows per DELETE when pruning. Each batch is one statement and its commit; at 800,000 events on
- * a busy Mac 500 rows took 1–4 ms (95th percentile under 4 ms, the slowest about 10 ms with a
- * WAL checkpoint), where 5,000 took 12–20 ms and up to 190 ms, and 800,000 → 5,000 takes about
- * 2.5 s (analytics-store.budget.test.ts).
+ * a busy Mac 500 rows took 1–3 ms (95th percentile under 3 ms, the slowest a batch that also
+ * checkpoints the WAL), where 5,000 took 12–20 ms and up to 190 ms, and 800,000 → 5,000 takes
+ * about 2 s (analytics-store.budget.test.ts).
  */
 export const PRUNE_BATCH = 500;
+
+/** Pages of WAL that trigger a checkpoint (1 MB at SQLite's 4 KB pages). */
+const WAL_CHECKPOINT_PAGES = 250;
+/** Bytes the WAL file is cut back to once it has been checkpointed. */
+const WAL_SIZE_LIMIT = 4 * 1024 * 1024;
 
 export interface PruneOptions {
   /** Rows per DELETE. */
@@ -165,6 +170,12 @@ export class AnalyticsStore {
     if (path !== ':memory:') db.exec('PRAGMA journal_mode = WAL');
     db.exec('PRAGMA synchronous = NORMAL');
     db.exec('PRAGMA busy_timeout = 2000');
+    // Checkpoint every 250 pages (1 MB), not SQLite's 1,000: the commit that crosses the mark
+    // writes the WAL back and syncs it, and a prune's batch that does that with 4 MB took over
+    // 100 ms on CI's disk where the rest took 3 ms. And give the WAL file back after a big prune
+    // or vacuum, which otherwise leaves it at its largest (about 180 MB from 800,000 events).
+    db.exec(`PRAGMA wal_autocheckpoint = ${WAL_CHECKPOINT_PAGES}`);
+    db.exec(`PRAGMA journal_size_limit = ${WAL_SIZE_LIMIT}`);
     db.exec(SCHEMA);
     db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('schema', ?)").run(SCHEMA_VERSION);
     return new AnalyticsStore(db);
@@ -447,6 +458,8 @@ export class AnalyticsStore {
   vacuum(): void {
     try {
       this.db.exec('PRAGMA incremental_vacuum');
+      // Write the vacuum back now, so the next commit starts the WAL again within its limit.
+      this.db.exec('PRAGMA wal_checkpoint(PASSIVE)');
     } catch {
       // Another process holds the database; the next prune tries again.
     }
