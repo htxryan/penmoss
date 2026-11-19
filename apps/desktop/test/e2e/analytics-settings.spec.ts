@@ -211,7 +211,7 @@ test('Delete My Shared Data asks first, naming the ID; only Delete forgets it (a
   // Under the button, naming the ID; focus on Cancel; Escape cancels.
   await button.click();
   await expect(confirm).toBeVisible();
-  await expect(confirm.locator('.privacy-confirm-title')).toHaveText('Delete Your Shared Data?');
+  await expect(confirm.locator('.confirm-block-title')).toHaveText('Delete Your Shared Data?');
   await expect(confirm).toContainText(
     `Penmoss’s server deletes everything this Mac shared under ID ${id}, and this Mac gets a new ID. The record on this Mac stays.`,
   );

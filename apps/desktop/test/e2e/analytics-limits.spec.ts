@@ -115,7 +115,7 @@ test('Advanced opens in place; a limit out of range is refused, a lowering that 
     await expect(confirm).toBeVisible();
   };
   await ask();
-  const title = (await confirm.locator('.privacy-confirm-title').textContent()) ?? '';
+  const title = (await confirm.locator('.confirm-block-title').textContent()) ?? '';
   const count = Number(/^Delete ([\d,]+) Events\?$/.exec(title)![1]!.replaceAll(',', ''));
   expect(count).toBeGreaterThanOrEqual(total - 500);
   await expect(confirm).toHaveAccessibleName(title);
