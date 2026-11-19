@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="noindex" />
+    <title>Penmoss Usage</title>
+    <link rel="stylesheet" href="/app.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header class="top">
+      <p class="brand">Penmoss Usage</p>
+      <form class="filters" aria-label="Filters">
+        <label class="filter">
+          <span>Period</span>
+          <select id="filter-days">
+            <option value="7">Last 7 Days</option>
+            <option value="30">Last 30 Days</option>
+            <option value="90">Last 90 Days</option>
+            <option value="365">Last 365 Days</option>
+            <option value="395">Last 13 Months</option>
+          </select>
+        </label>
+        <label class="filter">
+          <span>Client</span>
+          <select id="filter-client">
+            <option value="">All Clients</option>
+            <option value="mac">Mac</option>
+            <option value="android">Android</option>
+            <option value="cli">CLI</option>
+            <option value="mcp">MCP</option>
+          </select>
+        </label>
+        <label class="filter">
+          <span>Actor</span>
+          <select id="filter-actor">
+            <option value="">All Actors</option>
+            <option value="person">Person</option>
+            <option value="agent">Agent</option>
+            <option value="script">Script</option>
+          </select>
+        </label>
+        <label class="filter">
+          <span>Channel</span>
+          <select id="filter-channel">
+            <option value="">All Channels</option>
+            <option value="stable">Stable</option>
+            <option value="alpha">Alpha</option>
+            <option value="dev">Dev</option>
+          </select>
+        </label>
+        <label class="filter">
+          <span>Version</span>
+          <select id="filter-version">
+            <option value="">All Versions</option>
+          </select>
+        </label>
+      </form>
+    </header>
+    <nav class="views" aria-label="Views">
+      <a href="#overview" data-view="overview">Overview</a>
+      <a href="#commands" data-view="commands">Commands &amp; Shortcuts</a>
+      <a href="#firstrun" data-view="firstrun">First Run</a>
+      <a href="#paths" data-view="paths">Paths</a>
+      <a href="#platforms" data-view="platforms">Platforms</a>
+      <a href="#agents" data-view="agents">Agents</a>
+      <a href="#health" data-view="health">Health</a>
+    </nav>
+    <main id="view"></main>
+    <p id="status" role="status"></p>
+  </body>
+</html>

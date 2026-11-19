@@ -1,0 +1,114 @@
+/**
+ * Usage analytics' dashboard Worker (PEN-137) on stats.penmoss.app. Every request, the page's
+ * files included, needs a valid Cloudflare Access JWT (access.ts), or it gets 403. Then
+ * GET /api/<view> answers JSON from the named queries (api.ts), cached for 5 minutes, and
+ * anything else is the page's static files. It only reads: GET and HEAD, nothing else.
+ */
+import { AccessVerifier, type AccessEnv } from './access';
+import { BadRequest, VIEWS, readFilters, viewData, type View } from './api';
+
+export interface DashboardEnv extends AccessEnv {
+  readonly DB: D1Database;
+  readonly ASSETS: Fetcher;
+}
+
+export interface Deps {
+  readonly verifier: AccessVerifier;
+  readonly now: () => number;
+  /** The Cache API's cache, or null for none. */
+  readonly cache: Cache | null;
+}
+
+/** How long an answer is kept in the Cache API. */
+export const CACHE_SECONDS = 300;
+
+const headers = {
+  'cache-control': 'private, no-store',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+};
+
+const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
+const forbidden = () => new Response('Forbidden', { status: 403, headers });
+
+/** The page's own rules: its files only, nothing from elsewhere. */
+const CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
+  "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+async function api(
+  url: URL,
+  env: DashboardEnv,
+  ctx: ExecutionContext,
+  deps: Deps,
+): Promise<Response> {
+  const view = url.pathname.slice('/api/'.length);
+  if (!(VIEWS as readonly string[]).includes(view)) return json({ error: 'No such view.' }, 404);
+  let filters;
+  try {
+    filters = readFilters(url);
+  } catch (error) {
+    if (error instanceof BadRequest) return json({ error: error.message }, 400);
+    throw error;
+  }
+  // The cache is keyed by the URL alone, with its parameters in one order; it is reached only
+  // after Access let the request through.
+  const key = new URL(url.pathname, url.origin);
+  for (const [name, value] of [...url.searchParams].sort(([a], [b]) => a.localeCompare(b))) {
+    key.searchParams.append(name, value);
+  }
+  const cacheKey = new Request(key.toString(), { method: 'GET' });
+  const hit = await deps.cache?.match(cacheKey);
+  if (hit) {
+    const body = await hit.text();
+    return new Response(body, {
+      headers: { ...headers, 'content-type': 'application/json', 'x-dashboard-cache': 'hit' },
+    });
+  }
+  const now = deps.now();
+  const body = JSON.stringify({
+    view,
+    filters,
+    today: new Date(now).toISOString().slice(0, 10),
+    ...(await viewData(env.DB, view as View, filters, now)),
+  });
+  if (deps.cache) {
+    const stored = new Response(body, {
+      headers: { 'content-type': 'application/json', 'cache-control': `max-age=${CACHE_SECONDS}` },
+    });
+    ctx.waitUntil(deps.cache.put(cacheKey, stored));
+  }
+  return new Response(body, { headers: { ...headers, 'content-type': 'application/json' } });
+}
+
+/** Answers one request. */
+export async function handle(
+  request: Request,
+  env: DashboardEnv,
+  ctx: ExecutionContext,
+  deps: Deps,
+): Promise<Response> {
+  if (!(await deps.verifier.verify(request, env, deps.now()))) return forbidden();
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return new Response('Method Not Allowed', {
+      status: 405,
+      headers: { ...headers, allow: 'GET, HEAD' },
+    });
+  }
+  const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/')) return api(url, env, ctx, deps);
+  const asset = await env.ASSETS.fetch(request);
+  const response = new Response(asset.body, asset);
+  for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+  response.headers.set('content-security-policy', CSP);
+  response.headers.set('x-frame-options', 'DENY');
+  return response;
+}
+
+const verifier = new AccessVerifier();
+
+export default {
+  fetch(request: Request, env: DashboardEnv, ctx: ExecutionContext): Promise<Response> {
+    return handle(request, env, ctx, { verifier, now: Date.now, cache: caches.default });
+  },
+} satisfies ExportedHandler<DashboardEnv>;
