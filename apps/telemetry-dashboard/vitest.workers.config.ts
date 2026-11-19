@@ -22,7 +22,7 @@ export default defineConfig(async () => ({
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations('../telemetry/migrations'),
           ACCESS_TEAM: 'penmoss-test',
-          ACCESS_AUD: 'a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
+          ACCESS_AUD: 'penmoss-test-access-audience',
         },
       },
     }),

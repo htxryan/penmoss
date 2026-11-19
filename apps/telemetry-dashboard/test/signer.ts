@@ -7,7 +7,7 @@ import type { AccessKey, FetchCerts } from '../src/access';
 
 export const TEST_TEAM = 'penmoss-test';
 export const TEST_ISSUER = `https://${TEST_TEAM}.cloudflareaccess.com`;
-export const TEST_AUD = 'a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0';
+export const TEST_AUD = 'penmoss-test-access-audience';
 
 const b64url = (bytes: Uint8Array | string) =>
   btoa(typeof bytes === 'string' ? bytes : String.fromCharCode(...bytes))
