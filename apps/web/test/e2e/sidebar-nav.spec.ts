@@ -54,7 +54,7 @@ test('Back and Forward step through the app’s pages, greyed out at either end 
   await page.getByTestId('sidebar-settings').click();
   await expect(page).toHaveURL(/\/settings/);
   await page
-    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('navigation', { name: 'Settings Sections' })
     .getByRole('link', { name: /^Sidebar$/i })
     .click();
   await expect(page).toHaveURL(/\/settings\/sidebar$/);

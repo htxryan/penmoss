@@ -278,7 +278,7 @@ test('signs in with GitHub on the same screens, lists the repositories with it, 
   await page.goto('/settings/github');
   await expect(page.getByTestId('github-account')).toContainText('ryan');
   await expect(page.getByTestId('github-token-saved')).toHaveText(
-    'Signed in with GitHub · kept in this Mac’s Keychain',
+    'Signed In with GitHub · kept in this Mac’s Keychain',
   );
   await expect(page.getByTestId('github-token-remove')).toHaveText('Sign Out');
   await expect(page.getByTestId('github-token').getByTestId('github-signin-start')).toHaveText(
@@ -411,7 +411,7 @@ test('Settings → GitHub signs in with the same device sign-in, and Sign Out fo
   await expect(github.getByTestId('github-signin-code')).toHaveText('WDJB-MJHT');
   host.githubRepos.approve();
   await expect(github.getByTestId('github-account')).toContainText('ryan');
-  await expect(github.getByTestId('github-token-saved')).toContainText('Signed in with GitHub');
+  await expect(github.getByTestId('github-token-saved')).toContainText('Signed In with GitHub');
   // Another account, such as a work one, can be added beside it (A1617).
   await expect(github.getByTestId('github-signin-start')).toHaveText('Add Account');
 

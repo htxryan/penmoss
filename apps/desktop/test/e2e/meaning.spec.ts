@@ -244,7 +244,7 @@ test('Settings → Semantic Search: Off keeps the model, and Delete Model remove
   await row.getByTestId('meaning-delete-model').click();
   await page.getByTestId('meaning-delete-confirm').click();
   await expect(row.getByTestId('meaning-model-state')).toHaveText(
-    'EmbeddingGemma 300M · Not downloaded',
+    'EmbeddingGemma 300M · Not Downloaded',
   );
   await expect(row.getByTestId('meaning-delete-model')).toHaveCount(0);
   expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(false);
@@ -306,7 +306,7 @@ test('Settings → Semantic Search: Recreate Index rebuilds the vectors while on
   expect(existsSync(segment)).toBe(true);
   await row.getByTestId('meaning-delete-index').click();
   await ask.getByTestId('meaning-index-confirm').click();
-  await expect(state).toHaveText('No index');
+  await expect(state).toHaveText('No Index');
   await expect(row.getByTestId('meaning-delete-index')).toHaveCount(0);
   expect(existsSync(vectors)).toBe(false);
   expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(true);

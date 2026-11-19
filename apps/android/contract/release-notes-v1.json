@@ -91,7 +91,7 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version",
+          "title": "In This Version",
           "builds": false,
           "groups": [
             {
@@ -130,7 +130,7 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version",
+          "title": "In This Version",
           "builds": false,
           "groups": [
             {
@@ -150,7 +150,7 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version (since build 1183)",
+          "title": "In This Version (Since Build 1183)",
           "builds": true,
           "groups": [
             {
@@ -161,7 +161,7 @@
         },
         "earlier": [
           {
-            "title": "Earlier builds (since 0.2.1)",
+            "title": "Earlier Builds (Since 0.2.1)",
             "builds": true,
             "groups": [
               {
@@ -209,7 +209,7 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version (since 0.2.1)",
+          "title": "In This Version (Since 0.2.1)",
           "builds": true,
           "groups": [
             {
@@ -262,7 +262,7 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version",
+          "title": "In This Version",
           "builds": true,
           "groups": [
             {
@@ -273,7 +273,7 @@
         },
         "earlier": [
           {
-            "title": "Earlier builds (since 0.2.1)",
+            "title": "Earlier Builds (Since 0.2.1)",
             "builds": true,
             "groups": [
               {
@@ -321,13 +321,13 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version",
+          "title": "In This Version",
           "builds": true,
           "groups": []
         },
         "earlier": [
           {
-            "title": "Earlier builds",
+            "title": "Earlier Builds",
             "builds": true,
             "groups": [
               {
@@ -347,13 +347,13 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version (since build 1166)",
+          "title": "In This Version (Since Build 1166)",
           "builds": true,
           "groups": []
         },
         "earlier": [
           {
-            "title": "Earlier builds",
+            "title": "Earlier Builds",
             "builds": true,
             "groups": [
               {
@@ -373,7 +373,7 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version",
+          "title": "In This Version",
           "builds": false,
           "groups": [
             {
@@ -412,7 +412,7 @@
       "expected": {
         "status": "ok",
         "current": {
-          "title": "In this version (since 0.2.0)",
+          "title": "In This Version (Since 0.2.0)",
           "builds": true,
           "groups": []
         },

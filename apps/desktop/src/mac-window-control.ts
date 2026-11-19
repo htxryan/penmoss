@@ -82,7 +82,7 @@ export async function setCompactTitleBar(
   if (compact === current || state.reopening) return unchanged;
   const { response } = await dialog.showMessageBox(from, {
     type: 'question',
-    message: compact ? 'Use the compact title bar?' : 'Use the standard title bar?',
+    message: compact ? 'Use the Compact Title Bar?' : 'Use the Standard Title Bar?',
     detail:
       'Penmoss closes its windows and opens them again to change the title bar. Your notes are saved first.',
     buttons: ['Reopen Windows', 'Cancel'],
@@ -100,7 +100,7 @@ export async function setCompactTitleBar(
     if (!from.isDestroyed()) {
       await dialog.showMessageBox(from, {
         type: 'warning',
-        message: 'The title bar was not changed',
+        message: 'The Title Bar Was Not Changed',
         detail,
         buttons: ['OK'],
       });

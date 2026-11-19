@@ -161,7 +161,7 @@ test('Help → Send feedback in a note window: the window offered unticked, file
   await section.getByTestId('github-token-save').click();
   await expect(section.getByTestId('github-account')).toContainText('htxryan');
   await expect(section.getByTestId('github-token-saved')).toHaveText(
-    'Token saved · kept in this Mac’s Keychain',
+    'Token Saved · kept in this Mac’s Keychain',
   );
   await expect(page.getByText('fake-local-token')).toHaveCount(0);
 

@@ -369,10 +369,10 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
   await expect(settings).toBeVisible();
   // Look and Feel first: Appearance, Sidebar, Note and Symbols (A551, PEN-146); then Writing,
   // then the notebooks; nothing of the server's (T59: no Git Mirror, no Devices and tokens).
-  const nav = page.getByRole('navigation', { name: 'Settings sections' });
+  const nav = page.getByRole('navigation', { name: 'Settings Sections' });
   await expect(nav.getByRole('group', { name: 'Look and Feel' })).toBeVisible();
   await expect(nav.getByRole('group', { name: 'Writing' })).toBeVisible();
-  const links = page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link');
+  const links = page.getByRole('navigation', { name: 'Settings Sections' }).getByRole('link');
   await expect(links.first()).toHaveText('Appearance');
   const sections = await links.allTextContents();
   expect(sections.slice(0, 4)).toEqual(['Appearance', 'Sidebar', 'Note', 'Symbols']);

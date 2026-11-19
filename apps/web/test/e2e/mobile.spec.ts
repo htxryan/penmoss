@@ -140,7 +140,7 @@ test('a phone reaches Settings → Notebooks, History and Trash from a note', as
   await openDrawer(page);
   await drawer(page).getByRole('link', { name: 'Settings', exact: true }).tap();
   await expect(page).toHaveURL(/\/settings$/);
-  const sections = page.getByRole('navigation', { name: 'Settings sections' });
+  const sections = page.getByRole('navigation', { name: 'Settings Sections' });
   await sections.getByRole('link', { name: 'All Notebooks', exact: true }).tap();
   await expect(page).toHaveURL(/\/settings\/git-notebooks$/);
   const gitSettings = page.getByTestId('git-notebooks-settings');

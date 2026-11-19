@@ -485,3 +485,14 @@
     opacity: 0.35;
   }
 }
+
+/*
+ * An inline confirmation's question (ConfirmBlock, PEN-137): a line of its own, in the row
+ * label's weight, above the sentence; in a row of buttons it takes the whole first line.
+ */
+[role='alertdialog'] > .confirm-block-title {
+  flex-basis: 100%;
+  margin: 0 0 0.25rem;
+  color: var(--pm-fg);
+  font-weight: var(--pm-weight-row-label);
+}

@@ -217,7 +217,7 @@ test.describe.serial('T28: a custom theme', () => {
     await editor.getByLabel('Name', { exact: true }).fill(name);
 
     // A colour edit shows on the whole app at once, and in the preview.
-    await editor.getByLabel('Accent, hex', { exact: true }).fill('#7a3e9d');
+    await editor.getByLabel('Accent, Hex', { exact: true }).fill('#7a3e9d');
     await expect
       .poll(() =>
         page.evaluate(() => document.documentElement.style.getPropertyValue('--pm-accent')),
@@ -231,7 +231,7 @@ test.describe.serial('T28: a custom theme', () => {
     await expect(report).toContainText('passes WCAG AA');
 
     // A poor choice is called out with the pairs it breaks.
-    const muted = editor.getByLabel('Secondary text and icons, hex', { exact: true });
+    const muted = editor.getByLabel('Secondary Text and Icons, Hex', { exact: true });
     await muted.fill('#c8ccd4');
     await expect(report).toContainText('below WCAG AA');
     await muted.fill(NORD.light.muted);

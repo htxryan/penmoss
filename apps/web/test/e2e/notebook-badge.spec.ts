@@ -46,7 +46,7 @@ export const sidebarBadge = (page: Page, name: string): Locator =>
 export async function openNotebookSettings(page: Page, name: string): Promise<void> {
   await page.getByTestId('sidebar-settings').click();
   await page
-    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('navigation', { name: 'Settings Sections' })
     .getByRole('link', { name: 'All Notebooks', exact: true })
     .click();
   // By the row's name alone: a repository's path may hold the name too.

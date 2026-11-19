@@ -88,7 +88,7 @@ See [Daily and weekly notes](/docs/journal/).
 | Setting               | What it does                                                                        |
 | --------------------- | ----------------------------------------------------------------------------------- |
 | Saves To              | Where a capture goes by default: Today's Note or New Note in Inbox                  |
-| Shortcut From Any App | The capture hotkey (this Mac)                                                       |
+| Shortcut from Any App | The capture hotkey (this Mac)                                                       |
 | Show in the Menu Bar  | The [menu bar icon](/docs/install/mac/#the-menu-bar-icon); on by default (this Mac) |
 
 See [Quick capture](/docs/quick-capture/).
@@ -126,7 +126,7 @@ On All Notebooks, under **Between Notebooks**, with **Primary Notebook** first:
 
 ### Agents
 
-**The MCP Server**: the one command for every notebook, for Claude Code (with **Receive comments sent to Claude Code sessions**) and Codex, with **Copy** ([Connect an agent](/docs/agents/connect/)). For each notebook, its agent copies: the one Penmoss made, which the server uses, and older copies connected by name, with **Remove**. **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
+**The MCP Server**: the one command for every notebook, for Claude Code (with **Receive Comments Sent to Claude Code Sessions**) and Codex, with **Copy** ([Connect an agent](/docs/agents/connect/)). For each notebook, its agent copies: the one Penmoss made, which the server uses, and older copies connected by name, with **Remove**. **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
 
 ### Agent Activity
 

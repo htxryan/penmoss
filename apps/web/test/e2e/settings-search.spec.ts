@@ -15,7 +15,7 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
-const nav = (page: Page) => page.getByRole('navigation', { name: 'Settings sections' });
+const nav = (page: Page) => page.getByRole('navigation', { name: 'Settings Sections' });
 const field = (page: Page) => page.getByRole('searchbox', { name: 'Search Settings' });
 
 test('the nav is in five groups, This Mac’s saying it is not synced', async ({ page }) => {

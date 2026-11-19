@@ -234,7 +234,7 @@ test('Quick Capture starts on the default from Settings every time', async ({ pa
   const errors = collectErrors(page);
   await openJournalSettings(page);
   await page
-    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('navigation', { name: 'Settings Sections' })
     .getByRole('link', { name: 'Quick Capture' })
     .click();
   const settings = page.getByTestId('quick-capture-settings');

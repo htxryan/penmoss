@@ -109,7 +109,7 @@ describe('Settings → GitHub (PEN-146)', () => {
     await shown();
     expect(byTestId('github-account')?.textContent).toContain('htxryan');
     expect(byTestId('github-token-saved')?.textContent).toBe(
-      'Signed in with GitHub · kept in this Mac’s Keychain',
+      'Signed In with GitHub · kept in this Mac’s Keychain',
     );
     // Another account beside it (A1617): Add Account, or a token.
     expect(byTestId('github-signin-start')?.textContent).toBe('Add Account');
@@ -155,7 +155,7 @@ describe('Settings → GitHub (PEN-146)', () => {
     await shown();
     expect(byTestId('github-account')?.textContent).toContain('htxryan');
     expect(byTestId('github-token-saved')?.textContent).toBe(
-      'Send Feedback uses it · Signed in with GitHub · kept in this Mac’s Keychain',
+      'Send Feedback uses it · Signed In with GitHub · kept in this Mac’s Keychain',
     );
     expect(byTestId('github-account-ryan-work')?.textContent).toContain('ryan-work');
     expect(byTestId('github-signin-start')?.textContent).toBe('Add Account');
@@ -202,12 +202,12 @@ describe('Settings → Updates’ version card (PEN-146)', () => {
 
   it('names the channel and when it last checked', () => {
     const now = Date.parse('2026-11-15T12:00:00Z');
-    expect(checkedLine(state({}), now)).toBe('Stable · not checked yet');
+    expect(checkedLine(state({}), now)).toBe('Stable · Not Checked Yet');
     expect(checkedLine(state({ checkedAt: now - 5 * 60_000 }), now)).toBe(
-      'Stable · checked 5 minutes ago',
+      'Stable · Checked 5 minutes ago',
     );
     expect(checkedLine(state({ channel: 'alpha', checkedAt: now }), now)).toBe(
-      'Alpha · checked just now',
+      'Alpha · Checked just now',
     );
   });
 });

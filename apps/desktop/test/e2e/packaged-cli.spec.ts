@@ -591,7 +591,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   // On PATH, it is one line (PEN-146): Manage… opens the card.
   const manage = cliCard.getByTestId('git-cli-manage');
   if (await manage.isVisible()) await manage.click();
-  await cliCard.locator('summary', { hasText: 'Without the command' }).click();
+  await cliCard.locator('summary', { hasText: 'Without the Command' }).click();
   const direct = cliCard.getByTestId('git-cli-direct');
   await direct.scrollIntoViewIfNeeded();
   await expect(direct).toContainText(`'${CLI_EXE}' --penmoss-cli`);
