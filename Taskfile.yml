@@ -94,7 +94,7 @@ tasks:
   workflows:test:
     desc: "Which parts a change touches and whether it ships (A1095, PEN-128); GitHub intake into Linear (D66) against a fake Linear API; CI's Android emulator (A1227) against a stub adb and emulator; Chromium's system libraries; and the pull request's Release note (A1294). The fork guard is `task ci:lint`'s (A1481)"
     cmds:
-      - node --test .github/scripts/changed-parts.test.mjs .github/scripts/linear-intake.test.mjs .github/scripts/android-emulator.test.mjs .github/scripts/system-deps.test.mjs .github/scripts/release-note.test.mjs
+      - node --test .github/scripts/changed-parts.test.mjs .github/scripts/linear-intake.test.mjs .github/scripts/feedback-logs.test.mjs .github/scripts/android-emulator.test.mjs .github/scripts/system-deps.test.mjs .github/scripts/release-note.test.mjs
 
   audit:secrets:
     desc: 'gitleaks over the tree, or every commit with `-- --history` (T80.1, A1185; docs/qa/public-release-audit.md)'
@@ -194,6 +194,24 @@ tasks:
       - test -z "$PENMOSS_FACTORY_RUN" || { echo 'No production deploys from a factory run; they happen after merge (FD24).' >&2; exit 1; }
       - task: site:build
       - pnpm exec wrangler deploy {{.CLI_ARGS}}
+
+  telemetry:query:
+    desc: "Usage analytics (PEN-137): run a named query, apps/telemetry/queries/<name>.sql, against the production D1 and print a table: `task telemetry:query -- active --days 90 --client mac` (`--start command:app.palette` for next, `--json`, `--local` for wrangler dev's database). Needs wrangler signed in"
+    dir: apps/telemetry
+    cmds:
+      - node scripts/query.mjs {{.CLI_ARGS}}
+
+  telemetry:sql:
+    desc: 'Usage analytics (PEN-137): run any SQL against the production D1 and print a table: `task telemetry:sql -- "SELECT COUNT(*) AS events FROM events"`. Needs wrangler signed in'
+    dir: apps/telemetry
+    cmds:
+      - node scripts/query.mjs --sql {{.CLI_ARGS}}
+
+  telemetry:deploy:
+    desc: "Usage analytics' ingest Worker on t.penmoss.app (PEN-137): apply D1's migrations, then wrangler deploy (refused inside a factory run, FD24). Deploy it before an app that records new names: the catalogue only grows"
+    dir: apps/telemetry
+    cmds:
+      - pnpm run deploy
 
   decision:next:
     desc: 'The next decision number for a row you add to docs/decisions.md by hand, reserved from the factory counter so an open run never takes it too (A1253): `task decision:next` (`-- --count 2` for two)'

@@ -1,0 +1,171 @@
+/**
+ * The named queries (PEN-137, AC19): each one runs against the fixture D1 and returns rows, each
+ * is one SELECT, and the ones the dashboard leans on say what they should. `task telemetry:query`
+ * runs the same files through scripts/query.mjs.
+ */
+import { env } from 'cloudflare:workers';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { dayOf } from '../src/day';
+import {
+  NAMED_QUERIES,
+  QUERY_NAMES,
+  bindingsFor,
+  parameterCount,
+  runQuery,
+  type QueryParams,
+} from '../src/queries';
+import { seedFixture } from './fixture';
+
+const NOW = Date.UTC(2026, 10, 19, 18, 0);
+const ALL: QueryParams = {
+  days: 30,
+  client: '',
+  actor: '',
+  channel: '',
+  version: '',
+  today: dayOf(NOW),
+  startKind: 'command',
+  startName: 'app.palette',
+};
+
+beforeAll(async () => {
+  await seedFixture(env.DB, NOW);
+});
+
+describe('every named query', () => {
+  it('is the list the plan names, and more', () => {
+    for (const name of [
+      'active',
+      'commands',
+      'shortcuts',
+      'unused',
+      'firstrun',
+      'next',
+      'gave-up',
+      'settings',
+      'agents',
+      'platforms',
+      'sync',
+      'feedback',
+      'health',
+    ]) {
+      expect(QUERY_NAMES).toContain(name);
+    }
+  });
+
+  it.each(QUERY_NAMES)('%s is one SELECT and returns rows from the fixture', async (name) => {
+    const sql = NAMED_QUERIES[name].replace(/--.*$/gm, '').trim();
+    expect(sql).toMatch(/^(WITH|SELECT)\b/);
+    expect(sql).not.toMatch(/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|PRAGMA|ATTACH|REPLACE)\b/i);
+    // One statement: the only semicolon ends it.
+    expect(sql.indexOf(';')).toBe(sql.length - 1);
+    const rows = await runQuery(env.DB, name, ALL);
+    expect(rows.length, name).toBeGreaterThan(0);
+  });
+
+  it('binds exactly the values a query uses', () => {
+    expect(parameterCount(NAMED_QUERIES.next)).toBe(8);
+    expect(parameterCount(NAMED_QUERIES.health)).toBe(6);
+    expect(bindingsFor(NAMED_QUERIES.health, ALL)).toEqual([30, '', '', '', '', '2026-11-19']);
+  });
+});
+
+describe('what they say', () => {
+  it('active-totals counts installs today, this week and this month', async () => {
+    const [totals] = await runQuery<{ today: number; last7: number; last30: number }>(
+      env.DB,
+      'active-totals',
+      ALL,
+    );
+    // Ten installs use Penmoss every day; two phones gave up in the first run 24 and 25 days ago.
+    expect(totals).toEqual({ today: 10, last7: 10, last30: 12 });
+  });
+
+  it('a filter narrows a query to one client', async () => {
+    const phones = await runQuery<{ client: string }>(env.DB, 'platforms', {
+      ...ALL,
+      client: 'android',
+    });
+    expect(new Set(phones.map((row) => row.client))).toEqual(new Set(['android']));
+    const [totals] = await runQuery<{ today: number }>(env.DB, 'active-totals', {
+      ...ALL,
+      client: 'android',
+    });
+    expect(totals!.today).toBe(2);
+  });
+
+  it('commands are split by source, most run first', async () => {
+    const rows = await runQuery<{ name: string; source: string; runs: number; total: number }>(
+      env.DB,
+      'commands',
+      ALL,
+    );
+    expect(rows[0]!.name).toBe('note.new');
+    const sources = rows.filter((row) => row.name === 'note.new').map((row) => row.source);
+    expect(sources.sort()).toEqual(['key', 'palette']);
+    const quickOpen = rows.filter((row) => row.name === 'app.quickOpen').map((row) => row.source);
+    expect(quickOpen.sort()).toEqual(['menu', 'tray']);
+  });
+
+  it('shortcuts say which installs set their own combination', async () => {
+    const rows = await runQuery<{ name: string; keys: string; rebound_installs: number }>(
+      env.DB,
+      'shortcuts',
+      ALL,
+    );
+    const custom = rows.find((row) => row.keys === 'Mod+Alt+N');
+    expect(custom).toMatchObject({ name: 'note.new', rebound_installs: 2 });
+  });
+
+  it('the first run funnel narrows, and gave-up names where two phones stopped', async () => {
+    const funnel = await runQuery<{ step: string; installs: number }>(env.DB, 'firstrun', {
+      ...ALL,
+      days: 90,
+    });
+    const reached = (step: string) =>
+      funnel.filter((row) => row.step === step).reduce((sum, row) => sum + row.installs, 0);
+    expect(reached('welcome')).toBe(12);
+    expect(reached('consent')).toBe(10);
+    const gaveUp = await runQuery<{ step: string; result: string; error: string }>(
+      env.DB,
+      'gave-up',
+      { ...ALL, days: 90 },
+    );
+    expect(gaveUp.map((row) => [row.step, row.result, row.error]).sort()).toEqual([
+      ['github', 'failed', 'auth'],
+      ['repo', 'back', ''],
+    ]);
+  });
+
+  it('next hides any path fewer than 5 sessions took', async () => {
+    const rows = await runQuery<{ depth: number; n1: string; sessions: number }>(
+      env.DB,
+      'next',
+      ALL,
+    );
+    expect(rows.every((row) => row.sessions >= 5)).toBe(true);
+    // One Mac went from the palette to the trash once: never shown.
+    expect(rows.some((row) => row.n1 === 'command:app.trash')).toBe(false);
+    expect(rows.find((row) => row.depth === 1 && row.n1 === 'command:note.new')).toBeDefined();
+    expect(rows.find((row) => row.depth === 3)).toBeDefined();
+  });
+
+  it('agents splits MCP tools by agent client and counts the successes', async () => {
+    const rows = await runQuery<{ kind: string; agent: string; calls: number; ok: number }>(
+      env.DB,
+      'agents',
+      ALL,
+    );
+    const agents = new Set(rows.filter((row) => row.kind === 'tool').map((row) => row.agent));
+    expect(agents).toEqual(new Set(['claude-code', 'codex']));
+    for (const row of rows) expect(row.ok).toBeLessThanOrEqual(row.calls);
+    expect(rows.some((row) => row.ok < row.calls)).toBe(true);
+  });
+
+  it('unused lists catalogued names nothing ran', async () => {
+    const rows = await runQuery<{ kind: string; name: string }>(env.DB, 'unused', ALL);
+    const names = rows.map((row) => `${row.kind}:${row.name}`);
+    expect(names).toContain('command:app.graph');
+    expect(names).not.toContain('command:app.palette');
+  });
+});

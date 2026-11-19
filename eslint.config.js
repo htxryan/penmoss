@@ -54,7 +54,12 @@ export default defineConfig(
   },
   {
     // Tool config files and the Workers' entries must use default exports.
-    files: ['**/*.config.{js,mjs,ts}', 'apps/relay/src/index.ts'],
+    files: [
+      '**/*.config.{js,mjs,ts}',
+      'apps/relay/src/index.ts',
+      'apps/telemetry/src/index.ts',
+      'apps/telemetry-dashboard/src/index.ts',
+    ],
     rules: { 'no-restricted-exports': 'off' },
   },
   {
