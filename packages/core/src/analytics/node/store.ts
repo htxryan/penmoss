@@ -6,7 +6,7 @@
  *
  * It stays fast at the largest limits (800,000 events): every query the clients run is served
  * by an index, counts by state are kept by triggers, the viewer pages by keyset on (at, id), and
- * pruning deletes 5,000 rows at a time, yielding between batches.
+ * pruning deletes PRUNE_BATCH rows at a time, yielding between batches.
  */
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -77,6 +77,14 @@ WHEN OLD.state <> NEW.state BEGIN
 END;
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 `;
+
+/**
+ * Rows per DELETE when pruning. Each batch is one statement and its commit; at 800,000 events on
+ * a busy Mac 500 rows took 1–4 ms (95th percentile under 4 ms, the slowest about 10 ms with a
+ * WAL checkpoint), where 5,000 took 12–20 ms and up to 190 ms, and 800,000 → 5,000 takes about
+ * 2.5 s (analytics-store.budget.test.ts).
+ */
+export const PRUNE_BATCH = 500;
 
 export interface PruneOptions {
   /** Rows per DELETE. */
@@ -326,14 +334,15 @@ export class AnalyticsStore {
     const total = this.total(query);
     if (query.after) {
       const rows = this.statement(
-        `SELECT * FROM events WHERE ${[...where, '(at > ? OR (at = ? AND id > ?))'].join(' AND ')}
+        `SELECT * FROM events WHERE ${[...where, '(at, id) > (?, ?)'].join(' AND ')}
          ORDER BY at ASC, id ASC LIMIT ?`,
-      ).all(...args, query.after.at, query.after.at, query.after.id, limit) as unknown as Row[];
+      ).all(...args, query.after.at, query.after.id, limit) as unknown as Row[];
       const events = rows.map(fromRow).reverse();
       return { events, total, newer: this.newerThan(where, args, events[0]) };
     }
-    const keyset = query.before ? ['(at < ? OR (at = ? AND id < ?))'] : [];
-    const keyArgs = query.before ? [query.before.at, query.before.at, query.before.id] : [];
+    // Row values, so SQLite seeks the (at, id) index rather than scanning it (an OR scans).
+    const keyset = query.before ? ['(at, id) < (?, ?)'] : [];
+    const keyArgs = query.before ? [query.before.at, query.before.id] : [];
     const clause = [...where, ...keyset];
     const rows = this.statement(
       `SELECT * FROM events ${clause.length ? `WHERE ${clause.join(' AND ')}` : ''}
@@ -356,10 +365,10 @@ export class AnalyticsStore {
     first: StoredEvent | undefined,
   ): number {
     if (!first) return 0;
-    const clause = [...where, '(at > ? OR (at = ? AND id > ?))'];
+    const clause = [...where, '(at, id) > (?, ?)'];
     const row = this.statement(
       `SELECT COUNT(*) AS n FROM events WHERE ${clause.join(' AND ')}`,
-    ).get(...args, first.at, first.at, first.id) as { n: number };
+    ).get(...args, first.at, first.id) as { n: number };
     return row.n;
   }
 
@@ -413,7 +422,7 @@ export class AnalyticsStore {
     now: number,
     options: PruneOptions = {},
   ): Promise<number> {
-    const steps = this.pruneSteps(limits, now, options.batch ?? 5000);
+    const steps = this.pruneSteps(limits, now, options.batch ?? PRUNE_BATCH);
     for (;;) {
       const step = steps.next();
       if (step.done) return step.value;
@@ -422,7 +431,11 @@ export class AnalyticsStore {
   }
 
   /** The same, without yielding (the CLI's and MCP server's prune). */
-  pruneNow(limits: Pick<Limits, 'events.days' | 'events.max'>, now: number, batch = 5000): number {
+  pruneNow(
+    limits: Pick<Limits, 'events.days' | 'events.max'>,
+    now: number,
+    batch = PRUNE_BATCH,
+  ): number {
     const steps = this.pruneSteps(limits, now, batch);
     for (;;) {
       const step = steps.next();

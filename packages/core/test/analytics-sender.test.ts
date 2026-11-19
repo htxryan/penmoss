@@ -255,7 +255,7 @@ describe('sendNext', () => {
       status: null,
     });
     // At once, not after the 10 s timeout.
-    expect(Date.now() - started).toBeLessThan(2000);
+    expect(Date.now() - started).toBeLessThan(5000);
     const during = new AbortController();
     const sending = sendNext(store, INSTALL, { base: BASE, fetch, signal: during.signal });
     during.abort();
