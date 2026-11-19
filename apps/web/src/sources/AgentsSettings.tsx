@@ -83,7 +83,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
         <ul
           className="nset-fold-list"
           data-testid="agents-notebook-list"
-          data-setting="connected-on-this-mac"
+          data-setting="agent-copies-on-this-mac"
         >
           {sources.map((source) => (
             <NotebookAgentsRow
@@ -136,7 +136,7 @@ function useAgentCount(
 const countWords = (agents: readonly LocalAgentInfo[] | null, count: number | null) => {
   if (agents && agents.length > 0) return agents.map((agent) => agent.label).join(', ');
   if (count === null) return '';
-  return count === 0 ? 'No agent copies' : count === 1 ? '1 agent copy' : `${count} agent copies`;
+  return count === 0 ? 'No Agent Copies' : count === 1 ? '1 Agent Copy' : `${count} Agent Copies`;
 };
 
 /** A notebook's row: its name and its agent copies' names, folding open in place to them. */

@@ -270,7 +270,7 @@ export function installFakeBridge(config: {
           kind: kind as StoredEvent['kind'],
           name: name!,
           props: client === 'mac' ? { source: 'key', keys: 'Mod+K' } : {},
-          state: states[index % states.length]!,
+          state: states[Math.floor(index / 3) % states.length]!,
           sentAt: null,
         });
       }

@@ -180,7 +180,7 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   saves('Today’s Note', { help: 'At the end of ## Captures, with the time' }),
   saves('New Note in Inbox', { help: 'Titled by its first line', aliases: ['inbox'] }),
   saves('Notebook', { help: 'Your primary notebook' }),
-  captureMac('Shortcut From Any App', { aliases: ['hotkey', 'global shortcut', 'keys'] }),
+  captureMac('Shortcut from Any App', { aliases: ['hotkey', 'global shortcut', 'keys'] }),
   captureMac('Show in the Menu Bar', {
     help: 'Quick Capture, Today’s Journal and Quick Access',
     aliases: ['menu bar icon', 'tray', 'status bar'],
@@ -213,12 +213,13 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     ],
   }),
   // Agents.
-  at('agents')('Penmoss Command', {
+  // Each label is its row's (PEN-137): the card's heading, the group's heading.
+  at('agents')('The penmoss Command', {
     help: 'Agents read and edit your notes through it',
     aliases: ['cli', 'terminal', 'install'],
   }),
-  at('agents')('Connected on This Mac', {
-    aliases: ['connect an agent', 'claude code', 'codex', 'mcp', 'disconnect'],
+  at('agents')('Agent Copies on This Mac', {
+    aliases: ['connected', 'connect an agent', 'claude code', 'codex', 'mcp', 'disconnect'],
   }),
   at('agent-activity')('Agent Activity', {
     id: 'agent-activity-filters',

@@ -26,7 +26,7 @@ export function ActivityList({
     );
   }
   return (
-    <ul className="trash-list" aria-label="Agent activity" data-testid="agent-activity-list">
+    <ul className="trash-list" aria-label="Agent Activity" data-testid="agent-activity-list">
       {entries.map((entry) => (
         <li
           key={entry.id}

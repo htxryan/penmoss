@@ -21,6 +21,7 @@ import {
   type GitAnswer,
   type LocalAgentInfo,
 } from '../desktop/bridge';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 
 function CopyBlock({ label, text, testId }: { label: string; text: string; testId: string }) {
   const [copied, setCopied] = useState<boolean | null>(null);
@@ -91,10 +92,10 @@ export function AgentServer({ git }: { git: DesktopGit }) {
           data-testid="agents-server-channel"
           onChange={(event) => setChannel(event.target.checked)}
         />
-        <span>Receive comments sent to Claude Code sessions</span>
+        <span>Receive Comments Sent to Claude Code Sessions</span>
       </label>
       <CopyBlock
-        label="Claude Code: run in a terminal"
+        label="Claude Code: Run in a Terminal"
         text={channel ? server.claudeChannel : server.claude}
         testId="agents-server-claude"
       />
@@ -113,7 +114,7 @@ export function AgentServer({ git }: { git: DesktopGit }) {
         </>
       ) : null}
       <CopyBlock
-        label="Codex: add to ~/.codex/config.toml"
+        label="Codex: Add to ~/.codex/config.toml"
         text={server.codex}
         testId="agents-server-codex"
       />
@@ -221,10 +222,10 @@ export function GitLocalAgents({
                 )}
               </div>
               {unsynced?.name === agent.name ? (
-                <div
+                <ConfirmBlock
                   className="git-remove-confirm"
-                  role="alert"
-                  data-testid="git-local-agent-unsynced"
+                  title="Disconnect Anyway?"
+                  testId="git-local-agent-unsynced"
                 >
                   <p>
                     “{agent.label}” has changes it has not pushed yet: removing it now loses them.
@@ -250,7 +251,7 @@ export function GitLocalAgents({
                       Keep It
                     </button>
                   </div>
-                </div>
+                </ConfirmBlock>
               ) : null}
             </li>
           ))}
@@ -352,11 +353,11 @@ export function CommandLine({ git }: { git: DesktopGit }) {
         data-testid="git-cli"
         data-state={cli.state}
         data-compact="true"
-        data-setting="penmoss-command"
+        data-setting="the-penmoss-command"
       >
         <span className="nset-okline-mark" data-testid="git-cli-state">
           <Icon name="check" size={14} />
-          penmoss command installed
+          penmoss Command Installed
         </span>
         <code className="muted">{cli.path}</code>
         <button
@@ -377,7 +378,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
       aria-labelledby={`${id}-h`}
       data-testid="git-cli"
       data-state={cli.state}
-      data-setting="penmoss-command"
+      data-setting="the-penmoss-command"
     >
       {head}
       <p data-testid="git-cli-state">
@@ -440,8 +441,8 @@ export function CommandLine({ git }: { git: DesktopGit }) {
         ) : null}
       </div>
       <details className="local-agent-direct">
-        <summary>Without the command</summary>
-        <CopyBlock label="Run the CLI as" text={cli.direct} testId="git-cli-direct" />
+        <summary>Without the Command</summary>
+        <CopyBlock label="Run the CLI As" text={cli.direct} testId="git-cli-direct" />
       </details>
       <p role="status" className="muted" data-testid="git-cli-message">
         {message}

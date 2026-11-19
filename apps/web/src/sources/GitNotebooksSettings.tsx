@@ -84,6 +84,7 @@ import {
 import './sources.css';
 import './notebook-settings.css';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { withoutRecording } from '../analytics/track';
 
 const when = (at: number | null) =>
@@ -189,7 +190,7 @@ function ReconfirmPurges({
     void work().finally(() => setBusy(false));
   };
   return (
-    <div className="git-reconfirm" data-testid="git-reconfirm-panel">
+    <ConfirmBlock className="git-reconfirm" title="Delete for Good?" testId="git-reconfirm-panel">
       {again.length > 0 ? (
         <>
           <p>
@@ -308,7 +309,7 @@ function ReconfirmPurges({
             }}
           >
             <Icon name="key" size={14} />
-            Confirm {again.length === 1 ? '1 note' : `${again.length} notes`} with Touch ID
+            Confirm {again.length === 1 ? '1 Note' : `${again.length} Notes`} with Touch ID
           </button>
         ) : null}
         <button
@@ -325,7 +326,7 @@ function ReconfirmPurges({
           {kept.length > 0 ? 'Done' : 'Cancel'}
         </button>
       </div>
-    </div>
+    </ConfirmBlock>
   );
 }
 
@@ -480,7 +481,7 @@ function GitNotebookRow({ source }: { source: GitSource }) {
             data-testid="git-row-state"
           >
             {stopped
-              ? `${status.detail}${status.lastSyncAt ? ` · last synced ${when(status.lastSyncAt)}` : ''}`
+              ? `${status.detail}${status.lastSyncAt ? ` · Last Synced ${when(status.lastSyncAt)}` : ''}`
               : `${info.repository} · ${syncLine(status, now)}`}
           </span>
         </span>
@@ -853,7 +854,7 @@ function GitNotebookCard({
           >
             <span className="nset-dot" data-state={dotState(status)} aria-hidden="true" />
             {syncLine(status, now)}
-            {waiting > 0 ? ` · ${waiting} waiting` : ''}
+            {waiting > 0 ? ` · ${waiting} Waiting` : ''}
           </span>
         }
         actions={
@@ -895,7 +896,7 @@ function GitNotebookCard({
       <div
         className="nset-tabs"
         role="tablist"
-        aria-label={`${info.name} settings`}
+        aria-label={`${info.name} Settings`}
         onKeyDown={onTabKey}
       >
         {TABS.map((each) => (
@@ -1076,7 +1077,11 @@ function OverviewTab({
           Remove from This Mac…
         </button>
         {removing ? (
-          <div className="git-remove-confirm" role="alert" data-testid="git-remove-confirm">
+          <ConfirmBlock
+            className="git-remove-confirm"
+            title="Remove This Notebook?"
+            testId="git-remove-confirm"
+          >
             <p>
               {removing.known
                 ? `${unpushedWords(removing.notes, removing.folders)} not pushed yet: removing now loses ${removing.notes + (removing.folders ? 1 : 0) === 1 ? 'it' : 'them'}.`
@@ -1120,7 +1125,7 @@ function OverviewTab({
                 Keep It
               </button>
             </div>
-          </div>
+          </ConfirmBlock>
         ) : (
           <p className="muted nset-foot-note">
             Removes this Mac’s copy, after Touch ID. The repository keeps everything pushed.
@@ -1297,12 +1302,12 @@ function SyncTab({
           help={[
             status.closing ? 'Pushing…' : PHASE_WORDS[status.phase],
             waiting === 0
-              ? 'nothing waits to be pushed'
-              : `${waiting === 1 ? '1 note waits' : `${waiting} notes wait`} to be pushed`,
+              ? 'Nothing Waits to Be Pushed'
+              : `${waiting === 1 ? '1 Note Waits' : `${waiting} Notes Wait`} to Be Pushed`,
             status.lastSyncAt === null
-              ? 'never synced'
-              : `last synced ${agoWords(status.lastSyncAt, now)}`,
-            ...(status.nextRetryAt ? [`tries again ${when(status.nextRetryAt)}`] : []),
+              ? 'Never Synced'
+              : `Last Synced ${agoWords(status.lastSyncAt, now)}`,
+            ...(status.nextRetryAt ? [`Tries Again ${when(status.nextRetryAt)}`] : []),
           ].join(' · ')}
         />
       </div>
@@ -1311,7 +1316,7 @@ function SyncTab({
           Details
           {notices > 0 ? (
             <span className="chip" data-testid="git-details-count">
-              {notices === 1 ? '1 notice' : `${notices} notices`}
+              {notices === 1 ? '1 Notice' : `${notices} Notices`}
             </span>
           ) : null}
         </summary>

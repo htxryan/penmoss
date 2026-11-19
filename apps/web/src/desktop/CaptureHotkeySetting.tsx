@@ -7,7 +7,7 @@ import { desktop, type CaptureHotkey } from './bridge';
 import { acceleratorToCombo, comboToAccelerator } from './hotkey-keys';
 
 /**
- * Settings → Quick Capture → Shortcut From Any App (T30, A226; PEN-146): the Mac app's
+ * Settings → Quick Capture → Shortcut from Any App (T30, A226; PEN-146): the Mac app's
  * system-wide capture hotkey, recorded by pressing the keys like every other shortcut in
  * Settings (`useKeyRecorder`), where it was a typed field. It belongs to this Mac (another may
  * have the keys taken), so it is not a synced setting; the main process checks it (two
@@ -66,7 +66,7 @@ export function CaptureHotkeySetting() {
   return (
     <SettingRow
       setting="shortcut-from-any-app"
-      label="Shortcut From Any App"
+      label="Shortcut from Any App"
       labelId={`${id}-label`}
       help={`Opens Quick Capture over any app. Press Change, then the keys: ⌘ or ⌃ and one more modifier.${help ?? ''}`}
       helpId={`${id}-help`}
@@ -82,7 +82,7 @@ export function CaptureHotkeySetting() {
     >
       {recording ? (
         <span className="chip" role="status">
-          Press keys… Esc cancels
+          Press Keys… Esc Cancels
         </span>
       ) : (
         <span data-testid="capture-hotkey-keys">

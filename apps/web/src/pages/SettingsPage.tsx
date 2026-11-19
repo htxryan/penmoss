@@ -165,7 +165,7 @@ export function SettingsPage({
         <div className="settings-layout">
           <div className="settings-side">
             <SettingsSearch search={search} onOpen={open} />
-            <nav ref={nav} className="settings-nav" aria-label="Settings sections">
+            <nav ref={nav} className="settings-nav" aria-label="Settings Sections">
               {SETTINGS_GROUPS.map((group) => {
                 const inGroup = pages.filter((page) => page.group === group.id);
                 if (inGroup.length === 0) return null;

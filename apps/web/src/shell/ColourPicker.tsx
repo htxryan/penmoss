@@ -220,7 +220,7 @@ export function ColourPicker({
           <div
             className="colour-swatches"
             role="radiogroup"
-            aria-label="Theme colours"
+            aria-label="Theme Colours"
             onKeyDown={(event) => onGridKeyDown(event, SWATCH_COLUMNS)}
           >
             {swatches.map((each, index) => {
@@ -271,7 +271,7 @@ export function ColourPicker({
                 className="colour-wheel"
                 role="slider"
                 tabIndex={0}
-                aria-label="Hue and saturation"
+                aria-label="Hue and Saturation"
                 aria-valuemin={0}
                 aria-valuemax={359}
                 aria-valuenow={Math.round(draft.h)}

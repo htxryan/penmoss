@@ -265,7 +265,7 @@ export function DeleteDialog({
   const one = tags.length === 1;
   return (
     <ConfirmDialog
-      title={one ? `Delete #${tags[0]!}` : `Delete ${tags.length} Tags`}
+      title={one ? `Delete #${tags[0]!}?` : `Delete ${tags.length} Tags?`}
       testId="tags-delete-dialog"
       onCancel={onCancel}
       onSubmit={run}

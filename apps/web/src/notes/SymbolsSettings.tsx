@@ -140,7 +140,7 @@ export function SymbolsSettings() {
               type="button"
               className="icon-btn lf-grip"
               data-ui="item"
-              aria-label={`Move ${symbol.kind ? symbol.name : symbolSpokenName(symbol)}, symbol ${index + 1} of ${symbols.length}`}
+              aria-label={`Move ${symbol.kind ? symbol.name : symbolSpokenName(symbol)}, Symbol ${index + 1} of ${symbols.length}`}
               aria-description="Drag, or press Alt and the up or down arrow"
               data-tip={`Drag to Move ${callOf(symbol)}`}
               data-testid={`symbol-move-${index + 1}`}

@@ -168,7 +168,7 @@ export function MeaningSettings() {
             help={
               <>
                 <span data-testid="meaning-model-state">
-                  {modelName(status.model)} · {here ? sizeOf(status) : 'Not downloaded'}
+                  {modelName(status.model)} · {here ? sizeOf(status) : 'Not Downloaded'}
                 </span>
                 {status.license ? (
                   <>
@@ -204,7 +204,7 @@ export function MeaningSettings() {
               <span data-testid="meaning-index-state">
                 {indexBytes > 0
                   ? `${indexSize(indexBytes)} on this Mac, from your notes`
-                  : 'No index'}
+                  : 'No Index'}
               </span>
             }
           >

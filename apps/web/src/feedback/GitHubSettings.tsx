@@ -138,7 +138,7 @@ function GitHubSection({
                   <span data-testid={at === 0 ? 'github-token-saved' : undefined}>
                     {[
                       account.primary && accounts.length > 1 ? 'Send Feedback uses it' : null,
-                      account.signedIn ? 'Signed in with GitHub' : 'Token saved',
+                      account.signedIn ? 'Signed In with GitHub' : 'Token Saved',
                       'kept in this Mac’s Keychain',
                     ]
                       .filter(Boolean)

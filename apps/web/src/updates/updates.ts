@@ -130,6 +130,6 @@ export function updateChip(state: DesktopUpdateState): string | null {
 /** "Stable · checked 5 minutes ago": the channel, and when main last asked. */
 export function checkedLine(state: DesktopUpdateState, now = Date.now()): string {
   const channel = state.channel === 'alpha' ? 'Alpha' : 'Stable';
-  if (!state.checkedAt) return `${channel} · not checked yet`;
-  return `${channel} · checked ${pushedWords(new Date(state.checkedAt).toISOString(), now)}`;
+  if (!state.checkedAt) return `${channel} · Not Checked Yet`;
+  return `${channel} · Checked ${pushedWords(new Date(state.checkedAt).toISOString(), now)}`;
 }

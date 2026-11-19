@@ -178,7 +178,7 @@ function TemplateEditor({ settings }: { readonly settings: Record<string, unknow
     pending.current.delete(kind);
     workspace.setSetting(templateSetting(kind), undefined);
     forget(kind);
-    setStatus((current) => ({ ...current, [kind]: 'Back to the default' }));
+    setStatus((current) => ({ ...current, [kind]: 'Back to the Default' }));
   };
 
   /** Puts `{{name}}` where the cursor is (over a selection), and the cursor after it. */

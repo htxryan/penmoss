@@ -12,6 +12,7 @@ import { GroupHead, ScopeMarker } from '../theme/look-rows';
 import '../journal/writing.css';
 import { settingId } from '../pages/settings-index';
 import { linkHandler, settingsPath } from '../router';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { useWorkspace } from '../workspace/hooks';
 import type { CommandArea, CommandDefinition } from './definitions';
@@ -191,7 +192,7 @@ export function ShortcutsSettings() {
     const help = custom
       ? `Changed from ${keysText(command.keys)}`
       : keys.length === 0
-        ? 'No shortcut'
+        ? 'No Shortcut'
         : undefined;
     return (
       <div
@@ -209,9 +210,15 @@ export function ShortcutsSettings() {
           </span>
           {help ? <span className="lf-row-help">{help}</span> : null}
           {rowNotice?.kind === 'conflict' ? (
-            <div className="kb-conflict" role="alert" data-testid="shortcut-conflict">
-              <Kbd combo={rowNotice.combo} /> is used by{' '}
-              {rowNotice.others.map((other) => `“${title(other)}”`).join(' and ')}.
+            <ConfirmBlock
+              className="kb-conflict"
+              title="Replace This Shortcut?"
+              testId="shortcut-conflict"
+            >
+              <span>
+                <Kbd combo={rowNotice.combo} /> is used by{' '}
+                {rowNotice.others.map((other) => `“${title(other)}”`).join(' and ')}.
+              </span>
               <button
                 type="button"
                 className="btn"
@@ -231,7 +238,7 @@ export function ShortcutsSettings() {
               >
                 Cancel
               </button>
-            </div>
+            </ConfirmBlock>
           ) : rowNotice ? (
             <div
               className={rowNotice.kind === 'error' ? 'kb-error' : 'kb-done'}
@@ -292,7 +299,7 @@ export function ShortcutsSettings() {
             >
               {listening ? (
                 <span className="chip" role="status">
-                  Press keys… Esc cancels
+                  Press Keys… Esc Cancels
                 </span>
               ) : keys.length > 0 ? (
                 keys.map((combo) => <Kbd key={combo} combo={combo} />)
@@ -379,7 +386,7 @@ export function ShortcutsSettings() {
             className="input"
             type="search"
             placeholder={`Search ${commands.definitions.size} commands, or press keys`}
-            aria-label="Search shortcuts"
+            aria-label="Search Shortcuts"
             aria-describedby={`${id}-found`}
             value={filter}
             onFocus={() => setSearchFocused(true)}

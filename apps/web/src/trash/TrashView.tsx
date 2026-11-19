@@ -4,6 +4,7 @@ import { useNoteList, useNotes } from '../notes/hooks';
 import { RestoreNeedsFolder, TRASH_DAYS, trashDaysLeft, type TrashEntry } from '../notes/service';
 import { useIsGitSource } from '../sources/hooks';
 import { navigate, notePath } from '../router';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { FolderPicker } from '../workspace/FolderPicker';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { folderChoices } from '../workspace/model';
@@ -121,15 +122,11 @@ export function TrashView() {
                   </span>
                 </div>
                 {confirming === entry.id ? (
-                  <div
-                    className="trash-actions"
-                    role="group"
-                    aria-label={`Delete ${title} for good?`}
-                  >
+                  <ConfirmBlock className="trash-actions" title="Delete for Good?">
                     <span className="trash-warning" data-testid="purge-warning">
                       {git
-                        ? 'Delete for good? It leaves this notebook on every device; the repository’s git history still keeps its content.'
-                        : 'Delete for good? This cannot be undone.'}
+                        ? 'It leaves this notebook on every device; the repository’s git history still keeps its content.'
+                        : 'This cannot be undone.'}
                     </span>
                     <button
                       type="button"
@@ -154,7 +151,7 @@ export function TrashView() {
                     >
                       Cancel
                     </button>
-                  </div>
+                  </ConfirmBlock>
                 ) : needsPlace?.id === entry.id ? (
                   <div
                     className="trash-actions trash-needs-place"

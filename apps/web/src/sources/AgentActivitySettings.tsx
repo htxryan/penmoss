@@ -172,7 +172,7 @@ export function AgentActivitySettings() {
               : 'No change matches these filters.'}
         </p>
       ) : (
-        <ul className="trash-list" aria-label="Agent activity" data-testid="agent-activity-list">
+        <ul className="trash-list" aria-label="Agent Activity" data-testid="agent-activity-list">
           {shown.map((item) => {
             const source = sources.find((each) => each.id === item.notebookId);
             const key = keyOf(item);

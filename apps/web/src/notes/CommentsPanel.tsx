@@ -32,6 +32,7 @@ import {
 } from 'react';
 import { useCommands } from '../commands/hooks';
 import { useSource } from '../sources/hooks';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { shortWhen } from '../shell/when';
 import {
   canEdit,
@@ -511,11 +512,12 @@ export function CommentThread({
         </button>
       </span>
       {deleting ? (
-        <div className="comment-confirm" role="alertdialog" aria-label="Delete this thread?">
+        <ConfirmBlock className="comment-confirm" title="Delete This Thread?">
           <p>
-            Delete this thread and its{' '}
-            {thread.comments.length === 1 ? 'comment' : `${thread.comments.length} comments`} on
-            every device? To keep them, resolve it instead.
+            {thread.comments.length === 1
+              ? 'Its comment is deleted'
+              : `Its ${thread.comments.length} comments are deleted`}{' '}
+            on every device. To keep them, resolve it instead.
           </p>
           <span className="comment-composer-actions">
             <button
@@ -541,7 +543,7 @@ export function CommentThread({
               Delete
             </button>
           </span>
-        </div>
+        </ConfirmBlock>
       ) : null}
     </Root>
   );
