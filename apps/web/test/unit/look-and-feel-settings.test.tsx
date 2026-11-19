@@ -391,3 +391,92 @@ describe('Settings → Appearance (PEN-146, Live Preview Studio)', () => {
     expect(byTest('theme-customize').textContent).toBe('Customize Penmoss copy…');
   });
 });
+
+// A1633: Appearance, Sidebar and Note are two tabs, Settings and Preview, as Android's
+// Appearance is (A1619). Settings opens first; the preview is on its own tab, with no Enlarge.
+describe('Settings and Preview tabs (A1633)', () => {
+  const key = (element: Element, k: string) =>
+    act(() => {
+      element.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+    });
+
+  const cases: ReadonlyArray<{
+    readonly page: string;
+    readonly tabs: string;
+    readonly preview: string;
+    readonly draw: () => void;
+  }> = [
+    {
+      page: 'Sidebar',
+      tabs: 'sidebar-tabs',
+      preview: 'sidebar-preview',
+      draw: () => render(<SidebarSettings />),
+    },
+    {
+      page: 'Note',
+      tabs: 'note-tabs',
+      preview: 'note-preview',
+      draw: () => render(<NoteSettings />),
+    },
+    {
+      page: 'Appearance',
+      tabs: 'appearance-tabs',
+      preview: 'app-preview',
+      draw: () =>
+        render(
+          <ThemeProvider
+            controller={
+              new ThemeController({
+                root: {
+                  style: { colorScheme: '', setProperty: () => undefined },
+                  setAttribute: () => undefined,
+                },
+                storage: null,
+                systemDark: { matches: false, subscribe: () => () => undefined },
+              })
+            }
+          >
+            <AppearanceSettings />
+          </ThemeProvider>,
+        ),
+    },
+  ];
+
+  for (const { page, tabs, preview, draw } of cases) {
+    it(`${page}: opens on Settings, and Preview holds the preview`, () => {
+      draw();
+      const list = byTest(tabs);
+      expect(list.getAttribute('role')).toBe('tablist');
+      expect(list.getAttribute('aria-label')).toBe(page);
+      const settingsTab = byTest(`${tabs}-settings`);
+      const previewTab = byTest(`${tabs}-preview`);
+      expect([settingsTab.textContent, previewTab.textContent]).toEqual(['Settings', 'Preview']);
+      expect(settingsTab.getAttribute('aria-selected')).toBe('true');
+      expect(previewTab.tabIndex).toBe(-1);
+      const settingsPanel = byTest(`${tabs}-settings-panel`);
+      const previewPanel = byTest(`${tabs}-preview-panel`);
+      expect(settingsPanel.hidden).toBe(false);
+      expect(previewPanel.hidden).toBe(true);
+      // The preview is on its tab, not beside the controls, and opens no dialog: the tab is the
+      // larger view.
+      expect(previewPanel.contains(byTest(preview))).toBe(true);
+      expect(settingsPanel.querySelector('[data-setting]')).not.toBeNull();
+      expect(host.querySelector('.preview-zoom-button')).toBeNull();
+
+      click(previewTab);
+      expect(previewTab.getAttribute('aria-selected')).toBe('true');
+      expect(settingsPanel.hidden).toBe(true);
+      expect(previewPanel.hidden).toBe(false);
+      expect(previewPanel.getAttribute('aria-labelledby')).toBe(previewTab.id);
+
+      // ← and → move between the tabs, and the focus with them.
+      key(previewTab, 'ArrowRight');
+      expect(settingsTab.getAttribute('aria-selected')).toBe('true');
+      expect(document.activeElement).toBe(settingsTab);
+      key(settingsTab, 'End');
+      expect(previewPanel.hidden).toBe(false);
+      key(previewTab, 'Home');
+      expect(settingsPanel.hidden).toBe(false);
+    });
+  }
+});

@@ -2,6 +2,7 @@ package app.penmoss.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.NotebookGraph
 import androidx.compose.runtime.Immutable
@@ -9,7 +10,16 @@ import app.penmoss.engine.settings.DisplayKeys
 import app.penmoss.engine.settings.SidebarLayout
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.Settings
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.home.DrawerNotebook
+import app.penmoss.ui.home.HomeUi
 import app.penmoss.ui.settings.DisplayScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.JsonPrimitive
 
 /*
@@ -41,6 +51,21 @@ data class HomeShortcuts(
             journal = settings.shows(DisplayKeys.JOURNAL),
             capture = settings.shows(DisplayKeys.CAPTURE),
         )
+
+        /** As Settings → Home's switches leave them, for its Preview tab (A1633). */
+        fun of(choices: List<DisplayChoice>): HomeShortcuts {
+            val shown = choices.associate { it.key to it.shown }
+            fun shows(key: String) = shown[key] ?: true
+            return HomeShortcuts(
+                tags = shows(DisplayKeys.TAGS),
+                today = shows(DisplayKeys.TODAY),
+                thisWeek = shows(DisplayKeys.THIS_WEEK),
+                graph = shows(DisplayKeys.GRAPH),
+                commands = shows(DisplayKeys.COMMANDS),
+                journal = shows(DisplayKeys.JOURNAL),
+                capture = shows(DisplayKeys.CAPTURE),
+            )
+        }
     }
 }
 
@@ -68,8 +93,20 @@ fun displaySummary(settings: Settings): String {
 }
 
 @Composable
-internal fun DisplayRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
+internal fun DisplayRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit, notebook: NotebookGraph? = null) {
     val state by graph.settings.collectAsStateWithLifecycle()
+    // The Preview tab's sidebar (A1633): the notebooks on this phone, and the Quick Access notes
+    // of the notebook Settings opened over, as its Home's sidebar lists them.
+    val hub = graph.gitIfAny
+    val notebooks by remember(hub) { hub?.list ?: MutableStateFlow(emptyList<app.penmoss.engine.git.GitNotebookView>()) }.collectAsStateWithLifecycle()
+    val badges by remember(hub) { hub?.badges ?: flowOf(emptyMap<String, app.penmoss.engine.settings.NotebookBadge>()) }.collectAsStateWithLifecycle(emptyMap())
+    val quickAccess by remember(notebook) {
+        notebook?.store?.observeQuickAccess(graph.settings.map { it.settings.quickAccess })
+            ?.map { Items.notes(it, System.currentTimeMillis()) }
+            ?.distinctUntilChanged()
+            ?.flowOn(Dispatchers.Default)
+            ?: flowOf(emptyList<app.penmoss.ui.common.NoteItem>())
+    }.collectAsStateWithLifecycle(emptyList())
     DisplayScreen(
         choices = displayChoices(state.settings),
         enabled = state.known,
@@ -84,6 +121,11 @@ internal fun DisplayRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
         onRecentCount = { graph.changeSetting(SettingKeys.RECENT_COUNT, JsonPrimitive(it)) },
         onQuickAccessNotebook = { graph.changeSetting(SettingKeys.QUICK_ACCESS_NOTEBOOK, JsonPrimitive(it)) },
         onQuickAccessInDrawer = { graph.changeSetting(SettingKeys.QUICK_ACCESS_IN_DRAWER, JsonPrimitive(it)) },
+        preview = HomeUi(
+            notebookId = notebook?.localId.orEmpty(),
+            notebooks = notebooks.map { DrawerNotebook(it.localId, it.name, badges[it.localId]) },
+            quickAccess = quickAccess,
+        ),
     )
 }
 

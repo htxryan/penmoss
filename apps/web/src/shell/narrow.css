@@ -479,6 +479,12 @@
     padding-inline: 1rem;
   }
 
+  /* Settings and Preview (A1633) under it, across the screen, as Android's Appearance has them. */
+  .lf-tabs {
+    top: calc(var(--pm-bar) + var(--pm-hit) + 2px);
+    margin-inline: -1rem;
+  }
+
   .settings-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;

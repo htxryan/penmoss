@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -126,6 +127,8 @@ class DisplayAndSyncStopTest {
     }
 
     @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun displayHasASwitchPerShortcutThatSendsTheWebsKeys() {
         var current by mutableStateOf(Settings())
         var enabled by mutableStateOf(false)
@@ -160,6 +163,8 @@ class DisplayAndSyncStopTest {
 
     /** Recent Notes' − and + say what they change (T53 pass), and the notebook names switch is A984's. */
     @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun theRecentCountsButtonsAreNamedAndStepTheCount() {
         val counts = mutableListOf<Int>()
         compose.setContent {
@@ -200,6 +205,8 @@ class DisplayAndSyncStopTest {
 
     /** PEN-146: Home's sections move by dragging their handle, or by TalkBack's Move Up and Move Down. */
     @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun homesSectionsMoveByDragAndByTheirActions() {
         val orders = mutableListOf<List<String>>()
         val hidden = mutableListOf<Pair<String, Boolean>>()
@@ -233,6 +240,52 @@ class DisplayAndSyncStopTest {
         assertEquals(2, app.penmoss.ui.settings.dropIndex(0, 160f, listOf(100, 100, 100)))
         assertEquals(0, app.penmoss.ui.settings.dropIndex(2, -160f, listOf(100, 100, 100)))
         assertEquals(1, app.penmoss.ui.settings.dropIndex(1, 40f, listOf(100, 100, 100)))
+    }
+
+    /**
+     * A1633: Home is two tabs, as Appearance is (A1619). Settings first, with the switches;
+     * Preview draws Home's own shortcut row and the sidebar its menu opens, inert, and follows
+     * the switches.
+     */
+    @Test
+    // A phone's height: Home's tabs hold still and the Settings tab scrolls under them (A1633).
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
+    fun homeIsTwoTabsAndItsPreviewIsHomeItselfInert() {
+        var current by mutableStateOf(Settings())
+        var layout by mutableStateOf(HomeLayout())
+        compose.setContent {
+            PenmossTheme {
+                DisplayScreen(
+                    displayChoices(current), enabled = true,
+                    onChange = { key, shown -> current = current.with(key, JsonPrimitive(shown)) },
+                    onBack = {},
+                    layout = layout,
+                    preview = HomeUi(
+                        notebookId = "n1",
+                        notebooks = listOf(DrawerNotebook("n1", "Personal")),
+                        quickAccess = listOf(app.penmoss.ui.common.NoteItem("q1", "Garden Plan", "", "")),
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithTag("homeTabs").assertExists()
+        compose.onNodeWithTag("homeSettingsTab").assertIsSelected()
+        compose.onNodeWithTag("homePreviewApp").assertDoesNotExist()
+        compose.onNodeWithTag("display-${DisplayKeys.GRAPH}").performScrollTo().performClick()
+        compose.onNodeWithTag("homePreviewTab").performClick()
+        compose.onNodeWithTag("homePreviewTab").assertIsSelected()
+        compose.onNodeWithTag("homePreviewApp").assertIsDisplayed()
+        compose.onNodeWithTag("display-${DisplayKeys.TODAY}").assertDoesNotExist()
+        // Drawn, but out of reach: TalkBack and a test find none of its controls.
+        compose.onNodeWithTag("homeShortcuts").assertDoesNotExist()
+        compose.onNodeWithTag("homeDrawer").assertDoesNotExist()
+        compose.onNodeWithTag("homePreviewShield").assertExists()
+        // The row it draws follows the switches: Graph, switched off, is the only one gone.
+        assertEquals(HomeShortcuts(graph = false), HomeShortcuts.of(displayChoices(current)))
+        layout = HomeLayout(quickAccessInDrawer = true)
+        compose.onNodeWithTag("homePreviewApp").assertIsDisplayed()
+        compose.onNodeWithTag("homeSettingsTab").performClick()
+        compose.onNodeWithTag("display-${DisplayKeys.TODAY}").assertExists()
     }
 
     @Test
