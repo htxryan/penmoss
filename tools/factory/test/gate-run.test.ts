@@ -222,3 +222,29 @@ describe('proof and validation carried over from an earlier run (PEN-63)', () =>
     expect(parseProven(kept[0] ?? '')?.validation?.rows[0]?.verdict).toBe('match');
   });
 });
+
+describe("the gate's budget check (A1651)", () => {
+  it('sends a budget that fails a repeat run back to the agent, before any proof', async () => {
+    // A branch of tests alone is ci-only (A1312): the gate's check, then the budgets.
+    const f = fake({ paths: ['packages/core/test/store.budget.test.ts'], budgetExits: [1, 0] });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    const budgets = f.calls.filter((c) => c.includes('PENMOSS_BUDGETS=1'));
+    expect(budgets[0]).toContain(
+      `(cd 'packages/core' && PENMOSS_BUDGETS=1 pnpm exec vitest run 'test/store.budget.test.ts')`,
+    );
+    expect(f.prompts[1]).toMatch(
+      /ran the performance budgets this branch adds or changes[\s\S]*266/,
+    );
+    expect(f.details).toContainEqual([
+      'budgets-checked',
+      { files: ['packages/core/test/store.budget.test.ts'], runs: 3 },
+    ]);
+  });
+
+  it('runs no budgets for a branch that changes none', async () => {
+    const f = fake({ paths: ['packages/core/test/store.test.ts'] });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(f.calls.some((c) => c.includes('PENMOSS_BUDGETS=1'))).toBe(false);
+    expect(f.events).not.toContain('budgets-checked');
+  });
+});

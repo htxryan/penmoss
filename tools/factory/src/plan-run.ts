@@ -23,17 +23,26 @@ import {
   planningAction,
   type PlanningAction,
   type PlanQuestion,
+  type PlanState,
 } from './planning.ts';
 
 export interface PlanDeps {
   comment(issue: number, body: string): Promise<void>;
   setStatus(item: BoardItem, status: string): Promise<void>;
   setBlocked(item: BoardItem): Promise<void>;
-  /** Prepares the read-only snapshot of main the session explores. */
-  snapshot(): Promise<void>;
+  /** Prepares the read-only snapshot of main the session explores; returns main's commit. */
+  snapshot(): Promise<string | void>;
+  /** main's commit now, as the host fetched it (A1648). */
+  mainCommit?(): Promise<string>;
+  /** What changed on main between two commits, for the session (A1648). */
+  mainChanges?(from: string | undefined, to: string): Promise<string>;
+  /** The factory's design check of the session's current output (A1649): its problems. */
+  designCheck?(state: PlanState, main: string | undefined): string[];
   /** Starts the session with a message, or resumes it by ID. */
   launch(message: string, resume?: string): Promise<{ sessionId?: string; chatUrl?: string }>;
   stop(sessionId: string): Promise<void>;
+  /** A line for the daemon's log. */
+  log?(line: string): void;
   /** The session as `claude agents` lists it, or nothing once it has stopped. */
   session(): Promise<{ readonly busy: boolean } | undefined>;
   now(): Date;
@@ -141,10 +150,11 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
     case 'start': {
       if (item.status !== config.status.planning)
         await deps.setStatus(item, config.status.planning);
-      await deps.snapshot();
+      const main = (await deps.snapshot()) ?? undefined;
       const started = await deps.launch(input.prompt);
       const next: PlanMeta = {
         ...started,
+        ...(main ? { mainCommit: main } : {}),
         deliveredAt: issue.comments.at(-1)?.createdAt ?? now.toISOString(),
         messagedAt: now.toISOString(),
       };
@@ -174,10 +184,19 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
       ]
         .filter(Boolean)
         .join('\n\n');
-      const resumed = await deps.launch(message, meta.sessionId);
+      // A resumed session works on main as it is now, never the snapshot it started with:
+      // PEN-137's plan was drawn against Settings as they were before three merges (A1648).
+      const refreshed = await refreshMain(deps, meta);
+      const resumed = await deps.launch(
+        [message, refreshed.note].filter(Boolean).join('\n\n'),
+        meta.sessionId,
+      );
       const next: PlanMeta = {
         ...meta,
         ...resumed,
+        ...(refreshed.main ? { mainCommit: refreshed.main } : {}),
+        // Ryan's words reached the session: the design check's tries start again.
+        designFixes: 0,
         // A resumed session has a new link; the old one would reach the stopped session.
         chatUrl: resumed.chatUrl,
         deliveredAt: [delivered, others.at(-1)?.createdAt]
@@ -192,11 +211,38 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
       return action;
     }
     case 'ask': {
+      // The factory's design check before Ryan sees the revision (A1649): what it finds goes
+      // back to the session, twice at most per round with Ryan, then to Ryan with the points.
+      const found = state && deps.designCheck ? deps.designCheck(state, meta.mainCommit) : [];
+      const fixes = meta.designFixes ?? 0;
+      if (found.length > 0 && fixes < MAX_DESIGN_FIXES) {
+        const resumed = await deps.launch(
+          [designCheckMessage(found), input.images && imagesReminder(input.images)]
+            .filter(Boolean)
+            .join('\n\n'),
+          meta.sessionId,
+        );
+        const next: PlanMeta = {
+          ...meta,
+          ...resumed,
+          chatUrl: resumed.chatUrl,
+          deliveredAt: delivered,
+          messagedAt: now.toISOString(),
+          askedAt: undefined,
+          designFixes: fixes + 1,
+        };
+        writeMeta(files, next);
+        deps.log?.(`design check sent the plan back (${found.length} problem(s))`);
+        await postNewChat(deps, item.number, meta, next, marker('plan-resume'));
+        return { kind: 'resume', comments: [] };
+      }
       await deps.comment(
         item.number,
         [
           'The plan has open points:',
           action.open.map((o) => `- ${o}`).join('\n'),
+          found.length > 0 &&
+            `The factory's design check still finds these after ${fixes} round(s) with the planning session:\n\n${found.map((p) => `- ${p}`).join('\n')}`,
           questionsText(state?.questions ?? []),
           links(meta, state?.planUrl ?? null, state?.designUrl ?? null),
           'Answer here, in the artifact comments or in the chat, then clear Blocked: the session picks up from there. Say "complete" when the plan is.',
@@ -327,6 +373,43 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
       return action;
     }
   }
+}
+
+/** How many times the design check sends one revision back before Ryan sees it (A1649). */
+export const MAX_DESIGN_FIXES = 2;
+
+/** What the session hears when the design check finds problems. */
+export function designCheckMessage(problems: readonly string[]): string {
+  return [
+    "Before Ryan sees this revision, the factory's design check found these problems:",
+    problems.map((p) => `- ${p}`).join('\n'),
+    'Fix each one in the design, its mockups and the plan, republish, run the self-review again ("Before you post") and write state.json again. A label that is right as it is (a sentence, or a name written that way) goes in the review\'s `titleCaseExceptions`, exactly as shown.',
+  ].join('\n\n');
+}
+
+/**
+ * Brings the snapshot up to main before a resumed session's turn (A1648): when main has moved
+ * since the snapshot (or the snapshot's commit is unknown), it is made again, and the session is
+ * told what changed and to check the plan and design against it.
+ */
+async function refreshMain(
+  deps: PlanDeps,
+  meta: PlanMeta,
+): Promise<{ main?: string; note?: string }> {
+  if (!deps.mainCommit) return {};
+  const now = await deps.mainCommit();
+  if (meta.mainCommit === now) return { main: now };
+  const main = (await deps.snapshot()) || now;
+  const changes = deps.mainChanges ? await deps.mainChanges(meta.mainCommit, main) : '';
+  return {
+    main,
+    note: [
+      `## main moved since your last turn\n\nYour snapshot of the repository has been made again, from main at ${main.slice(0, 10)} (its \`.factory-main\` says so). Before anything else, check the plan and the design against it: every mockup's screens, navigation, names and icons, every task's paths and component names, and every assumption about the code. Redraw what changed, say in your reply what the merges changed for this plan, and make your self-review against this commit.`,
+      changes,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  };
 }
 
 /** Every message to a resumed session says where the issue's images are (A1277). */

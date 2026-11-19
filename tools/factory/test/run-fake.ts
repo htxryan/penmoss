@@ -117,11 +117,14 @@ export function fake(overrides: {
   rendered?: string;
   /** `git diff --raw` of the branch's own changes in the gate (carry.ts); default: none. */
   raw?: string;
+  /** The branch adds a budget file, whose repeat runs exit with these in turn (A1651); then 0. */
+  budgetExits?: number[];
   /** What each `uncommitted` call finds after an agent session, in order (PEN-141); then none. */
   uncommitted?: string[][];
 }): Fake {
   const calls: string[] = [];
   const comments: string[] = [];
+  const budgetExits = [...(overrides.budgetExits ?? [])];
   let opened = 0;
   const sandbox = (): RunSandbox => {
     const n = ++opened;
@@ -136,6 +139,20 @@ export function fake(overrides: {
             exitCode: 0,
             stdout:
               'diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n+          for i in 1 2 3; do apt-get update && break; done\n',
+            stderr: '',
+          });
+        if (command.startsWith('git diff') && overrides.budgetExits)
+          return Promise.resolve({
+            exitCode: 0,
+            stdout:
+              'diff --git a/packages/core/test/store.budget.test.ts b/packages/core/test/store.budget.test.ts\nnew file mode 100644\n+it("prunes", () => {})\n',
+            stderr: '',
+          });
+        if (command.startsWith('for n in $(seq'))
+          return Promise.resolve({
+            exitCode: budgetExits.shift() ?? 0,
+            stdout:
+              'budget run 2 of 3: packages/core/test/store.budget.test.ts\n× prunes: the slowest batch: expected 266 to be less than 100',
             stderr: '',
           });
         if (command.startsWith('git diff'))

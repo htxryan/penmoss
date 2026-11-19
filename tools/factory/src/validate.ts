@@ -8,7 +8,9 @@
  */
 import type { Platform } from './config.ts';
 import { parseReview, type FidelityRow } from './fidelity.ts';
+import { missingCaptures } from './coverage.ts';
 import { renderMockups } from './mockups.ts';
+import type { AttachedProof } from './proof/body.ts';
 import { fill, promptTemplate } from './prompt.ts';
 import { runAgentPatiently } from './agent-round.ts';
 import { whenVmFree } from './vm-wait.ts';
@@ -32,6 +34,14 @@ export interface ValidateDeps extends Pick<
   readReview(sandbox: RunSandbox): Promise<string | null>;
   /** Copies the rows' images into the PR body's folder as `fidelity-*`; returns the renamed rows. */
   collectFidelity(sandbox: RunSandbox, rows: readonly FidelityRow[]): Promise<FidelityRow[]>;
+  /** `.factory/validation/captures.json` from the worktree, as text, if it exists (A1650). */
+  readCaptures?(sandbox: RunSandbox): Promise<string | null>;
+  /**
+   * Puts the proof's last screenshots and stills from its recordings in the worktree's
+   * `.factory/validation/proof/`, for the reviewer (A1650); returns what it put there, as the
+   * reviewer's prompt lists it.
+   */
+  stageProof?(sandbox: RunSandbox, proof: readonly AttachedProof[]): Promise<string>;
 }
 
 /** The images section when the issue has none. */
@@ -46,7 +56,12 @@ export interface ValidateInput {
   readonly images?: string;
   /** The platforms the change affects: each is walked on its own build (PEN-94). */
   readonly platforms?: readonly Platform[];
+  /** The proof the gate just recorded, which the reviewer judges as well (A1650). */
+  readonly proof?: readonly AttachedProof[];
 }
+
+/** What the reviewer's prompt says when there is no proof to look at. */
+const NO_PROOF = 'None was recorded for this change.';
 
 export async function validate(
   deps: ValidateDeps,
@@ -54,23 +69,29 @@ export async function validate(
   branch: string,
   input: ValidateInput,
 ): Promise<{ ok: true; rows: FidelityRow[] } | { ok: false; error: string }> {
-  const { plan, builder = [], images = '', platforms = ['web'] } = input;
+  const { plan, builder = [], images = '', platforms = ['web'], proof = [] } = input;
   try {
     await deps.heavy(`factory validation ${branch}`, async () => {
       await deps.stageMockups(sandbox);
       // Rendered here, not by the session, which spent minutes on a renderer that hung (A1323).
       const mockups = await renderMockups(sandbox);
-      await runAgentPatiently(
-        deps,
-        sandbox,
-        fill(promptTemplate('validate'), {
-          branch,
-          plan,
-          images: images || NO_IMAGES,
-          platforms: platforms.join(', '),
-          mockups,
-        }),
-      );
+      const prompt = fill(promptTemplate('validate'), {
+        branch,
+        plan,
+        images: images || NO_IMAGES,
+        platforms: platforms.join(', '),
+        mockups,
+      });
+      await runAgentPatiently(deps, sandbox, prompt);
+      // Every criterion, on each app it is about (A1650): what the session left out goes back
+      // to it once, before the walkthroughs run.
+      const missing = deps.readCaptures
+        ? missingCaptures(plan, await deps.readCaptures(sandbox), platforms)
+        : [];
+      if (missing.length > 0) {
+        deps.log('validation-incomplete', { missing: missing.length });
+        await runAgentPatiently(deps, sandbox, `${prompt}\n\n${coverageFeedback(missing)}`);
+      }
     });
     // The Mac and Android walkthroughs the session wrote, which only the host can run.
     const walks: WalkOutcome[] = [];
@@ -79,6 +100,7 @@ export async function validate(
     // A fresh session: the reviewer hasn't seen the build or the walkthrough, only their
     // results, and the builder's reasons for what it left undone, so a reason that holds is a
     // deviation.
+    const proofs = (proof.length > 0 && (await deps.stageProof?.(sandbox, proof))) || NO_PROOF;
     await deps.heavy(`factory review ${branch}`, () =>
       runAgentPatiently(
         deps,
@@ -88,6 +110,7 @@ export async function validate(
           images: images || NO_IMAGES,
           walks: walksText(walks),
           builder: builder.length ? builder.map((r) => `- ${r}`).join('\n') : 'Nothing.',
+          proofs,
         }),
       ),
     );
@@ -108,6 +131,19 @@ export async function validate(
     deviation: parsed.rows.filter((r) => r.verdict === 'deviation').length,
   });
   return { ok: true, rows: await deps.collectFidelity(sandbox, parsed.rows) };
+}
+
+/** What the capturing session hears when it left criteria out (A1650). */
+export function coverageFeedback(missing: readonly string[]): string {
+  return [
+    '## Criteria you left out',
+    '',
+    "The factory checked `.factory/validation/captures.json` against the plan's criteria and the apps in scope. These are missing:",
+    '',
+    ...missing.map((m) => `- ${m}`),
+    '',
+    "Capture each one now: on the web build, or in the Mac or Android walkthrough for a criterion about that app (one test per criterion, as above), and add it to captures.json. Keep what you've already captured.",
+  ].join('\n');
 }
 
 /** The apps walked by the host, in this order: the VM may make the Mac one wait. */

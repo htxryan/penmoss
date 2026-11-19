@@ -172,3 +172,41 @@ describe('fidelity (F19)', () => {
     expect(md).not.toContain('standing in');
   });
 });
+
+describe('the reviewer on the proof (A1650)', () => {
+  it('sends thin and missing proof back as mismatches, and keeps what is shown out', async () => {
+    const { parseReview } = await import('../src/fidelity.ts');
+    const parsed = parseReview(
+      JSON.stringify({
+        rows: [{ criterion: 'AC7 Send Feedback on Android', verdict: 'match', note: '' }],
+        proofs: [
+          {
+            criterion: 'AC7',
+            platform: 'android',
+            verdict: 'thin',
+            note: 'The preview never opens.',
+            frame: 'proof-android-4-f5.png',
+          },
+          { criterion: 'AC26', platform: 'android', verdict: 'missing' },
+          { criterion: 'AC2', platform: 'mac', verdict: 'shown' },
+          { criterion: 'AC9', platform: 'mac', verdict: 'thin', frame: '../escape.png' },
+        ],
+      }),
+    );
+    if (!parsed.ok) throw new Error(parsed.error);
+    const [row, thin, missing, escaped, ...rest] = parsed.rows;
+    expect(row).toEqual({ criterion: 'AC7 Send Feedback on Android', verdict: 'match', note: '' });
+    expect(thin).toEqual({
+      criterion: 'Proof of AC7 (android)',
+      verdict: 'mismatch',
+      note: 'Too thin: The preview never opens. Fix the proof spec so its recording brings it on screen, holds it and ends on it.',
+      screenshot: 'proof-android-4-f5.png',
+    });
+    expect(missing?.criterion).toBe('Proof of AC26 (android)');
+    expect(missing?.note).toMatch(/^Missing: No proof recording shows it/);
+    // A frame outside the validation folder is dropped; a proof shown makes no row.
+    expect(escaped?.criterion).toBe('Proof of AC9 (mac)');
+    expect(escaped?.screenshot).toBeUndefined();
+    expect(rest).toEqual([]);
+  });
+});

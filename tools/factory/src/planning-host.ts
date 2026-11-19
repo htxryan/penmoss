@@ -49,6 +49,13 @@ export interface PlanMeta {
   };
   /** How many times the session was sent back to fix the plan contract (F16). */
   readonly contractFixes?: number | undefined;
+  /** The commit of main the session's snapshot was made from (A1648). */
+  readonly mainCommit?: string | undefined;
+  /**
+   * How many times the factory's design check sent the session back since it last heard from
+   * Ryan (A1649); reset when Ryan's words reach it.
+   */
+  readonly designFixes?: number | undefined;
 }
 
 /**
@@ -131,6 +138,8 @@ export function planningFlags(files: PlanFiles): string[] {
     '--allowedTools',
     'Artifact',
     'ArtifactComments',
+    // A fresh-context reviewer for the design self-review (A1649): it inherits these paths.
+    'Agent',
     under('Read', files.repo),
     under('Read', files.out),
     under('Read', files.attachments),
@@ -147,24 +156,31 @@ export function planningFlags(files: PlanFiles): string[] {
 export const under = (tool: 'Read' | 'Edit', dir: string): string =>
   `${tool}(/${dir.replace(/\/+$/, '')}/**)`;
 
+/** Where a snapshot records the commit of main it was made from, for the session to quote. */
+export const SNAPSHOT_MAIN = '.factory-main';
+
 /**
  * A fresh snapshot of main for the session to explore: main's files, exported from the publish
  * repo (`git archive`), with no `.git`. git never runs in the runs' clone (A1230); a snapshot
  * an older factory made as a worktree of that clone is deleted, and the janitor drops its record.
+ * Returns the commit it was made from, which it also writes to `SNAPSHOT_MAIN` in the snapshot.
  */
 export async function prepareSnapshot(
   config: FactoryConfig,
   files: PlanFiles,
   exec: Exec,
-): Promise<void> {
+): Promise<string> {
   mkdirSync(files.out, { recursive: true });
   rmSync(files.repo, { recursive: true, force: true });
   mkdirSync(files.repo, { recursive: true });
   const tar = join(files.root, 'main.tar');
   try {
-    await mustGit(exec, publishDir(config), ['archive', '--format=tar', `--output=${tar}`, MAIN]);
+    const commit = await mainCommit(config, exec);
+    await mustGit(exec, publishDir(config), ['archive', '--format=tar', `--output=${tar}`, commit]);
     const unpacked = await exec('tar', ['-x', '-f', tar, '-C', files.repo]);
     if (unpacked.code !== 0) throw new Error(unpacked.stderr.trim());
+    writeFileSync(join(files.repo, SNAPSHOT_MAIN), `${commit}\n`);
+    return commit;
   } catch (error) {
     throw new Error(
       `couldn't make the planning snapshot: ${error instanceof Error ? error.message : String(error)}`,
@@ -173,6 +189,54 @@ export async function prepareSnapshot(
   } finally {
     rmSync(tar, { force: true });
   }
+}
+
+/** main's commit in the publish repo, which `ensureClone` fetches at every planning step. */
+export async function mainCommit(config: FactoryConfig, exec: Exec): Promise<string> {
+  return (
+    await mustGit(exec, publishDir(config), ['rev-parse', '--verify', `${MAIN}^{commit}`])
+  ).trim();
+}
+
+/** How many commits and paths a "main moved" message lists before it says how many more. */
+const MOVED_COMMITS = 40;
+const MOVED_PATHS = 80;
+
+/**
+ * What changed on main between two commits, for a resumed planning session (A1648): the
+ * commits' subjects and the paths they touched. Without `from` (a snapshot from before the
+ * factory kept its commit), only the new commit is named.
+ */
+export async function mainChanges(
+  config: FactoryConfig,
+  exec: Exec,
+  from: string | undefined,
+  to: string,
+): Promise<string> {
+  const short = (c: string) => c.slice(0, 10);
+  if (!from) return `main is now at ${short(to)}.`;
+  const dir = publishDir(config);
+  const log = (
+    await mustGit(exec, dir, ['log', '--no-merges', '--format=- %h %s', `${from}..${to}`])
+  )
+    .trim()
+    .split('\n')
+    .filter(Boolean);
+  const paths = (await mustGit(exec, dir, ['diff', '--name-only', from, to]))
+    .trim()
+    .split('\n')
+    .filter(Boolean);
+  const more = (n: number, what: string) => (n > 0 ? [`- …and ${n} more ${what}`] : []);
+  return [
+    `main moved from ${short(from)} to ${short(to)}: ${log.length} commit(s), ${paths.length} path(s).`,
+    '',
+    ...log.slice(0, MOVED_COMMITS),
+    ...more(log.length - MOVED_COMMITS, 'commits'),
+    '',
+    'Paths changed:',
+    ...paths.slice(0, MOVED_PATHS).map((p) => `- ${p}`),
+    ...more(paths.length - MOVED_PATHS, 'paths'),
+  ].join('\n');
 }
 
 const CHAT_URL = /https:\/\/claude\.ai\/code\/session_[A-Za-z0-9_-]+/;

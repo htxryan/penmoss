@@ -14,7 +14,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { codeDir, commitOf, ownCheckout, syncCode } from '../src/code.ts';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec, type Exec, type ExecOptions } from '../src/exec.ts';
-import { GIT_HARDENING, GIT_TIMEOUT_MS, hostGit, TOKEN_HELPER } from '../src/git.ts';
+import { GIT_HARDENING, GIT_TIMEOUT_MS, hostGit, subcommand, TOKEN_HELPER } from '../src/git.ts';
 import { ensureClone, repoDir } from '../src/clone.ts';
 import { hostDeps } from '../src/host.ts';
 import { sandboxTakeCommand } from '../src/sandbox-commands.ts';
@@ -186,7 +186,11 @@ describe("the host's git, structurally (A1230)", () => {
     const { exec, calls } = fakeExec();
     await prepareSnapshot(config, planFiles(config, 42), exec);
     expectHardened(calls, clone);
-    expect(calls.find((c) => c.cmd === 'git')?.args).toContain('archive');
+    // It reads main's commit, then archives that commit (A1648).
+    expect(calls.filter((c) => c.cmd === 'git').map((c) => subcommand(c.args))).toEqual([
+      'rev-parse',
+      'archive',
+    ]);
     const before = calls.length;
     await sweep(config, exec, new Set(), () => undefined);
     expect(calls.length).toBe(before);

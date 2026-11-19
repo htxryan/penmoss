@@ -31,6 +31,7 @@ import type { AgentResult } from './result.ts';
 import { excerpt, tail } from './gate-log.ts';
 import type { RunSandbox, RunDeps } from './run-deps.ts';
 import { withTimeout } from './timeout.ts';
+import { BUDGET_RUNS, budgetCommand, budgetFeedback, changedBudgets } from './budgets.ts';
 import { porcelainPaths } from './agent-round.ts';
 import { whenVmFree } from './vm-wait.ts';
 
@@ -213,6 +214,22 @@ export async function gateAndProve(
       };
     }
     deps.log('gate-passed', { command });
+    // The budgets the branch adds or changes, which `task check` never runs (A1651).
+    const budgets = scope.kind === 'docs-only' ? [] : changedBudgets(patch);
+    if (budgets.length > 0) {
+      const timed = await deps.heavy(`factory budgets ${branch}`, () =>
+        gateExec(gate, budgetCommand(budgets), deps.config.timeouts.gateMinutes),
+      );
+      if (timed.exitCode !== 0) {
+        deps.keep?.('budgets.log', timed.stdout + timed.stderr);
+        return {
+          ok: false,
+          reason: `performance budget failed a repeat run: ${budgets.join(', ')}`,
+          feedback: budgetFeedback(budgets, excerpt(timed.stdout + timed.stderr)),
+        };
+      }
+      deps.log('budgets-checked', { files: budgets, runs: BUDGET_RUNS });
+    }
     // F19: a planned change that users see is walked on each app it affects and reviewed
     // against the plan (PEN-94).
     const validating = validation && scope.platforms.length > 0 ? validation : undefined;
@@ -314,6 +331,7 @@ export async function gateAndProve(
         builder: result.risks,
         images: validating.images ?? '',
         platforms: scope.platforms,
+        proof: prepared.proof,
       });
       if (!v.ok)
         return {
