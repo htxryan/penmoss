@@ -78,14 +78,18 @@ export function PrivacyPolicyLink({
  * this window either way).
  */
 export function ConsentAnswers({
+  onChoose,
   onAnswer,
 }: {
+  /** At the click, before main has it (a dialog's `done`: the answer may close it first). */
+  readonly onChoose?: () => void;
   readonly onAnswer: (answer: ConsentAnswer) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const answer = (consent: ConsentAnswer) => {
     if (busy) return;
     setBusy(true);
+    onChoose?.();
     const analytics = analyticsBridge();
     void (analytics ? analytics.answer(consent) : Promise.resolve(null))
       .catch(() => null)
@@ -156,12 +160,7 @@ function ConsentDialog({ onAnswer }: { readonly onAnswer: () => void }) {
       <ConsentQuestion />
       <div className="consent-dialog-foot">
         <PrivacyPolicyLink className="consent-policy" event="consent.policy" />
-        <ConsentAnswers
-          onAnswer={() => {
-            tracked.done();
-            onAnswer();
-          }}
-        />
+        <ConsentAnswers onChoose={() => tracked.done()} onAnswer={onAnswer} />
       </div>
     </dialog>
   );

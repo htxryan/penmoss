@@ -93,6 +93,9 @@ function resetPruning(preview: LimitsPreview, limits: Limits): Pruning | null {
   return lowered ? pruning(preview, lowered.key, DEFAULT_LIMITS[lowered.key]) : null;
 }
 
+/** A limit's value as its field shows it: "5,000". */
+const shown = (value: number) => value.toLocaleString('en-US');
+
 /** The whole number typed, or null for anything else. */
 function typed(text: string): number | null {
   const trimmed = text.trim().replace(/[,_\s]/g, '');
@@ -175,16 +178,16 @@ function LimitField({
   readonly analytics: DesktopAnalytics;
 }) {
   const id = useId();
-  const [text, setText] = useState(String(saved));
+  const [text, setText] = useState(shown(saved));
   const [refused, setRefused] = useState(false);
   const [asking, setAsking] = useState<(Pruning & { readonly value: number }) | null>(null);
   /** A commit in flight, or a question open: leaving the field commits nothing more. */
   const working = useRef(false);
   // The saved value as main has it (a terminal may change it meanwhile).
-  const [shown, setShown] = useState(saved);
-  if (shown !== saved) {
-    setShown(saved);
-    setText(String(saved));
+  const [held, setHeld] = useState(saved);
+  if (held !== saved) {
+    setHeld(saved);
+    setText(shown(saved));
     setRefused(false);
   }
 
@@ -201,7 +204,7 @@ function LimitField({
     }
     setRefused(false);
     if (value === saved) {
-      setText(String(saved));
+      setText(shown(saved));
       return;
     }
     working.current = true;
@@ -282,7 +285,7 @@ function LimitField({
           cancelEvent="privacy.limits.cancel"
           confirmEvent="privacy.limits.confirm"
           onCancel={() => {
-            setText(String(saved));
+            setText(shown(saved));
             settle();
           }}
           onConfirm={() => {
