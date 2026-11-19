@@ -10,7 +10,10 @@ import android.os.Looper
 import android.view.PixelCopy
 import android.view.Window
 import androidx.webkit.WebViewCompat
+import app.penmoss.analytics.Analytics
+import app.penmoss.analytics.Limits
 import app.penmoss.data.PenmossDatabase
+import app.penmoss.log.PenmossLog
 import app.penmoss.engine.api.HistoryAuthor
 import app.penmoss.engine.api.NoteHistory
 import app.penmoss.engine.api.PenmossJson
@@ -82,7 +85,20 @@ class FeedbackCollector(
         }
         val edits = note?.let { edits(it.id) }.orEmpty()
         val known = runCatching { names() }.getOrNull()
-        FeedbackContextBuilder.build(app(), where, sync(), facts, if (gitNotebook) emptyList() else edits, recent.all(), text, known, gitNotebook)
+        FeedbackContextBuilder.build(app(), where, sync(), facts, if (gitNotebook) emptyList() else edits, recent.all(), text, known)
+    }
+
+    /**
+     * The log lines a bug report attaches now (PEN-137): the newest within the limits, scrubbed
+     * again with the open notebook's note titles and folder, tag and attachment names (scrub #2).
+     */
+    suspend fun logs(
+        limits: Limits = Analytics.service?.state?.value?.limits ?: Limits.DEFAULTS,
+        now: Long = System.currentTimeMillis(),
+    ): List<String> = withContext(Dispatchers.IO) {
+        val known = PenmossLog.files?.known ?: ErrorScrub.Known()
+        val more = runCatching { names() }.getOrNull().orEmpty()
+        runCatching { PenmossLog.reportLines(limits, now, known.withNames(more)) }.getOrDefault(emptyList())
     }
 
     /** The folder's path, top first, as Info shows it; null at the top level. */
@@ -157,7 +173,13 @@ class FeedbackService(
     private val scope: CoroutineScope,
 ) {
     /** What the form opened on: the context as it was, and the window's capture once written. */
-    data class Opening(val context: FeedbackContextData, val capture: File? = null, val capturing: Boolean = false)
+    data class Opening(
+        val context: FeedbackContextData,
+        val capture: File? = null,
+        val capturing: Boolean = false,
+        /** The anonymised log lines a bug report attaches, read as the form opened (PEN-137). */
+        val logs: List<String> = emptyList(),
+    )
 
     private val _opening = MutableStateFlow<Opening?>(null)
     val opening: StateFlow<Opening?> = _opening.asStateFlow()
@@ -176,7 +198,8 @@ class FeedbackService(
                 // Never a git notebook's screen (A889): it shows the notebook's notes.
                 val shot = window?.takeUnless { collector.gitNotebook }?.let { withTimeoutOrNull(CAPTURE_TIMEOUT_MS) { pixelCopy(it) } }
                 val context = runCatching { collector.collect(where, noteId, extras) }.getOrElse { FeedbackContextData() }
-                _opening.value = Opening(context, capturing = shot != null)
+                val logs = runCatching { collector.logs() }.getOrDefault(emptyList())
+                _opening.value = Opening(context, capturing = shot != null, logs = logs)
                 show()
                 if (shot != null) {
                     val file = withContext(Dispatchers.IO) { writeCapture(shot) }
@@ -191,7 +214,10 @@ class FeedbackService(
     /** The form opened with nothing captured (after the app was restarted on it): the context now. */
     suspend fun reopen(where: WhereFacts) {
         if (_opening.value != null) return
-        _opening.value = Opening(runCatching { collector.collect(where, null) }.getOrElse { FeedbackContextData() })
+        _opening.value = Opening(
+            runCatching { collector.collect(where, null) }.getOrElse { FeedbackContextData() },
+            logs = runCatching { collector.logs() }.getOrDefault(emptyList()),
+        )
     }
 
     /** The form is closed: its capture goes unless the draft took it. */
@@ -238,8 +264,8 @@ class FeedbackService(
      * submission stored, the draft gone, then one attempt now. Throws [IOException] when a
      * screenshot cannot be read; nothing is stored then and the draft stays.
      */
-    suspend fun send(draft: FeedbackDraft, context: FeedbackContextData): FeedbackOutbox.Outcome {
-        val payload = FeedbackPayload.of(draft, version, context)
+    suspend fun send(draft: FeedbackDraft, context: FeedbackContextData, logs: List<String> = emptyList()): FeedbackOutbox.Outcome {
+        val payload = FeedbackPayload.of(draft, version, context, logs)
         val folder = outbox.folder(draft.submissionId)
         val names = withContext(Dispatchers.Default) {
             folder.deleteRecursively()
@@ -278,9 +304,13 @@ class FeedbackService(
     suspend fun edit(id: String, show: () -> Unit): Edit {
         var outcome = Edit.GONE
         var context: FeedbackContextData? = null
+        var logs: List<String> = emptyList()
         outbox.takeBack(id) { row, folder ->
             withContext(Dispatchers.IO) {
-                val (form, captured) = FeedbackPayload.formOf(row.payload) ?: return@withContext false
+                val sent = FeedbackPayload.editOf(row.payload) ?: return@withContext false
+                val form = sent.draft
+                val captured = sent.context
+                logs = sent.logs
                 if (!drafts.load().blank) {
                     outcome = Edit.DRAFT_IN_THE_WAY
                     return@withContext false
@@ -296,7 +326,7 @@ class FeedbackService(
             }
         }
         context?.let {
-            _opening.value = Opening(it)
+            _opening.value = Opening(it, logs = logs)
             show()
         }
         return outcome

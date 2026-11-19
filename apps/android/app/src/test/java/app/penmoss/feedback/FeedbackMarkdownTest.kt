@@ -64,6 +64,7 @@ class FeedbackMarkdownTest {
                 client = input.getValue("client").jsonPrimitive.content,
                 version = input.getValue("version").jsonPrimitive.content,
                 submissionId = input.getValue("submissionId").jsonPrimitive.content,
+                logs = input["logs"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
             )
             val expected = case.getValue("body").jsonPrimitive.content
             assertEquals(case.getValue("name").jsonPrimitive.content, expected, body)

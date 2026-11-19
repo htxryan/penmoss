@@ -112,6 +112,10 @@ data class FeedbackUi(
     val capturing: Boolean = false,
     /** The draft's screenshot that is this opening's capture, while ticked. */
     val captureFile: String? = null,
+    /** The anonymised log lines a bug report attaches (PEN-137): exactly what is sent. */
+    val logs: List<String> = emptyList(),
+    /** The limits the lines were read within, which the hint states. */
+    val logLimits: app.penmoss.analytics.Limits = app.penmoss.analytics.Limits.DEFAULTS,
 ) {
     /** What is sent: the context without the groups left out. The preview shows exactly this. */
     val sent: FeedbackContextData get() = context.without(draft.omitted.toSet())
@@ -130,6 +134,8 @@ class FeedbackActions(
     val remove: (Int) -> Unit = {},
     val move: (Int, Int) -> Unit = { _, _ -> },
     val omit: (String, Boolean) -> Unit = { _, _ -> },
+    /** Attach Anonymised Logs ticked or not (PEN-137). */
+    val logs: (Boolean) -> Unit = {},
     val discard: () -> Unit = {},
     val dismissNotice: () -> Unit = {},
     /** A small picture of a screenshot file, off the main thread. */
@@ -237,6 +243,9 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
             Screenshots(ui, actions, editing)
 
             CapturedContext(ui, actions, editing)
+
+            // A bug report's logs (PEN-137, O6): ticked for a bug, not offered for a feature request.
+            if (ui.draft.type == FeedbackType.BUG.wire) AnonymisedLogs(ui, actions, editing)
 
             if (editing) {
                 OutlinedButton(onClick = { discarding = true }, modifier = Modifier.testTag("feedbackDiscard")) { Text("Discard Draft") }
@@ -523,7 +532,7 @@ private fun CapturedContext(ui: FeedbackUi, actions: FeedbackActions, editing: B
             .testTag("contextToggle"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Captured context", Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        Text(app.penmoss.analytics.AnalyticsCopy.text("feedback.context.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         Icon(if (open) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
     }
     Text(
@@ -551,6 +560,70 @@ private fun CapturedContext(ui: FeedbackUi, actions: FeedbackActions, editing: B
         Text(
             markdown.ifEmpty { "Nothing: every group is left out." },
             Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape).padding(8.dp).testTag("contextMarkdown"),
+            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+/**
+ * Attach Anonymised Logs (PEN-137, AC7): the app's log lines from the last hours the limits allow,
+ * scrubbed twice, shown exactly as they are attached, with how many lines and how big. Ticked for
+ * a bug; unticked, none go.
+ */
+@Composable
+private fun AnonymisedLogs(ui: FeedbackUi, actions: FeedbackActions, editing: Boolean) {
+    val copy = app.penmoss.analytics.AnalyticsCopy
+    val ticked = ui.draft.attachesLogs
+    var open by rememberSaveable { mutableStateOf(false) }
+    val limits = ui.logLimits
+    HorizontalDivider()
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp)
+            .toggleable(value = ticked, enabled = editing, role = Role.Checkbox) {
+                app.penmoss.analytics.Analytics.click("feedback.logs.toggle", it)
+                actions.logs(it)
+            }
+            .testTag("feedbackLogs"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = ticked, onCheckedChange = null, enabled = editing)
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f)) {
+            Text(copy.text("feedback.logs.label"))
+            val summary = if (ui.logs.isEmpty()) {
+                copy.text("feedback.logs.empty", "hours" to limits.reportHours)
+            } else {
+                copy.text("feedback.logs.summary", "lines" to ui.logs.size, "size" to FeedbackLogs.formatReportSize(FeedbackLogs.textBytes(ui.logs)))
+            }
+            Text(summary, Modifier.testTag("feedbackLogsSummary"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    Text(
+        copy.text("feedback.logs.hint", "hours" to limits.reportHours, "maxLines" to limits.reportLines, "kb" to limits.reportKb),
+        Modifier.testTag("feedbackLogsHint"),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (ui.logs.isEmpty()) return
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .toggleable(value = open, role = Role.Button) {
+                open = it
+                if (it) app.penmoss.analytics.Analytics.click("feedback.logs.preview")
+            }
+            .semantics { stateDescription = if (open) "Shown" else "Hidden" }
+            .testTag("feedbackLogsToggle"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(copy.text("feedback.logs.block.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        Icon(if (open) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
+    }
+    if (!open) return
+    SelectionContainer {
+        Text(
+            ui.logs.joinToString("\n"),
+            Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape).padding(8.dp).testTag("feedbackLogsText"),
             fontFamily = FontFamily.Monospace,
             style = MaterialTheme.typography.bodySmall,
         )

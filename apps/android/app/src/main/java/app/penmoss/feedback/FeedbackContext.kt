@@ -123,7 +123,7 @@ fun clipCell(value: String, max: Int = FeedbackLimits.CELL): String {
 object FeedbackMarkdown {
     fun context(context: FeedbackContextData): String {
         if (context.groups.isEmpty()) return ""
-        val parts = mutableListOf("<details><summary>Captured context</summary>")
+        val parts = mutableListOf("<details><summary>Captured Context</summary>")
         for (group in context.groups) {
             parts += "#### ${group.group?.title ?: group.id}"
             parts += if (group.rows.isEmpty()) "_None_" else table(group.columns, group.rows)
@@ -137,8 +137,8 @@ object FeedbackMarkdown {
 
     /**
      * The issue's body as the Worker writes it (core's `feedbackIssueBody`): the description,
-     * the screenshots, the context, then the footer. For the contract test: the phone never
-     * writes the body, but its context part must match.
+     * the screenshots, the context, a bug report's anonymised logs (PEN-137), then the footer.
+     * GitHubFeedbackApi files it as written; `FeedbackMarkdownTest` checks it against core's.
      */
     fun issueBody(
         description: String,
@@ -147,6 +147,8 @@ object FeedbackMarkdown {
         client: String,
         version: String,
         submissionId: String,
+        /** A bug report's anonymised log lines (PEN-137), oldest first, as the form previewed them. */
+        logs: List<String> = emptyList(),
     ): String {
         val parts = mutableListOf<String>()
         val trimmed = Js.trim(description)
@@ -163,7 +165,14 @@ object FeedbackMarkdown {
             "android" -> "Android"
             else -> client
         }
-        parts += "Sent from Penmoss $name $shown · submission $submissionId"
+        val footer = "Sent from Penmoss $name $shown · submission $submissionId"
+        if (logs.isNotEmpty()) {
+            // The rest of the body, and the blank lines around the block.
+            val others = (parts + footer).joinToString("\n\n").length + 3
+            val block = FeedbackLogs.block(FeedbackLogs.fit(logs, others))
+            if (block.isNotEmpty()) parts += block
+        }
+        parts += footer
         return "${parts.joinToString("\n\n")}\n"
     }
 
