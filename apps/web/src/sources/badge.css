@@ -62,7 +62,20 @@
 
 .badge-preview-strip {
   display: inline-flex;
+  /* Framed tight around its tab, as the sidebar's row is (ac17): not the strip's full row with an
+     empty band above the tab and the tab's foot over the frame. */
   border: 1px solid var(--pm-border-soft);
+}
+
+/* Over the strip's own height in either title bar (tabs.css). */
+:root .badge-preview-places > .tab-strip.badge-preview-strip {
+  align-items: stretch;
+  height: auto;
+}
+
+.badge-preview-places > .badge-preview-strip > .tab {
+  min-height: 2rem;
+  margin-bottom: 0;
 }
 
 .badge-swatches {

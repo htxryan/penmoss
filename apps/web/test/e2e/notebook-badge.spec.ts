@@ -161,6 +161,12 @@ test('notebooks get default badges, and one is changed in Settings (PEN-140, AC1
   await expect(preview).toHaveAttribute('data-color', hex);
   await expect(preview).toHaveAccessibleName('Penmoss');
   await expect(group.getByTestId('badge-reset')).toBeEnabled();
+  // The tab in the preview fills its frame, as the sidebar's row does: no empty band above it,
+  // and its foot is not cut by the frame (ac17).
+  const strip = (await group.locator('.badge-preview-strip').boundingBox())!;
+  const tab = (await group.locator('.badge-preview-strip > .tab').boundingBox())!;
+  expect(tab.y - strip.y).toBeLessThanOrEqual(1.5);
+  expect(strip.y + strip.height - (tab.y + tab.height)).toBeGreaterThanOrEqual(0.5);
 
   // Back to the notes: the sidebar's row has changed at once, the other notebook's has not.
   await page.locator('.settings-bar .back-link').click();

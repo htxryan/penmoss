@@ -75,6 +75,8 @@ export function AppBar({
           {title || 'Untitled'}
         </h1>
       )}
+      {/* The main window's tabs, at 700 px and narrower, before Search (PEN-140, A1502, ac13). */}
+      <TabsButton />
       <button
         type="button"
         className="icon-btn"
@@ -86,8 +88,6 @@ export function AppBar({
       >
         <Icon name="search" />
       </button>
-      {/* The main window's tabs, at 700 px and narrower (PEN-140, A1502). */}
-      <TabsButton />
       {children}
     </header>
   );
