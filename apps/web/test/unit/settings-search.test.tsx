@@ -26,7 +26,13 @@ describe('the settings index (PEN-146)', () => {
     expect(settingId('Copy Settings…')).toBe('copy-settings');
     expect(settingId('What’s New')).toBe('whats-new');
     // Each entry's id is its label's, but for a row named apart from another of its label.
-    const apart = new Set(['tags-section', 'agent-activity-filters']);
+    const apart = new Set([
+      'tags-section',
+      'agent-activity-filters',
+      // Privacy → Advanced's two At Most fields (PEN-137).
+      'report-at-most-lines',
+      'report-at-most-kb',
+    ]);
     for (const entry of SETTINGS_INDEX) {
       if (!apart.has(entry.id)) expect(entry.id).toBe(settingId(entry.label));
     }

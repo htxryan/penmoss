@@ -9,7 +9,7 @@ import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { app } from 'electron';
-import { killGitOnSignals, nodeIo, run } from '@penmoss/cli/node';
+import { channelOf, killGitOnSignals, nodeIo, run } from '@penmoss/cli/node';
 import { NodeMeaning } from '@penmoss/embed';
 import { CLI_FLAG } from './local-agents';
 
@@ -75,7 +75,13 @@ const meaning = new NodeMeaning({
   workerPath: join(__dirname, 'embed-worker.cjs'),
 });
 
-void run(process.argv.slice(at + 1), nodeIo({ self, meaning })).then(
+// Usage analytics (PEN-137): the CLI's and its MCP server's events carry the app's version.
+const analytics = {
+  version: app.getVersion(),
+  channel: channelOf(app.getVersion(), app.isPackaged),
+};
+
+void run(process.argv.slice(at + 1), nodeIo({ self, meaning, analytics })).then(
   (code) => app.exit(code),
   (error: unknown) => {
     process.stderr.write(`penmoss: ${error instanceof Error ? error.message : String(error)}\n`);

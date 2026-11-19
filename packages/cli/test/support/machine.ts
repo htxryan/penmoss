@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MemoryRemote, MemoryTransport } from '@penmoss/git-notebook';
 import { afterEach, beforeEach } from 'vitest';
-import type { Io } from '../../src/io';
+import type { AnalyticsIo, Io } from '../../src/io';
 import { run } from '../../src/main';
 import { memoryTokenStore } from '../../src/memory-store';
 import { nodeNotebooks } from '../../src/node-notebooks';
@@ -117,6 +117,10 @@ export interface Input {
   readonly logs?: string[];
   /** The CLI's own environment (`io.env`). */
   readonly cliEnv?: Readonly<Record<string, string>>;
+  /** Usage analytics (PEN-137): without it, nothing is recorded. */
+  readonly analytics?: AnalyticsIo;
+  /** Whether stdout is a terminal (default false). */
+  readonly tty?: boolean;
 }
 
 export interface Ran {
@@ -151,7 +155,7 @@ export function machine(
     const io: Io = {
       env: input.cliEnv ?? {},
       stdin: { isTTY: false, read: () => Promise.resolve(input.stdin ?? '') },
-      stdout: { isTTY: false, write: (text) => void (stdout += text) },
+      stdout: { isTTY: input.tty === true, write: (text) => void (stdout += text) },
       stderr: { write: (text) => void (stderr += text) },
       openUrl: () => Promise.resolve(false),
       readFile: (path) => Promise.resolve(new Uint8Array(readFileSync(path))),
@@ -180,6 +184,7 @@ export function machine(
             }),
       },
       notebooks,
+      ...(input.analytics ? { analytics: input.analytics } : {}),
     };
     const code = await run(argv, io);
     return { code, stdout, stderr, json: () => JSON.parse(stdout) as Record<string, unknown> };
