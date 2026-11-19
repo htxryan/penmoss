@@ -26,6 +26,7 @@ import { parseBlock } from '../../../../scripts/ports.mjs';
 import { cliScript } from '../../src/local-agents';
 import { inVirtualMachine, refuseOnMacHost } from './host-guard';
 import {
+  answerAnalytics,
   bareRepository,
   dataDir,
   DESKTOP,
@@ -319,6 +320,9 @@ function world() {
     '[user]\n  name = Ryan on the Mac\n  email = ryan@example.invalid\n[commit]\n  gpgSign = false\n',
   );
   const app = { PENMOSS_HOME: join(root, 'penmoss'), GIT_CONFIG_GLOBAL: gitconfig };
+  // Usage analytics answered No (PEN-137), as launch() does: the first run's last step, the
+  // usage question, isn't this spec's (analytics-consent.spec.ts has it).
+  answerAnalytics(app.PENMOSS_HOME, 'no');
   const env = { ...process.env, ...app, GIT_CONFIG_NOSYSTEM: '1' };
   const cli = (exe: string, args: readonly string[]) =>
     spawnSync(exe, ['--penmoss-cli', ...args], { env, encoding: 'utf8', timeout: 90_000 });
