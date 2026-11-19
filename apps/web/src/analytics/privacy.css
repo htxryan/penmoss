@@ -142,10 +142,9 @@
   margin: 0;
 }
 
-.privacy-confirm-title {
-  color: var(--pm-fg);
+.privacy-confirm > .confirm-block-title {
+  margin: 0;
   font-size: var(--pm-text-row-label);
-  font-weight: var(--pm-weight-row-label);
 }
 
 .privacy-confirm-body {

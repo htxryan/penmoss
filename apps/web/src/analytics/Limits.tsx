@@ -21,7 +21,7 @@ import {
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState } from 'react';
 import type { DesktopAnalytics, LimitsPreview } from '../desktop/bridge';
-import { InlineConfirm } from './InlineConfirm';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { record } from './record';
 import { copy } from './status';
 
@@ -58,6 +58,53 @@ const LABELS = {
 interface Pruning {
   readonly title: string;
   readonly body: string;
+}
+
+/**
+ * A lowering's question, under the field or Reset to Defaults: Cancel (quiet, focused first, and
+ * Escape) or Delete. Its title is `pruning`'s.
+ */
+function PruneConfirm({
+  asking,
+  onCancel,
+  onConfirm,
+}: {
+  readonly asking: Pruning;
+  readonly onCancel: () => void;
+  readonly onConfirm: () => void;
+}) {
+  return (
+    <ConfirmBlock
+      className="privacy-confirm"
+      title={asking.title}
+      testId="privacy-limit-confirm"
+      onCancel={onCancel}
+    >
+      <p className="privacy-confirm-body">{asking.body}</p>
+      <span className="privacy-confirm-actions">
+        <button
+          type="button"
+          className="btn quiet"
+          data-ui="dismiss"
+          data-event="privacy.limits.cancel"
+          data-testid="privacy-limit-confirm-cancel"
+          onClick={onCancel}
+        >
+          {copy('confirm.cancel.button')}
+        </button>
+        <button
+          type="button"
+          className="btn danger"
+          data-ui="submit"
+          data-event="privacy.limits.confirm"
+          data-testid="privacy-limit-confirm-delete"
+          onClick={onConfirm}
+        >
+          {copy('confirm.delete.button')}
+        </button>
+      </span>
+    </ConfirmBlock>
+  );
 }
 
 /** Why `key` at `value` deletes what it does: its age, its cap or the logs' size. */
@@ -278,12 +325,8 @@ function LimitField({
         ) : null}
       </span>
       {asking ? (
-        <InlineConfirm
-          title={asking.title}
-          body={asking.body}
-          testId="privacy-limit-confirm"
-          cancelEvent="privacy.limits.cancel"
-          confirmEvent="privacy.limits.confirm"
+        <PruneConfirm
+          asking={asking}
           onCancel={() => {
             setText(shown(saved));
             settle();
@@ -351,12 +394,8 @@ function ResetLimits({
         )}
       </span>
       {asking ? (
-        <InlineConfirm
-          title={asking.title}
-          body={asking.body}
-          testId="privacy-limit-confirm"
-          cancelEvent="privacy.limits.cancel"
-          confirmEvent="privacy.limits.confirm"
+        <PruneConfirm
+          asking={asking}
           onCancel={() => setAsking(null)}
           onConfirm={() => {
             setAsking(null);

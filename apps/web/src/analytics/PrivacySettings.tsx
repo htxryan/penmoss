@@ -12,9 +12,9 @@ import { useId, useState } from 'react';
 import type { DesktopAnalytics, DesktopAnalyticsStatus } from '../desktop/bridge';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { linkHandler, PRIVACY_DATA_PATH } from '../router';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { SettingRow, Switch } from '../theme/look-rows';
 import { PrivacyPolicyLink } from './Consent';
-import { InlineConfirm } from './InlineConfirm';
 import { AdvancedLimits } from './Limits';
 import { record } from './record';
 import { analyticsBridge, copy, shortId, useAnalyticsStatus } from './status';
@@ -169,25 +169,52 @@ function PrivacyRows({
             </span>
           </div>
           {forgetting ? (
-            <InlineConfirm
+            <ConfirmBlock
+              className="privacy-confirm"
               title={copy('forget.title')}
-              body={copy('forget.body', { id: shortId(status.install) })}
               testId="privacy-forget-confirm"
-              cancelEvent="privacy.forget.cancel"
-              confirmEvent="privacy.forget.confirm"
               onCancel={() => setForgetting(false)}
-              onConfirm={() => {
-                setForgetting(false);
-                void run(async () => {
-                  const result = await analytics.forget().catch(() => null);
-                  const outcome = result?.outcome ?? 'failed';
-                  if (outcome === 'ok') record('setting', 'privacy.forget', { value: true });
-                  setNote(
-                    outcome === 'ok' ? 'forgotten' : outcome === 'offline' ? 'offline' : 'failed',
-                  );
-                });
-              }}
-            />
+            >
+              <p className="privacy-confirm-body">
+                {copy('forget.body', { id: shortId(status.install) })}
+              </p>
+              <span className="privacy-confirm-actions">
+                <button
+                  type="button"
+                  className="btn quiet"
+                  data-ui="dismiss"
+                  data-event="privacy.forget.cancel"
+                  data-testid="privacy-forget-confirm-cancel"
+                  onClick={() => setForgetting(false)}
+                >
+                  {copy('confirm.cancel.button')}
+                </button>
+                <button
+                  type="button"
+                  className="btn danger"
+                  data-ui="submit"
+                  data-event="privacy.forget.confirm"
+                  data-testid="privacy-forget-confirm-delete"
+                  onClick={() => {
+                    setForgetting(false);
+                    void run(async () => {
+                      const result = await analytics.forget().catch(() => null);
+                      const outcome = result?.outcome ?? 'failed';
+                      if (outcome === 'ok') record('setting', 'privacy.forget', { value: true });
+                      setNote(
+                        outcome === 'ok'
+                          ? 'forgotten'
+                          : outcome === 'offline'
+                            ? 'offline'
+                            : 'failed',
+                      );
+                    });
+                  }}
+                >
+                  {copy('confirm.delete.button')}
+                </button>
+              </span>
+            </ConfirmBlock>
           ) : null}
         </div>
         <SettingRow

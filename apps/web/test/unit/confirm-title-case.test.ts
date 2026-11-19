@@ -1,11 +1,14 @@
 /**
  * PEN-137 ac44 (A938 amended): every confirmation asks in Title Case. A web confirmation is a
- * `ConfirmBlock` (inline: its title a line of its own and the block's name), a `ConfirmDialog`
- * (modal) or the Privacy page's `InlineConfirm`; this reads every `title` given to one in the
- * page's source, and every button inside it, as the literals each expression may come to (a
- * `${…}` is "X"). A hand-made `role="alertdialog"` elsewhere fails, so none goes without a
- * title. The Mac's native message boxes (`dialog.showMessageBox`) are read the same way.
+ * `ConfirmBlock` (inline: its title a line of its own and the block's name) or a `ConfirmDialog`
+ * (modal); this reads every `title` given to one in the page's source, and every button inside
+ * it, as the literals each expression may come to (a `${…}` or a `{var}` is "X"). The analytics
+ * copy (`copy('forget.title')`) is read as the Mac's words, and `x.title` as every `title:` an
+ * object in that file is built with (Privacy's `pruning`). A hand-made `role="alertdialog"`
+ * elsewhere fails, so none goes without a title. The Mac's native message boxes
+ * (`dialog.showMessageBox`) are read the same way.
  */
+import { ANALYTICS_COPY, analyticsCopy, type CopyKey } from '@penmoss/core/analytics';
 import { isTitleCase, titleCaseProblem } from '@penmoss/core/title-case';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -17,14 +20,9 @@ const WEB = fileURLToPath(new URL('../../src', import.meta.url));
 const DESKTOP = fileURLToPath(new URL('../../../desktop/src', import.meta.url));
 
 /** The components that frame a confirmation, by the name the page writes. */
-const CONFIRMS = new Set(['ConfirmBlock', 'ConfirmDialog', 'InlineConfirm']);
+const CONFIRMS = new Set(['ConfirmBlock', 'ConfirmDialog']);
 /** Where `role="alertdialog"` may be written: inside those components. */
-const ALERT_DIALOG_HOMES = new Set(['shell/ConfirmBlock.tsx', 'analytics/InlineConfirm.tsx']);
-/**
- * The Privacy page's words are `ANALYTICS_COPY`'s, which core's copy test holds to Title Case
- * (ac41): a title there that is not a literal is one of them.
- */
-const COPY_CHECKED = /^analytics\//;
+const ALERT_DIALOG_HOMES = new Set(['shell/ConfirmBlock.tsx']);
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -49,6 +47,33 @@ const isCopyCall = (node: ts.Node) =>
   ts.isIdentifier(node.expression) &&
   /^(copy|analyticsCopy)$/.test(node.expression.text);
 
+/** The Mac's words for an analytics copy key, a `{var}` read as "X"; null for no such key. */
+function copyText(node: ts.CallExpression): string | null {
+  const key = node.arguments[0];
+  if (!key || !ts.isStringLiteralLike(key) || !Object.hasOwn(ANALYTICS_COPY, key.text)) {
+    return null;
+  }
+  return analyticsCopy(key.text as CopyKey, 'mac').replace(/\{\w+\}/g, 'X');
+}
+
+/** Every `title: …` an object literal in `file` is built with. */
+function titleProperties(file: ts.SourceFile): ts.Expression[] {
+  const found: ts.Expression[] = [];
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === 'title' &&
+      ts.isObjectLiteralExpression(node.parent)
+    ) {
+      found.push(node.initializer);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return found;
+}
+
 /** The `const name = …` in `file`, if there is one. */
 function constant(file: ts.SourceFile, name: string): ts.Expression | undefined {
   let found: ts.Expression | undefined;
@@ -69,9 +94,9 @@ function constant(file: ts.SourceFile, name: string): ts.Expression | undefined 
 
 /**
  * The words an expression may come to, a `${…}` read as "X" unless it is itself literals; null
- * when it is none of these (a value from elsewhere), or 'copy' for the analytics copy's.
+ * when it is none of these (a value from elsewhere).
  */
-function texts(node: ts.Node, file: ts.SourceFile): string[] | null | 'copy' {
+function texts(node: ts.Node, file: ts.SourceFile): string[] | null {
   if (ts.isJsxExpression(node)) return node.expression ? texts(node.expression, file) : null;
   if (ts.isStringLiteralLike(node)) return [node.text];
   if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) {
@@ -80,7 +105,6 @@ function texts(node: ts.Node, file: ts.SourceFile): string[] | null | 'copy' {
   if (ts.isConditionalExpression(node)) {
     const yes = texts(node.whenTrue, file);
     const no = texts(node.whenFalse, file);
-    if (yes === 'copy' || no === 'copy') return 'copy';
     return yes && no ? [...yes, ...no] : null;
   }
   if (ts.isTemplateExpression(node)) {
@@ -92,10 +116,17 @@ function texts(node: ts.Node, file: ts.SourceFile): string[] | null | 'copy' {
     }
     return out;
   }
-  if (isCopyCall(node)) return 'copy';
+  if (isCopyCall(node)) {
+    const text = copyText(node as ts.CallExpression);
+    return text === null ? null : [text];
+  }
   if (ts.isIdentifier(node)) {
     const value = constant(file, node.text);
     return value ? texts(value, file) : null;
+  }
+  if (ts.isPropertyAccessExpression(node) && node.name.text === 'title') {
+    const built = titleProperties(file).map((each) => texts(each, file));
+    return built.length > 0 && built.every((each) => each !== null) ? built.flat() : null;
   }
   return null;
 }
@@ -124,8 +155,6 @@ function confirmations(): { titles: Found[]; buttons: Found[]; unread: string[];
       `${name}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
     const add = (list: Found[], node: ts.Node, value: ts.Node) => {
       const words = texts(value, file);
-      if (words === 'copy') return;
-      if (words === null && COPY_CHECKED.test(name)) return;
       if (words === null) unread.push(where(node));
       else for (const text of words) list.push({ text, where: where(node) });
     };
@@ -138,7 +167,6 @@ function confirmations(): { titles: Found[]; buttons: Found[]; unread: string[];
             if (ts.isJsxText(part)) words = words.map((start) => start + part.text);
             else if (ts.isJsxExpression(part) && part.expression) {
               const inner = texts(part.expression, file);
-              if (inner === 'copy') return;
               const parts = Array.isArray(inner) ? inner : ['X'];
               words = words.flatMap((start) => parts.map((each) => start + each));
             }
@@ -245,6 +273,10 @@ describe('confirmations ask in Title Case (PEN-137 ac44)', () => {
       'Delete #X?',
       'Delete X Tags?',
       'Delete “X” on Every Device?',
+      // Settings → Privacy's, in the analytics copy's words.
+      'Delete Your Shared Data?',
+      'Delete X Events?',
+      'Delete X of Logs?',
     ]) {
       expect(titles, title).toContain(title);
     }
@@ -253,6 +285,9 @@ describe('confirmations ask in Title Case (PEN-137 ac44)', () => {
   it('writes every title and button in Title Case', () => {
     expect(problems(found.titles)).toEqual([]);
     expect(problems(found.buttons)).toEqual([]);
+    // Privacy's buttons are read too: Cancel, then Delete.
+    const privacy = found.buttons.filter((each) => each.where.startsWith('analytics/'));
+    expect(new Set(privacy.map((each) => each.text))).toEqual(new Set(['Cancel', 'Delete']));
   });
 
   it('frames every inline confirmation with ConfirmBlock, so none is without its title', () => {

@@ -282,7 +282,7 @@ test.describe('Settings → Privacy', () => {
     await field.press('Enter');
     const confirm = days.getByRole('alertdialog', { name: title });
     await expect(confirm).toBeVisible();
-    await expect(confirm.locator('.privacy-confirm-title')).toHaveText(title);
+    await expect(confirm.locator('.confirm-block-title')).toHaveText(title);
     await expect(confirm).toContainText(
       'They’re older than 3 days. They’re deleted from this Mac now, and raising the limit later won’t bring them back.',
     );
