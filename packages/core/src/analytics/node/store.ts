@@ -531,7 +531,8 @@ export class AnalyticsStore {
 
   /** Gives back the free pages after a large prune, all at once (tests and maintenance). */
   vacuum(): void {
-    for (const _ of this.vacuumSteps()) {
+    const steps = this.vacuumSteps();
+    while (!steps.next().done) {
       // Each step runs as the loop asks for it.
     }
   }
