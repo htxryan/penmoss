@@ -183,6 +183,7 @@ export function MeaningSettings() {
           >
             {here || deleting ? (
               <button
+                data-event="settings.meaning.delete-model"
                 type="button"
                 className="btn danger-fill"
                 data-ui="item"
@@ -210,6 +211,7 @@ export function MeaningSettings() {
           >
             {indexAction === 'recreate' ? (
               <button
+                data-event="settings.meaning.recreate-index"
                 type="button"
                 className="btn"
                 data-ui="item"
@@ -221,6 +223,7 @@ export function MeaningSettings() {
               </button>
             ) : indexAction === 'delete' ? (
               <button
+                data-event="settings.meaning.delete-index"
                 type="button"
                 className="btn danger-fill"
                 data-ui="item"
@@ -248,6 +251,7 @@ export function MeaningSettings() {
           </p>
           <div className="confirm-actions">
             <button
+              data-event="settings.meaning.index.cancel"
               type="button"
               className="btn"
               data-ui="dismiss"
@@ -258,6 +262,11 @@ export function MeaningSettings() {
               Cancel
             </button>
             <button
+              data-event={
+                indexAction === 'recreate'
+                  ? 'settings.meaning.index.recreate'
+                  : 'settings.meaning.index.delete'
+              }
               type="submit"
               className={indexAction === 'recreate' ? 'btn primary' : 'btn danger-fill'}
               data-ui="submit"
@@ -282,6 +291,7 @@ export function MeaningSettings() {
           </p>
           <div className="confirm-actions">
             <button
+              data-event="settings.meaning.delete-model.cancel"
               type="button"
               className="btn"
               data-ui="dismiss"
@@ -292,6 +302,7 @@ export function MeaningSettings() {
               Cancel
             </button>
             <button
+              data-event="settings.meaning.delete-model.confirm"
               type="submit"
               className="btn danger-fill"
               data-ui="submit"

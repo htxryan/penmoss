@@ -199,6 +199,7 @@ export function AgentActivitySettings() {
                 {item.entry.undoneAt || !source ? null : (
                   <div className="trash-actions">
                     <button
+                      data-event="settings.agent-activity.undo"
                       type="button"
                       className="btn"
                       data-ui="item"

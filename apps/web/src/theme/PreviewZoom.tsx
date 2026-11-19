@@ -40,6 +40,7 @@ export function PreviewZoom({
         type="button"
         className="preview-zoom-button"
         data-ui="item"
+        data-event="settings.preview.enlarge"
         data-testid={testId}
         aria-label={`Enlarge ${name} Preview`}
         aria-haspopup="dialog"

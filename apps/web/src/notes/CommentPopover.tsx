@@ -188,6 +188,7 @@ export function CommentPopover({
         type="button"
         className="icon-btn comment-popover-close"
         data-ui="dismiss"
+        data-event="comments.popover.close"
         aria-label="Close"
         data-tip="Close"
         onClick={() => onClose(true)}

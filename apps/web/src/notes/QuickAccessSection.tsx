@@ -181,6 +181,7 @@ export function QuickAccessSection({
               <a
                 className="sb-item"
                 data-ui="item"
+                data-event="sidebar.quick-access.note"
                 href={notePath(note.id)}
                 draggable={quickAccess.canChange}
                 aria-current={note.id === activeId ? 'page' : undefined}
@@ -262,6 +263,7 @@ export function QuickAccessSection({
           <MenuItem
             icon="pin"
             data-testid="quick-access-remove"
+            data-event="sidebar.quick-access.remove"
             disabled={!quickAccess.canChange}
             onClick={() => {
               const pin = menu.id;

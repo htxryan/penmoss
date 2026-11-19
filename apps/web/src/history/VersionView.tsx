@@ -430,6 +430,7 @@ export function VersionView({
               type="button"
               className="btn"
               data-ui="option"
+              data-event="history.view.wrap"
               aria-pressed={wrap}
               aria-label="Wrap Lines"
               data-tip="Wrap Lines"
@@ -445,6 +446,7 @@ export function VersionView({
               type="button"
               className="btn"
               data-ui="option"
+              data-event="history.view.mode"
               aria-label={MODE_NAMES[next].long}
               data-tip={MODE_NAMES[next].long}
               data-testid="history-view-mode"
@@ -463,6 +465,7 @@ export function VersionView({
             type="button"
             className="btn primary"
             data-ui="submit"
+            data-event="history.view.restore"
             aria-label="Restore This Version"
             data-tip="Restore This Version"
             disabled={busy}
@@ -479,6 +482,7 @@ export function VersionView({
               type="button"
               className="btn"
               data-ui="submit"
+              data-event="history.view.revert"
               aria-label="Revert This Edit"
               data-tip="Revert This Edit"
               disabled={busy}
@@ -492,6 +496,7 @@ export function VersionView({
             type="button"
             className="btn"
             data-ui="submit"
+            data-event="history.view.copy"
             aria-label="Copy Text"
             data-tip="Copy Text"
             disabled={!detail}
@@ -523,6 +528,7 @@ export function VersionView({
                       type="button"
                       className="history-view-sha"
                       data-ui="submit"
+                      data-event="history.view.copy-sha"
                       aria-label={`Copy Commit SHA ${shortSha(version.commit)}`}
                       data-tip="Copy Commit SHA"
                       data-testid="history-view-sha"
@@ -586,6 +592,7 @@ export function VersionView({
                     type="button"
                     className="history-view-fold"
                     data-ui="item"
+                    data-event="history.view.fold"
                     data-testid="history-view-fold"
                     style={{ gridRow: at + 1 }}
                     onClick={() => openFold(item.from)}

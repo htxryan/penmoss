@@ -159,6 +159,7 @@ export function DrawingDialog({
                 type="button"
                 className="icon-btn history-half"
                 data-ui="submit"
+                data-event="drawing.back"
                 aria-label="Back"
                 data-tip="Keep the Drawing and Go Back"
                 disabled={!place.back || saving}
@@ -171,6 +172,7 @@ export function DrawingDialog({
                 type="button"
                 className="icon-btn history-half"
                 data-ui="submit"
+                data-event="drawing.forward"
                 aria-label="Forward"
                 data-tip="Keep the Drawing and Go Forward"
                 disabled={!place.forward || saving}
@@ -204,6 +206,7 @@ export function DrawingDialog({
             type="button"
             className="btn drawing-editor-cancel"
             data-ui="dismiss"
+            data-event="drawing.cancel"
             onClick={onCancel}
           >
             <Icon name="close" size={14} />
@@ -213,6 +216,7 @@ export function DrawingDialog({
             type="button"
             className="btn primary drawing-editor-done"
             data-ui="submit"
+            data-event="drawing.done"
             disabled={saving}
             onClick={() => void done()}
           >

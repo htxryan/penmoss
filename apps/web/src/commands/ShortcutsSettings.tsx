@@ -223,6 +223,7 @@ export function ShortcutsSettings() {
                 type="button"
                 className="btn"
                 data-ui="submit"
+                data-event="settings.shortcuts.conflict.replace"
                 onClick={() => {
                   setNotice(null);
                   assign(command.id, rowNotice.combo, true);
@@ -234,6 +235,7 @@ export function ShortcutsSettings() {
                 type="button"
                 className="btn quiet"
                 data-ui="dismiss"
+                data-event="settings.shortcuts.conflict.cancel"
                 onClick={() => setNotice(null)}
               >
                 Cancel
@@ -254,6 +256,7 @@ export function ShortcutsSettings() {
               type="button"
               className="btn quiet kb-remove"
               data-ui="item"
+              data-event="settings.shortcuts.row.remove"
               aria-label={`Remove the Shortcut for ${command.title}`}
               onClick={() => {
                 setNotice(null);
@@ -268,6 +271,7 @@ export function ShortcutsSettings() {
               type="button"
               className="btn quiet"
               data-ui="item"
+              data-event="settings.shortcuts.row.reset"
               aria-label={`Reset the Shortcut for ${command.title}`}
               onClick={() => {
                 setNotice(null);
@@ -282,6 +286,7 @@ export function ShortcutsSettings() {
               type="button"
               className={keys.length > 0 || listening ? 'kb-key-btn' : 'btn quiet'}
               data-ui="item"
+              data-event="settings.shortcuts.row.edit"
               ref={(element) => {
                 if (element) editButtons.current.set(command.id, element);
                 else editButtons.current.delete(command.id);
@@ -327,6 +332,7 @@ export function ShortcutsSettings() {
       type="button"
       className="btn"
       data-ui="item"
+      data-event="settings.shortcuts.reset-all"
       data-testid={`shortcuts-reset-${where}`}
       disabled={changed.length === 0}
       onClick={() => setConfirmReset(true)}
@@ -370,6 +376,7 @@ export function ShortcutsSettings() {
                 type="button"
                 className="icon-btn"
                 data-ui="dismiss"
+                data-event="settings.shortcuts.clear-keys"
                 aria-label="Clear the Keys"
                 data-tip="Clear the Keys"
                 onClick={() => {
@@ -408,6 +415,7 @@ export function ShortcutsSettings() {
             <label key={value} className="seg-option">
               <input
                 type="radio"
+                data-event="settings.shortcuts.show"
                 name={`${id}-show`}
                 value={value}
                 checked={show === value}
@@ -450,6 +458,7 @@ export function ShortcutsSettings() {
             The capture shortcut from any app is on{' '}
             <a
               data-ui="item"
+              data-event="settings.shortcuts.quick-capture-link"
               href={settingsPath('quick-capture')}
               onClick={linkHandler(settingsPath('quick-capture'))}
             >
@@ -481,12 +490,18 @@ export function ShortcutsSettings() {
               type="button"
               className="btn"
               data-ui="dismiss"
+              data-event="settings.shortcuts.reset-all.cancel"
               onClick={() => setConfirmReset(false)}
               autoFocus
             >
               Cancel
             </button>
-            <button type="submit" className="btn danger-fill" data-ui="submit">
+            <button
+              type="submit"
+              className="btn danger-fill"
+              data-ui="submit"
+              data-event="settings.shortcuts.reset-all.confirm"
+            >
               Reset to Defaults
             </button>
           </div>

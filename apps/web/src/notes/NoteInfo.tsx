@@ -46,6 +46,7 @@ function SaveStatusLabel({ status }: { status: SaveStatus | null }) {
         className="save-status"
         data-state={status.state}
         data-ui="item"
+        data-event="note.status.save-status"
         href={path}
         title={status.hint}
         aria-label={`${status.label}: ${status.hint}`}
@@ -76,6 +77,7 @@ export function SyncNowButton() {
       type="button"
       className="icon-btn status-sync-now"
       data-ui="item"
+      data-event="note.status.sync-now"
       data-testid="status-sync-now"
       aria-label="Sync Now"
       data-tip="Sync Now"

@@ -21,6 +21,7 @@ export function AboutVersions() {
         type="button"
         className="icon-btn"
         data-ui="menu"
+        data-event="history.about"
         aria-label="About Versions"
         data-tip="About Versions"
         aria-expanded={open}

@@ -101,6 +101,7 @@ export function TrashedToast() {
               type="button"
               className="toast-action"
               data-ui="submit"
+              data-event="trash.toast.undo"
               onClick={() => void restore()}
               data-testid="trashed-undo"
             >

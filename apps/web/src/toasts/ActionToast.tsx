@@ -18,6 +18,7 @@ export function ActionToast({
   dismissTestId,
   onHold,
   toastRef,
+  'data-event': event,
 }: {
   readonly tone: ToastTone;
   readonly testId: string;
@@ -32,6 +33,8 @@ export function ActionToast({
   readonly dismissTestId?: string;
   readonly onHold?: (held: boolean) => void;
   readonly toastRef?: Ref<HTMLDivElement>;
+  /** Dismiss's tracked id (PEN-137): the toast's own, as a literal at the caller. */
+  readonly 'data-event'?: string;
 }) {
   const hold = onHold
     ? {
@@ -65,6 +68,7 @@ export function ActionToast({
           type="button"
           className="toast-close"
           data-ui="dismiss"
+          data-event={event ?? 'toast.dismiss'}
           aria-label="Dismiss"
           onClick={onDismiss}
           data-testid={dismissTestId}

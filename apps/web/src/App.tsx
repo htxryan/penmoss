@@ -393,6 +393,7 @@ function NotesShell({
               type="button"
               className="icon-btn drawer-close"
               data-ui="dismiss"
+              data-event="sidebar.drawer.close"
               aria-label="Close Navigation"
               data-tip="Close Navigation"
               onClick={dismissDrawer}

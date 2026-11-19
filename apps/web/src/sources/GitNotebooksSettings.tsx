@@ -161,6 +161,7 @@ function ReconfirmPurges({
   if (notes === null) {
     return (
       <button
+        data-event="settings.git-notebooks.reconfirm.open"
         data-ui="item"
         type="button"
         className="btn"
@@ -219,6 +220,7 @@ function ReconfirmPurges({
               <li key={note.id} data-testid="git-never-note">
                 <span>{title(note)}</span>{' '}
                 <button
+                  data-event="settings.git-notebooks.reconfirm.keep-note"
                   data-ui="item"
                   type="button"
                   className="btn"
@@ -239,6 +241,7 @@ function ReconfirmPurges({
                   Keep Note
                 </button>{' '}
                 <button
+                  data-event="settings.git-notebooks.reconfirm.purge-note"
                   data-ui="item"
                   type="button"
                   className="btn"
@@ -271,6 +274,7 @@ function ReconfirmPurges({
             <li key={note.id}>
               Kept {title(note)}.{' '}
               <button
+                data-event="settings.git-notebooks.reconfirm.undo-keep"
                 data-ui="item"
                 type="button"
                 className="btn"
@@ -292,6 +296,7 @@ function ReconfirmPurges({
       <div className="settings-actions">
         {again.length > 0 ? (
           <button
+            data-event="settings.git-notebooks.reconfirm.confirm"
             data-ui="item"
             type="button"
             className="btn"
@@ -313,6 +318,7 @@ function ReconfirmPurges({
           </button>
         ) : null}
         <button
+          data-event="settings.git-notebooks.reconfirm.cancel"
           data-ui="item"
           type="button"
           className="btn"
@@ -400,6 +406,7 @@ function AllNotebooks({
         intro="The notebooks on this Mac, and what goes between them."
         actions={
           <button
+            data-event="settings.git-notebooks.add"
             data-ui="item"
             type="button"
             className="btn primary"
@@ -456,6 +463,7 @@ function GitNotebookRow({ source }: { source: GitSource }) {
   return (
     <li>
       <a
+        data-event="settings.git-notebooks.row.open"
         href={path}
         data-ui="item"
         className="git-notebook-row"
@@ -586,6 +594,7 @@ function BetweenNotebooks() {
             help="From one notebook to another, once"
           >
             <button
+              data-event="settings.git-notebooks.copy-settings.open"
               data-ui="item"
               type="button"
               className="btn"
@@ -700,6 +709,7 @@ function CopySettingsPanel({
       </p>
       <div className="settings-actions">
         <button
+          data-event="settings.git-notebooks.copy-settings.copy"
           data-ui="item"
           type="button"
           className="btn primary"
@@ -710,7 +720,13 @@ function CopySettingsPanel({
           <Icon name="copy" size={14} />
           Copy Settings
         </button>
-        <button data-ui="item" type="button" className="btn" onClick={onClose}>
+        <button
+          data-event="settings.git-notebooks.copy-settings.cancel"
+          data-ui="item"
+          type="button"
+          className="btn"
+          onClick={onClose}
+        >
           {done ? 'Done' : 'Cancel'}
         </button>
       </div>
@@ -859,6 +875,7 @@ function GitNotebookCard({
         }
         actions={
           <button
+            data-event="settings.git-notebooks.sync-now"
             data-ui="item"
             type="button"
             className="btn"
@@ -901,6 +918,7 @@ function GitNotebookCard({
       >
         {TABS.map((each) => (
           <button
+            data-event="settings.git-notebooks.tab"
             key={each.id}
             type="button"
             role="tab"
@@ -1044,6 +1062,7 @@ function OverviewTab({
             help="Copy from or to other notebooks"
           >
             <button
+              data-event="settings.git-notebooks.copy-settings.open"
               data-ui="item"
               type="button"
               className="btn"
@@ -1066,6 +1085,7 @@ function OverviewTab({
       </div>
       <div className="nset-foot" data-setting="remove-from-this-mac">
         <button
+          data-event="settings.git-notebooks.remove"
           data-ui="item"
           type="button"
           className="btn danger"
@@ -1089,6 +1109,7 @@ function OverviewTab({
             </p>
             <div className="settings-actions">
               <button
+                data-event="settings.git-notebooks.remove.push-first"
                 data-ui="item"
                 type="button"
                 className="btn primary"
@@ -1103,6 +1124,7 @@ function OverviewTab({
                 Push First
               </button>
               <button
+                data-event="settings.git-notebooks.remove.anyway"
                 data-ui="item"
                 type="button"
                 className="btn danger"
@@ -1117,6 +1139,7 @@ function OverviewTab({
                 Remove Anyway
               </button>
               <button
+                data-event="settings.git-notebooks.remove.keep"
                 data-ui="item"
                 type="button"
                 className="btn"
@@ -1181,6 +1204,7 @@ function NotebookName({ source }: { source: GitSource }) {
             onChange={(event) => setDraft(event.target.value)}
           />
           <button
+            data-event="settings.git-notebooks.rename"
             type="submit"
             className="btn"
             data-ui="submit"
@@ -1312,7 +1336,7 @@ function SyncTab({
         />
       </div>
       <details className="nset-details" data-testid="git-details">
-        <summary>
+        <summary data-event="settings.git-notebooks.details">
           Details
           {notices > 0 ? (
             <span className="chip" data-testid="git-details-count">
@@ -1469,6 +1493,7 @@ function GitTab({
           />
           <div className="settings-actions">
             <button
+              data-event="settings.git-notebooks.token.save"
               type="submit"
               className="btn"
               data-ui="submit"
@@ -1478,6 +1503,7 @@ function GitTab({
             </button>
             {info.hasToken ? (
               <button
+                data-event="settings.git-notebooks.token.forget"
                 data-ui="item"
                 type="button"
                 className="btn"
@@ -1570,7 +1596,13 @@ function CommitIdentity({
         />
       </label>
       <div className="settings-actions">
-        <button type="submit" className="btn" data-ui="submit" disabled={busy}>
+        <button
+          data-event="settings.git-notebooks.author.save"
+          type="submit"
+          className="btn"
+          data-ui="submit"
+          disabled={busy}
+        >
           Save
         </button>
       </div>

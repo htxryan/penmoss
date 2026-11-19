@@ -192,6 +192,7 @@ export function ColourPicker({
         type="button"
         className="btn colour-trigger"
         data-ui="menu"
+        data-event="colour-picker.open"
         aria-label={`${label}: ${valueLabel}`}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -233,6 +234,7 @@ export function ColourPicker({
                   role="radio"
                   className="colour-swatch"
                   data-ui="option"
+                  data-event="colour-picker.swatch"
                   aria-checked={checked}
                   aria-label={each.label}
                   data-tip={each.label}

@@ -45,6 +45,7 @@ export function GitHubSignIn({
             {state.userCode}
           </code>
           <button
+            data-event="settings.github.sign-in.copy-code"
             type="button"
             className="btn"
             data-ui="item"
@@ -63,6 +64,7 @@ export function GitHubSignIn({
         </p>
         <div className="settings-actions">
           <button
+            data-event="settings.github.sign-in.cancel"
             type="button"
             className="btn quiet"
             data-ui="dismiss"
@@ -85,6 +87,7 @@ export function GitHubSignIn({
       ) : null}
       <div className="settings-actions">
         <button
+          data-event="settings.github.sign-in.start"
           type="button"
           className="btn primary"
           data-ui="item"

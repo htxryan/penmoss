@@ -26,6 +26,7 @@ export function TabsButton() {
       type="button"
       className="icon-btn tabs-button"
       data-ui="menu"
+      data-event="tabs.sheet.open"
       aria-label={`Tabs, ${count}`}
       aria-haspopup="dialog"
       aria-expanded={open}
@@ -102,6 +103,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
             type="button"
             className="icon-btn"
             data-ui="dismiss"
+            data-event="tabs.sheet.close"
             aria-label="Close Tabs"
             data-tip="Close Tabs"
             onClick={onClose}
@@ -116,6 +118,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
                 type="button"
                 className="tabs-sheet-tab"
                 data-ui="item"
+                data-event="tabs.sheet.tab"
                 aria-current={face.active ? 'true' : undefined}
                 data-testid="tabs-sheet-tab"
                 onClick={() => {
@@ -149,6 +152,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
                   type="button"
                   className="icon-btn"
                   data-ui="dismiss"
+                  data-event="tabs.sheet.close-tab"
                   aria-label={`Close ${face.title}`}
                   data-testid="tabs-sheet-close"
                   onClick={() => tabs.close(face.id)}

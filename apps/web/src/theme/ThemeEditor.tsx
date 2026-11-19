@@ -62,6 +62,7 @@ export function ThemeEditor({
             type="button"
             className="btn quiet"
             data-ui="item"
+            data-event="theme-editor.done"
             data-testid="theme-editor-done"
             onClick={onDone}
           >
@@ -81,6 +82,7 @@ export function ThemeEditor({
             type="button"
             className="btn primary"
             data-ui="item"
+            data-event="theme-editor.duplicate"
             onClick={() =>
               duplicateAndChoose(
                 workspace,
@@ -200,6 +202,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
               <label key={each} className="seg-option">
                 <input
                   type="radio"
+                  data-event="theme-editor.variant"
                   name={`${id}-variant`}
                   value={each}
                   checked={variant === each}
@@ -278,6 +281,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
               type="button"
               className="btn danger-fill"
               data-ui="submit"
+              data-event="theme-editor.delete.confirm"
               onClick={() => {
                 if (save.current.timer !== null) clearTimeout(save.current.timer);
                 save.current.timer = null;
@@ -292,6 +296,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
               type="button"
               className="btn"
               data-ui="dismiss"
+              data-event="theme-editor.delete.cancel"
               onClick={() => setConfirmDelete(false)}
             >
               Keep It
@@ -303,6 +308,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
               type="button"
               className="btn danger"
               data-ui="item"
+              data-event="theme-editor.delete"
               onClick={() => setConfirmDelete(true)}
             >
               <Icon name="trash" size={14} />

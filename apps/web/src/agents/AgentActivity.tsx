@@ -48,6 +48,7 @@ export function ActivityList({
           {entry.undoneAt ? null : (
             <div className="trash-actions">
               <button
+                data-event="agents.activity.undo"
                 type="button"
                 className="btn"
                 data-ui="item"

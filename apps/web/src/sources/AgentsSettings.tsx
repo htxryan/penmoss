@@ -99,6 +99,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
       <p className="muted nset-pointer">
         What agents changed, in every notebook, is on{' '}
         <a
+          data-event="settings.agents.activity-link"
           href={ACTIVITY_PATH}
           data-ui="item"
           data-testid="agents-activity-link"
@@ -164,6 +165,9 @@ function NotebookAgentsRow({
     >
       <div className="nset-fold-head">
         <button
+          data-event={
+            open ? 'settings.agents.notebook.collapse' : 'settings.agents.notebook.expand'
+          }
           type="button"
           className="nset-fold-toggle"
           data-ui="item"

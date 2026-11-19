@@ -159,6 +159,7 @@ function GitHubSection({
             >
               {!account.primary && account.login && token.makePrimary ? (
                 <button
+                  data-event="settings.github.make-primary"
                   type="button"
                   className="btn quiet"
                   data-ui="item"
@@ -171,6 +172,7 @@ function GitHubSection({
                 </button>
               ) : null}
               <button
+                data-event="settings.github.sign-out"
                 type="button"
                 className="btn quiet"
                 data-ui="dismiss"
@@ -228,6 +230,7 @@ function GitHubSection({
             />
           ) : (
             <button
+              data-event="settings.github.token.open"
               type="button"
               className="btn quiet"
               data-ui="item"
@@ -338,6 +341,7 @@ function TokenForm({
           data-testid="github-token-input"
         />
         <button
+          data-event="settings.github.token.save"
           type="submit"
           className="btn primary"
           data-ui="submit"
@@ -390,6 +394,7 @@ function FeedbackRow({ feedback }: { feedback: FeedbackService }) {
       }
     >
       <button
+        data-command="app.sendFeedback"
         type="button"
         className="btn quiet"
         data-ui="item"

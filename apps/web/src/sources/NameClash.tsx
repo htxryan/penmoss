@@ -26,6 +26,7 @@ export function NameClash({
       </p>
       <div className="name-clash-actions">
         <button
+          data-event="name-clash.use"
           type="button"
           className="btn primary"
           data-ui="item"
@@ -36,6 +37,7 @@ export function NameClash({
         </button>
         {onKeep ? (
           <button
+            data-event="name-clash.keep"
             type="button"
             className="btn"
             data-ui="item"
@@ -46,7 +48,13 @@ export function NameClash({
           </button>
         ) : null}
         {onCancel ? (
-          <button type="button" className="btn" data-ui="item" onClick={onCancel}>
+          <button
+            data-event="name-clash.cancel"
+            type="button"
+            className="btn"
+            data-ui="item"
+            onClick={onCancel}
+          >
             Cancel
           </button>
         ) : null}

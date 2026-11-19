@@ -76,6 +76,7 @@ export function Cheatsheet({
               type="button"
               className="icon-btn"
               data-ui="dismiss"
+              data-event="cheatsheet.close"
               aria-label="Close"
               data-tip="Close (Esc)"
               onClick={onClose}

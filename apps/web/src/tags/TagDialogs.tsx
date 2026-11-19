@@ -158,6 +158,7 @@ export function MergeDialog({
                 <label key={row.tag} className="tags-merge-option" data-on={picked === row.tag}>
                   <input
                     type="radio"
+                    data-event="tags.merge.target"
                     name="merge-target"
                     checked={picked === row.tag}
                     autoFocus={initialTarget === row.tag}
@@ -185,6 +186,7 @@ export function MergeDialog({
             >
               <input
                 type="radio"
+                data-event="tags.merge.keep"
                 name="merge-keep"
                 checked={!typed.trim() && picked === source}
                 autoFocus={index === 0}
@@ -200,6 +202,7 @@ export function MergeDialog({
           <label className="tags-merge-option" data-on={Boolean(typed.trim())}>
             <input
               type="radio"
+              data-event="tags.merge.keep"
               name="merge-keep"
               aria-label="A New Name"
               checked={Boolean(typed.trim())}
@@ -225,10 +228,22 @@ export function MergeDialog({
         </p>
       ) : null}
       <div className="confirm-actions">
-        <button type="button" className="btn" data-ui="dismiss" onClick={onCancel}>
+        <button
+          type="button"
+          className="btn"
+          data-ui="dismiss"
+          data-event="tags.merge.cancel"
+          onClick={onCancel}
+        >
           Cancel
         </button>
-        <button type="submit" className="btn primary" data-ui="submit" disabled={!ready || busy}>
+        <button
+          type="submit"
+          className="btn primary"
+          data-ui="submit"
+          data-event="tags.merge.submit"
+          disabled={!ready || busy}
+        >
           <Icon name="branch" size={14} />
           {busy ? 'Merging…' : 'Merge Tags'}
         </button>
@@ -284,10 +299,23 @@ export function DeleteDialog({
         </p>
       ) : null}
       <div className="confirm-actions">
-        <button type="button" className="btn" data-ui="dismiss" onClick={onCancel} autoFocus>
+        <button
+          type="button"
+          className="btn"
+          data-ui="dismiss"
+          data-event="tags.delete.cancel"
+          onClick={onCancel}
+          autoFocus
+        >
           Cancel
         </button>
-        <button type="submit" className="btn danger-fill" data-ui="submit" disabled={busy}>
+        <button
+          type="submit"
+          className="btn danger-fill"
+          data-ui="submit"
+          data-event="tags.delete.confirm"
+          disabled={busy}
+        >
           {busy ? 'Deleting…' : one ? 'Delete Tag' : 'Delete Tags'}
         </button>
       </div>

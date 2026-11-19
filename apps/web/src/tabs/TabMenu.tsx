@@ -39,18 +39,129 @@ export function TabMenu({
   const right = state.tabs.slice(at + 1).some((item) => !item.pinned);
   const pinnedQuick = note !== null && quickAccess.pinned(note);
 
-  const item = (
-    testId: string,
-    label: string,
-    icon: IconName,
-    run: () => void,
-    disabled = false,
-    keys: readonly string[] = [],
-    focusMoves = false,
-  ) => (
+  const rule = (key: string) => <div key={key} className="menu-sep" role="separator" />;
+
+  return (
+    <ContextMenu label="Tab" x={x} y={y} onClose={onClose}>
+      <Item
+        data-event="tabs.menu.close"
+        testId="tab-menu-close"
+        label="Close Tab"
+        icon="close"
+        run={() => tabs.close(id)}
+        // ⌘W closes the active tab; a pinned one stays (A1499).
+        keys={tab.pinned ? [] : closeKeys}
+        onClose={onClose}
+      />
+      <Item
+        data-event="tabs.menu.close-others"
+        testId="tab-menu-close-others"
+        label="Close Other Tabs"
+        icon="close"
+        run={() => tabs.closeOthers(id)}
+        disabled={!others}
+        onClose={onClose}
+      />
+      <Item
+        data-event="tabs.menu.close-right"
+        testId="tab-menu-close-right"
+        label="Close Tabs to the Right"
+        icon="close"
+        run={() => tabs.closeRight(id)}
+        disabled={!right}
+        onClose={onClose}
+      />
+      {rule('a')}
+      <Item
+        data-event={tab.pinned ? 'tabs.menu.unpin' : 'tabs.menu.pin'}
+        testId="tab-menu-pin"
+        label={tab.pinned ? 'Unpin Tab' : 'Pin Tab'}
+        icon="pin"
+        run={() => tabs.setPinned(id, !tab.pinned)}
+        onClose={onClose}
+      />
+      <Item
+        data-event="tabs.menu.duplicate"
+        testId="tab-menu-duplicate"
+        label="Duplicate Tab"
+        icon="copy"
+        run={() => tabs.duplicate(id)}
+        onClose={onClose}
+      />
+      <Item
+        data-event="tabs.menu.move-to-window"
+        testId="tab-menu-window"
+        label="Move to New Window"
+        icon="windowNew"
+        run={() => {
+          if (note === null) return;
+          const path = currentEntry(tab).path;
+          const heading = new URLSearchParams(path.split('?')[1] ?? '').get('heading');
+          openNoteWindow(note, heading);
+          tabs.close(id);
+        }}
+        disabled={note === null}
+        onClose={onClose}
+      />
+      {rule('b')}
+      <Item
+        data-event={pinnedQuick ? 'tabs.menu.quick-access.unpin' : 'tabs.menu.quick-access.pin'}
+        testId="tab-menu-quick-access"
+        label={pinnedQuick ? 'Unpin from Quick Access' : 'Pin to Quick Access'}
+        icon="star"
+        run={() => {
+          if (note !== null) quickAccess.toggle(note);
+        }}
+        disabled={note === null || !quickAccess.canChange}
+        onClose={onClose}
+      />
+      <Item
+        data-event="tabs.menu.reveal"
+        testId="tab-menu-reveal"
+        label="Reveal in Sidebar"
+        icon="folder"
+        run={() => {
+          if (note === null) return;
+          // Its tab first, which the tree reveals (a tab behind too); focus goes to the row.
+          tabs.activate(id);
+          revealNote(note);
+        }}
+        disabled={note === null}
+        focusMoves
+        onClose={onClose}
+      />
+    </ContextMenu>
+  );
+}
+
+/** One of the menu's items; `data-event` is its tracked id (PEN-137). */
+function Item({
+  'data-event': event,
+  testId,
+  label,
+  icon,
+  run,
+  disabled = false,
+  keys = [],
+  focusMoves = false,
+  onClose,
+}: {
+  readonly 'data-event': string;
+  readonly testId: string;
+  readonly label: string;
+  readonly icon: IconName;
+  readonly run: () => void;
+  readonly disabled?: boolean;
+  readonly keys?: readonly string[];
+  /** The item puts focus somewhere of its own, so not back on the tab. */
+  readonly focusMoves?: boolean;
+  readonly onClose: (giveFocusBack?: boolean) => void;
+}) {
+  return (
     <MenuItem
       icon={icon}
       data-testid={testId}
+      data-event={event}
       disabled={disabled}
       aria-keyshortcuts={ariaKeyShortcuts(keys) || undefined}
       // Named by aria-keyshortcuts: the keycaps stay out of the item's name.
@@ -68,76 +179,5 @@ export function TabMenu({
     >
       {label}
     </MenuItem>
-  );
-  const rule = (key: string) => <div key={key} className="menu-sep" role="separator" />;
-
-  return (
-    <ContextMenu label="Tab" x={x} y={y} onClose={onClose}>
-      {item(
-        'tab-menu-close',
-        'Close Tab',
-        'close',
-        () => tabs.close(id),
-        // ⌘W closes the active tab; a pinned one stays (A1499).
-        false,
-        tab.pinned ? [] : closeKeys,
-      )}
-      {item(
-        'tab-menu-close-others',
-        'Close Other Tabs',
-        'close',
-        () => tabs.closeOthers(id),
-        !others,
-      )}
-      {item(
-        'tab-menu-close-right',
-        'Close Tabs to the Right',
-        'close',
-        () => tabs.closeRight(id),
-        !right,
-      )}
-      {rule('a')}
-      {item('tab-menu-pin', tab.pinned ? 'Unpin Tab' : 'Pin Tab', 'pin', () =>
-        tabs.setPinned(id, !tab.pinned),
-      )}
-      {item('tab-menu-duplicate', 'Duplicate Tab', 'copy', () => tabs.duplicate(id))}
-      {item(
-        'tab-menu-window',
-        'Move to New Window',
-        'windowNew',
-        () => {
-          if (note === null) return;
-          const path = currentEntry(tab).path;
-          const heading = new URLSearchParams(path.split('?')[1] ?? '').get('heading');
-          openNoteWindow(note, heading);
-          tabs.close(id);
-        },
-        note === null,
-      )}
-      {rule('b')}
-      {item(
-        'tab-menu-quick-access',
-        pinnedQuick ? 'Unpin from Quick Access' : 'Pin to Quick Access',
-        'star',
-        () => {
-          if (note !== null) quickAccess.toggle(note);
-        },
-        note === null || !quickAccess.canChange,
-      )}
-      {item(
-        'tab-menu-reveal',
-        'Reveal in Sidebar',
-        'folder',
-        () => {
-          if (note === null) return;
-          // Its tab first, which the tree reveals (a tab behind too); focus goes to the row.
-          tabs.activate(id);
-          revealNote(note);
-        },
-        note === null,
-        [],
-        true,
-      )}
-    </ContextMenu>
   );
 }

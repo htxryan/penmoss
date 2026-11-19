@@ -32,6 +32,7 @@ function CopyBlock({ label, text, testId }: { label: string; text: string; testI
         <code>{text}</code>
       </pre>
       <button
+        data-event="settings.agents.copy"
         data-ui="item"
         type="button"
         className="btn"
@@ -86,6 +87,7 @@ export function AgentServer({ git }: { git: DesktopGit }) {
       </p>
       <label className="local-agent-channel">
         <input
+          data-event="settings.agents.server-channel"
           type="checkbox"
           role="switch"
           checked={channel}
@@ -209,6 +211,7 @@ export function GitLocalAgents({
                       it
                     </span>
                     <button
+                      data-event="settings.agents.local-agent.remove"
                       data-ui="item"
                       type="button"
                       className="btn"
@@ -233,6 +236,7 @@ export function GitLocalAgents({
                   </p>
                   <div className="settings-actions">
                     <button
+                      data-event="settings.agents.local-agent.remove-anyway"
                       data-ui="item"
                       type="button"
                       className="btn danger"
@@ -243,6 +247,7 @@ export function GitLocalAgents({
                       Remove Anyway
                     </button>
                     <button
+                      data-event="settings.agents.local-agent.keep"
                       data-ui="item"
                       type="button"
                       className="btn"
@@ -361,6 +366,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
         </span>
         <code className="muted">{cli.path}</code>
         <button
+          data-event="settings.agents.cli.manage"
           data-ui="item"
           type="button"
           className="btn"
@@ -407,6 +413,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
       <div className="settings-actions">
         {cli.state === 'other' ? null : (
           <button
+            data-event="settings.agents.cli.install"
             data-ui="item"
             type="button"
             className="btn primary"
@@ -429,6 +436,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
         )}
         {mine ? (
           <button
+            data-event="settings.agents.cli.remove"
             data-ui="item"
             type="button"
             className="btn"
@@ -441,7 +449,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
         ) : null}
       </div>
       <details className="local-agent-direct">
-        <summary>Without the Command</summary>
+        <summary data-event="settings.agents.cli.direct">Without the Command</summary>
         <CopyBlock label="Run the CLI As" text={cli.direct} testId="git-cli-direct" />
       </details>
       <p role="status" className="muted" data-testid="git-cli-message">

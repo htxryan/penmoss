@@ -336,6 +336,7 @@ export function IconPicker({
               role="tab"
               className="icon-picker-tab"
               data-ui="option"
+              data-event="icon-picker.tab"
               aria-selected={tab === each}
               tabIndex={tab === each ? 0 : -1}
               data-testid={`${testId}-tab-${each}`}

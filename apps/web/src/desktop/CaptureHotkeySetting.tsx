@@ -94,6 +94,11 @@ export function CaptureHotkeySetting() {
         </span>
       )}
       <button
+        data-event={
+          recording
+            ? 'settings.quick-capture.hotkey.cancel'
+            : 'settings.quick-capture.hotkey.change'
+        }
         type="button"
         className="btn quiet"
         data-ui="item"

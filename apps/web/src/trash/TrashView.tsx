@@ -132,6 +132,7 @@ export function TrashView() {
                       type="button"
                       className="btn danger-fill"
                       data-ui="submit"
+                      data-event="trash.delete-for-good.confirm"
                       disabled={busy !== null}
                       onClick={() =>
                         void run(entry.id, async () => {
@@ -147,6 +148,7 @@ export function TrashView() {
                       type="button"
                       className="btn quiet"
                       data-ui="dismiss"
+                      data-event="trash.delete-for-good.cancel"
                       onClick={() => setConfirming(null)}
                     >
                       Cancel
@@ -163,6 +165,7 @@ export function TrashView() {
                       type="button"
                       className="btn"
                       data-ui="item"
+                      data-event="trash.choose-folder"
                       disabled={busy !== null}
                       onClick={() => setPicking({ id: entry.id, title })}
                     >
@@ -173,6 +176,7 @@ export function TrashView() {
                       type="button"
                       className="btn quiet"
                       data-ui="dismiss"
+                      data-event="trash.choose-folder.cancel"
                       onClick={() => setNeedsPlace(null)}
                     >
                       Cancel
@@ -184,6 +188,7 @@ export function TrashView() {
                       type="button"
                       className="btn"
                       data-ui="item"
+                      data-event="trash.restore"
                       disabled={busy !== null}
                       aria-label={`Restore ${title}`}
                       onClick={() =>
@@ -201,6 +206,7 @@ export function TrashView() {
                       type="button"
                       className="btn quiet danger"
                       data-ui="item"
+                      data-event="trash.delete-for-good"
                       disabled={busy !== null}
                       aria-label={`Delete ${title} for Good`}
                       onClick={() => setConfirming(entry.id)}

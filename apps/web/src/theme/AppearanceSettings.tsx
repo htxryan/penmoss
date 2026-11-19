@@ -123,6 +123,7 @@ export function AppearanceSettings() {
                     <label key={item.mode} className="seg-option">
                       <input
                         type="radio"
+                        data-event="settings.appearance.mode"
                         name={`${id}-mode`}
                         value={item.mode}
                         checked={state.mode === item.mode}
@@ -159,6 +160,7 @@ export function AppearanceSettings() {
                 type="button"
                 className="btn"
                 data-ui="item"
+                data-event="settings.appearance.customize-theme"
                 data-testid="theme-customize"
                 onClick={customize}
               >
@@ -269,7 +271,14 @@ function ThemeCard({
 }) {
   return (
     <label className="theme-card" data-theme-id={theme.id}>
-      <input type="radio" name={name} value={theme.id} checked={checked} onChange={onChoose} />
+      <input
+        type="radio"
+        data-event="settings.appearance.theme"
+        name={name}
+        value={theme.id}
+        checked={checked}
+        onChange={onChoose}
+      />
       <ThemeSwatch theme={theme} />
       <span className="theme-card-foot">
         <span className="theme-card-name">

@@ -62,6 +62,7 @@ function GitSectionStatus({ source, status }: { source: GitSource; status: GitSy
   const tip = status.detail ? `${label}. ${status.detail}` : label;
   return (
     <a
+      data-event="sidebar.notebook.sync-status"
       className="sync-dot"
       data-ui="item"
       href={gitNotebookPath(source.id)}
@@ -182,6 +183,7 @@ export function SourceSection({
           </div>
         ) : (
           <button
+            data-event={collapsed ? 'sidebar.notebook.expand' : 'sidebar.notebook.collapse'}
             ref={toggle}
             type="button"
             className="sb-section-toggle sb-notebook-name"
@@ -217,6 +219,7 @@ export function SourceSection({
       {menu ? (
         <ContextMenu label={`Notebook ${source.name}`} x={menu.x} y={menu.y} onClose={closeMenu}>
           <MenuItem
+            data-event="sidebar.notebook.rename"
             icon="pencil"
             data-testid="notebook-rename"
             onClick={() => {
@@ -227,6 +230,7 @@ export function SourceSection({
             Rename Notebook
           </MenuItem>
           <MenuItem
+            data-event="sidebar.notebook.settings"
             icon="settings"
             data-testid="notebook-settings"
             onClick={() => {
