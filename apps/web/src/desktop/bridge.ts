@@ -565,6 +565,11 @@ export interface DesktopUpdateState {
    * answered (PEN-110); null otherwise.
    */
   readonly updatedFrom: string | null;
+  /**
+   * The version Penmoss ran before this one, kept after the notice is answered: where an Alpha
+   * build's "In this version" starts. Null when not known (absent from before it was added).
+   */
+  readonly previousVersion?: string | null;
 }
 
 export interface DesktopUpdates {

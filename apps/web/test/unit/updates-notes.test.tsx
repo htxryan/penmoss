@@ -136,8 +136,11 @@ describe('Settings → Updates: release notes', () => {
   });
 
   it('names each build on Alpha', async () => {
-    await show(state({ current: '0.2.1-alpha.1178', channel: 'alpha' }), FILE);
-    expect(headings(block('release-notes-current'))[0]).toBe('In this version (since 0.2.0)');
+    await show(
+      state({ current: '0.2.1-alpha.1178', channel: 'alpha', previousVersion: '0.2.1-alpha.1172' }),
+      FILE,
+    );
+    expect(headings(block('release-notes-current'))[0]).toBe('In this version (since build 1172)');
     expect(items(block('release-notes-current'))).toContain(
       'The window keeps its size. (build 1178)',
     );
@@ -169,8 +172,17 @@ describe('Settings → Updates: release notes', () => {
 
   it('counts builds on Alpha', async () => {
     window.history.replaceState(null, '', '/settings/updates');
-    await show(state({ current: '0.2.1-alpha.1178', channel: 'alpha' }), FILE);
+    await show(
+      state({ current: '0.2.1-alpha.1178', channel: 'alpha', previousVersion: '0.2.1-alpha.1172' }),
+      FILE,
+    );
     expect(block('whats-new-count')?.textContent).toBe('Build 1178 · 2 changes');
+  });
+
+  it('counts only an Alpha build’s own changes when the version before it is not known', async () => {
+    window.history.replaceState(null, '', '/settings/updates');
+    await show(state({ current: '0.2.1-alpha.1178', channel: 'alpha' }), FILE);
+    expect(block('whats-new-count')?.textContent).toBe('Build 1178 · 1 change');
   });
 
   it('links to GitHub until there is a file', async () => {

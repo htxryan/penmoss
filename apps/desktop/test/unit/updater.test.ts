@@ -546,9 +546,26 @@ describe('the notice after an update (PEN-110)', () => {
     expect((await updates.current()).updatedFrom).toBe('0.2.0');
     await updates.acknowledge();
     expect(states.at(-1)?.updatedFrom).toBeNull();
-    expect(await prefs()).toEqual({ auto: true, channel: 'stable', lastSeenVersion: '0.2.1' });
+    expect(await prefs()).toEqual({
+      auto: true,
+      channel: 'stable',
+      lastSeenVersion: '0.2.1',
+      previousVersion: '0.2.0',
+    });
     const again = updatesWith(fakeUpdater(), 'enabled', '0.2.1').updates;
     expect((await again.current()).updatedFrom).toBeNull();
+  });
+
+  it('keeps the version before this one after the notice is answered, for What’s New', async () => {
+    await writeFile(join(dir, 'updates.json'), '{"lastSeenVersion":"0.2.2-alpha.1470"}\n');
+    const { updates } = updatesWith(fakeUpdater(), 'enabled', '0.2.2-alpha.1491');
+    expect((await updates.current()).previousVersion).toBe('0.2.2-alpha.1470');
+    await updates.acknowledge();
+    const again = updatesWith(fakeUpdater(), 'enabled', '0.2.2-alpha.1491').updates;
+    expect((await again.current()).previousVersion).toBe('0.2.2-alpha.1470');
+    // The next update: the build answered is the one before it.
+    const next = updatesWith(fakeUpdater(), 'enabled', '0.2.2-alpha.1500').updates;
+    expect((await next.current()).previousVersion).toBe('0.2.2-alpha.1491');
   });
 
   it('places Alpha builds by their build, before their release', () => {

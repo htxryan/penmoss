@@ -144,9 +144,68 @@
       }
     },
     {
-      "name": "an Alpha build: everything since the last release, with builds",
+      "name": "an Alpha build: what changed since the build it updated from, with builds",
       "current": "0.2.2-alpha.1185",
       "updatedFrom": "0.2.2-alpha.1183",
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version (since build 1183)",
+          "builds": true,
+          "groups": [
+            {
+              "kind": "fixed",
+              "notes": [[1185, "Daily notes open right."]]
+            }
+          ]
+        },
+        "earlier": [
+          {
+            "title": "Earlier builds (since 0.2.1)",
+            "builds": true,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1183, "A What’s new screen."]]
+              }
+            ]
+          },
+          {
+            "title": "0.2.1",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1174, "Release notes in the app."]]
+              },
+              {
+                "kind": "improved",
+                "notes": [[1178, "Search ranks titles."]]
+              },
+              {
+                "kind": "fixed",
+                "notes": [[1172, "The keyboard stays down."]]
+              }
+            ]
+          },
+          {
+            "title": "0.2.0",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": "build 1185"
+      }
+    },
+    {
+      "name": "an Alpha build updated from before the last release: since that release",
+      "current": "0.2.2-alpha.1185",
+      "updatedFrom": "0.2.1-alpha.1176",
       "expected": {
         "status": "ok",
         "current": {
@@ -197,9 +256,9 @@
       }
     },
     {
-      "name": "an Alpha build before any release",
-      "current": "0.2.0-alpha.1168",
-      "updatedFrom": "0.1.9",
+      "name": "an Alpha build with no version before it: only its own notes",
+      "current": "0.2.2-alpha.1185",
+      "updatedFrom": null,
       "expected": {
         "status": "ok",
         "current": {
@@ -207,13 +266,104 @@
           "builds": true,
           "groups": [
             {
-              "kind": "new",
-              "notes": [[1165, "Quick capture."]]
+              "kind": "fixed",
+              "notes": [[1185, "Daily notes open right."]]
             }
           ]
         },
-        "earlier": [],
-        "notice": "build 1168"
+        "earlier": [
+          {
+            "title": "Earlier builds (since 0.2.1)",
+            "builds": true,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1183, "A What’s new screen."]]
+              }
+            ]
+          },
+          {
+            "title": "0.2.1",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1174, "Release notes in the app."]]
+              },
+              {
+                "kind": "improved",
+                "notes": [[1178, "Search ranks titles."]]
+              },
+              {
+                "kind": "fixed",
+                "notes": [[1172, "The keyboard stays down."]]
+              }
+            ]
+          },
+          {
+            "title": "0.2.0",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": null
+      }
+    },
+    {
+      "name": "an Alpha build before any release: only its own notes, the rest earlier",
+      "current": "0.2.0-alpha.1168",
+      "updatedFrom": "0.1.9",
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version",
+          "builds": true,
+          "groups": []
+        },
+        "earlier": [
+          {
+            "title": "Earlier builds",
+            "builds": true,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": null
+      }
+    },
+    {
+      "name": "an Alpha build before any release, updated from an earlier build",
+      "current": "0.2.0-alpha.1168",
+      "updatedFrom": "0.2.0-alpha.1166",
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version (since build 1166)",
+          "builds": true,
+          "groups": []
+        },
+        "earlier": [
+          {
+            "title": "Earlier builds",
+            "builds": true,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": null
       }
     },
     {

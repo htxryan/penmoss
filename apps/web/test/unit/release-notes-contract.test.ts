@@ -1,7 +1,7 @@
 /**
  * Which release notes each app shows (PEN-109): apps/android/contract/release-notes-v1.json holds
- * a notes file and cases, each with a version (and the one before it, for the notice after an
- * update) and what `notesView` and `updatedNotice` make of it for Android. The Mac's page uses
+ * a notes file and cases, each with a version (and the one before it, where an Alpha build's
+ * notes start and for the notice after an update) and what `notesView` and `updatedNotice` make of it for Android. The Mac's page uses
  * these functions directly; Android's Kotlin checks itself against this file, so both apps pick
  * the same notes.
  *
@@ -52,14 +52,29 @@ const CASES: ReadonlyArray<{
   },
   { name: 'the first stable release: everything up to it', current: '0.2.0', updatedFrom: null },
   {
-    name: 'an Alpha build: everything since the last release, with builds',
+    name: 'an Alpha build: what changed since the build it updated from, with builds',
     current: '0.2.2-alpha.1185',
     updatedFrom: '0.2.2-alpha.1183',
   },
   {
-    name: 'an Alpha build before any release',
+    name: 'an Alpha build updated from before the last release: since that release',
+    current: '0.2.2-alpha.1185',
+    updatedFrom: '0.2.1-alpha.1176',
+  },
+  {
+    name: 'an Alpha build with no version before it: only its own notes',
+    current: '0.2.2-alpha.1185',
+    updatedFrom: null,
+  },
+  {
+    name: 'an Alpha build before any release: only its own notes, the rest earlier',
     current: '0.2.0-alpha.1168',
     updatedFrom: '0.1.9',
+  },
+  {
+    name: 'an Alpha build before any release, updated from an earlier build',
+    current: '0.2.0-alpha.1168',
+    updatedFrom: '0.2.0-alpha.1166',
   },
   { name: 'updated to a stable version with notes', current: '0.2.1', updatedFrom: '0.2.0' },
   {
@@ -85,7 +100,8 @@ const block = (b: NotesBlock | null) =>
   };
 
 function expected(file: DesktopReleaseNotes | null, current: string, updatedFrom: string | null) {
-  const view = notesView(file, current, null, 'android');
+  // The version before this one is where an Alpha build's notes start, and the notice's.
+  const view = notesView(file, current, null, 'android', updatedFrom);
   return {
     status: view.status,
     current: view.status === 'ok' ? block(view.current) : null,

@@ -26,7 +26,16 @@ const openedToShow = () =>
  * show what changed (the notice after an update) and while an update is offered, which is what
  * the notes are for then. Its state lasts while the page is open, and is not kept.
  */
-export function WhatsNew({ current, offered }: { current: string; offered: string | null }) {
+export function WhatsNew({
+  current,
+  offered,
+  since = null,
+}: {
+  current: string;
+  offered: string | null;
+  /** The version Penmoss ran before this one, where an Alpha build's notes start. */
+  since?: string | null;
+}) {
   const file = useReleaseNotes();
   const [open, setOpen] = useState(() => openedToShow() || offered !== null);
   // An update found while the page is open: what it brings, unfolded.
@@ -36,7 +45,7 @@ export function WhatsNew({ current, offered }: { current: string; offered: strin
     if (offered !== null) setOpen(true);
   }
   const id = useId();
-  const view = notesView(file, current, offered);
+  const view = notesView(file, current, offered, 'mac', since);
   return (
     <details
       className="updates-whats-new"

@@ -443,12 +443,13 @@ internal fun WhatsNewRoute(onBack: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val store = remember(context) { app.penmoss.updates.ReleaseNotesStore.get(context) }
     val file by store.notes.collectAsStateWithLifecycle()
+    val since = remember(store) { store.previousVersion(BuildConfig.VERSION_NAME) }
     LaunchedEffect(store) {
         store.load()
         store.refresh(BuildConfig.VERSION_NAME)
     }
     WhatsNewScreen(
-        view = app.penmoss.updates.notesView(file, BuildConfig.VERSION_NAME),
+        view = app.penmoss.updates.notesView(file, BuildConfig.VERSION_NAME, since = since),
         onOpenReleases = {
             context.startActivity(
                 android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(app.penmoss.updates.RELEASES_URL))

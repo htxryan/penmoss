@@ -14,8 +14,10 @@ import kotlinx.serialization.json.intOrNull
  * holds the cases both check themselves against.
  *
  * - In this version: a stable release's own notes (after the stable release before it, up to
- *   it); an Alpha build's, everything since the last stable release, each with its build.
- * - Earlier versions: each stable release older than this version's own notes, newest first.
+ *   it); an Alpha build's since the version the phone ran before it, or only its own build's
+ *   when that isn't known, never further back than the last stable release, each with its build.
+ * - Earlier versions: an Alpha build's earlier builds since the last stable release, in one
+ *   block, then each stable release older than this version's own notes, newest first.
  */
 
 /** The `release-notes.json` schema this app reads; a newer file shows a link instead. */
@@ -68,31 +70,52 @@ fun groupNotes(notes: List<ReleaseNote>): List<NoteGroup> =
 private fun releaseBlock(file: NotesFile, release: NotesRelease, platform: String) =
     NotesBlock(release.version, false, groupNotes(range(file, before(file, release.build)?.build, release.build, platform)))
 
-/** What What's New shows for this app's [current] version. */
-fun notesView(file: NotesFile?, current: String, platform: String = "android"): NotesView {
+/**
+ * What What's New shows for this app's [current] version; [since] is the version the phone ran
+ * before it (null when not known), where an Alpha build's notes start.
+ */
+fun notesView(file: NotesFile?, current: String, platform: String = "android", since: String? = null): NotesView {
     if (file == null) return NotesView.None
     if (file.schema > NOTES_SCHEMA) return NotesView.Newer
     val here = buildFor(file, current)
     val alpha = alphaBuildOf(current) != null
     val base = here?.let { before(file, if (alpha) it + 1 else it) }
+    val start = if (here != null && alpha) alphaStart(file, here, base, since) else null
     val currentBlock = when {
         here == null -> null
-        alpha -> NotesBlock(
-            title = base?.let { "In this version (since ${it.version})" } ?: "In this version",
+        start != null -> NotesBlock(
+            title = start.second?.let { "In this version (since $it)" } ?: "In this version",
             builds = true,
-            groups = groupNotes(range(file, base?.build, here, platform)),
+            groups = groupNotes(range(file, start.first, here, platform)),
         )
         else -> releaseBlock(file, NotesRelease(current, "v$current", here, ""), platform).copy(title = "In this version")
     }
     val stable = file.releases.sortedBy { it.build }
-    val earlier = when {
+    val releases = when {
         here == null -> stable.reversed().map { releaseBlock(file, it, platform) }
         else -> {
             val floor = if (alpha) base?.build else before(file, here)?.build
             if (floor == null) emptyList() else stable.filter { it.build <= floor }.reversed().map { releaseBlock(file, it, platform) }
         }
     }
+    val builds = start?.let { groupNotes(range(file, base?.build, it.first, platform)) }.orEmpty()
+    val earlier = if (builds.isEmpty()) releases else {
+        listOf(NotesBlock(base?.let { "Earlier builds (since ${it.version})" } ?: "Earlier builds", true, builds)) + releases
+    }
     return NotesView.Ok(currentBlock, earlier)
+}
+
+/**
+ * Where an Alpha build's notes start, and what the heading says they are since: after [since]
+ * when it is an older build since the last stable release; after that release when [since] is
+ * from before it; otherwise after the build before this one, so only this build's own notes.
+ */
+private fun alphaStart(file: NotesFile, here: Int, base: NotesRelease?, since: String?): Pair<Int, String?> {
+    val previous = since?.takeIf { it.isNotEmpty() }?.let { buildFor(file, it) }
+    if (since != null && previous != null && previous < here) {
+        return if (base == null || previous > base.build) previous to versionLabel(since) else base.build to base.version
+    }
+    return (here - 1) to null
 }
 
 /**
@@ -101,7 +124,7 @@ fun notesView(file: NotesFile?, current: String, platform: String = "android"): 
  */
 fun updatedNotice(file: NotesFile?, current: String, updatedFrom: String?, platform: String = "android"): String? {
     if (updatedFrom.isNullOrEmpty()) return null
-    val view = notesView(file, current, platform) as? NotesView.Ok ?: return null
+    val view = notesView(file, current, platform, updatedFrom) as? NotesView.Ok ?: return null
     return if (view.current?.groups?.isNotEmpty() == true) versionLabel(current) else null
 }
 

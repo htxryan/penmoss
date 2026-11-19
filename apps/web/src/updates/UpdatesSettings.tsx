@@ -188,6 +188,7 @@ export function UpdatesSettings() {
       {state ? (
         <WhatsNew
           current={state.current}
+          since={state.updatedFrom ?? state.previousVersion ?? null}
           offered={offered || state.phase === 'downloading' ? state.version : null}
         />
       ) : null}

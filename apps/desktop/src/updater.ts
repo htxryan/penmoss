@@ -25,7 +25,10 @@
  *
  * After an update (PEN-110), `updates.json` remembers the last version Penmoss ran
  * (`lastSeenVersion`): a launch of a newer one reports `updatedFrom` until the person answers the
- * notice (`acknowledge`). A first launch with no record records its version silently.
+ * notice (`acknowledge`). A first launch with no record records its version silently. It also
+ * keeps the version before this one (`previousVersion`) after the notice is answered, so What's
+ * New on an Alpha build shows what changed since then, not everything since the last stable
+ * release.
  *
  * Only a signed build has an update feed (`app-update.yml`, written by electron-builder when the
  * build is signed, electron-builder.config.cjs): Squirrel.Mac refuses unsigned updates, so an
@@ -154,6 +157,8 @@ export class Updates {
   private checkedAt: number | null = null;
   /** The last version the person was told about (PEN-110); null until read. */
   private lastSeen: string | null = null;
+  /** The version Penmoss ran before this one, kept after the notice is answered; null if none. */
+  private previous: string | null = null;
   /** Install and Restart was asked for: restart as soon as the download is in. */
   private installing = false;
   /**
@@ -184,6 +189,8 @@ export class Updates {
       message: this.message,
       checkedAt: this.checkedAt,
       updatedFrom: this.lastSeen !== null && isNewer(current, this.lastSeen) ? this.lastSeen : null,
+      previousVersion:
+        this.previous !== null && isNewer(current, this.previous) ? this.previous : null,
     };
   }
 
@@ -366,21 +373,31 @@ export class Updates {
           auto?: unknown;
           channel?: unknown;
           lastSeenVersion?: unknown;
+          previousVersion?: unknown;
         };
         this.auto = value.auto === true;
         this.channel = value.channel === 'alpha' ? 'alpha' : 'stable';
         this.lastSeen = typeof value.lastSeenVersion === 'string' ? value.lastSeenVersion : null;
+        this.previous = typeof value.previousVersion === 'string' ? value.previousVersion : null;
       })
       .catch(() => {
         this.auto = false;
         this.channel = 'stable';
         this.lastSeen = null;
+        this.previous = null;
       })
       .then(async () => {
         // A first launch (or one from before PEN-110): this version is seen, and nothing shows.
+        // A launch of a newer version than the last seen: that one is the version before this.
         const current = this.options.version?.() ?? '';
-        if (this.lastSeen === null && current) {
-          this.lastSeen = current;
+        const first = this.lastSeen === null && current !== '';
+        const updated =
+          this.lastSeen !== null &&
+          this.previous !== this.lastSeen &&
+          isNewer(current, this.lastSeen);
+        if (first) this.lastSeen = current;
+        if (updated) this.previous = this.lastSeen;
+        if (first || updated) {
           await this.write().catch((error: unknown) =>
             this.options.log(
               `updates.json: ${error instanceof Error ? error.message : String(error)}`,
@@ -395,15 +412,23 @@ export class Updates {
     await mkdir(this.options.dir, { recursive: true });
     const path = join(this.options.dir, PREFS);
     const next = `${path}.${process.pid}.tmp`;
-    await writeFile(
-      next,
-      `${JSON.stringify({ auto: this.auto, channel: this.channel, lastSeenVersion: this.lastSeen ?? undefined })}\n`,
-    );
+    const prefs = {
+      auto: this.auto,
+      channel: this.channel,
+      lastSeenVersion: this.lastSeen ?? undefined,
+      previousVersion: this.previous ?? undefined,
+    };
+    await writeFile(next, `${JSON.stringify(prefs)}\n`);
     await rename(next, path);
   }
 
   private set(
-    patch: Partial<Omit<UpdateState, 'supported' | 'auto' | 'channel' | 'current' | 'updatedFrom'>>,
+    patch: Partial<
+      Omit<
+        UpdateState,
+        'supported' | 'auto' | 'channel' | 'current' | 'updatedFrom' | 'previousVersion'
+      >
+    >,
   ): void {
     if (patch.phase !== undefined) this.phase = patch.phase;
     if (patch.version !== undefined) this.version = patch.version;

@@ -5,8 +5,12 @@
  *
  * - The offered update: the notes after this build, up to the offered one.
  * - This version: a stable release's own range (after the stable release before it, up to it);
- *   an Alpha build's notes since the last stable release, up to it, each with its build.
- * - Earlier versions: each stable release older than this version, newest first.
+ *   an Alpha build's notes since the version Penmoss ran before it (`since`), or only its own
+ *   build's when that isn't known, each with its build. Never further back than the last stable
+ *   release: every Alpha build is a release of its own, so "this version" is not everything
+ *   since the last stable one (which, before the first stable release, is every note ever).
+ * - Earlier versions: an Alpha build's earlier builds since the last stable release, in one
+ *   block, then each stable release older than this version, newest first.
  *
  * Builds place themselves by build number (D65): an Alpha version says it (`X.Y.Z-alpha.N`), a
  * stable one is found in the file's `releases`.
@@ -131,13 +135,15 @@ export function versionLabel(version: string): string {
 
 /**
  * The notes Settings → Updates shows: `current` is this app's version, `offered` the newer one
- * an update check found (or null).
+ * an update check found (or null), and `since` the version Penmoss ran before this one (or null
+ * when it isn't known), where an Alpha build's "In this version" starts.
  */
 export function notesView(
   file: DesktopReleaseNotes | null,
   current: string,
   offered: string | null,
   platform: NotesPlatform = 'mac',
+  since: string | null = null,
 ): NotesView {
   if (!file) return { status: 'none' };
   if (file.schema > NOTES_SCHEMA) return { status: 'newer' };
@@ -146,39 +152,44 @@ export function notesView(
   const base = here === null ? null : before(file, alpha ? here + 1 : here);
 
   let currentBlock: NotesBlock | null = null;
-  if (here !== null) {
-    currentBlock = alpha
-      ? {
-          title: base ? `In this version (since ${base.version})` : 'In this version',
-          groups: groupNotes(range(file, base?.build ?? null, here, platform)),
-          builds: true,
-        }
-      : {
-          ...releaseBlock(
-            file,
-            { version: current, tag: `v${current}`, build: here, date: '' },
-            platform,
-          ),
-          title: 'In this version',
-        };
+  // An Alpha build's notes start after `from`; earlier builds since `base` are Earlier Versions.
+  let from: number | null = null;
+  if (here !== null && alpha) {
+    const start = alphaStart(file, here, base, since);
+    from = start.from;
+    currentBlock = {
+      title: start.label ? `In this version (since ${start.label})` : 'In this version',
+      groups: groupNotes(range(file, from, here, platform)),
+      builds: true,
+    };
+  } else if (here !== null) {
+    currentBlock = {
+      ...releaseBlock(
+        file,
+        { version: current, tag: `v${current}`, build: here, date: '' },
+        platform,
+      ),
+      title: 'In this version',
+    };
   }
 
   let offeredBlock: NotesBlock | null = null;
   const there = offered === null ? null : buildFor(file, offered);
   if (offered !== null && there !== null && (here === null || there > here)) {
     const offeredAlpha = alphaBuildOf(offered) !== null;
-    const from = here ?? before(file, there)?.build ?? null;
+    const start = here ?? before(file, there)?.build ?? null;
     offeredBlock = {
       title: `What's new in ${versionLabel(offered)}`,
-      groups: groupNotes(range(file, from, there, platform)),
+      groups: groupNotes(range(file, start, there, platform)),
       builds: offeredAlpha,
     };
   }
 
-  // Earlier versions: the stable releases before this version's own notes begin.
+  // Earlier versions: the stable releases before this version's own notes begin, and on Alpha
+  // the builds between the last stable release and this version's notes.
   const floor =
     here === null ? null : alpha ? (base?.build ?? null) : (before(file, here)?.build ?? null);
-  const earlier =
+  const releases =
     here === null
       ? stable(file)
           .reverse()
@@ -189,8 +200,42 @@ export function notesView(
             .filter((release) => release.build <= floor)
             .reverse()
             .map((release) => releaseBlock(file, release, platform));
+  const builds = from === null ? [] : groupNotes(range(file, base?.build ?? null, from, platform));
+  const earlier =
+    builds.length === 0
+      ? releases
+      : [
+          {
+            title: base ? `Earlier builds (since ${base.version})` : 'Earlier builds',
+            groups: builds,
+            builds: true,
+          },
+          ...releases,
+        ];
 
   return { status: 'ok', offered: offeredBlock, current: currentBlock, earlier };
+}
+
+/**
+ * Where an Alpha build's "In this version" starts: after the version Penmoss ran before it when
+ * that is an older build since the last stable release; after the last stable release when it
+ * ran one from before that; and otherwise (not known, or not older) after the build before this
+ * one, so only this build's own notes. `label` is what the heading says it is since, if anything.
+ */
+function alphaStart(
+  file: DesktopReleaseNotes,
+  here: number,
+  base: DesktopReleaseNotesRelease | null,
+  since: string | null,
+): { from: number; label: string | null } {
+  const previous = since ? buildFor(file, since) : null;
+  if (since && previous !== null && previous < here) {
+    if (base === null || previous > base.build) {
+      return { from: previous, label: versionLabel(since) };
+    }
+    return { from: base.build, label: base.version };
+  }
+  return { from: here - 1, label: null };
 }
 
 /**
@@ -204,7 +249,7 @@ export function updatedNotice(
   platform: NotesPlatform = 'mac',
 ): string | null {
   if (!updatedFrom) return null;
-  const view = notesView(file, current, null, platform);
+  const view = notesView(file, current, null, platform, updatedFrom);
   if (view.status !== 'ok' || !view.current || view.current.groups.length === 0) return null;
   return versionLabel(current);
 }

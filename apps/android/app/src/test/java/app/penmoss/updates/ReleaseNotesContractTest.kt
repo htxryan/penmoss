@@ -54,7 +54,7 @@ class ReleaseNotesContractTest {
                 JsonNull -> null
                 else -> parseNotes(f.toString())
             }
-            val view = notesView(file, current)
+            val view = notesView(file, current, since = from)
             val made = buildJsonObject {
                 put("status", when (view) { NotesView.None -> "none"; NotesView.Newer -> "newer"; is NotesView.Ok -> "ok" })
                 put("current", if (view is NotesView.Ok) block(view.current) else JsonNull)
