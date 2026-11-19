@@ -77,7 +77,7 @@ export function parseTheme(raw: unknown): ParsedTheme | null {
   let name = raw['name'].trim().slice(0, NAME_MAX);
   if (!name) {
     problems.push('name');
-    name = 'Untitled theme';
+    name = 'Untitled Theme';
   }
   const colours = (variant: 'light' | 'dark'): ThemeColours => {
     const source = isRecord(raw[variant]) ? raw[variant] : {};
@@ -134,7 +134,7 @@ export function duplicateTheme(source: Theme, id: string, name: string): Theme {
   return {
     ...source,
     id,
-    name: name.trim().slice(0, NAME_MAX) || 'Untitled theme',
+    name: name.trim().slice(0, NAME_MAX) || 'Untitled Theme',
     description: describeCustom(base),
     base: base.id,
   };

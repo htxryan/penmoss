@@ -324,9 +324,9 @@ The emulator walk-through is in [`docs/evidence/t40/p1/p1b.md`](evidence/t40/p1/
 
 1. **Duplicate.** Choose Nord, then Appearance → Duplicate Nord: the editor opens on "Nord copy", which is chosen. The web shows Nord copy in its theme list and uses it after its next sync.
 2. **Preview.** The strip at the top shows "Garden plan" in the theme. Change Accent in its sheet (try the square, then a hex such as `#d8b04a`) and tap Use colour: the preview, the editor's own controls and the rest of the app change at once; the web follows within a pass.
-3. **Contrast.** That yellow accent fails WCAG AA on the light page: the summary says how many pairs fail, and a warning shows beside Page background and the other colours it concerns. The theme still saves (A419).
+3. **Contrast.** That yellow accent fails WCAG AA on the light page: the summary says how many pairs fail, and a warning shows beside Page Background and the other colours it concerns. The theme still saves (A419).
 4. **Dark.** Tap Dark: the preview shows the dark variant, and the screen says which one the app is showing. A change there leaves the light variant alone.
-5. **Type and layout.** Choose Serif (book) as the note font and a narrower note width: the preview's text changes, and on the web a note uses both.
+5. **Type and layout.** Choose Serif (Book) as the note font and a narrower note width: the preview's text changes, and on the web a note uses both.
 6. **Both at once.** With the theme open on the phone in airplane mode, change its Accent on the phone and its Text colour on the web. Turn airplane mode off: both edits are kept (A416, A417).
 7. **Delete.** Menu → Delete this theme → Delete theme: the editor closes, Appearance chooses Nord again, and the theme leaves the web's list. Delete a theme on the web while the phone has it open: on the phone's next pass the editor says the theme was deleted, and an edit the phone had not sent is not kept.
 8. **One WebView.** Open a note, go back, and open the theme editor at once: the preview opens once the note's WebView has gone (A418).
