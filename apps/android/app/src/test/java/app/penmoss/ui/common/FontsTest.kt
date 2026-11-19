@@ -81,8 +81,7 @@ class FontsTest {
         compose.setContent {
             PenmossTheme {
                 AppearanceScreen(
-                    "system", systemDark = false, themes = emptyList(), chosen = "penmoss", fullWidth = false, editorWidth = 52,
-                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {}, fonts = fonts,
+                    "system", systemDark = false, themes = emptyList(), chosen = "penmoss", enabled = true, onMode = {}, onTheme = {}, onBack = {}, fonts = fonts,
                 )
             }
         }
