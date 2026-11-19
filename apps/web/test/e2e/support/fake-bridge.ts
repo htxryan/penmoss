@@ -25,6 +25,7 @@ import type {
   DesktopAnalytics,
   DesktopAnalyticsStatus,
   MenuCommandEvent,
+  PageEvent,
   PenmossDesktop,
 } from '../../../src/desktop/bridge';
 import type { Page, PageQuery, StateName, StoredEvent } from '@penmoss/core/analytics';
@@ -91,6 +92,8 @@ declare global {
     __penmossMeaningChanged?: (status: unknown) => void;
     __penmossFake?: FakeBridgeState;
     __penmossFakeAnalytics?: FakeAnalyticsState;
+    /** The page's memory sink (declared again here: the site's typecheck reads this file alone). */
+    __penmossAnalytics?: PageEvent[];
   }
 }
 
