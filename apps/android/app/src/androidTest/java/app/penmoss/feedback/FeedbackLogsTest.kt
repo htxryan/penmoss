@@ -74,6 +74,7 @@ class FeedbackLogsTest {
             }
             val opened = SystemClock.uptimeMillis() + 10_000
             var inSight = false
+            var seen = "no block"
             do {
                 instrumentation.waitForIdleSync()
                 SystemClock.sleep(250)
@@ -83,12 +84,16 @@ class FeedbackLogsTest {
                     if (block != null) {
                         // Laid out at its full height: bring the whole block into the form's view.
                         val view = scroller(block)?.boundsInWindow
-                        inSight = view != null && block.boundsInWindow.top >= view.top && block.boundsInWindow.bottom <= view.bottom
+                        // Its unclipped place: boundsInWindow is Rect.Zero while it is below the fold.
+                        val top = block.positionInWindow.y
+                        val bottom = top + block.size.height
+                        inSight = view != null && top >= view.top && bottom <= view.bottom
+                        seen = "block $top..$bottom in $view"
                         if (!inSight) scrollIntoView(block)
                     }
                 }
             } while (!inSight && SystemClock.uptimeMillis() < opened)
-            assertTrue("the logs' block is not in sight", inSight)
+            assertTrue("the logs' block is not in sight: $seen", inSight)
             scenario.onActivity { activity ->
                 val text = ScreenTree.nodes(activity.window.decorView).single { it.config.getOrNull(SemanticsProperties.TestTag) == "feedbackLogsText" }
                 assertEquals(logs.joinToString("\n"), text.config.getOrNull(SemanticsProperties.Text).orEmpty().joinToString("") { it.text })
@@ -110,10 +115,13 @@ class FeedbackLogsTest {
         return parent
     }
 
-    /** Scrolls the form so [node] sits in the upper part of the window. */
+    /**
+     * Scrolls the form so [node] sits in the upper part of the window. It reads the node's unclipped
+     * position, since its boundsInWindow is clipped to the window, and Rect.Zero when out of sight.
+     */
     private fun scrollIntoView(node: SemanticsNode) {
         val scroller = scroller(node) ?: return
-        val by = node.boundsInWindow.top - scroller.boundsInWindow.top - scroller.boundsInWindow.height / 4
+        val by = node.positionInWindow.y - scroller.boundsInWindow.top - scroller.boundsInWindow.height / 4
         if (by > 0) scroller.config[SemanticsActions.ScrollBy].action?.invoke(0f, by)
     }
 }

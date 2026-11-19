@@ -75,7 +75,12 @@ async function names(page: Page, where: string): Promise<Name[]> {
   const texts = await settings
     .locator('legend, .lf-row-label, .lf-sub-name, summary, .chip')
     .evaluateAll((elements) =>
-      elements.map((element) => [element.tagName.toLowerCase(), element.textContent ?? '']),
+      elements.map((element) => {
+        // A summary's hint (Privacy's Advanced) is a sentence beside its title, so not read.
+        const label = element.cloneNode(true) as Element;
+        for (const hint of label.querySelectorAll('.lf-sub-hint')) hint.remove();
+        return [element.tagName.toLowerCase(), label.textContent ?? ''];
+      }),
     );
   for (const [tag, text] of texts) {
     const name = text!.replace(/\s+/g, ' ').trim();
