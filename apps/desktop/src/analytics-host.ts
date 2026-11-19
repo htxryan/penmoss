@@ -64,8 +64,10 @@ export interface HostOptions {
   /** Prune this often (ms); and once, `firstPruneMs` after starting. */
   readonly pruneEveryMs?: number;
   readonly firstPruneMs?: number;
-  /** Rows per prune batch (core's PRUNE_BATCH unless a test says). */
+  /** Rows the prune's first DELETE takes (core's PRUNE_BATCH unless a test says). */
   readonly pruneBatch?: number;
+  /** How long one prune step runs before it yields (core's STEP_MS unless a test says). */
+  readonly pruneStepMs?: number;
   readonly now?: () => number;
   /** Told of a failure that is kept from main (a busy database, a prune that failed). */
   readonly onError?: (message: string) => void;
@@ -217,11 +219,12 @@ export class StoreHost {
     }
   }
 
-  /** Removes what falls outside the limits, yielding between batches; one prune at a time. */
+  /** Removes what falls outside the limits, yielding between steps; one prune at a time. */
   async prune(limits: EventLimits = this.limits, now = this.now()): Promise<number> {
     while (this.pruning) await this.pruning.catch(() => 0);
     const running = this.store.prune(limits, now, {
       batch: this.options.pruneBatch ?? PRUNE_BATCH,
+      ...(this.options.pruneStepMs === undefined ? {} : { stepMs: this.options.pruneStepMs }),
       between: () => {
         this.flush();
         return yieldNow();

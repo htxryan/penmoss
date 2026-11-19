@@ -6,8 +6,9 @@
  *
  * It stays fast at the largest limits (800,000 events): every query the clients run is served
  * by an index, counts by state are kept by triggers, the viewer pages by keyset on (at, id), and
- * pruning deletes PRUNE_BATCH rows at a time, yielding after each batch, each WAL checkpoint and
- * each slice of the vacuum, so no step holds the database long.
+ * pruning runs in time-boxed steps (STEP_MS each): small DELETEs whose size follows how long the
+ * last took, a WAL checkpoint after each step, and the vacuum a few pages at a time, yielding
+ * after every step, so no step holds the database long.
  */
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -80,34 +81,82 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 `;
 
 /**
- * Rows per DELETE when pruning. Each batch is one statement in its own transaction; at 800,000
- * events on a busy Mac 500 rows took 1–3 ms, where 5,000 took 12–20 ms and up to 190 ms, and
- * 800,000 → 5,000 takes about 2 s (analytics-store.budget.test.ts).
+ * How long one prune step may run before it yields, in ms: a step keeps taking small DELETEs (or
+ * vacuum slices) while it is under this, so a step ends within it plus one chunk. The chunks
+ * size themselves to CHUNK_SHARE of it, so a chunk that runs long on a busy disk makes the next
+ * one smaller. A fixed 500-row DELETE took 1–3 ms on a Mac but up to 118 ms on CI.
  */
-export const PRUNE_BATCH = 500;
+export const STEP_MS = 8;
+/** The share of a step one chunk aims at: four chunks a step at the chunk's usual pace. */
+const CHUNK_SHARE = 0.25;
+/** Rows the first DELETE of a prune takes; later ones follow how long the last took. */
+export const PRUNE_BATCH = 200;
+/** The smallest and largest DELETE. */
+const MIN_ROWS = 16;
+const MAX_ROWS = 4000;
+/** Free pages the first vacuum slice gives back, and the bounds of later ones. */
+export const VACUUM_PAGES = 16;
+const MIN_PAGES = 1;
+const MAX_PAGES = 512;
 
 /**
  * Pages of WAL that trigger a checkpoint (1 MB at SQLite's 4 KB pages) outside a prune. While a
- * prune runs this connection's auto-checkpoint is off, so no batch's commit writes the WAL back
+ * prune runs this connection's auto-checkpoint is off, so no chunk's commit writes the WAL back
  * and syncs it (on CI's disk such a commit took 100–270 ms where the rest took 3 ms); the prune
- * checkpoints between batches instead, as steps of their own.
+ * checkpoints after every step instead, as a step of its own, so each checkpoint writes back
+ * only the few pages one step wrote.
  */
 const WAL_CHECKPOINT_PAGES = 250;
-/** Delete batches between a prune's checkpoints: each writes about 10–20 pages of WAL. */
-const CHECKPOINT_EVERY = 4;
-/** Free pages one vacuum step gives back; each step is followed by a checkpoint. */
-export const VACUUM_PAGES = 64;
 /** Bytes the WAL file is cut back to once it has been checkpointed. */
 const WAL_SIZE_LIMIT = 4 * 1024 * 1024;
 
-/** One step of a prune: a batch's DELETE, a checkpoint of the WAL, or a slice of the vacuum. */
+/** One step of a prune: time-boxed DELETEs, a checkpoint of the WAL, or a slice of the vacuum. */
 export type PruneStep = 'delete' | 'checkpoint' | 'vacuum';
 
+/** What a step did: the rows its DELETEs removed, or the pages its vacuum gave back. */
+export interface PruneStepDone {
+  readonly rows?: number;
+  readonly pages?: number;
+  /** How many DELETEs or vacuum slices the step ran. */
+  readonly chunks?: number;
+}
+
 export interface PruneOptions {
-  /** Rows per DELETE. */
+  /** Rows the first DELETE takes; later ones follow how long the last took. */
   readonly batch?: number;
+  /** How long one step may run before it yields, in ms (STEP_MS). */
+  readonly stepMs?: number;
+  /** The clock steps and chunks are timed by, in ms (tests pass a fake one). */
+  readonly clock?: () => number;
   /** Called after every step; an async store yields here. */
-  readonly between?: (step: PruneStep) => void | Promise<void>;
+  readonly between?: (step: PruneStep, done: PruneStepDone) => void | Promise<void>;
+}
+
+/**
+ * The size of the next chunk, from how long the last took: aims each chunk at a share of the
+ * step, growing at most twice and shrinking at most to a quarter at a time, within its bounds.
+ */
+export class ChunkSizer {
+  private current: number;
+
+  constructor(
+    first: number,
+    private readonly target: number,
+    private readonly min: number,
+    private readonly max: number,
+  ) {
+    this.current = Math.min(max, Math.max(min, Math.round(first)));
+  }
+
+  get size(): number {
+    return this.current;
+  }
+
+  /** Records that a chunk of `size` took `ms`. */
+  took(size: number, ms: number): void {
+    const ratio = ms <= 0 ? 2 : Math.min(2, Math.max(0.25, this.target / ms));
+    this.current = Math.min(this.max, Math.max(this.min, Math.round(size * ratio)));
+  }
 }
 
 interface Row {
@@ -406,16 +455,20 @@ export class AnalyticsStore {
   }
 
   /**
-   * Deletes a batch at a time, then gives back the free pages, yielding after every step: each
-   * batch's DELETE alone in its own transaction, a WAL checkpoint every few batches, and the
-   * vacuum a few pages at a time with a checkpoint after each. Auto-checkpoint is off meanwhile,
-   * so a checkpoint never lands inside a batch's commit. Returns how many events went.
+   * Deletes the oldest events in time-boxed steps, then gives back the free pages, yielding after
+   * every step. A delete step runs small DELETEs, each its own transaction and sized by how long
+   * the last took, until it has run `stepMs` or nothing is left; a checkpoint of the few WAL
+   * pages it wrote follows it as a step of its own; the vacuum runs the same way, a few pages a
+   * slice. Auto-checkpoint is off meanwhile, so a checkpoint never lands inside a chunk's commit.
+   * Returns how many events went.
    */
   private *pruneSteps(
     limits: Pick<Limits, 'events.days' | 'events.max'>,
     now: number,
-    batch: number,
-  ): Generator<PruneStep, number> {
+    options: Omit<PruneOptions, 'between'>,
+  ): Generator<[PruneStep, PruneStepDone], number> {
+    const stepMs = options.stepMs ?? STEP_MS;
+    const clock = options.clock ?? (() => performance.now());
     const before = this.size();
     let removed = 0;
     const cutoff = now - limits['events.days'] * DAY;
@@ -425,57 +478,81 @@ export class AnalyticsStore {
     const byCap = this.statement(
       'DELETE FROM events WHERE id IN (SELECT id FROM events ORDER BY at, id LIMIT ?)',
     );
+    const rows = new ChunkSizer(
+      options.batch ?? PRUNE_BATCH,
+      stepMs * CHUNK_SHARE,
+      MIN_ROWS,
+      MAX_ROWS,
+    );
+    // One DELETE of at most `rows.size` rows, timed; how many it removed and whether it found
+    // fewer than it asked for.
+    const chunk = (run: (limit: number) => number, most = Infinity) => {
+      const size = Math.min(rows.size, most);
+      const started = clock();
+      const changes = this.transaction(() => run(size));
+      // Only a full chunk of the sizer's own size says how long that size takes.
+      if (changes === size && size === rows.size) rows.took(size, clock() - started);
+      removed += changes;
+      return { changes, last: changes < size };
+    };
     this.db.exec('PRAGMA wal_autocheckpoint = 0');
     try {
-      let unchecked = 0;
-      const deleted = function* (this: AnalyticsStore): Generator<PruneStep, void> {
-        yield 'delete';
-        unchecked += 1;
-        if (unchecked >= CHECKPOINT_EVERY) {
-          unchecked = 0;
-          this.checkpoint();
-          yield 'checkpoint';
-        }
-      }.bind(this);
-      for (;;) {
-        const changes = this.transaction(() => Number(byAge.run(cutoff, batch).changes));
-        removed += changes;
-        if (changes === 0) break;
-        yield* deleted();
-        if (changes < batch) break;
-      }
-      for (;;) {
-        const excess = this.size() - limits['events.max'];
-        if (excess <= 0) break;
-        const changes = this.transaction(() => Number(byCap.run(Math.min(batch, excess)).changes));
-        removed += changes;
-        // A count that drifted from the rows must not loop forever.
-        if (changes === 0) break;
-        yield* deleted();
-      }
-      if (unchecked > 0) {
+      // By age, then by cap: each step runs chunks until its time is up or nothing is left.
+      for (let done = false; !done;) {
+        const started = clock();
+        let step = 0;
+        let chunks = 0;
+        do {
+          const { changes, last } = chunk((limit) => Number(byAge.run(cutoff, limit).changes));
+          step += changes;
+          chunks += 1;
+          done = last;
+        } while (!done && clock() - started < stepMs);
+        if (step === 0) break;
+        yield ['delete', { rows: step, chunks }];
         this.checkpoint();
-        yield 'checkpoint';
+        yield ['checkpoint', {}];
       }
-      if (before > 0 && removed / before > 0.1) yield* this.vacuumSteps();
+      for (let done = false; !done;) {
+        const started = clock();
+        let step = 0;
+        let chunks = 0;
+        do {
+          const excess = this.size() - limits['events.max'];
+          if (excess <= 0) {
+            done = true;
+            break;
+          }
+          const { changes } = chunk((limit) => Number(byCap.run(limit).changes), excess);
+          step += changes;
+          chunks += 1;
+          // A count that drifted from the rows must not loop forever.
+          if (changes === 0) done = true;
+        } while (!done && clock() - started < stepMs);
+        if (step === 0) break;
+        yield ['delete', { rows: step, chunks }];
+        this.checkpoint();
+        yield ['checkpoint', {}];
+      }
+      if (before > 0 && removed / before > 0.1) yield* this.vacuumSteps(stepMs, clock);
     } finally {
       this.db.exec(`PRAGMA wal_autocheckpoint = ${WAL_CHECKPOINT_PAGES}`);
     }
     return removed;
   }
 
-  /** Removes what falls outside the limits, `batch` rows at a time; how many went. */
+  /** Removes what falls outside the limits in time-boxed steps, yielding after each; how many went. */
   async prune(
     limits: Pick<Limits, 'events.days' | 'events.max'>,
     now: number,
     options: PruneOptions = {},
   ): Promise<number> {
-    const steps = this.pruneSteps(limits, now, options.batch ?? PRUNE_BATCH);
+    const steps = this.pruneSteps(limits, now, options);
     try {
       for (;;) {
         const step = steps.next();
         if (step.done) return step.value;
-        await options.between?.(step.value);
+        await options.between?.(...step.value);
       }
     } finally {
       // A `between` that threw leaves the generator open: close it, so auto-checkpoint is back.
@@ -487,9 +564,9 @@ export class AnalyticsStore {
   pruneNow(
     limits: Pick<Limits, 'events.days' | 'events.max'>,
     now: number,
-    batch = PRUNE_BATCH,
+    options: Omit<PruneOptions, 'between'> = {},
   ): number {
-    const steps = this.pruneSteps(limits, now, batch);
+    const steps = this.pruneSteps(limits, now, options);
     for (;;) {
       const step = steps.next();
       if (step.done) return step.value;
@@ -510,19 +587,38 @@ export class AnalyticsStore {
       .freelist_count;
   }
 
-  /** Gives back the free pages VACUUM_PAGES at a time, checkpointing after each slice. */
-  private *vacuumSteps(): Generator<PruneStep, void> {
+  /**
+   * Gives back the free pages in time-boxed steps: each runs `incremental_vacuum` slices, sized
+   * by how long the last took, until it has run `stepMs` or none are left, and a checkpoint
+   * follows each step.
+   */
+  private *vacuumSteps(
+    stepMs: number,
+    clock: () => number,
+  ): Generator<[PruneStep, PruneStepDone], void> {
+    const pages = new ChunkSizer(VACUUM_PAGES, stepMs * CHUNK_SHARE, MIN_PAGES, MAX_PAGES);
     try {
       let free = this.freePages();
-      while (free > 0) {
-        this.db.exec(`PRAGMA incremental_vacuum(${VACUUM_PAGES})`);
-        yield 'vacuum';
+      let stuck = false;
+      while (free > 0 && !stuck) {
+        const started = clock();
+        const was = free;
+        let chunks = 0;
+        do {
+          const size = Math.min(pages.size, free);
+          const slice = clock();
+          this.db.exec(`PRAGMA incremental_vacuum(${size})`);
+          pages.took(size, clock() - slice);
+          chunks += 1;
+          const left = this.freePages();
+          // A vacuum that freed nothing (another process holds the database) stops here.
+          stuck = left >= free;
+          free = left;
+        } while (!stuck && free > 0 && clock() - started < stepMs);
+        if (free >= was) break;
+        yield ['vacuum', { pages: was - free, chunks }];
         this.checkpoint();
-        yield 'checkpoint';
-        const left = this.freePages();
-        // A vacuum that freed nothing (another process holds the database) stops here.
-        if (left >= free) break;
-        free = left;
+        yield ['checkpoint', {}];
       }
     } catch {
       // Another process holds the database; the next prune tries again.
@@ -531,7 +627,7 @@ export class AnalyticsStore {
 
   /** Gives back the free pages after a large prune, all at once (tests and maintenance). */
   vacuum(): void {
-    const steps = this.vacuumSteps();
+    const steps = this.vacuumSteps(STEP_MS, () => performance.now());
     while (!steps.next().done) {
       // Each step runs as the loop asks for it.
     }

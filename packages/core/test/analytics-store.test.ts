@@ -1,8 +1,8 @@
 /**
  * The local usage record (PEN-137, N10, AC10, AC12, AC16, AC17): one SQLite database shared by
  * the Mac app, the CLI and the MCP server. Events are stored once, change state as the answer
- * does, leave oldest first, page newest first by keyset, and are pruned by age and by cap a
- * batch at a time. Wall-clock budgets at 800,000 events are in analytics-store.budget.test.ts.
+ * does, leave oldest first, page newest first by keyset, and are pruned by age and by cap in
+ * time-boxed steps. Wall-clock budgets at 800,000 events are in analytics-store.budget.test.ts.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,6 +14,7 @@ import {
   AnalyticsStore,
   wireEvent,
   type PruneStep,
+  type PruneStepDone,
   type StoredEvent,
 } from '../src/analytics/node/store';
 
@@ -319,23 +320,73 @@ describe('limits', () => {
     expect(store.outside({ 'events.days': 360, 'events.max': 800_000 }, NOW)).toBe(0);
   });
 
-  it('prunes by age, oldest first, a batch at a time, yielding after every step', async () => {
-    const steps: PruneStep[] = [];
+  it('prunes by age, oldest first, a step at a time, yielding after every step', async () => {
+    const steps: Array<[PruneStep, PruneStepDone]> = [];
+    // No time per step, and a clock that never moves: one DELETE a step, each twice the last.
     const removed = await store.prune({ 'events.days': 7, 'events.max': 800_000 }, NOW, {
       batch: 30,
-      between: (step) => {
-        steps.push(step);
+      stepMs: 0,
+      clock: () => 0,
+      between: (step, done) => {
+        steps.push([step, done]);
       },
     });
     expect(removed).toBe(200);
-    // Seven DELETEs (six of 30 and one of 20), a checkpoint after every fourth and one after the
-    // last, then the vacuum a slice at a time, each slice checkpointed.
-    const deletes = (n: number) => Array.from({ length: n }, () => 'delete');
-    expect(steps.slice(0, 9)).toEqual([...deletes(4), 'checkpoint', ...deletes(3), 'checkpoint']);
-    expect(new Set(steps.slice(9))).toEqual(new Set(['vacuum', 'checkpoint']));
-    expect(steps.filter((step) => step === 'delete')).toHaveLength(7);
+    // Each DELETE step is followed by a checkpoint of what it wrote, then the vacuum a slice at
+    // a time, each slice checkpointed.
+    expect(steps.slice(0, 6)).toEqual([
+      ['delete', { rows: 30, chunks: 1 }],
+      ['checkpoint', {}],
+      ['delete', { rows: 60, chunks: 1 }],
+      ['checkpoint', {}],
+      ['delete', { rows: 110, chunks: 1 }],
+      ['checkpoint', {}],
+    ]);
+    const vacuum = steps.slice(6);
+    expect(vacuum.length).toBeGreaterThan(0);
+    vacuum.forEach(([step], i) => expect(step).toBe(i % 2 ? 'checkpoint' : 'vacuum'));
+    expect(steps.filter(([step]) => step === 'delete')).toHaveLength(3);
     expect(store.size()).toBe(800);
     expect(store.page({ limit: 1000 }).events.at(-1)!.seq).toBe(200);
+  });
+
+  it('runs DELETEs in a step until its time is up', async () => {
+    // Each read of the clock moves it 1 ms, so a DELETE takes 1 ms: three fit in an 8 ms step.
+    let now = 0;
+    const steps: PruneStepDone[] = [];
+    const removed = await store.prune({ 'events.days': 360, 'events.max': 500 }, NOW, {
+      batch: 16,
+      stepMs: 8,
+      clock: () => (now += 1),
+      between: (step, done) => {
+        if (step === 'delete') steps.push(done);
+      },
+    });
+    expect(removed).toBe(500);
+    expect(steps.slice(0, -1).every(({ chunks }) => chunks === 3)).toBe(true);
+    expect(steps.reduce((sum, { rows }) => sum + rows!, 0)).toBe(500);
+    // A DELETE under its share of the step (2 ms) makes the next one larger.
+    expect(steps[0]!.rows).toBe(16 + 32 + 64);
+  });
+
+  it('makes the next DELETE smaller after a slow one', async () => {
+    // Each read of the clock moves it 10 ms: every DELETE runs over its step, so a step is one
+    // DELETE, and each is a quarter of the last, down to 16 rows.
+    let now = 0;
+    const rows: number[] = [];
+    const removed = await store.prune({ 'events.days': 7, 'events.max': 800_000 }, NOW, {
+      batch: 128,
+      clock: () => (now += 10),
+      between: (step, done) => {
+        if (step === 'delete') {
+          expect(done.chunks).toBe(1);
+          rows.push(done.rows!);
+        }
+      },
+    });
+    expect(removed).toBe(200);
+    expect(rows.slice(0, 4)).toEqual([128, 32, 16, 16]);
+    expect(rows.reduce((sum, n) => sum + n, 0)).toBe(200);
   });
 
   it('prunes by cap, keeping the newest', async () => {
@@ -350,7 +401,7 @@ describe('limits', () => {
   });
 
   it('prunes by age, then by cap', () => {
-    expect(store.pruneNow({ 'events.days': 7, 'events.max': 500 }, NOW, 128)).toBe(500);
+    expect(store.pruneNow({ 'events.days': 7, 'events.max': 500 }, NOW, { batch: 128 })).toBe(500);
     expect(store.size()).toBe(500);
     expect(store.outside({ 'events.days': 7, 'events.max': 500 }, NOW)).toBe(0);
     expect(store.pruneNow({ 'events.days': 7, 'events.max': 500 }, NOW)).toBe(0);
@@ -366,14 +417,7 @@ describe('limits', () => {
         order.push('resumed');
       },
     });
-    expect(order.slice(0, 6)).toEqual([
-      'delete',
-      'resumed',
-      'delete',
-      'resumed',
-      'checkpoint',
-      'resumed',
-    ]);
+    expect(order.slice(0, 4)).toEqual(['delete', 'resumed', 'checkpoint', 'resumed']);
     expect(order.filter((_, i) => i % 2 === 1).every((each) => each === 'resumed')).toBe(true);
     expect(store.size()).toBe(200);
   });

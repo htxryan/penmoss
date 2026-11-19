@@ -191,8 +191,10 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
         ListItem(
             headlineContent = { Text(AnalyticsCopy.text("privacy.logs.label")) },
             supportingContent = { Text(AnalyticsCopy.text("privacy.logs.hint", "days" to ui.limits.logsDays)) },
+            // Outlined, as Reset My Analytics ID and the Mac's bordered Show Log File beside the
+            // same row, so the two platforms read alike.
             trailingContent = {
-                TextButton(onClick = trackedClick("privacy.share-log-file", actions.onShareLog), modifier = Modifier.testTag("privacyShareLog").trackedId("privacy.share-log-file")) {
+                OutlinedButton(onClick = trackedClick("privacy.share-log-file", actions.onShareLog), modifier = Modifier.testTag("privacyShareLog").trackedId("privacy.share-log-file")) {
                     Text(AnalyticsCopy.text("privacy.logs.button"))
                 }
             },

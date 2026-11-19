@@ -97,7 +97,10 @@ class PrivacySettingsTest {
             screen.text("How long and how much Penmoss keeps on this phone")
             assertEquals("Closed", screen.tagged("privacyAdvanced").config.getOrNull(SemanticsProperties.StateDescription))
             assertFalse(screen.has(AnalyticsCopy.text("limits.usage.title")))
-            screen.reveal(screen.tagged("privacyResetId"), margin = 200f)
+            // Share Log File is outlined like Reset My Analytics ID above it, as the Mac's
+            // bordered Show Log File: the shot holds both.
+            screen.reveal(screen.tagged("privacyShareLog"), margin = 200f)
+            assertTrue(screen.tagged("privacyResetId").boundsInWindow.top < screen.tagged("privacyShareLog").boundsInWindow.top)
             SystemClock.sleep(2_000)
             ProofShot.take()
         }

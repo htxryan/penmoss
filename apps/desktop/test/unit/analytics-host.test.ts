@@ -130,8 +130,9 @@ describe('the record’s worker', () => {
     expect(await client.outside({ 'events.days': 360, 'events.max': 500 }, NOW)).toBe(0);
   });
 
-  it('prunes a batch at a time, answering calls between batches', async () => {
-    const { client, store } = connect({ pruneBatch: 50 });
+  it('prunes a step at a time, answering calls between steps', async () => {
+    // One DELETE a step, so the prune takes several steps.
+    const { client, store } = connect({ pruneBatch: 50, pruneStepMs: 0 });
     store.insert(
       inserted(
         Array.from({ length: 1000 }, (_, i) => event(i, NOW - 30 * DAY + i)),

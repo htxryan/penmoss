@@ -5,7 +5,6 @@
  */
 import {
   bars,
-  eventLabel,
   formatNumber,
   funnel,
   hideTip,
@@ -19,9 +18,21 @@ import {
   type Series,
   type TreeNode,
 } from './charts';
+import {
+  FIRSTRUN_LABELS,
+  commandName,
+  displayName,
+  eventName,
+  kindName,
+  titled,
+  type EventName,
+} from './names';
 
 type Row = Record<string, string | number | null>;
-type Cell = string | number;
+/** A display name with the id it was recorded by: the id is a muted line under it. */
+type Cell = string | number | EventName;
+
+const named = (value: Cell): value is EventName => typeof value === 'object';
 
 interface TableSpec {
   readonly columns: readonly string[];
@@ -88,24 +99,6 @@ const AGENT_CLIENT_LABELS: Record<string, string> = {
 };
 /** Who ran a CLI command or MCP tool: an agent client by name, else the actor. */
 const agentLabel = (key: string) => AGENT_CLIENT_LABELS[key] ?? ACTOR_LABELS[key] ?? titled(key);
-/** The first run's screens (FIRSTRUN_STEPS), as the funnel names them. */
-const FIRSTRUN_LABELS: Record<string, string> = {
-  welcome: 'Welcome',
-  goal: 'Choose a Goal',
-  way: 'Choose a Way',
-  github: 'Sign In with GitHub',
-  accounts: 'Choose an Account',
-  create: 'Create a Repository',
-  list: 'Choose a Repository',
-  branch: 'Choose a Branch',
-  repo: 'Open a Repository',
-  folder: 'Choose a Folder',
-  url: 'Enter a Git URL',
-  'git-missing': 'Git Missing',
-  name: 'Name the Notebook',
-  setup: 'Set Up',
-  consent: 'Consent Answered',
-};
 const STEP_RESULT_LABELS: Record<string, string> = { done: 'Done', back: 'Back', failed: 'Failed' };
 /** A CLI command's or MCP tool's results, in order: blue, then orange, aqua, and the rest. */
 const RESULTS = [
@@ -116,44 +109,6 @@ const RESULTS = [
   { key: 'failed', label: 'Failed', color: 'var(--s5)' },
 ] as const;
 
-/** Words kept lower case inside a Title Case label (A938). */
-const SHORT_WORDS = new Set([
-  'a',
-  'an',
-  'the',
-  'and',
-  'or',
-  'but',
-  'nor',
-  'as',
-  'at',
-  'by',
-  'for',
-  'from',
-  'in',
-  'into',
-  'of',
-  'on',
-  'per',
-  'to',
-  'with',
-]);
-
-/** An id ("git-missing", "notFound") as a Title Case label ("Git Missing", "Not Found"). */
-function titled(id: string): string {
-  const words = id
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .split(/[\s_.-]+/)
-    .filter(Boolean)
-    .map((word) => word.toLowerCase());
-  return words
-    .map((word, i) =>
-      i > 0 && i < words.length - 1 && SHORT_WORDS.has(word)
-        ? word
-        : word[0]!.toUpperCase() + word.slice(1),
-    )
-    .join(' ');
-}
 const SOURCE_LABELS: Record<string, string> = {
   key: 'Key',
   palette: 'Palette',
@@ -286,12 +241,22 @@ const distinct = (rows: readonly Row[], key: string) => [
 const resizers = new Set<() => void>();
 new ResizeObserver(() => resizers.forEach((draw) => draw())).observe(document.documentElement);
 
+/** The table as CSV: a named column is followed by its ids ("Command", "Command ID"). */
 function csvOf(table: TableSpec): string {
-  const cell = (value: Cell) => {
+  const cell = (value: string | number) => {
     const text = String(value);
     return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
-  return [table.columns, ...table.rows].map((row) => row.map(cell).join(',')).join('\n') + '\n';
+  const withIds = table.columns.map((_, i) => table.rows.some((row) => named(row[i]!)));
+  const head = table.columns.flatMap((column, i) =>
+    withIds[i] ? [column, `${column} ID`] : [column],
+  );
+  const body = table.rows.map((row) =>
+    row.flatMap((value, i) =>
+      named(value) ? [value.title, value.id] : withIds[i] ? [value, ''] : [value],
+    ),
+  );
+  return [head, ...body].map((row) => row.map(cell).join(',')).join('\n') + '\n';
 }
 
 function tableElement(spec: TableSpec, caption: string): HTMLTableElement {
@@ -315,8 +280,16 @@ function tableElement(spec: TableSpec, caption: string): HTMLTableElement {
     const tr = body.insertRow();
     for (const value of row) {
       const td = tr.insertCell();
-      td.textContent = typeof value === 'number' ? value.toLocaleString('en-GB') : value;
-      if (typeof value === 'number') td.className = 'num';
+      if (named(value)) {
+        // The display name, and the id it was recorded by muted under it.
+        const id = document.createElement('span');
+        id.className = 'cell-id';
+        id.textContent = value.id;
+        td.append(value.title, ...(value.id ? [id] : []));
+      } else {
+        td.textContent = typeof value === 'number' ? value.toLocaleString('en-GB') : value;
+        if (typeof value === 'number') td.className = 'num';
+      }
     }
   }
   return table;
@@ -575,7 +548,11 @@ function commands(answer: Answer): HTMLElement[] {
       installs: Number(own[0]?.['installs'] ?? 0),
     };
   });
-  const commandRows: BarRow[] = top.map(({ name, parts }) => ({ label: name, parts }));
+  const commandRows: BarRow[] = top.map(({ name, parts }) => ({
+    label: displayName('command', name),
+    id: name,
+    parts,
+  }));
   const installsColumn: BarColumn = {
     label: 'Installs',
     values: top.map(({ installs }) => formatNumber(installs)),
@@ -588,7 +565,9 @@ function commands(answer: Answer): HTMLElement[] {
   for (const row of unused) {
     const chip = document.createElement('li');
     chip.className = 'chip';
-    chip.textContent = eventLabel(`${String(row['kind'])}:${String(row['name'])}`);
+    const event = eventName(`${String(row['kind'])}:${String(row['name'])}`);
+    chip.textContent = event.title;
+    chip.title = event.id;
     chips.append(chip);
   }
   return [
@@ -611,7 +590,12 @@ function commands(answer: Answer): HTMLElement[] {
       legend,
       table: {
         columns: ['Command', 'Runs', 'Installs', ...legend.map((s) => s.label)],
-        rows: top.map(({ name, runs, installs, parts }) => [name, runs, installs, ...parts]),
+        rows: top.map(({ name, runs, installs, parts }) => [
+          commandName(name),
+          runs,
+          installs,
+          ...parts,
+        ]),
       },
       empty: rows.length === 0,
     }),
@@ -627,7 +611,8 @@ function commands(answer: Answer): HTMLElement[] {
             suffix: '%',
             series: [{ key: 'share', label: 'Key Share', color: 'var(--s1)' }],
             rows: shortcuts.map((row) => ({
-              label: `${String(row['name'])} · ${String(row['keys'])}`,
+              label: `${displayName('command', String(row['name']))} · ${String(row['keys'])}`,
+              id: String(row['name']),
               parts: [Number(row['key_share'])],
               note: `${formatNumber(Number(row['key_runs']))} runs`,
             })),
@@ -658,7 +643,7 @@ function commands(answer: Answer): HTMLElement[] {
           'Rebound',
         ],
         rows: shortcuts.map((row) => [
-          String(row['name']),
+          commandName(String(row['name'])),
           String(row['keys']),
           String(row['default_keys'] || 'None'),
           Number(row['key_runs']),
@@ -679,7 +664,10 @@ function commands(answer: Answer): HTMLElement[] {
       custom: chips,
       table: {
         columns: ['Kind', 'Name'],
-        rows: unused.map((row) => [titled(String(row['kind'])), String(row['name'])]),
+        rows: unused.map((row) => [
+          titled(String(row['kind'])),
+          eventName(`${String(row['kind'])}:${String(row['name'])}`),
+        ]),
       },
       empty: unused.length === 0,
     }),
@@ -756,6 +744,17 @@ function firstRun(answer: Answer): HTMLElement[] {
 function paths(answer: Answer): HTMLElement[] {
   const options = (answer['options'] as { event: string; events: number }[] | undefined) ?? [];
   const events = options.map((option) => option.event);
+  // The box shows display names; a name two events share says which kind each is ("Command
+  // Palette · Dialog"), so each maps back to its event.
+  const titles = options.map((option) => eventName(option.event).title);
+  const shownAs = new Map(
+    options.map((option) => {
+      const { title } = eventName(option.event);
+      const shared = titles.indexOf(title) !== titles.lastIndexOf(title);
+      return [option.event, shared ? `${title} · ${kindName(option.event)}` : title];
+    }),
+  );
+  const byShown = new Map([...shownAs].map(([event, shown]) => [shown, event]));
   const picker = document.createElement('div');
   picker.className = 'picker';
   const label = document.createElement('label');
@@ -764,7 +763,8 @@ function paths(answer: Answer): HTMLElement[] {
   const input = document.createElement('input');
   input.id = 'start';
   input.type = 'search';
-  input.value = state.start;
+  input.value = shownAs.get(state.start) ?? eventName(state.start).title;
+  input.title = eventName(state.start).id;
   input.setAttribute('list', 'start-options');
   input.autocomplete = 'off';
   input.spellcheck = false;
@@ -773,8 +773,8 @@ function paths(answer: Answer): HTMLElement[] {
   // Each catalogued event, the most frequent first, with how often it occurred in the period.
   for (const option of options) {
     const node = document.createElement('option');
-    node.value = option.event;
-    node.label = `${eventLabel(option.event)} · ${option.events.toLocaleString('en-GB')} ${
+    node.value = shownAs.get(option.event) ?? option.event;
+    node.label = `${eventName(option.event).id} · ${option.events.toLocaleString('en-GB')} ${
       option.events === 1 ? 'time' : 'times'
     }`;
     list.append(node);
@@ -786,8 +786,10 @@ function paths(answer: Answer): HTMLElement[] {
     ? `${chosen.events.toLocaleString('en-GB')} ${chosen.events === 1 ? 'time' : 'times'} in the period`
     : '';
   input.addEventListener('change', () => {
-    if (events.includes(input.value) && input.value !== state.start) {
-      state.start = input.value;
+    // A display name, or an id typed as recorded ("command:note.new").
+    const event = byShown.get(input.value) ?? input.value;
+    if (events.includes(event) && event !== state.start) {
+      state.start = event;
       void render();
     }
   });
@@ -796,8 +798,14 @@ function paths(answer: Answer): HTMLElement[] {
   const root = answer['tree'] as TreeNode | null;
   const flat: Cell[][] = [];
   const walk = (node: TreeNode, trail: string[]) => {
-    const here = [...trail, eventLabel(node.event)];
-    if (trail.length > 0) flat.push([here.join(' → '), node.sessions, node.share]);
+    const here = [...trail, eventName(node.event).title];
+    if (trail.length > 0) {
+      flat.push([
+        { title: here.join(' → '), id: eventName(node.event).id },
+        node.sessions,
+        node.share,
+      ]);
+    }
     node.children.forEach((child) => walk(child, here));
   };
   if (root) walk(root, []);
@@ -806,9 +814,11 @@ function paths(answer: Answer): HTMLElement[] {
     card({
       id: 'paths',
       wide: true,
-      title: `What Comes After ${eventLabel(state.start)}`,
+      title: `What Comes After ${eventName(state.start).title}`,
       note: `The three most common next events, three steps deep, over the last ${String(answer['days'])} days. A path fewer than 5 sessions took isn't shown.`,
-      chart: root ? (width) => tree({ label: `Paths after ${state.start}`, root }, width) : null,
+      chart: root
+        ? (width) => tree({ label: `Paths after ${eventName(state.start).title}`, root }, width)
+        : null,
       table: { columns: ['Path', 'Sessions', 'Share %'], rows: flat },
       empty: !root,
     }),
@@ -945,7 +955,8 @@ function agents(answer: Answer): HTMLElement[] {
     kind: String(rows.find((row) => row['name'] === name)?.['kind']),
   }));
   const nameRows: BarRow[] = names.map(({ name, kind }) => ({
-    label: `${kindLabel(kind)} · ${name}`,
+    label: `${kindLabel(kind)} · ${displayName(kind, name)}`,
+    id: name,
     parts: keys.map((k) =>
       rows
         .filter((row) => row['name'] === name && agentOf(row) === k)
@@ -958,7 +969,8 @@ function agents(answer: Answer): HTMLElement[] {
   const rateRows = rows.map((row) => {
     const calls = Number(row['calls']);
     return {
-      label: `${kindLabel(row['kind'])} · ${String(row['name'])} · ${agentLabel(String(row['agent']))}`,
+      label: `${kindLabel(row['kind'])} · ${displayName(String(row['kind']), String(row['name']))} · ${agentLabel(String(row['agent']))}`,
+      id: String(row['name']),
       calls,
       counts: RESULTS.map((result) => Number(row[result.key] ?? 0)),
     };
@@ -984,7 +996,7 @@ function agents(answer: Answer): HTMLElement[] {
         columns: ['Kind', 'Name', 'Agent', 'Calls', 'Installs'],
         rows: rows.map((row) => [
           kindLabel(row['kind']),
-          String(row['name']),
+          { title: displayName(String(row['kind']), String(row['name'])), id: String(row['name']) },
           agentLabel(String(row['agent'])),
           Number(row['calls']),
           Number(row['installs']),
@@ -1005,6 +1017,7 @@ function agents(answer: Answer): HTMLElement[] {
             series: RESULTS,
             rows: rateRows.map((row) => ({
               label: row.label,
+              id: row.id,
               parts: row.counts.map((count) => share(count, row.calls)),
             })),
             columns: [{ label: 'Calls', values: rateRows.map((row) => formatNumber(row.calls)) }],
@@ -1017,7 +1030,7 @@ function agents(answer: Answer): HTMLElement[] {
       table: {
         columns: ['Name', 'Calls', ...RESULTS.map((result) => `${result.label} %`)],
         rows: rateRows.map((row) => [
-          row.label,
+          { title: row.label, id: row.id },
           row.calls,
           ...row.counts.map((count) => share(count, row.calls)),
         ]),

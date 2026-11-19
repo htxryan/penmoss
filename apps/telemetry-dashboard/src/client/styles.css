@@ -667,3 +667,19 @@ th.num {
   font-size: var(--text-xs);
   white-space: nowrap;
 }
+
+/* An event's id under its display name (review round 2): muted, in a tooltip and a table cell. */
+.tip-id,
+.cell-id {
+  color: var(--ink-2);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--text-xs, 11px);
+}
+
+.tip-id {
+  margin: -2px 0 4px;
+}
+
+.cell-id {
+  display: block;
+}

@@ -5,6 +5,7 @@
  * fills, hairline grid; text in text colours, never a series colour. Every value a tooltip shows
  * is also in the card's table.
  */
+import { eventName } from './names';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -47,6 +48,9 @@ export interface Series {
   readonly color: string;
   readonly values: readonly number[];
 }
+
+/** A tooltip's heading: its text, or a display name with its id in a muted line under it. */
+export type TipHead = string | { readonly title: string; readonly id: string };
 
 export interface TipLine {
   readonly value: string;
@@ -128,7 +132,7 @@ export function tipPosition(
 export function showTip(
   x: number,
   y: number,
-  title: string,
+  title: TipHead,
   lines: readonly TipLine[],
   place?: Placement,
 ): void {
@@ -136,8 +140,14 @@ export function showTip(
   node.replaceChildren();
   const head = document.createElement('div');
   head.className = 'tip-title';
-  head.textContent = title;
+  head.textContent = typeof title === 'string' ? title : title.title;
   node.append(head);
+  if (typeof title !== 'string' && title.id) {
+    const id = document.createElement('div');
+    id.className = 'tip-id';
+    id.textContent = title.id;
+    node.append(id);
+  }
   for (const line of lines) {
     const row = document.createElement('div');
     row.className = 'tip-row';
@@ -172,16 +182,25 @@ export function hideTip(): void {
 }
 
 /** Hover and keyboard focus on `target` both show the same tooltip, placed by `place`. */
+/** A heading as one line of text: "New Note (note.new)". */
+function headText(title: TipHead): string {
+  return typeof title === 'string'
+    ? title
+    : title.id
+      ? `${title.title} (${title.id})`
+      : title.title;
+}
+
 function hoverable(
   target: SVGElement,
-  title: string,
+  title: TipHead,
   lines: () => readonly TipLine[],
   place: () => Placement = () => ({ avoid: target.getBoundingClientRect() }),
 ): void {
   target.setAttribute('tabindex', '0');
   target.setAttribute(
     'aria-label',
-    [title, ...lines().map((l) => `${l.label} ${l.value}`)].join(', '),
+    [headText(title), ...lines().map((l) => `${l.label} ${l.value}`)].join(', '),
   );
   target.classList.add('hit');
   target.addEventListener('pointermove', (event) =>
@@ -504,7 +523,10 @@ export function stackedArea(spec: TimeChart, width: number): SVGSVGElement {
 }
 
 export interface BarRow {
+  /** Its display name ("New Note"). */
   readonly label: string;
+  /** The id it was recorded by ("note.new"), muted in its tooltip. */
+  readonly id?: string;
   /** One part per series, in the series' order. */
   readonly parts: readonly number[];
   /** Said after the total in the tooltip ("12 installs"). */
@@ -538,6 +560,9 @@ export interface BarsSpec {
 
 /** Below this width a bar chart leaves its extra columns to the table. */
 const COLUMNS_FROM = 520;
+
+/** A bar's tooltip heading: its name, and its id muted under it when it has one. */
+const barHead = (row: BarRow): TipHead => (row.id ? { title: row.label, id: row.id } : row.label);
 
 /** Rows of horizontal bars, each split into its series, the total at the tip. */
 export function bars(spec: BarsSpec, width: number): SVGSVGElement {
@@ -588,7 +613,7 @@ export function bars(spec: BarsSpec, width: number): SVGSVGElement {
       { x: frame.left - 8, y: yMid + 4, class: 'label', 'text-anchor': 'end' },
       [truncate(row.label, labelWidth)],
     );
-    label.append(svg('title', {}, [row.label]));
+    label.append(svg('title', {}, [headText(barHead(row))]));
     chart.append(label);
     let left = frame.left;
     const shown = row.parts.map((value, i) => ({ value, i })).filter((p) => p.value > 0);
@@ -635,7 +660,7 @@ export function bars(spec: BarsSpec, width: number): SVGSVGElement {
     });
     hoverable(
       hit,
-      row.label,
+      barHead(row),
       () => [
         ...(spec.series.length > 1
           ? spec.series.map((s, i) => ({
@@ -786,6 +811,7 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
         }),
       );
     }
+    const name = eventName(node.event);
     const box = svg('g', { class: 'node' });
     const value =
       level === 0
@@ -805,7 +831,7 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
       // One line: the event, then its share at the right end.
       box.append(
         svg('text', { x: x + pad, y: y + 5, class: 'node-label' }, [
-          truncate(eventLabel(node.event), boxWidth - 2 * pad - 110, LABEL_CHAR),
+          truncate(name.title, boxWidth - 2 * pad - 110, LABEL_CHAR),
         ]),
         svg(
           'text',
@@ -816,13 +842,13 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
     } else {
       box.append(
         svg('text', { x: x + pad, y: y - 3, class: 'node-label' }, [
-          truncate(eventLabel(node.event), nodeWidth - 2 * pad, LABEL_CHAR),
+          truncate(name.title, nodeWidth - 2 * pad, LABEL_CHAR),
         ]),
         svg('text', { x: x + pad, y: y + 14, class: 'node-value' }, [value]),
       );
     }
-    const trail = [...path, eventLabel(node.event)];
-    hoverable(box, trail.join(' → '), () => [
+    const trail = [...path, name.title];
+    hoverable(box, { title: trail.join(' → '), id: name.id }, () => [
       { value: fullNumber(node.sessions), label: 'sessions' },
       ...(level > 0
         ? [{ value: `${node.share}%`, label: 'of the sessions at the step before' }]
@@ -838,16 +864,6 @@ export function tree(spec: { label: string; root: TreeNode }, width: number): SV
   };
   place(spec.root, 0, frame.top, null, []);
   return chart;
-}
-
-/** "command:note.new" → "note.new"; "screen:note" → "note (screen)"; "end" → "Session Ended". */
-export function eventLabel(event: string): string {
-  if (event === 'end') return 'Session Ended';
-  const at = event.indexOf(':');
-  if (at < 0) return event;
-  const kind = event.slice(0, at);
-  const name = event.slice(at + 1);
-  return kind === 'command' ? name : `${name} (${kind})`;
 }
 
 /** About how wide a character of a node's 13px label is, in px. */

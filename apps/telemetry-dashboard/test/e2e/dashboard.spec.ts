@@ -118,7 +118,15 @@ async function checkCard(page: Page, title: string): Promise<void> {
   });
   const csv = text.trim().split('\n');
   const header = await table.locator('thead th').allTextContents();
-  expect(csv[0]).toBe(header.map((cell) => (/[",]/.test(cell) ? `"${cell}"` : cell)).join(','));
+  // A column of display names with their ids muted under them has its ids in a column of their
+  // own in the CSV, beside it ("Command", "Command ID").
+  const withIds = await table
+    .locator('tbody tr')
+    .first()
+    .locator('td')
+    .evaluateAll((cells) => cells.map((cell) => cell.querySelector('.cell-id') !== null));
+  const csvHeader = header.flatMap((cell, i) => (withIds[i] ? [cell, `${cell} ID`] : [cell]));
+  expect(csv[0]).toBe(csvHeader.map((cell) => (/[",]/.test(cell) ? `"${cell}"` : cell)).join(','));
   expect(csv.length - 1).toBe(await table.locator('tbody tr').count());
   await toggle.click();
   await expect(table).toBeHidden();
@@ -249,7 +257,25 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
   const topCommands = page.getByRole('region', { name: 'Top 25 Commands', exact: true });
   await topCommands.scrollIntoViewIfNeeded();
   await expect(topCommands.locator('svg.chart .col-head')).toHaveText(['Installs', 'Runs']);
+  // Each command by its name in the shortcut contract, never its id; the id is in the tooltip
+  // and muted under the name in the table.
+  const commandLabels = topCommands.locator('svg.chart text.label');
+  await expect(commandLabels).toContainText(['New Note']);
+  // The label's own text, without the <title> that holds its id for a pointer's hover.
+  const visible = (labels: typeof commandLabels) =>
+    labels.evaluateAll((nodes) => nodes.map((node) => node.firstChild?.textContent ?? ''));
+  for (const label of await visible(commandLabels)) expect(label).not.toMatch(/\w\.\w/);
+  await topCommands.locator('svg.chart .hit').first().hover({ force: true });
+  await expect(page.getByRole('tooltip').locator('.tip-id')).toHaveText(/^[a-z]+\.[A-Za-z.]+$/);
+  await page.mouse.move(0, 0);
+  await topCommands.getByRole('button', { name: 'Table: Top 25 Commands' }).click();
+  const newNote = topCommands
+    .locator('tbody tr')
+    .filter({ has: page.locator('.cell-id', { hasText: /^note\.new$/ }) });
+  await expect(newNote.locator('td').first()).toHaveText('New Notenote.new');
+  await expect(newNote.locator('.cell-id')).toHaveText('note.new');
   await hold(page);
+  await topCommands.getByRole('button', { name: 'Table: Top 25 Commands' }).click();
   // Shortcuts: each combination's default and how many installs rebound it.
   const shortcuts = page.getByRole('region', { name: 'Shortcuts', exact: true });
   await shortcuts.scrollIntoViewIfNeeded();
@@ -259,13 +285,18 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
     'Key Share',
   ]);
   await expect(shortcuts.locator('svg.chart')).toContainText('Alt+N');
+  for (const label of await visible(shortcuts.locator('svg.chart text.label'))) {
+    expect(label).not.toMatch(/\w\.\w/);
+  }
   await hold(page);
   // Never Used: chips, counted in the heading.
   const neverUsed = page.getByRole('region', { name: /^Never Used [\d,]+$/ });
   await neverUsed.scrollIntoViewIfNeeded();
   await expect(neverUsed.getByRole('heading', { level: 2 })).toHaveText(/^Never Used [\d,]+$/);
   const chips = neverUsed.getByRole('list', { name: 'Never Used Names' });
-  await expect(chips).toContainText('app.graph');
+  // By name ("Graph"), the id in the chip's tooltip.
+  await expect(chips.locator('li[title="app.graph"]')).toHaveText('Graph');
+  await expect(chips).not.toContainText('app.graph');
   const count = Number((await neverUsed.locator('h2 .count').textContent())!.replaceAll(',', ''));
   await expect(chips.locator('li')).toHaveCount(count);
   await hold(page);
@@ -281,16 +312,24 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
   await expect(funnel.locator('svg')).not.toContainText('welcome');
   await hold(page);
   await openView(page, 'Paths');
-  await expect(page.getByLabel('Start From')).toHaveValue('command:app.palette');
+  await expect(page.getByLabel('Start From')).toHaveValue('Command Palette · Command');
   // The field's options say how often each event occurred, the most frequent first.
   await expect(page.locator('.picker .occurrences')).toHaveText(/^[\d,]+ times in the period$/);
   const labels = await page
     .locator('#start-options option')
     .evaluateAll((nodes) => nodes.slice(0, 3).map((node) => (node as HTMLOptionElement).label));
   for (const label of labels) expect(label).toMatch(/ · [\d,]+ times?$/);
-  await checkCard(page, 'What Comes After app.palette');
-  const paths = page.getByRole('region', { name: 'What Comes After app.palette' });
-  await expect(paths.locator('svg')).toContainText('note.new');
+  await checkCard(page, 'What Comes After Command Palette');
+  const paths = page.getByRole('region', { name: 'What Comes After Command Palette' });
+  // Nodes by name: the command note.new is New Note, the screen note is Note.
+  const nodeLabels = paths.locator('svg text.node-label');
+  await expect(nodeLabels).toContainText(['Command Palette']);
+  const shown = await nodeLabels.allTextContents();
+  expect(shown).toContain('New Note');
+  for (const label of shown) expect(label).not.toMatch(/\w\.\w|\(screen\)/);
+  await paths.locator('g.node').nth(1).hover({ force: true });
+  await expect(page.getByRole('tooltip').locator('.tip-id')).not.toBeEmpty();
+  await page.mouse.move(0, 0);
   await expect(paths).not.toContainText('app.trash');
   // Each node has room round its label: 10px inside its box.
   const node = paths.locator('g.node').nth(1);
@@ -302,10 +341,10 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
   expect(labelRect!.y - boxRect!.y).toBeGreaterThanOrEqual(5);
   await paths.scrollIntoViewIfNeeded();
   await hold(page);
-  await page.getByLabel('Start From').fill('command:note.new');
+  await page.getByLabel('Start From').fill('New Note');
   await page.getByLabel('Start From').press('Enter');
   await page.getByLabel('Start From').blur();
-  await expect(page.getByRole('region', { name: 'What Comes After note.new' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'What Comes After New Note' })).toBeVisible();
 
   // Platforms and Agents (AC33).
   await openView(page, 'Platforms');
