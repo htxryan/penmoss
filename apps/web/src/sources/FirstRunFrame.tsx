@@ -1,15 +1,18 @@
 /**
  * One screen of the first run (First Run C; Ryan's review of #192, findings 2–4): the "Step n of
- * 3" bar, the screen's title (which takes focus, so a screen reader hears where it is), what it
- * asks, and a footer with Back on the left and its buttons on the right.
+ * 3" bar (or "Last Step", the consent question's, PEN-137), the screen's title (which takes
+ * focus, so a screen reader hears where it is), what it asks, and a footer with Back on the left
+ * and its buttons on the right.
  */
 import { Icon, type IconName } from '@penmoss/ui/icons';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { copy } from '../analytics/status';
 import { folderWords } from './first-run-flow';
 
 export function Frame({
   name,
   step,
+  last = false,
   title,
   children,
   back,
@@ -28,6 +31,8 @@ export function Frame({
   name: string;
   /** Which of the three steps this is; none for the welcome and the last screen. */
   step?: 1 | 2 | 3;
+  /** The consent question after Setting Up (PEN-137): "Last Step", every bar on. */
+  last?: boolean;
   title: ReactNode;
   children?: ReactNode;
   /** Back, when there is somewhere to go back to. */
@@ -58,12 +63,12 @@ export function Frame({
       data-state={state}
     >
       <div className={`fr-body${centered ? ' fr-centered' : ''}`}>
-        {step ? (
+        {step || last ? (
           <div className="fr-progress">
-            <p className="fr-step">Step {step} of 3</p>
+            <p className="fr-step">{last ? copy('consent.lastStep.label') : `Step ${step} of 3`}</p>
             <div className="fr-bars" aria-hidden="true">
               {[1, 2, 3].map((each) => (
-                <span key={each} className={each <= step ? 'on' : undefined} />
+                <span key={each} className={last || each <= (step ?? 0) ? 'on' : undefined} />
               ))}
             </div>
           </div>
@@ -81,6 +86,7 @@ export function Frame({
               type="button"
               className="btn quiet"
               data-ui="item"
+              data-event="firstrun.cancel"
               data-testid="first-run-cancel"
               onClick={cancel}
             >
@@ -91,6 +97,7 @@ export function Frame({
               type="button"
               className="btn quiet"
               data-ui="item"
+              data-event="firstrun.back"
               data-testid="first-run-back"
               onClick={back}
             >
@@ -147,12 +154,13 @@ export function Action({
       {children}
     </>
   );
+  // Counted by name as the first run's buttons (PEN-137); which step it was is its `firstrun` event.
   return primary ? (
-    <button className="btn primary" data-ui="submit" {...props}>
+    <button className="btn primary" data-ui="submit" data-event="firstrun.continue" {...props}>
       {content}
     </button>
   ) : (
-    <button className="btn" data-ui="item" {...props}>
+    <button className="btn" data-ui="item" data-event="firstrun.action" {...props}>
       {content}
     </button>
   );
@@ -169,7 +177,14 @@ export function LinkButton({
   testId?: string;
 }) {
   return (
-    <button type="button" className="fr-link" data-ui="item" data-testid={testId} onClick={onClick}>
+    <button
+      type="button"
+      className="fr-link"
+      data-ui="item"
+      data-event="firstrun.link"
+      data-testid={testId}
+      onClick={onClick}
+    >
       {children}
     </button>
   );
@@ -256,7 +271,7 @@ export function MoreOptions({
 }) {
   return (
     <details className="fr-more" data-testid="first-run-more">
-      <summary>More Options</summary>
+      <summary data-event="firstrun.more-options">More Options</summary>
       <label className="settings-field">
         <span>Branch</span>
         <input

@@ -69,7 +69,9 @@ export type Screen =
   | { readonly at: 'url' }
   | { readonly at: 'git-missing' }
   | { readonly at: 'name'; readonly place: Place }
-  | { readonly at: 'setup'; readonly setup: Setup };
+  | { readonly at: 'setup'; readonly setup: Setup }
+  /** The first run's last step (PEN-137): Share How You Use Penmoss?, when not answered yet. */
+  | { readonly at: 'consent' };
 
 /** GitHub as the flow knows it once a sign-in answered (2.2, 2.5). */
 export interface Hub {

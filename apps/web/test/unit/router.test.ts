@@ -65,6 +65,16 @@ describe('parseRoute', () => {
       expect(parseRoute(`/settings/${section}`)).toEqual({ name: 'settings', section });
     }
     expect(parseRoute('/settings/git-notebooks/nope').name).toBe('not-found');
+    // PEN-137: Privacy, and Analytics Data, its own page under it.
+    expect(parseRoute('/settings/privacy')).toEqual({ name: 'settings', section: 'privacy' });
+    expect(parseRoute('/settings/privacy/data')).toEqual({
+      name: 'settings',
+      section: 'privacy',
+      item: 'data',
+    });
+    expect(parseRoute('/settings/privacy/01M6F03GY028BT0CNQR1YRC2TE').name).toBe('not-found');
+    expect(parseRoute('/settings/git-notebooks/data').name).toBe('not-found');
+    expect(parseRoute('/settings/updates/data').name).toBe('not-found');
   });
 
   // PEN-146: Display became Sidebar, Status became GitHub; old links, bookmarks and commands land.

@@ -31,7 +31,8 @@ const MARKED_MS = 2000;
 /**
  * Scrolls to `[data-setting=id]` in `root` once it shows (a page may draw it after reading its
  * state), marks it for a moment and puts focus on its first control. Gives up after about a
- * second, leaving the page at its top. Answers the cleanup.
+ * second, leaving the page at its top. A row in a closed `<details>` opens it first. Answers the
+ * cleanup.
  */
 export function revealSetting(root: HTMLElement | null, id: string, done: () => void): () => void {
   let frame = 0;
@@ -40,6 +41,14 @@ export function revealSetting(root: HTMLElement | null, id: string, done: () => 
   const find = () => {
     const row = root?.querySelector<HTMLElement>(`[data-setting="${CSS.escape(id)}"]`);
     if (!row) {
+      if (++tries < 60) frame = requestAnimationFrame(find);
+      else done();
+      return;
+    }
+    // A row in a closed disclosure (Privacy's Advanced, PEN-137): open it first.
+    const folded = row.closest<HTMLDetailsElement>('details:not([open])');
+    if (folded) {
+      folded.open = true;
       if (++tries < 60) frame = requestAnimationFrame(find);
       else done();
       return;

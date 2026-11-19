@@ -325,6 +325,10 @@ export const MENU_NAMES: readonly string[] = [
   'tray.quickAccess',
   'tray.quit',
   'hotkey.capture',
+  // The menu bar icon's Open Today's Journal, Window → Penmoss and the Dock menu's Quick Capture.
+  'tray.today',
+  'window.main',
+  'dock.capture',
 ];
 
 /**
@@ -399,6 +403,14 @@ export const CLICK_NAMES: readonly string[] = [
   'consent.share',
   'consent.dont-share',
   'consent.policy',
+  // The first run's own buttons (PEN-137): which step is its `firstrun` event's name.
+  'firstrun.back',
+  'firstrun.cancel',
+  'firstrun.continue',
+  'firstrun.action',
+  'firstrun.link',
+  'firstrun.option',
+  'firstrun.more-options',
   'feedback.logs.toggle',
   'feedback.logs.preview',
 ];

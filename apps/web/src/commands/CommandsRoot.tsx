@@ -405,6 +405,15 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     // The Mac app's (A1112).
     () => Boolean(desktop()?.updates),
   );
+  useCommand(
+    'app.privacy',
+    () => {
+      if (overlay) close(false);
+      navigate('/settings/privacy');
+    },
+    // The Mac app's usage analytics (PEN-137).
+    () => Boolean(desktop()?.analytics),
+  );
   useGitNotebookCommands(currentNoteId, (text, ok) => setMoved({ text, ok }));
   // Settings → GitHub, which was Status (PEN-146): the id stays, so keys bound to it still work.
   useCommand('app.status', () => {
