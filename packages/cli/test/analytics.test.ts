@@ -22,6 +22,7 @@ import {
 } from '@penmoss/core/analytics';
 import { AnalyticsStore, wireEvent } from '@penmoss/core/analytics/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ToolRecorder } from '../src/analytics';
 import type { FlagSpec } from '../src/args';
 import { COMMANDS, NOTEBOOK_COMMANDS } from '../src/main';
 import type { AnalyticsIo } from '../src/io';
@@ -672,4 +673,47 @@ describe('the built CLI (build.js)', () => {
       ['version', 'agent', 'pending'],
     ]);
   }, 30_000);
+});
+
+describe('the MCP server’s recorder', () => {
+  it('writes once a second while there are events, and the rest at the end', async () => {
+    const recorder = new ToolRecorder(analyticsIo(), {}, 20);
+    const call = { tool: 'read_note', agentClient: 'codex', result: 'ok', tookMs: 5 } as const;
+    recorder.record(call);
+    recorder.record({ ...call, tool: 'list_tags' });
+    expect(existsSync(join(home, 'analytics', 'events.db'))).toBe(false);
+    await vi.waitFor(() =>
+      expect(events().map((event) => event.name)).toEqual(['read_note', 'list_tags']),
+    );
+    recorder.record({ ...call, tool: 'search_notes', result: 'failed', tookMs: 7000 });
+    recorder.close();
+    expect(events().at(-1)).toMatchObject({
+      name: 'search_notes',
+      props: { agentClient: 'codex', result: 'failed', took: '5–15s' },
+    });
+    // Closed: nothing more is recorded.
+    recorder.record(call);
+    recorder.flush();
+    expect(events()).toHaveLength(3);
+  });
+
+  it('a record that cannot be opened drops the events and stops trying', () => {
+    let opened = 0;
+    const recorder = new ToolRecorder(
+      analyticsIo({
+        openStore: () => {
+          opened += 1;
+          throw new Error('locked');
+        },
+      }),
+      {},
+      60_000,
+    );
+    const call = { tool: 'read_note', agentClient: 'other', result: 'ok', tookMs: 1 } as const;
+    recorder.record(call);
+    recorder.flush();
+    recorder.record(call);
+    recorder.close();
+    expect(opened).toBe(1);
+  });
 });
