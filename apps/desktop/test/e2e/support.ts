@@ -5,7 +5,8 @@
  * same replica.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,6 +75,48 @@ export interface Launched {
   readonly errors: string[];
   /** Where the stand-in owner check reads its answer and logs its reasons (`answerChecks`). */
   readonly authDir: string;
+  /**
+   * The launch's `~/.penmoss` (`PENMOSS_HOME`): usage analytics' answer (`analytics.json`) and
+   * record (`analytics/events.db`), shared with the CLI a spec runs with the same home (PEN-137).
+   */
+  readonly home: string;
+  /** The launch's log folder (`PENMOSS_LOG_DIR`): `penmoss.log` and its rotated files. */
+  readonly logDir: string;
+}
+
+/**
+ * Usage analytics' answer as a launch starts (PEN-137): `ask` leaves none, so the first run's last
+ * step (or, with a notebook, the one-time dialog) asks; `yes` and `no` answer before the launch.
+ * Every launch but the ones that ask is answered No, so no spec meets the question unasked.
+ */
+export type AnalyticsAnswer = 'ask' | 'yes' | 'no';
+
+/** A stand-in endpoint nobody listens on: without a spec's own, nothing is ever sent anywhere. */
+export const NO_ANALYTICS_ENDPOINT = 'http://127.0.0.1:9';
+
+/** Writes `home`'s analytics.json with `answer`, unless it has one (a launch again keeps it). */
+export function answerAnalytics(home: string, answer: AnalyticsAnswer): void {
+  const file = join(home, 'analytics.json');
+  if (answer === 'ask' || existsSync(file)) return;
+  mkdirSync(home, { recursive: true });
+  const now = Date.now();
+  writeFileSync(
+    file,
+    `${JSON.stringify(
+      {
+        v: 1,
+        consent: answer,
+        install: randomBytes(16).toString('hex'),
+        answeredAt: now,
+        askedVersion: null,
+        sharingSince: answer === 'yes' ? now : null,
+        limits: {},
+      },
+      null,
+      2,
+    )}\n`,
+    { mode: 0o600 },
+  );
 }
 
 export async function launch(
@@ -92,6 +135,12 @@ export async function launch(
      * layout, as on a Mac. The window keeps Linux's frame under xvfb.
      */
     macWindow?: boolean;
+    /**
+     * Usage analytics' answer before the launch (PEN-137): `no` unless a spec says, so the
+     * question only shows where a spec asks for it (`ask`). A stand-in endpoint goes in `env`
+     * as `PENMOSS_ANALYTICS_URL` (an http origin on loopback); without one nothing is sent.
+     */
+    analytics?: AnalyticsAnswer;
     /** More of the app's environment (another git config, T50; the fake GitHub, T57). */
     env?: Readonly<Record<string, string>>;
   } = {},
@@ -99,6 +148,11 @@ export async function launch(
   refuseOnMacHost('Launching the Mac app for a test');
   const userData = options.userData ?? dataDir();
   const authDir = dataDir();
+  // Each launch's own ~/.penmoss and log folder, beside its data, so a launch again with the same
+  // data keeps them; this Mac's own are never touched (PEN-137).
+  const home = options.env?.['PENMOSS_HOME'] ?? join(userData, 'penmoss-home');
+  const logDir = options.env?.['PENMOSS_LOG_DIR'] ?? join(userData, 'logs');
+  answerAnalytics(home, options.analytics ?? 'no');
   // Proof mode (the software factory's F7, `task proof:mac`): the main window is recorded.
   const proof = process.env['PENMOSS_PROOF'] === '1';
   const app = await _electron.launch({
@@ -116,13 +170,16 @@ export async function launch(
       // Search by meaning's service (T76) only where a spec asks for it (meaning.spec.ts), so no
       // launch downloads the model or indexes in this Mac's ~/.penmoss.
       PENMOSS_TEST_MEANING: 'off',
+      PENMOSS_HOME: home,
+      PENMOSS_LOG_DIR: logDir,
+      PENMOSS_ANALYTICS_URL: NO_ANALYTICS_ENDPOINT,
       ...options.env,
     },
   });
   const page = await mainPage(app);
   if (proof) await recordWindow(app, page);
   const errors = collectErrors(page, options.offline ?? false);
-  return { app, page, userData, errors, authDir };
+  return { app, page, userData, errors, authDir, home, logDir };
 }
 
 /**

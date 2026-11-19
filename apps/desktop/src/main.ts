@@ -19,6 +19,8 @@ import {
   config,
   dataFile,
   log,
+  logAt,
+  logFile,
   mac,
   macWindows,
   preferencesFile,
@@ -41,6 +43,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import { killLiveGit, watchGitProcesses } from '@penmoss/git-notebook/system-git';
+import { countBucket, durationBucket } from '@penmoss/core/analytics';
 import { setMenus } from './app-menu';
 import { killBoundedGroups } from './bounded-exec';
 import { currentHotkey, startHotkey } from './capture-hotkey';
@@ -51,6 +54,7 @@ import { writeLaunchLog } from './launch-log';
 import { loadPreferences } from './preferences';
 import { IpcHandlers } from './ipc';
 import { registerAgentsIpc } from './ipc/agents';
+import { registerAnalyticsIpc } from './ipc/analytics';
 import { registerFeedbackIpc } from './ipc/feedback';
 import { registerGitIpc } from './ipc/git';
 import { registerGitHubIpc } from './ipc/github';
@@ -59,7 +63,17 @@ import { registerUpdatesIpc } from './ipc/updates';
 import { registerWindowIpc } from './ipc/window';
 import { serveAsset } from './protocol';
 import { ALLOWED_PERMISSIONS, downloadDialog, isAppFrame, isAppWindowFrame } from './security';
-import { gitNotebooks, gitProcesses, localAgents, loginPath, meaning, updates } from './services';
+import {
+  analytics,
+  consentWatcher,
+  gitNotebooks,
+  gitProcesses,
+  localAgents,
+  loginPath,
+  meaning,
+  startAnalytics,
+  updates,
+} from './services';
 import { describeMenu } from './tray';
 import { refreshTray, trayMenu, trayShown } from './tray-control';
 import {
@@ -105,6 +119,46 @@ function registerIpc(): void {
   registerMeaningIpc(ipc);
   registerUpdatesIpc(ipc);
   registerFeedbackIpc(ipc);
+  registerAnalyticsIpc(ipc);
+}
+
+// --- the log file and usage analytics (PEN-137) ---
+
+// What would take the main process down, and the pages and helpers that end, reach the log file.
+// A monitor only: Electron's own handling of an uncaught exception is unchanged.
+process.on('uncaughtExceptionMonitor', (error, origin) => {
+  logAt(
+    'error',
+    `${origin}: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+  );
+});
+app.on('render-process-gone', (_event, _contents, details) => {
+  logAt('error', `a page ended: ${details.reason} (${details.exitCode})`);
+});
+app.on('child-process-gone', (_event, details) => {
+  logAt('warn', `${details.type} ended: ${details.reason} (${details.exitCode})`);
+});
+
+/** Since when the app has been in front (for `background`'s duration). */
+let activeSince: number | null = null;
+app.on('did-become-active', () => {
+  activeSince = Date.now();
+  analytics.record('app', 'foreground');
+});
+app.on('did-resign-active', () => {
+  const active = activeSince === null ? 0 : Date.now() - activeSince;
+  activeSince = null;
+  analytics.record('app', 'background', { active: durationBucket(active) });
+  analytics.background();
+});
+
+/** Records the launch once the notebooks are counted (a count's bucket only, never a name). */
+function recordLaunch(): void {
+  void gitNotebooks
+    .list()
+    .then((list) => list.length)
+    .catch(() => 0)
+    .then((notebooks) => analytics.record('app', 'launch', { notebooks: countBucket(notebooks) }));
 }
 
 app.on('web-contents-created', (_event, contents) => harden(contents));
@@ -159,6 +213,10 @@ if (!app.requestSingleInstanceLock()) {
     void localAgents.refreshCli();
     watchGitProcesses(gitProcesses);
     registerIpc();
+    // Usage analytics (PEN-137): the record's worker, the send timer and the consent watcher.
+    log(`Penmoss ${app.getVersion()} starting`);
+    startAnalytics();
+    recordLaunch();
     setMenus([]);
 
     const parsed = pendingLink ? parseDeepLink(pendingLink) : null;
@@ -212,6 +270,8 @@ if (!app.requestSingleInstanceLock()) {
     if (!windows.main) createMainWindow();
   });
   app.on('before-quit', () => {
+    // `quit`, and what waits is sent (not waited for) while the windows store.
+    analytics.quitting();
     state.quitting = true;
     // Every window off the screen at once, storing side by side (A1577).
     startQuitting();
@@ -225,7 +285,20 @@ if (!app.requestSingleInstanceLock()) {
     state.updating = true;
     startQuitting();
   });
-  app.on('will-quit', () => {
+  // The usage record and the log file are written and closed before the app ends (PEN-137): the
+  // quit waits for them once, at most 1.5 s. Not when quitting into an update, which ShipIt
+  // waits on.
+  let recordsClosed = false;
+  app.on('will-quit', (event) => {
+    if (!recordsClosed && !state.updating) {
+      event.preventDefault();
+      recordsClosed = true;
+      consentWatcher.close();
+      void Promise.all([analytics.close(1500), logFile.close()])
+        .catch(() => undefined)
+        .finally(() => app.quit());
+      return;
+    }
     // No git outlives the app (A853): a sync still running is stopped, the notebook keeps it.
     killLiveGit();
     // Nor does any other program main started and is waiting for (A1480).
@@ -253,7 +326,15 @@ if (!app.requestSingleInstanceLock()) {
 if (mac) {
   void app.whenReady().then(() => {
     app.dock?.setMenu(
-      Menu.buildFromTemplate([{ label: 'Quick Capture', click: () => showCapture() }]),
+      Menu.buildFromTemplate([
+        {
+          label: 'Quick Capture',
+          click: () => {
+            analytics.record('menu', 'dock.capture', { source: 'context' });
+            showCapture();
+          },
+        },
+      ]),
     );
   });
 }

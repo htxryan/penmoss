@@ -69,6 +69,17 @@ const POLICY: Record<keyof typeof INVOKE, [Caller, 'none' | 'handler' | { refuse
   cliRemove: ['main', { refused: NEEDS_A_PERSON }],
   captureHotkey: ['app', 'none'],
   captureSetHotkey: ['window', 'handler'],
+  // Usage analytics (PEN-137): the answer and the switch need a gesture only to turn sharing on.
+  analyticsStatus: ['window', 'none'],
+  analyticsAnswer: ['main', 'handler'],
+  analyticsSetSharing: ['main', 'handler'],
+  analyticsResetId: ['main', 'none'],
+  analyticsForget: ['main', 'none'],
+  analyticsPage: ['window', 'none'],
+  analyticsPreview: ['window', 'none'],
+  analyticsSetLimits: ['main', 'none'],
+  analyticsShowLogFile: ['window', 'none'],
+  analyticsReportLogs: ['window', 'none'],
 };
 
 describe('the IPC contract', () => {
@@ -102,6 +113,9 @@ describe('the IPC contract', () => {
       quickAccessSet: 'mac',
       // Main listens for a store reply itself, from the window it asked.
       saved: null,
+      // Usage events and log lines (PEN-137): main and note windows, never the capture window.
+      analyticsRecord: 'window',
+      analyticsLog: 'window',
     });
   });
 

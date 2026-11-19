@@ -4,6 +4,7 @@
  */
 import { screenshotsOf } from '../github-token';
 import type { IpcHandlers } from '../ipc';
+import { log } from '../app-state';
 import { githubToken } from '../services';
 
 export function registerFeedbackIpc(ipc: IpcHandlers): void {
@@ -15,7 +16,11 @@ export function registerFeedbackIpc(ipc: IpcHandlers): void {
         body: { error: { code: 'invalid_request', message: 'Screenshots are not readable' } },
       };
     }
-    return githubToken.file(payload, shots);
+    // The outbox's result, by its status only (PEN-137): never the report's text.
+    return githubToken.file(payload, shots).then((answer) => {
+      log(`feedback filed: ${answer.status}`);
+      return answer;
+    });
   });
   ipc.handle('feedbackCapture', async ({ event }) => {
     try {

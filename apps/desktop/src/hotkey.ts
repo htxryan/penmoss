@@ -56,6 +56,19 @@ function asCombo(modifiers: readonly string[], key: string, apple: boolean): str
 }
 
 /**
+ * An accelerator the hotkey takes (`Control+Alt+Command+N`) as a registry combination
+ * (`Ctrl+Alt+Mod+N` on a Mac), as usage analytics records a shortcut (PEN-137, O8); null when it
+ * is not one `normaliseHotkey` would take.
+ */
+export function hotkeyCombo(accelerator: string, platform: NodeJS.Platform): string | null {
+  const parts = accelerator.split('+');
+  const key = parts.pop();
+  if (!key || parts.some((part) => !MODIFIERS.has(part.toLowerCase() as never))) return null;
+  const modifiers = parts.map((part) => MODIFIERS.get(part.toLowerCase() as never)!);
+  return asCombo(modifiers, key, platform === 'darwin');
+}
+
+/**
  * A hotkey in canonical form (`Control+Alt+Command+N`), or an error. It must
  * have two modifiers or more, not only Shift and Alt (those type characters),
  * so it can never take ordinary typing in other apps, and pass A90's checks
