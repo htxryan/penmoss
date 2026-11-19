@@ -199,8 +199,8 @@ class DisplayAndSyncStopTest {
         assertEquals("Every shortcut on Home", displaySummary(Settings()))
         assertEquals("Hidden: This Week, Graph", displaySummary(settings(DisplayKeys.THIS_WEEK to false, DisplayKeys.GRAPH to false, DisplayKeys.TODAY to true)))
         assertEquals("Hidden: Tags", displaySummary(settings(DisplayKeys.TAGS to false)))
-        // Look and Feel: Appearance, Home, Symbols (PEN-146).
-        assertEquals(listOf("appearance", "home", "symbols"), settingsGroups(Settings(), "Penmoss").first().sections.map { it.id })
+        // Look and Feel: Appearance, Home, Note, Symbols (PEN-146, A1634).
+        assertEquals(listOf("appearance", "home", "note", "symbols"), settingsGroups(Settings(), "Penmoss").first().sections.map { it.id })
     }
 
     /** PEN-146: Home's sections move by dragging their handle, or by TalkBack's Move Up and Move Down. */
