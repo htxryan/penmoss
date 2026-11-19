@@ -104,7 +104,7 @@ fun privacySummary(sharing: Boolean?, events: Long?): String {
         true -> "Sharing"
         false -> "Not Sharing"
     }
-    return if (events == null) state else "$state · ${AnalyticsFormat.number(events)} ${if (events == 1L) "event" else "events"}"
+    return if (events == null) state else "$state · ${AnalyticsFormat.number(events)} ${if (events == 1L) "Event" else "Events"}"
 }
 
 /** The Advanced rows' ids: the Mac's `data-setting`s; a search result for one opens Advanced. */

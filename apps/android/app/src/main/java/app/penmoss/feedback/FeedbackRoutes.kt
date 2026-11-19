@@ -67,8 +67,8 @@ object FeedbackRoutes {
 
     /** What Settings' GitHub row says (PEN-146): the accounts (A1616), or that there are none. */
     fun tokenSummary(logins: List<String?>): String = when {
-        logins.isEmpty() -> "Not signed in"
-        else -> logins.joinToString(", ") { it ?: "Signed in" }
+        logins.isEmpty() -> "Not Signed In"
+        else -> logins.joinToString(", ") { it ?: "Signed In" }
     }
 }
 
@@ -175,7 +175,7 @@ fun GitHubScreen(
             if (accounts.isEmpty()) {
                 ListItem(
                     modifier = Modifier.settingRow("github"),
-                    headlineContent = { Text("Not signed in", Modifier.testTag("githubLogin")) },
+                    headlineContent = { Text("Not Signed In", Modifier.testTag("githubLogin")) },
                     supportingContent = { Text("Sign in so Send Feedback can file issues in $repo, and to pick repositories when adding a notebook.") },
                 )
             }
@@ -184,7 +184,7 @@ fun GitHubScreen(
                 val key = account.login.orEmpty()
                 ListItem(
                     modifier = (if (at == 0) Modifier.settingRow("github") else Modifier).testTag("githubAccount-$key"),
-                    headlineContent = { Text(account.login ?: "Signed in", Modifier.testTag(if (account.primary) "githubLogin" else "githubLogin-$key")) },
+                    headlineContent = { Text(account.login ?: "Signed In", Modifier.testTag(if (account.primary) "githubLogin" else "githubLogin-$key")) },
                     supportingContent = {
                         Text(if (account.primary) "Send Feedback uses it · kept on this phone, encrypted by the Android Keystore" else "Kept on this phone, encrypted by the Android Keystore")
                     },
@@ -452,7 +452,7 @@ fun FeedbackOutboxList(
         val confirm = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { discarding = null },
-            title = { Text("Discard this feedback?") },
+            title = { Text("Discard This Feedback?") },
             text = { Text("It is deleted from this phone and never sent.") },
             confirmButton = {
                 TextButton(onClick = trackedClick("feedback-outbox.discard.confirm", confirm.done {

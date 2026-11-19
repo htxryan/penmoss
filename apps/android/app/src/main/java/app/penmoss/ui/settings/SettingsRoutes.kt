@@ -180,7 +180,7 @@ internal fun settingsGroups(
     notebooks: List<NotebookEntry> = emptyList(),
     /** What Storage takes now; null while it is counted. */
     storage: String? = null,
-    github: String = "Not signed in",
+    github: String = "Not Signed In",
     version: String = BuildConfig.VERSION_NAME,
     agentActivity: String = "What agents changed, with Undo",
     /** Whether the usage record is shared, and its size (PEN-137); null leaves Privacy out. */
@@ -210,7 +210,7 @@ internal fun settingsGroups(
             SettingsSection(
                 "notebook-${notebook.localId}",
                 notebook.name,
-                if (notebook.primary) "Primary · ${notebook.status.replaceFirstChar { it.lowercase() }}" else notebook.status,
+                if (notebook.primary) "Primary · ${notebook.status}" else notebook.status,
                 route = SettingsRoutes.notebook(notebook.localId),
                 dot = notebook.dot,
                 badge = notebook.badge,
@@ -238,7 +238,7 @@ internal fun settingsGroups(
 internal fun shortcutsSummary(settings: Settings): String {
     // The ones this phone uses: not a Mac-only binding, nor one it cannot read (review N1).
     val changed = app.penmoss.engine.keys.Bindings.of(app.penmoss.engine.keys.ShortcutCatalogue.bundled, settings.values).usable.size
-    return if (changed == 0) "For a hardware keyboard" else "$changed changed"
+    return if (changed == 0) "For a hardware keyboard" else "$changed Changed"
 }
 
 @Composable

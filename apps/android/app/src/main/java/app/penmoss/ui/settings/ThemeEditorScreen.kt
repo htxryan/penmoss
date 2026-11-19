@@ -165,7 +165,7 @@ fun ThemeEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(theme?.let { it.text("name") } ?: "Theme editor") },
+                title = { Text(theme?.let { it.text("name") } ?: "Theme Editor") },
                 navigationIcon = { BackButton(onBack) },
                 actions = {
                     if (theme != null) {
@@ -239,7 +239,7 @@ fun ThemeEditorScreen(
                         ColourRow(token.key, token.label, hex, failing, enabled) { editing = token.key }
                     }
                 }
-                GroupTitle("Type and layout")
+                GroupTitle("Type and Layout")
                 for ((key, label) in FONT_FIELDS) {
                     FontField(key, label, ThemeEdits.font(theme, key), catalogue.fonts, enabled) { edit(ThemeEdits.withFont(theme, key, it)) }
                 }
@@ -266,7 +266,7 @@ fun ThemeEditorScreen(
             val tracked = rememberTrackedDialog("confirm")
             AlertDialog(
                 onDismissRequest = { confirmDelete = false },
-                title = { Text("Delete “${theme.text("name")}” on every device?") },
+                title = { Text("Delete “${theme.text("name")}” on Every Device?") },
                 text = { Text("Devices showing it go back to the theme it was based on.") },
                 confirmButton = {
                     TextButton(
@@ -407,7 +407,7 @@ private fun FontField(key: String, label: String, stack: String, fonts: List<The
 private fun WidthField(rem: Int, range: IntRange, enabled: Boolean, onWidth: (Int) -> Unit) {
     var value by remember(rem) { mutableStateOf(rem.toFloat()) }
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text("Note width: ${value.toInt()} rem", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyLarge)
+        Text("Note Width: ${value.toInt()} rem", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyLarge)
         Slider(
             value = value,
             onValueChange = { value = it },
@@ -415,7 +415,7 @@ private fun WidthField(rem: Int, range: IntRange, enabled: Boolean, onWidth: (In
             valueRange = range.first.toFloat()..range.last.toFloat(),
             steps = range.last - range.first - 1,
             enabled = enabled,
-            modifier = Modifier.semantics { contentDescription = "Note width"; stateDescription = "${value.toInt()} rem" }.testTag("themeWidth"),
+            modifier = Modifier.semantics { contentDescription = "Note Width"; stateDescription = "${value.toInt()} rem" }.testTag("themeWidth"),
         )
     }
 }
@@ -484,7 +484,7 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("colourHex"),
             )
-            Text("This theme’s colours", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
+            Text("This Theme’s Colours", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
             FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (pick in quickPicks) {
                     val chosen = pick.hex == current
@@ -539,7 +539,7 @@ private fun SaturationValueSquare(hue: Float, saturation: Float, value: Float, o
             .pointerInput(hue) { detectTapGestures { pick(it, size.width.toFloat(), size.height.toFloat()) } }
             .pointerInput(hue) { detectDragGestures { change, _ -> pick(change.position, size.width.toFloat(), size.height.toFloat()) } }
             .semantics {
-                contentDescription = "Saturation and brightness"
+                contentDescription = "Saturation and Brightness"
                 stateDescription = "Saturation ${(saturation * 100).toInt()}%, brightness ${(value * 100).toInt()}%"
             }
             .testTag("colourSquare"),

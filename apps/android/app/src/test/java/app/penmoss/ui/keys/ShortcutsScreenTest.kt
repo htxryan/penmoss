@@ -178,12 +178,13 @@ class ShortcutsScreenTest {
         record("app.search") { withKeyDown(Key.CtrlLeft) { pressKey(Key.D) } }
         assertEquals(emptyList<Any>(), writes)
         compose.onNodeWithText("Ctrl+D is used by “Today's Note”.").assertExists()
+        compose.onNodeWithText("Replace This Shortcut?").assertExists()
         compose.onNodeWithTag("useHere").performScrollTo().performClick()
         assertEquals(listOf("journal.today" to emptyList<String>(), "app.search" to listOf("Mod+D")), writes)
         row("app.search")
         compose.onNodeWithTag("keys-app.search", useUnmergedTree = true).assertTextEquals("Ctrl+D")
         row("journal.today")
-        compose.onNodeWithTag("keys-journal.today", useUnmergedTree = true).assertTextEquals("No shortcut")
+        compose.onNodeWithTag("keys-journal.today", useUnmergedTree = true).assertTextEquals("No Shortcut")
     }
 
     @Test
@@ -208,7 +209,7 @@ class ShortcutsScreenTest {
         row("app.search")
         compose.onNodeWithTag("change-app.search").assertDoesNotExist()
         compose.onNodeWithTag("remove-app.search").performClick()
-        compose.onNodeWithTag("keys-app.search", useUnmergedTree = true).assertTextEquals("No shortcut")
+        compose.onNodeWithTag("keys-app.search", useUnmergedTree = true).assertTextEquals("No Shortcut")
         row("app.quickOpen")
         compose.onNodeWithTag("reset-app.quickOpen").performClick()
         compose.onNodeWithTag("keys-app.quickOpen", useUnmergedTree = true).assertTextEquals("Ctrl+P")
@@ -245,7 +246,7 @@ class ShortcutsScreenTest {
         }
         compose.onNode(hasText("Ctrl+Shift+S")).assertExists()
         compose.onNode(
-            SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Reset the shortcut for Search Notes…")),
+            SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Reset the Shortcut for Search Notes…")),
             useUnmergedTree = true,
         ).assertExists()
     }

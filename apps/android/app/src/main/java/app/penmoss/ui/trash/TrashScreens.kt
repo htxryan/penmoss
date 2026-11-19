@@ -174,7 +174,7 @@ fun TrashScreen(
         val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { confirming = null },
-            title = { Text("Delete “${entry.title}” for good?") },
+            title = { Text("Delete “${entry.title}” for Good?") },
             text = { Text("It can’t be restored on this phone or any other device. You’ll be asked for your fingerprint, face or screen lock.") },
             confirmButton = {
                 TextButton(onClick = trackedClick("trash.delete-for-good.confirm", tracked.done {

@@ -67,7 +67,7 @@ fun StorageScreen(
         )
         ListItem(
             modifier = Modifier.settingRow("pictures-from-the-web"),
-            headlineContent = { Text("Pictures From the Web") },
+            headlineContent = { Text("Pictures from the Web") },
             supportingContent = {
                 Text(
                     use?.let { "${it.webPictureCount} kept to show again · ${formatBytes(it.webPictures)}" } ?: "Counting…",
@@ -80,7 +80,7 @@ fun StorageScreen(
                 }
             },
         )
-        GroupTitle("Load Pictures From the Web", Modifier.settingRow("load-pictures-from-the-web"))
+        GroupTitle("Load Pictures from the Web", Modifier.settingRow("load-pictures-from-the-web"))
         Segments(WEB_PICTURE_CHOICES, webPictures.key, enabled = true, tag = "webPictures", event = "settings.storage.web-pictures") { key ->
             WebPictureSetting.entries.firstOrNull { it.key == key }?.let(onWebPictures)
         }
@@ -94,7 +94,7 @@ fun StorageScreen(
         val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { clearing = false },
-            title = { Text("Clear Pictures From the Web?") },
+            title = { Text("Clear Pictures from the Web?") },
             text = { Text("Penmoss fetches each one again the next time a note shows it. Your notes and their own files stay as they are.") },
             confirmButton = {
                 TextButton(onClick = trackedClick("settings.storage.clear-web-pictures.confirm", tracked.done {

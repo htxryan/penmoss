@@ -113,7 +113,7 @@ class NoteInfoTest {
             counts = NoteCounts(words = 1, characters = 5, minutes = 0, selection = null),
         )
         // The sync icon's words, and the web's status-bar counts (no reading time under a minute).
-        assertEquals("Waiting to upload", counted[3].value)
+        assertEquals("Waiting to Upload", counted[3].value)
         assertEquals("1 word · 5 characters", counted[4].value)
         // A date the phone cannot read is shown as written; before the page says, an ellipsis.
         assertEquals("yesterday-ish", createdLabel("yesterday-ish", NOW))

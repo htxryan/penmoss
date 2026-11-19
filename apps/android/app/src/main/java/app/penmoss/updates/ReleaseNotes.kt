@@ -13,7 +13,7 @@ import kotlinx.serialization.json.intOrNull
  * Mac's `apps/web/src/updates/notes.ts`, for Android's notes: `contract/release-notes-v1.json`
  * holds the cases both check themselves against.
  *
- * - In this version: a stable release's own notes (after the stable release before it, up to
+ * - In This Version: a stable release's own notes (after the stable release before it, up to
  *   it); an Alpha build's since the version the phone ran before it, or only its own build's
  *   when that isn't known, never further back than the last stable release, each with its build.
  * - Earlier versions: an Alpha build's earlier builds since the last stable release, in one
@@ -54,6 +54,9 @@ fun alphaBuildOf(version: String): Int? = ALPHA.matchEntire(version)?.groupValue
 /** A version as the notes say it: "0.2.1", or "build 1185" for an Alpha build. */
 fun versionLabel(version: String): String = alphaBuildOf(version)?.let { "build $it" } ?: version
 
+/** A version as a heading names it (Title Case): "Build 1183", "0.2.1". */
+private fun headingVersion(version: String): String = version.replaceFirstChar { it.uppercase() }
+
 /** A version's build: an Alpha build's own number, or a stable release's from the file. */
 fun buildFor(file: NotesFile, version: String): Int? =
     alphaBuildOf(version) ?: file.releases.firstOrNull { it.version == version }?.build
@@ -84,11 +87,11 @@ fun notesView(file: NotesFile?, current: String, platform: String = "android", s
     val currentBlock = when {
         here == null -> null
         start != null -> NotesBlock(
-            title = start.second?.let { "In this version (since $it)" } ?: "In this version",
+            title = start.second?.let { "In This Version (Since ${headingVersion(it)})" } ?: "In This Version",
             builds = true,
             groups = groupNotes(range(file, start.first, here, platform)),
         )
-        else -> releaseBlock(file, NotesRelease(current, "v$current", here, ""), platform).copy(title = "In this version")
+        else -> releaseBlock(file, NotesRelease(current, "v$current", here, ""), platform).copy(title = "In This Version")
     }
     val stable = file.releases.sortedBy { it.build }
     val releases = when {
@@ -100,7 +103,7 @@ fun notesView(file: NotesFile?, current: String, platform: String = "android", s
     }
     val builds = start?.let { groupNotes(range(file, base?.build, it.first, platform)) }.orEmpty()
     val earlier = if (builds.isEmpty()) releases else {
-        listOf(NotesBlock(base?.let { "Earlier builds (since ${it.version})" } ?: "Earlier builds", true, builds)) + releases
+        listOf(NotesBlock(base?.let { "Earlier Builds (Since ${it.version})" } ?: "Earlier Builds", true, builds)) + releases
     }
     return NotesView.Ok(currentBlock, earlier)
 }

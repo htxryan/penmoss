@@ -104,8 +104,8 @@ fun gitStatusLine(status: GitEngineStatus?, host: String, now: Long = System.cur
         "synced" -> (status.lastSyncAt?.let { "Synced at ${clock(it, zone)}" } ?: "Synced") + waiting
         "syncing" -> status.since.let { since -> if (since != null && now - since > WAITING_AFTER_MS) "Waiting for $host…$waiting" else "Syncing…$waiting" }
         "offline" -> "Offline: changes stay on this phone" + (status.nextRetryAt?.let { ". Tries again at ${clock(it, zone)}" } ?: "") + waiting
-        "stopped" -> status.detail ?: "Sync stopped."
-        else -> "Not synced yet$waiting"
+        "stopped" -> status.detail ?: "Sync Stopped"
+        else -> "Not Synced Yet$waiting"
     }
 }
 
@@ -226,7 +226,7 @@ class GitNotebooksActions(
 /**
  * Settings → All Notebooks (T50 G7, G8; A856, A825, A855; PEN-146): the notebooks on this phone, one
  * row each with its sync dot (a tap opens its page), Add Notebook (its form shows only after Add),
- * Between Notebooks (the Primary Notebook first), Commits From This Phone and the background runs. It is
+ * Between Notebooks (the Primary Notebook first), Commits from This Phone and the background runs. It is
  * also the app's home (A828, A1040), titled Penmoss with Settings in its bar, where a row opens the
  * notebook: with no notebook yet, the first run asks to add or create one.
  */
@@ -518,7 +518,7 @@ fun RecoveryNotice(notice: GitRecoveryNotice, onSave: () -> Unit = {}, onDismiss
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                if (notice.titles.isEmpty()) "Notes not brought back" else "Notes brought back",
+                if (notice.titles.isEmpty()) "Notes Not Brought Back" else "Notes Brought Back",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
@@ -584,7 +584,7 @@ internal fun Purges(row: GitRow, actions: GitNotebooksActions) {
     val id = row.view.localId
     val purges = row.purges
     LaunchedEffect(id, purges == null) { if (purges == null) actions.onShowPurges(id) }
-    Text("Delete for good, waiting", style = MaterialTheme.typography.titleSmall)
+    Text("Delete for Good, Waiting", style = MaterialTheme.typography.titleSmall)
     if (purges == null) {
         Text("Reading the notes from the branch…", style = MaterialTheme.typography.bodySmall)
         return
@@ -699,7 +699,8 @@ internal fun NewSigningKey(
     onConfirm: (app.penmoss.engine.git.CommitKeyType) -> Unit,
 ) {
     if (type == null) return
-    val kind = if (type == app.penmoss.engine.git.CommitKeyType.ED25519) "an Ed25519" else "a new P-256"
+    val ed25519 = type == app.penmoss.engine.git.CommitKeyType.ED25519
+    val kind = if (ed25519) "an Ed25519" else "a new P-256"
     val signing = ui.rows.filter { it.view.signCommits }.map { it.view.name }
     val who = when (signing.size) {
         0 -> "No notebook signs commits now; any you turn Sign commits on for uses it."
@@ -709,7 +710,7 @@ internal fun NewSigningKey(
     val tracked = rememberTrackedDialog("confirm")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Make $kind signing key?") },
+        title = { Text("Make ${if (ed25519) "an Ed25519" else "a New P-256"} Signing Key?") },
         text = {
             Text(
                 "This deletes this phone's signing key and makes $kind key in its place, for every git notebook on this phone. $who " +
@@ -727,7 +728,7 @@ internal fun NewSigningKey(
 }
 
 /**
- * Commits From This Phone (PEN-146): the name and email this phone commits as, and its signing key,
+ * Commits from This Phone (PEN-146): the name and email this phone commits as, and its signing key,
  * one row that opens in place. A notebook's own name and email are on its Git tab.
  */
 @Composable
@@ -735,9 +736,9 @@ private fun CommitsFromThisPhone(ui: GitNotebooksUi, actions: GitNotebooksAction
     var open by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable(ui.identityName) { mutableStateOf(ui.identityName) }
     var email by rememberSaveable(ui.identityEmail) { mutableStateOf(ui.identityEmail) }
-    GroupTitle("Commits From This Phone", Modifier.settingRow("commits-from-this-phone"))
+    GroupTitle("Commits from This Phone", Modifier.settingRow("commits-from-this-phone"))
     ListItem(
-        headlineContent = { Text(ui.identityName.ifBlank { "No name set" }) },
+        headlineContent = { Text(ui.identityName.ifBlank { "No Name Set" }) },
         supportingContent = {
             Text(listOfNotNull(ui.identityEmail.ifBlank { null }, if (ui.signingKey != null) "signing key on this phone" else null).joinToString(" · ").ifEmpty { "Name and email for your commits" })
         },

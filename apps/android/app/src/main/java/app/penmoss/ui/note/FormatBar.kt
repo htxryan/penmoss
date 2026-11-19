@@ -301,7 +301,7 @@ fun LinkDialog(current: String?, onApply: (String) -> Unit, onDismiss: () -> Uni
     val tracked = rememberTrackedDialog("link")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (current == null) "Add a link" else "Edit the link") },
+        title = { Text(if (current == null) "Add a Link" else "Edit the Link") },
         text = {
             OutlinedTextField(
                 value = address,

@@ -211,7 +211,7 @@ fun ColourPicker(hex: String, onChange: (String) -> Unit, modifier: Modifier = M
                 .size(WHEEL)
                 .testTag("symbol-colour-wheel")
                 .semantics {
-                    contentDescription = "Hue and saturation"
+                    contentDescription = "Hue and Saturation"
                     stateDescription = "Hue ${hsva.hue.roundToInt()}°, saturation ${(hsva.saturation * 100).roundToInt()}%"
                 }
                 .onKeyEvent { event ->

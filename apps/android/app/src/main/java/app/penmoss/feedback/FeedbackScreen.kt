@@ -263,7 +263,7 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
         val confirm = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { discarding = false },
-            title = { Text("Discard this draft?") },
+            title = { Text("Discard This Draft?") },
             text = { Text("Its title, description and screenshots are deleted from this phone.") },
             confirmButton = {
                 TextButton(onClick = trackedClick("feedback.discard.confirm", confirm.done {

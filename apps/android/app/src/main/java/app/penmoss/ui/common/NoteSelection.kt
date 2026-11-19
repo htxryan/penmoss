@@ -118,7 +118,8 @@ internal fun selectionName(picked: List<Picked>): String =
     picked.singleOrNull()?.let { "“${titleOf(it.title)}”" } ?: pickedCount(picked.size)
 
 /** The folder picker's title for a Move of [picked]. */
-internal fun moveTitle(picked: List<Picked>): String = "Move ${selectionName(picked)} to…"
+internal fun moveTitle(picked: List<Picked>): String =
+    "Move ${picked.singleOrNull()?.let { "“${titleOf(it.title)}”" } ?: if (picked.size == 1) "1 Note" else "${picked.size} Notes"} To…"
 
 /**
  * The contextual bar over the screen while notes are chosen: ✕, the count, Move, Move to Trash,

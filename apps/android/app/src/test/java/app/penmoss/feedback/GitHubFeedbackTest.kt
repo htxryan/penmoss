@@ -417,7 +417,7 @@ class GitHubFeedbackTest {
 
         store.remove("htxryan")
         assertNull(store.token())
-        assertEquals(FeedbackRoutes.tokenSummary(emptyList()), "Not signed in")
+        assertEquals(FeedbackRoutes.tokenSummary(emptyList()), "Not Signed In")
     }
 
     /** A work account beside a personal one (A1616): each kept sealed, either first, removing one keeps the other. */

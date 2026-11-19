@@ -52,11 +52,11 @@ class PrivacyScreenTest {
         assertEquals(listOf("storage", "github", "whatsnew", "privacy"), phone.sections.map { it.id })
         val privacy = phone.sections.last()
         assertEquals("Privacy", privacy.title)
-        assertEquals("Sharing · 255 events", privacy.summary)
+        assertEquals("Sharing · 255 Events", privacy.summary)
         assertEquals(SettingsIcons.Shield, privacy.icon)
         assertEquals(SettingsRoutes.PRIVACY, privacy.route)
-        assertEquals("Not Sharing · 1 event", privacySummary(false, 1))
-        assertEquals("Not Answered Yet · 0 events", privacySummary(null, 0))
+        assertEquals("Not Sharing · 1 Event", privacySummary(false, 1))
+        assertEquals("Not Answered Yet · 0 Events", privacySummary(null, 0))
         // Without analytics (a test's graph), no row.
         assertTrue(settingsGroups(Settings(), "Penmoss").flatMap { it.sections }.none { it.id == "privacy" })
     }

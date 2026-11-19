@@ -372,7 +372,7 @@ private fun NoteDialogs(note: NoteScreenState, onSyncStorage: () -> Unit) {
     note.moving?.let { pick ->
         FolderPickerFor(
             graph,
-            title = "Move “${note.editor.title.ifBlank { Items.UNTITLED }}” to…",
+            title = "Move “${note.editor.title.ifBlank { Items.UNTITLED }}” To…",
             current = pick.current,
             onPick = { folder ->
                 note.moving = null

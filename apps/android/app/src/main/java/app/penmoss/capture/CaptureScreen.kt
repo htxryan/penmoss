@@ -199,7 +199,7 @@ fun CaptureScreen(
         val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = onKeepEditing,
-            title = { Text("Discard this capture?") },
+            title = { Text("Discard This Capture?") },
             text = { Text("What you typed here has not been saved.") },
             confirmButton = { TextButton(onClick = trackedClick("capture.discard", tracked.done(onDiscard)), Modifier.testTag("captureDiscard")) { Text("Discard") } },
             dismissButton = { TextButton(onClick = trackedClick("capture.keep-editing", onKeepEditing), Modifier.testTag("captureKeepEditing")) { Text("Keep Editing") } },

@@ -649,7 +649,7 @@ private fun ThemeCardView(theme: ThemeCard, selected: Boolean, enabled: Boolean,
     Surface(
         modifier = modifier
             .testTag("theme-${theme.id}")
-            .semantics { if (theme.custom) stateDescription = if (selected) "Selected, custom theme" else "Custom theme" }
+            .semantics { if (theme.custom) stateDescription = if (selected) "Selected, Custom Theme" else "Custom Theme" }
             .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = trackedClick("settings.appearance.theme", onClick)),
         shape = RectangleShape,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) colours.primary else colours.outlineVariant),
@@ -906,7 +906,7 @@ private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, t
             onClick = trackedClick("settings.journal.template-reset") {
                 typed = false
                 onSave(field.key, null)
-                status = "Back to the default"
+                status = "Back to the Default"
             },
             enabled = enabled && field.custom,
             modifier = Modifier.testTag("reset-${field.key}"),
@@ -1026,7 +1026,7 @@ fun QuickCaptureScreen(
         Help("The capture sheet starts on this, and lets you pick the other for one capture.")
         GroupTitle("Notebook")
         ListItem(
-            headlineContent = { Text(notebook ?: "No notebook yet") },
+            headlineContent = { Text(notebook ?: "No Notebook Yet") },
             supportingContent = { Text(if (notebook != null) "Your primary notebook · change it on All Notebooks" else "Add one on All Notebooks") },
             trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
             modifier = Modifier.testTag("captureNotebook").clickable(role = Role.Button, onClick = trackedClick("settings.quick-capture.notebook-link", onNotebook)),

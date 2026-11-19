@@ -88,7 +88,7 @@ fun ThemePreview(
     when {
         gone -> {
             Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Preview unavailable", Modifier.testTag("previewGone"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Preview Unavailable", Modifier.testTag("previewGone"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(
                     onClick = trackedClick("settings.preview.reload") {
                         gone = false

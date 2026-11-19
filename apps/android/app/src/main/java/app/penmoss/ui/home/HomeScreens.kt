@@ -280,7 +280,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
         ui.stopped -> SyncDot(DotState.STOPPED, ui.status, actions.onStatus)
         ui.statusAlert -> SyncDot(DotState.OFFLINE, ui.status)
         slowSync || pulled -> SyncDot(DotState.SYNCING, "Syncing…")
-        ui.status.isEmpty() -> SyncDot(DotState.IDLE, "Not synced yet")
+        ui.status.isEmpty() -> SyncDot(DotState.IDLE, "Not Synced Yet")
         else -> SyncDot(DotState.SYNCED, ui.status)
     }
     // The hamburger's drawer, with the Mac sidebar's areas (A1604).
@@ -685,7 +685,7 @@ fun FolderScreen(
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                 if (onNewNoteIn != null) {
                                     DropdownMenuItem(
-                                        text = { Text("New Note in…") },
+                                        text = { Text("New Note In…") },
                                         onClick = trackedClick("folders.more.new-note-in") {
                                             menu = false
                                             onNewNoteIn()
@@ -709,7 +709,7 @@ fun FolderScreen(
                                     modifier = Modifier.testTag("folderRename"),
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Move to…") },
+                                    text = { Text("Move To…") },
                                     onClick = trackedClick("folders.more.move") {
                                         menu = false
                                         onMoveFolderTo()

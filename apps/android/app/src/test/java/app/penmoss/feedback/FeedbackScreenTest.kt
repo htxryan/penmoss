@@ -427,7 +427,7 @@ class FeedbackScreenTest {
                 )
             }
         }
-        compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("Not signed in")
+        compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("Not Signed In")
         compose.onNodeWithTag("githubUserCode").assertTextEquals("WDJB-MJHT")
         compose.onNodeWithTag("githubSignIn").assertDoesNotExist()
         // The code shows first; GitHub's page opens only on the button (17 Nov 2026).

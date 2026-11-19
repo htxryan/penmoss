@@ -386,7 +386,7 @@ private fun ShortcutRow(
 ) {
     val keysText = when {
         later != null -> "Not on Android yet: arrives with $later"
-        keys.isEmpty() -> "No shortcut"
+        keys.isEmpty() -> "No Shortcut"
         else -> keys.joinToString(" or ") { combo ->
             Combos.format(combo) + if (types(combo)) " (types a character on this keyboard)" else ""
         }
@@ -413,17 +413,17 @@ private fun ShortcutRow(
                 if (later == null) Row {
                     if (canRecord) {
                         IconButton(onClick = trackedClick("settings.shortcuts.row.edit", onChange), modifier = Modifier.testTag("change-${command.id}")) {
-                            Icon(Icons.Default.Edit, contentDescription = "Change the shortcut for ${command.title}")
+                            Icon(Icons.Default.Edit, contentDescription = "Change the Shortcut for ${command.title}")
                         }
                     }
                     if (canChange && keys.isNotEmpty()) {
                         IconButton(onClick = trackedClick("settings.shortcuts.row.remove", onRemove), modifier = Modifier.testTag("remove-${command.id}")) {
-                            Icon(Icons.Default.Close, contentDescription = "Remove the shortcut for ${command.title}")
+                            Icon(Icons.Default.Close, contentDescription = "Remove the Shortcut for ${command.title}")
                         }
                     }
                     if (canChange && custom) {
                         IconButton(onClick = trackedClick("settings.shortcuts.row.reset", onReset), modifier = Modifier.testTag("reset-${command.id}")) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Reset the shortcut for ${command.title}")
+                            Icon(Icons.Default.Refresh, contentDescription = "Reset the Shortcut for ${command.title}")
                         }
                     }
                 }
@@ -439,6 +439,8 @@ private fun ShortcutRow(
                 color = if (notice.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             is RowNotice.Clash -> Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("conflict-${command.id}")) {
+                // Its title, as the web's ConfirmBlock has it; the sentence below says why.
+                Text("Replace This Shortcut?", Modifier.semantics { heading() }, style = MaterialTheme.typography.titleSmall)
                 Text(
                     "${Combos.format(notice.combo)} is used by ${notice.others.joinToString(" and ") { "“${it.title}”" }}.",
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite },

@@ -36,7 +36,7 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 
 /** What the Settings list says of Note: its width. */
-fun noteSummary(fullWidth: Boolean): String = if (fullWidth) "Full width" else "The theme’s width"
+fun noteSummary(fullWidth: Boolean): String = if (fullWidth) "Full Width" else "The Theme’s Width"
 
 @Composable
 internal fun NoteSettingsRoute(graph: DeviceGraph, onBack: () -> Unit) {

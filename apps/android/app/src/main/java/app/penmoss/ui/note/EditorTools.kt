@@ -234,7 +234,7 @@ internal fun BlockSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag("blockSheet")) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Text(
-                if (purpose == BlockPurpose.INSERT) "Insert" else "Turn into",
+                if (purpose == BlockPurpose.INSERT) "Insert" else "Turn Into",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
@@ -331,7 +331,7 @@ internal fun BlockMenuButton(state: FormatState, onAction: (BlockAction) -> Unit
             val close = { open = false }
             BlockMenuItem("Move Up", "blockMoveUp", state.canMoveUp, close, event = "editor.block.move-up") { onAction(BlockAction.MOVE_UP) }
             BlockMenuItem("Move Down", "blockMoveDown", state.canMoveDown, close, event = "editor.block.move-down") { onAction(BlockAction.MOVE_DOWN) }
-            BlockMenuItem("Turn into…", "blockTurnInto", state.canTurnInto, close, event = "editor.block.turn-into", action = onTurnInto)
+            BlockMenuItem("Turn Into…", "blockTurnInto", state.canTurnInto, close, event = "editor.block.turn-into", action = onTurnInto)
             BlockMenuItem("Duplicate Block", "blockDuplicate", true, close, event = "editor.block.duplicate") { onAction(BlockAction.DUPLICATE) }
             BlockMenuItem("Delete Block", "blockDelete", true, close, event = "editor.block.delete") { onAction(BlockAction.DELETE) }
         }

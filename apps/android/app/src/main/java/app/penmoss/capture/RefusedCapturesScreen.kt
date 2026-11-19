@@ -54,7 +54,7 @@ fun RefusedCapturesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Captures not added") },
+                title = { Text("Captures Not Added") },
                 navigationIcon = { IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             )
         },
@@ -92,7 +92,7 @@ fun RefusedCapturesScreen(
         val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { discarding = null },
-            title = { Text("Discard this capture?") },
+            title = { Text("Discard This Capture?") },
             text = { Text("It is only on this phone, so its text is lost. Copy it first to keep it.") },
             confirmButton = {
                 TextButton(

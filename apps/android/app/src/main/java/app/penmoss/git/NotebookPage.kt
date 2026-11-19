@@ -54,7 +54,7 @@ object NotebookTab {
 
 /** The Notes row's words (PEN-148): how many, or that they are not read yet. */
 internal fun noteCountWords(count: Int?): String = when (count) {
-    null -> "Not read yet"
+    null -> "Not Read Yet"
     1 -> "1 note"
     else -> String.format(java.util.Locale.US, "%,d notes", count)
 }
@@ -339,7 +339,7 @@ private fun GitTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions
             { authorEmail = it.trim() },
             Modifier.fillMaxWidth().testTag("gitAuthorEmail-$id"),
             label = { Text("Commit Email for This Notebook") },
-            supportingText = { Text("Blank: Commits From This Phone, on All Notebooks. A GitHub no-reply address (…@users.noreply.github.com) keeps yours private.") },
+            supportingText = { Text("Blank: Commits from This Phone, on All Notebooks. A GitHub no-reply address (…@users.noreply.github.com) keeps yours private.") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         )

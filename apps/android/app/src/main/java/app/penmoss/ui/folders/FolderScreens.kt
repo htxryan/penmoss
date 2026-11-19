@@ -118,7 +118,7 @@ fun FolderSheet(
                 // The web's name for it, beside New Note Here (T53 item 12).
                 FolderSheetAction("New Folder Here", "folderAction-subfolder", event = "tree.folder-menu.new-folder", tracked.done(onNewSubfolder))
                 FolderSheetAction("Rename", "folderAction-rename", event = "tree.folder-menu.rename", tracked.done(onRename))
-                FolderSheetAction("Move to…", "folderAction-move", event = "tree.folder-menu.move", tracked.done(onMove))
+                FolderSheetAction("Move To…", "folderAction-move", event = "tree.folder-menu.move", tracked.done(onMove))
                 // The web's names, with "…" for what asks first (T39 pass 3, A891).
                 FolderSheetAction("Delete Folder…", "folderAction-delete", event = "tree.folder-menu.delete", tracked.done(onDelete))
             }

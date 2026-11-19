@@ -155,6 +155,9 @@ object ControlScan {
     class Source(private val text: String) {
         /** 0 code, 1 string, 2 comment. */
         private val kinds = ByteArray(text.length)
+
+        /** How deep in string templates the reading is: a string inside one is the outer string's. */
+        private var templates = 0
         private val lineStarts = ArrayList<Int>().apply {
             add(0)
             text.forEachIndexed { i, c -> if (c == '\n') add(i + 1) }
@@ -245,7 +248,7 @@ object ControlScan {
             while (i < to) {
                 if (kinds[i] == CODE && text[i] == '"' && !text.startsWith("\"\"\"", i)) {
                     var j = i + 1
-                    while (j < text.length && kinds[j] == STRING && !(text[j] == '"' && text[j - 1] != '\\')) j++
+                    while (j < text.length && kinds[j] == STRING) j++
                     found += i to text.substring(i + 1, j)
                     i = j + 1
                 } else {
@@ -318,7 +321,8 @@ object ControlScan {
         /** A string from its opening quote; its templates' code counts as string too. Returns the index after it. */
         private fun string(start: Int, raw: Boolean): Int {
             val quote = if (raw) 3 else 1
-            kinds[start] = CODE
+            val edge = if (templates > 0) STRING else CODE
+            kinds[start] = edge
             var i = start + quote
             while (i < text.length) {
                 if (raw && text.startsWith("\"\"\"", i)) {
@@ -326,11 +330,11 @@ object ControlScan {
                     var end = i + 3
                     while (end < text.length && text[end] == '"') end++
                     for (k in i until end - 3) kinds[k] = STRING
-                    for (k in end - 3 until end) kinds[k] = CODE
+                    for (k in end - 3 until end) kinds[k] = edge
                     return end
                 }
                 if (!raw && text[i] == '"') {
-                    kinds[i] = CODE
+                    kinds[i] = edge
                     return i + 1
                 }
                 if (!raw && text[i] == '\\') {
@@ -342,7 +346,9 @@ object ControlScan {
                 if (text.startsWith("\${", i)) {
                     kinds[i] = STRING
                     kinds[i + 1] = STRING
+                    templates++
                     i = code(i + 2, inTemplate = true)
+                    templates--
                     continue
                 }
                 kinds[i++] = STRING

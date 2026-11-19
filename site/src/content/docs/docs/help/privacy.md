@@ -22,7 +22,7 @@ Penmoss does not check who can read your repository. Keep it **private** to keep
 - **Send feedback**, only when you send it: an issue on Penmoss's GitHub repository, with what you wrote, the screenshots you chose and a description of the screen, never a note's text. See [Send feedback](/docs/help/feedback/).
 - **Agents you connect** read and change the notebook you gave them. Their providers handle what they read under their own terms. Penmoss never sends your notes to an AI service by itself.
 - **The search model** is downloaded once from Hugging Face on the Mac. Semantic search then runs on your Mac; your notes are not sent anywhere.
-- **Pictures from the web** in a note are downloaded from their websites, which see your IP address. On Android, **Settings → Storage → Load Pictures From the Web** sets it to **Always**, **On Wi-Fi** or **Never**.
+- **Pictures from the web** in a note are downloaded from their websites, which see your IP address. On Android, **Settings → Storage → Load Pictures from the Web** sets it to **Always**, **On Wi-Fi** or **Never**.
 - **Updates**: the Mac app asks for the newest build when it checks.
 
 - **Usage data**, only if you choose **Share Usage Data**: the names of the commands, shortcuts, buttons, screens and settings you use, sent to Penmoss's own server. See [Usage data](#usage-data) below.

@@ -122,7 +122,7 @@ fun SymbolsScreen(
                     headlineContent = { Text(symbol.name, Modifier.testTag("symbol-colour-label-$index")) },
                     supportingContent = {
                         Text(
-                            "${keys.getOrNull(index) ?: "No key"} · ${kindDoes(kind)}",
+                            "${keys.getOrNull(index) ?: "No Key"} · ${kindDoes(kind)}",
                             Modifier.testTag("symbol-key-$index"),
                         )
                     },
@@ -158,7 +158,7 @@ fun SymbolsScreen(
                         Modifier.testTag("symbol-colour-label-$index"),
                     )
                 },
-                supportingContent = { Text(keys.getOrNull(index) ?: "No key", Modifier.testTag("symbol-key-$index")) },
+                supportingContent = { Text(keys.getOrNull(index) ?: "No Key", Modifier.testTag("symbol-key-$index")) },
                 trailingContent = {
                     IconButton(
                         onClick = trackedClick("settings.symbols.row.remove") { change(symbols.filterIndexed { at, _ -> at != index }, "Removed ${symbol.glyph}. Lines with ${symbol.glyph} show it as text.") },
@@ -264,7 +264,7 @@ internal fun kindDoes(kind: String): String = when (kind) {
 }
 
 /** What a symbol's row says in place of its colour for an emoji, in its own colours (A1588). */
-internal const val OWN_COLOURS = "Its own colours"
+internal const val OWN_COLOURS = "Its Own Colours"
 
 /** The colour chips' value for "any colour", until one is picked. */
 private const val CUSTOM = "custom"

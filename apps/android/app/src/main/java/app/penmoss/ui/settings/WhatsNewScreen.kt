@@ -108,7 +108,7 @@ private fun Heading(text: String, style: androidx.compose.ui.text.TextStyle, mod
 
 @Composable
 private fun Block(block: NotesBlock, tag: String) {
-    Heading(headingCase(block.title), MaterialTheme.typography.titleMedium, Modifier.testTag(tag))
+    Heading(block.title, MaterialTheme.typography.titleMedium, Modifier.testTag(tag))
     if (block.groups.isEmpty()) {
         Help("Nothing that people using Penmoss would notice.")
         return
@@ -125,13 +125,6 @@ private fun Block(block: NotesBlock, tag: String) {
         }
     }
 }
-
-/**
- * A release block's title as a heading (PEN-146): the shared model's "In this version (since
- * 0.2.0)", which the Mac's contract fixes, in Title Case on the screen. A version stays as it is.
- */
-internal fun headingCase(title: String): String =
-    title.replace("In this version", "In This Version").replace("(since ", "(Since ")
 
 /**
  * The version card's line (PEN-146; PEN-148): how each install updates. One from Google Play (its

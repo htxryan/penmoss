@@ -160,7 +160,7 @@ class BetweenNotebooksScreenTest {
         compose.waitForIdle()
         assertEquals(listOf("w" to "h"), copies)
         assertEquals("1 note", noteCountWords(1))
-        assertEquals("Not read yet", noteCountWords(null))
+        assertEquals("Not Read Yet", noteCountWords(null))
     }
 
     @Test

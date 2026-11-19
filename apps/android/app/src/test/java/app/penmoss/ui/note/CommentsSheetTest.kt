@@ -123,8 +123,8 @@ class CommentsSheetTest {
     fun aNoteOffersSendToAndDeleteThreadIsNamed() {
         show(draft = CommentDraft("Raised beds", range = true))
         compose.onNodeWithTag("commentComposer").assertExists()
-        compose.onNodeWithTag("commentDraftSendTo").assertTextEquals("Send to…")
-        compose.onNodeWithTag("commentSendTo-T1").assertTextEquals("Send to…")
+        compose.onNodeWithTag("commentDraftSendTo").assertTextEquals("Send To…")
+        compose.onNodeWithTag("commentSendTo-T1").assertTextEquals("Send To…")
         compose.onNodeWithTag("commentDeleteThread-T1").assertTextEquals("Delete Thread")
         assertEquals(emptyList<String>(), calls)
     }
@@ -343,7 +343,7 @@ class CommentsSheetTest {
         compose.onNodeWithTag("commentDelete-C5").assertExists()
         compose.onNodeWithTag("commentDeleteThread-T3").performClick()
         assertEquals(emptyList<String>(), calls)
-        compose.onNodeWithText("Delete this thread?").assertExists()
+        compose.onNodeWithText("Delete This Thread?").assertExists()
         compose.onNodeWithTag("commentDeleteConfirm").performClick()
         assertEquals(listOf("deleteThread T3"), calls)
     }

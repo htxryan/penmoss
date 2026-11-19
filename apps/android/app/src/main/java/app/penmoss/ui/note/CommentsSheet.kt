@@ -304,7 +304,7 @@ internal fun CommentsSheet(
         val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("Delete this thread?") },
+            title = { Text("Delete This Thread?") },
             text = { Text("Its comments are deleted on every device. To keep them, resolve it instead.") },
             confirmButton = {
                 TextButton(onClick = trackedClick("comments.thread.delete.confirm", tracked.done {
@@ -377,7 +377,7 @@ private fun Composer(
         // Comment into a narrow column with no label (A1096).
         TextButton(onClick = trackedClick("comments.send-to", onSendTo), modifier = Modifier.testTag("commentDraftSendTo")) {
             Text(
-                target?.let { "Send to ${it.label}" } ?: "Send to…",
+                target?.let { "Send to ${it.label}" } ?: "Send To…",
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -490,7 +490,7 @@ private fun ThreadCard(
                 } else {
                     TextButton(onClick = trackedClick("comments.reopen") { onStatus(ThreadStatus.OPEN) }, modifier = Modifier.testTag("commentReopen-${thread.id}")) { Text("Reopen") }
                 }
-                TextButton(onClick = trackedClick("comments.send-to", onSendTo), modifier = Modifier.testTag("commentSendTo-${thread.id}")) { Text("Send to…") }
+                TextButton(onClick = trackedClick("comments.send-to", onSendTo), modifier = Modifier.testTag("commentSendTo-${thread.id}")) { Text("Send To…") }
                 // The web's name for it (T39 pass 3, A909).
                 TextButton(onClick = trackedClick("comments.thread.delete", onDeleteThread), modifier = Modifier.testTag("commentDeleteThread-${thread.id}")) { Text("Delete Thread") }
             }
@@ -590,7 +590,7 @@ internal fun SendToDialog(
     val tracked = rememberTrackedDialog("sendTo")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Send to…") },
+        title = { Text("Send To…") },
         text = {
             LazyColumn(Modifier.fillMaxWidth().testTag("sendToList")) {
                 if (ui.loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
