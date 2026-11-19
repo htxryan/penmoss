@@ -86,6 +86,8 @@ export async function sendNext(
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? SEND_TIMEOUT_MS);
   const abort = () => controller.abort();
   options.signal?.addEventListener('abort', abort);
+  // Sharing turned off before the send began: it never starts.
+  if (options.signal?.aborted) controller.abort();
   try {
     const response = await (options.fetch ?? fetch)(`${options.base}/v1/batch`, {
       method: 'POST',
