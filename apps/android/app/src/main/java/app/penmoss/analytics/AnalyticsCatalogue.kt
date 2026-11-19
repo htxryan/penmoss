@@ -15,7 +15,13 @@ import kotlinx.serialization.json.longOrNull
  * An event whose name is not here, or whose props are not typed for its kind, is dropped before
  * it is stored (core's `validate.ts`), so the phone can never record free text.
  */
-class AnalyticsCatalogue(private val names: Map<String, Set<String>>) {
+class AnalyticsCatalogue(
+    private val names: Map<String, Set<String>>,
+    /** The words each setting's value may be (core's SETTING_VALUES); any other word is refused. */
+    private val settingWords: Map<String, Set<String>> = emptyMap(),
+    /** The CLI's own flags (core's CLI_FLAGS): a cli event names only these. */
+    private val cliFlags: Set<String> = emptySet(),
+) {
     fun has(kind: String, name: String): Boolean = names[kind]?.contains(name) == true
 
     fun names(kind: String): Set<String> = names[kind].orEmpty()
@@ -34,7 +40,7 @@ class AnalyticsCatalogue(private val names: Map<String, Set<String>>) {
         if (event.sizeClass != null && event.sizeClass !in AnalyticsFormat.SIZE_CLASSES) return "sizeClass"
         if (event.kind !in AnalyticsFormat.KINDS) return "kind"
         if (!has(event.kind, event.name)) return "name"
-        val checks = props(event.kind)
+        val checks = props(event.kind, event.name)
         for ((key, value) in event.props) {
             val check = checks[key] ?: return "prop $key"
             if (!check(value)) return "prop $key value"
@@ -42,7 +48,20 @@ class AnalyticsCatalogue(private val names: Map<String, Set<String>>) {
         return null
     }
 
-    private fun props(kind: String): Map<String, (JsonElement) -> Boolean> {
+    private fun props(kind: String, name: String): Map<String, (JsonElement) -> Boolean> {
+        // A setting's value: a boolean, a whole number, a count bucket, or one of its own words.
+        val settingValue: (JsonElement) -> Boolean = { value ->
+            val primitive = value as? JsonPrimitive
+            when {
+                primitive == null -> false
+                primitive.isString -> primitive.content in AnalyticsFormat.COUNT_BUCKETS || primitive.content in settingWords[name].orEmpty()
+                primitive.booleanOrNull != null -> true
+                else -> !primitive.content.contains('.') && primitive.longOrNull?.let { it in 0..MAX_SETTING_NUMBER } == true
+            }
+        }
+        val flags: (JsonElement) -> Boolean = { value ->
+            value is JsonArray && value.size <= MAX_FLAGS && value.all { flag -> flag.string()?.let { FLAG.matches(it) && it in cliFlags } == true }
+        }
         val screen: (JsonElement) -> Boolean = { value -> value.string()?.let { has("screen", it) } == true }
         return when (kind) {
             "app" -> mapOf("notebooks" to COUNT, "notes" to COUNT, "agents" to BOOL, "theme" to oneOf(BUILTIN_THEMES + "custom"), "active" to TOOK)
@@ -56,7 +75,7 @@ class AnalyticsCatalogue(private val names: Map<String, Set<String>>) {
             "dialog" -> mapOf("action" to oneOf(listOf("open", "done", "cancel")), "open" to TOOK)
             "click" -> mapOf("state" to oneOf(listOf("on", "off")))
             "menu" -> mapOf("source" to oneOf(listOf("menubar", "tray", "context")))
-            "setting" -> mapOf("value" to SETTING_VALUE, "changed" to { value -> (value as? JsonPrimitive)?.booleanOrNull == true && !value.isString })
+            "setting" -> mapOf("value" to settingValue, "changed" to { value -> (value as? JsonPrimitive)?.booleanOrNull == true && !value.isString })
             "firstrun" -> mapOf("result" to oneOf(listOf("done", "back", "failed")), "error" to oneOf(FIRSTRUN_ERRORS))
             "feedback" -> mapOf(
                 "type" to oneOf(listOf("bug", "feature")),
@@ -66,7 +85,7 @@ class AnalyticsCatalogue(private val names: Map<String, Set<String>>) {
                 "groupsLeftOut" to COUNT,
             )
             "sync" -> mapOf("result" to oneOf(listOf("ok", "conflict", "offline", "failed")), "took" to TOOK, "changed" to COUNT)
-            "cli" -> mapOf("flags" to FLAGS, "exit" to oneOf(CLI_EXITS), "took" to TOOK, "tty" to BOOL)
+            "cli" -> mapOf("flags" to flags, "exit" to oneOf(CLI_EXITS), "took" to TOOK, "tty" to BOOL)
             "tool" -> mapOf("agentClient" to oneOf(AGENT_CLIENTS), "result" to oneOf(listOf("ok", "invalid", "notFound", "conflict", "failed")), "took" to TOOK)
             else -> emptyMap()
         }
@@ -81,7 +100,6 @@ class AnalyticsCatalogue(private val names: Map<String, Set<String>>) {
             "^(?:(?:Mod|Ctrl|Alt|Shift|Meta|Cmd|Option)\\+){0,4}(?:[A-Z0-9]|F\\d{1,2}|[\\[\\]\\\\;',./`=-]|Enter|Escape|Tab|Space|Backspace|Delete|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown)$",
         )
         private val FLAG = Regex("^[a-z][a-z0-9-]{0,31}$")
-        private val SETTING_TOKEN = Regex("^[a-zA-Z0-9][a-zA-Z0-9-]{0,31}$")
 
         val BUILTIN_THEMES = listOf("penmoss", "paper", "slate", "nord", "solarized", "gruvbox", "rose-pine", "high-contrast")
         val FIRSTRUN_ERRORS = listOf("offline", "auth", "notFound", "conflict", "gitMissing", "refused", "other")
@@ -97,25 +115,18 @@ class AnalyticsCatalogue(private val names: Map<String, Set<String>>) {
         private val BOOL: (JsonElement) -> Boolean = { value -> value is JsonPrimitive && !value.isString && value.booleanOrNull != null }
         private val COUNT = oneOf(AnalyticsFormat.COUNT_BUCKETS)
         private val TOOK = oneOf(AnalyticsFormat.DURATION_BUCKETS)
-        private val FLAGS: (JsonElement) -> Boolean = { value ->
-            value is JsonArray && value.size <= 16 && value.all { it.string()?.let(FLAG::matches) == true }
-        }
-        private val SETTING_VALUE: (JsonElement) -> Boolean = { value ->
-            val primitive = value as? JsonPrimitive
-            when {
-                primitive == null -> false
-                primitive.isString -> SETTING_TOKEN.matches(primitive.content) || primitive.content in AnalyticsFormat.COUNT_BUCKETS
-                primitive.booleanOrNull != null -> true
-                else -> primitive.longOrNull?.let { it in 0..10_000_000 } == true && !primitive.content.contains('.')
-            }
-        }
+        const val MAX_FLAGS = 16
+        const val MAX_SETTING_NUMBER = 10_000_000L
 
-        /** Reads the contract's catalogue: `{ "catalogue": { kind: [names…] } }`. */
+        /** Reads the contract: its `catalogue` (kind → names), `settingValues` and `cliFlags`. */
         fun parse(text: String): AnalyticsCatalogue {
             val root = Json.parseToJsonElement(text) as JsonObject
             val catalogue = root["catalogue"] as? JsonObject ?: error("analytics-v1.json has no catalogue")
+            fun words(value: JsonElement?) = (value as? JsonArray)?.mapNotNull { it.string() }?.toSet().orEmpty()
             return AnalyticsCatalogue(
-                catalogue.mapValues { (_, names) -> (names as JsonArray).mapNotNull { it.string() }.toSet() },
+                catalogue.mapValues { (_, names) -> words(names) },
+                (root["settingValues"] as? JsonObject)?.mapValues { (_, values) -> words(values) }.orEmpty(),
+                words(root["cliFlags"]),
             )
         }
 

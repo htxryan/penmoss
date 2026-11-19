@@ -102,8 +102,8 @@ class AnalyticsContractTest {
         "enum" -> type.getValue("values").jsonArray.first() to JsonPrimitive("Zebracanary Title Q7")
         "keys" -> JsonPrimitive("Mod+Shift+K") to JsonPrimitive("pangolincanary")
         "screen" -> JsonPrimitive("settings.privacy") to JsonPrimitive("note/01HZX")
-        "setting" -> JsonPrimitive("dark") to JsonPrimitive("slothcanary search")
-        "flags" -> JsonArray(listOf(JsonPrimitive("json"))) to JsonArray(listOf(JsonPrimitive("--Path=/Users/x")))
+        "setting" -> JsonPrimitive(true) to JsonPrimitive("slothcanary")
+        "flags" -> JsonArray(listOf(JsonPrimitive(strings("cliFlags").first()))) to JsonArray(listOf(JsonPrimitive("slothcanary")))
         else -> error("A prop type the phone does not know: $type")
     }
 
@@ -121,6 +121,23 @@ class AnalyticsContractTest {
             }
             assertNotNull("$kind takes no other prop", catalogue.problem(event(kind, name, mapOf("title" to JsonPrimitive("x")))))
         }
+    }
+
+    @Test
+    fun aSettingsWordIsOneOfItsOwn() {
+        val words = contract.getValue("settingValues").jsonObject
+        for ((name, values) in words) {
+            for (word in values.jsonArray) {
+                assertNull("$name = $word", catalogue.problem(event("setting", name, mapOf("value" to word))))
+            }
+            assertNotNull(name, catalogue.problem(event("setting", name, mapOf("value" to JsonPrimitive("narwhalcanary")))))
+        }
+        // A limit's value is a number; a switch's a boolean; another setting's word is not this one's.
+        assertNull(catalogue.problem(event("setting", "privacy.limits.events.days", mapOf("value" to JsonPrimitive(30)))))
+        assertNull(catalogue.problem(event("setting", "privacy.share", mapOf("value" to JsonPrimitive(false)))))
+        assertNotNull(catalogue.problem(event("setting", "theme.id", mapOf("value" to JsonPrimitive("dark")))))
+        assertEquals(contract.getValue("maxFlags").jsonPrimitive.int, AnalyticsCatalogue.MAX_FLAGS)
+        assertEquals(contract.getValue("maxSettingNumber").jsonPrimitive.long, AnalyticsCatalogue.MAX_SETTING_NUMBER)
     }
 
     @Test
