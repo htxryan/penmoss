@@ -196,11 +196,7 @@ async function forget(context: Context, analytics: AnalyticsIo): Promise<void> {
     throw new CliError(EXIT.ERROR, analyticsCopy('forget.offline', 'mac'), 'offline');
   }
   if (outcome === 'failed') {
-    throw new CliError(
-      EXIT.ERROR,
-      'Penmoss’s server could not delete your shared data, so nothing changed. Try again later.',
-      'forget_failed',
-    );
+    throw new CliError(EXIT.ERROR, analyticsCopy('forget.failed', 'mac'), 'forget_failed');
   }
   const { file } = newId(analytics);
   context.emit({ deleted: old, id: file.install }, () => [
