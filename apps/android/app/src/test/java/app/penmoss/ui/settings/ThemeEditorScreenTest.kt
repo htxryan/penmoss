@@ -174,8 +174,8 @@ class ThemeEditorScreenTest {
         compose.setContent {
             PenmossTheme {
                 AppearanceScreen(
-                    "system", systemDark = false, themes = emptyList(), chosen = "nord", fullWidth = false, editorWidth = 52,
-                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {}, editor = entry,
+                    "system", systemDark = false, themes = emptyList(), chosen = "nord",
+                    enabled = true, onMode = {}, onTheme = {}, onBack = {}, editor = entry,
                 )
             }
         }

@@ -462,8 +462,8 @@ private val MODE_ICONS = mapOf("light" to SettingsIcons.Sun, "dark" to SettingsI
 
 /**
  * Appearance (ST3, ST4, ST11): two tabs (Ryan's pick, option 3, 18 Nov 2026; A1619). Settings
- * holds only the controls: Theme (the mode, the theme cards and Customize…), Text (the fonts and
- * size) and Note (its width, here since Android has no Note page). Preview holds the app as it
+ * holds only the controls: Theme (the mode, the theme cards and Customize…) and Text (the fonts
+ * and size); Note Width is on Settings → Note, as on the Mac (A1634). Preview holds the app as it
  * will look (Home's own shortcut row and the note's own editor page, inert, A1564) and the fonts
  * at their real size (A1582). A choice applies at once, to the native screens, the system bars,
  * the editor and every other device.
@@ -475,12 +475,9 @@ fun AppearanceScreen(
     systemDark: Boolean,
     themes: List<ThemeCard>,
     chosen: String,
-    fullWidth: Boolean,
-    editorWidth: Int,
     enabled: Boolean,
     onMode: (String) -> Unit,
     onTheme: (String) -> Unit,
-    onFullWidth: (Boolean) -> Unit,
     onBack: () -> Unit,
     /** The theme editor's way in for the theme chosen (T40 P1b): duplicate a built-in, or edit. */
     editor: ThemeEditorEntry? = null,
@@ -538,15 +535,6 @@ fun AppearanceScreen(
             GroupTitle("Text", deviceOnly = true)
             FontsGroup(fonts, enabled)
         }
-        GroupTitle("Note")
-        Text("Note Width", Modifier.settingRow("note-width").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
-        Segments(
-            listOf("theme" to "The Theme’s Width", "full" to "Full Width"),
-            if (fullWidth) "full" else "theme",
-            enabled,
-            "width",
-        ) { onFullWidth(it == "full") }
-        Help("The theme’s is $editorWidth rem. A phone already uses its whole width; this shows on a tablet, an unfolded phone and your other devices.")
         }
     }
 }

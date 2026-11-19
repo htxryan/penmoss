@@ -316,7 +316,7 @@ Device settings live in the primary notebook's `device` map, so the Mac app on t
 4. **Offline.** In airplane mode, change the theme and the mode: they show at once. Meanwhile change the mode on the Mac. Turn airplane mode off and let both sync: the phone's theme reaches the Mac, and both end on the same mode (A410, A411).
 5. **Daily Notes.** These are the primary notebook's. Pick a time zone by searching for a city, or with **Use This Phone’s Zone**; the date shown changes. Edit the daily template and Save; the web's Daily notes shows it. **Use the Default** restores the default on both. Paste more than 10,000 characters: the count under the field says it is too long and Save is off.
 6. **Quick Capture.** Choose **New Note in Inbox**: the capture sheet from the tile or the widget starts on it, and the web's capture form does too.
-7. **Note width.** Appearance → Note Width → **Full Width**, and check the web follows. In landscape, where the screen is a little wider than the theme's 52rem, a long paragraph runs to the edges; with **The Theme’s Width** it stops short of them (A413).
+7. **Note width.** Settings → Note → Note Width → **Full Width** (its Preview tab widens too), and check the web follows. In landscape, where the screen is a little wider than the theme's 52rem, a long paragraph runs to the edges; with **The Theme’s Width** it stops short of them (A413).
 
 ## Test the theme editor on the Pixel (T40 P1b)
 

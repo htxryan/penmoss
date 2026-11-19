@@ -55,6 +55,8 @@ internal object SettingsRoutes {
 
     /** Settings → Home, the Mac's Sidebar page (its route kept from when it was Display). */
     const val DISPLAY = "settings/display"
+    /** Settings → Note (A1634): the Mac's Note page, with Note Width. */
+    const val NOTE = "settings/note"
     const val SYMBOLS = "settings/symbols"
     const val DAILY = "settings/daily"
     const val ZONE = "settings/daily/zone"
@@ -183,6 +185,7 @@ internal fun settingsGroups(
         listOf(
             SettingsSection("appearance", "Appearance", "$themeName · ${modeLabel(settings.mode)}", SettingsIcons.Palette, SettingsRoutes.APPEARANCE),
             SettingsSection("home", "Home", displaySummary(settings), SettingsIcons.PanelLeft, SettingsRoutes.DISPLAY),
+            SettingsSection("note", "Note", noteSummary(settings.fullWidth), SettingsIcons.Note, SettingsRoutes.NOTE),
             SettingsSection("symbols", "Symbols", symbolsSummary(settings), SettingsIcons.Star, SettingsRoutes.SYMBOLS),
         ),
     ),
@@ -306,20 +309,15 @@ internal fun AppearanceRoute(graph: DeviceGraph, onEditTheme: (String) -> Unit, 
     val cards = remember(settings) {
         catalogue.builtIns.map { themeCard(it, custom = false) } + settings.customThemes.map { themeCard(it, custom = true) }
     }
-    val width = (resolved.theme["editorWidth"] as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() ?: 52
     val variant = if (appearance.isDark(isSystemInDarkTheme())) "dark" else "light"
     AppearanceScreen(
         mode = settings.mode,
         systemDark = isSystemInDarkTheme(),
         themes = cards,
         chosen = resolved.id,
-        fullWidth = settings.fullWidth,
-        editorWidth = width,
         enabled = state.known,
         onMode = { graph.changeSetting(SettingKeys.MODE, JsonPrimitive(it)) },
         onTheme = { graph.changeSetting(SettingKeys.THEME, JsonPrimitive(it)) },
-        // Off is stored too, as the web stores it, so another device's copy never wins (A501).
-        onFullWidth = { graph.changeSetting(SettingKeys.FULL_WIDTH, JsonPrimitive(it)) },
         onBack = onBack,
         // Interface Font, Note Font and Note Font Size (T51, A944), each stored as chosen.
         fonts = FontsUi(
@@ -561,6 +559,7 @@ internal fun NavGraphBuilder.settingsRoutes(host: SettingsHost) {
     composable(SettingsRoutes.STORAGE) { entry -> StorageRoute(device, onBack = back(entry)) }
     // Home's shortcuts and sections, synced with the Mac's sidebar (T42, A576; T40 ST12, A650).
     composable(SettingsRoutes.DISPLAY) { entry -> DisplayRoute(device, onBack = back(entry), notebook = host.notebook) }
+    composable(SettingsRoutes.NOTE) { entry -> NoteSettingsRoute(device, onBack = back(entry)) }
     // The line symbols, synced with the Mac's (T44, ST13, A747).
     composable(SettingsRoutes.SYMBOLS) { entry ->
         SymbolsRoute(device, onShortcuts = { nav.open(CommandRoutes.SHORTCUTS) }, onBack = back(entry))

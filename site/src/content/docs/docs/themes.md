@@ -36,7 +36,7 @@ Under **Text**:
 
 ## Note width
 
-**Settings → Note → Note Width** is the theme's width, about 52 rem, or **Full Window**. **Toggle Full-Width Notes** (⌘⌥⇧W, or the button at the note's top right) switches between them. The rest of how a note is laid out is on the same page; see [The note page in Settings](/docs/organise/#the-note-in-settings).
+**Settings → Note → Note Width** is the theme's width, about 52 rem, or **Full Window**. **Toggle Full-Width Notes** (⌘⌥⇧W, or the button at the note's top right) switches between them. The rest of how a note is laid out is on the same page; see [The note page in Settings](/docs/organise/#the-note-in-settings). On Android, Note Width is on **Settings → Note** too, as **The Theme's Width** or **Full Width**; it shows on a tablet or an unfolded phone, since a phone already uses its whole width.
 
 ## On the Mac
 

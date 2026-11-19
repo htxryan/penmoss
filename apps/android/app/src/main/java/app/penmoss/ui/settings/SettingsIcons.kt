@@ -31,6 +31,8 @@ object SettingsIcons {
     /** Display (T42, A650): the web's `panelL`, a window with its sidebar. */
     val PanelLeft = icon("Display", rect(3.5f, 4.5f, 17f, 15f, 2f) + "M9.5 4.5v15")
     /** Symbols (T44, A747): the web's `star`. */
+    /** Settings → Note (A1634), Lucide's file as the Mac's Note page has it. */
+    val Note = icon("Note", "M14.5 3.5H6.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10zM14.5 3.5v5h5")
     val Star = icon("Symbols", "m12 3.8 2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z")
     val Sun = icon(
         "Sun",

@@ -110,9 +110,13 @@ class SettingsScreensTest {
         compose.onNodeWithText("Look and Feel").assertIsDisplayed()
         compose.onNodeWithText("Nord · Dark").assertIsDisplayed()
         compose.onNodeWithText("Every shortcut on Home").assertIsDisplayed()
-        compose.onNodeWithText("☐ ★ ? ! 💡 →").assertIsDisplayed()
         compose.onNodeWithTag("section-appearance").performClick()
         compose.onNodeWithTag("section-home").performClick()
+        compose.onNodeWithText("The theme’s width").assertIsDisplayed()
+        compose.onNodeWithTag("section-note").performClick()
+        // Note pushes Symbols below a short screen (A1634).
+        list.performScrollToNode(hasText("☐ ★ ? ! 💡 →"))
+        compose.onNodeWithText("☐ ★ ? ! 💡 →").assertIsDisplayed()
         compose.onNodeWithTag("section-symbols").performClick()
         list.performScrollToNode(hasText("Writing"))
         list.performScrollToNode(hasText("America/Chicago"))
@@ -135,7 +139,7 @@ class SettingsScreensTest {
         for (gone in listOf("about", "sync", "display")) compose.onNodeWithTag("section-$gone").assertDoesNotExist()
         assertEquals(
             listOf(
-                SettingsRoutes.APPEARANCE, SettingsRoutes.DISPLAY, SettingsRoutes.SYMBOLS, app.penmoss.ui.keys.CommandRoutes.SHORTCUTS,
+                SettingsRoutes.APPEARANCE, SettingsRoutes.DISPLAY, SettingsRoutes.NOTE, SettingsRoutes.SYMBOLS, app.penmoss.ui.keys.CommandRoutes.SHORTCUTS,
                 "settings/git/n1", app.penmoss.ui.keys.CommandRoutes.GIT_NOTEBOOKS, SettingsRoutes.AGENT_ACTIVITY, SettingsRoutes.GITHUB,
             ),
             opened,
@@ -146,7 +150,7 @@ class SettingsScreensTest {
     fun theGroupsAreTheFiveOfTheDesignInOrder() {
         val groups = settingsGroups(Settings(), "Penmoss")
         assertEquals(listOf("Look and Feel", "Writing", "Notebooks", "Agents", "This Phone"), groups.map { it.title })
-        assertEquals(listOf("appearance", "home", "symbols"), groups[0].sections.map { it.id })
+        assertEquals(listOf("appearance", "home", "note", "symbols"), groups[0].sections.map { it.id })
         assertEquals(listOf("daily", "capture", "shortcuts"), groups[1].sections.map { it.id })
         assertEquals(listOf("git"), groups[2].sections.map { it.id })
         assertEquals(listOf("agent-activity"), groups[3].sections.map { it.id })
@@ -175,6 +179,8 @@ class SettingsScreensTest {
         assertTrue(searchSettings(SETTINGS_INDEX, "token").first().label.contains("Token"))
         assertEquals(emptyList<SettingEntry>(), searchSettings(SETTINGS_INDEX, "   "))
         assertTrue(searchSettings(SETTINGS_INDEX, "hotkey").any { it.route == app.penmoss.ui.keys.CommandRoutes.SHORTCUTS })
+        // Note Width is on Note, as on the Mac (A1634).
+        assertEquals(SettingsRoutes.NOTE, searchSettings(SETTINGS_INDEX, "full width").first().route)
         // Every id is unique, and every route is one of Settings' own.
         assertEquals(SETTINGS_INDEX.size, SETTINGS_INDEX.map { it.id }.toSet().size)
         assertTrue(SETTINGS_INDEX.all { it.route.startsWith("settings") })
@@ -194,7 +200,7 @@ class SettingsScreensTest {
         var mode by mutableStateOf("system")
         compose.setContent {
             PenmossTheme {
-                AppearanceScreen(mode, systemDark = true, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52, enabled = true, onMode = { mode = it }, onTheme = {}, onFullWidth = {}, onBack = {})
+                AppearanceScreen(mode, systemDark = true, themes = cards, chosen = "penmoss", enabled = true, onMode = { mode = it }, onTheme = {}, onBack = {})
             }
         }
         compose.onNodeWithTag("mode-system").assertIsSelected()
@@ -211,7 +217,7 @@ class SettingsScreensTest {
     fun theThemeCarriesTheLaptopMarkAndSaysItIsKeptOnThisPhone() {
         compose.setContent {
             PenmossTheme {
-                AppearanceScreen("system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52, enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {})
+                AppearanceScreen("system", systemDark = false, themes = cards, chosen = "penmoss", enabled = true, onMode = {}, onTheme = {}, onBack = {})
             }
         }
         // Unmerged, as BetweenNotebooksScreenTest finds the laptop: the mark is inside its row's semantics.
@@ -227,8 +233,7 @@ class SettingsScreensTest {
         compose.setContent {
             PenmossTheme {
                 AppearanceScreen(
-                    "system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52,
-                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {}, fonts = fonts,
+                    "system", systemDark = false, themes = cards, chosen = "penmoss", enabled = true, onMode = {}, onTheme = {}, onBack = {}, fonts = fonts,
                 )
             }
         }
@@ -251,8 +256,7 @@ class SettingsScreensTest {
         compose.setContent {
             PenmossTheme {
                 AppearanceScreen(
-                    "system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52,
-                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {},
+                    "system", systemDark = false, themes = cards, chosen = "penmoss", enabled = true, onMode = {}, onTheme = {}, onBack = {},
                     notePreview = { modifier -> Box(modifier.clickable { touched = true }.testTag("previewNote")) },
                     homeShortcuts = HomeShortcuts(graph = false),
                 )
@@ -282,10 +286,9 @@ class SettingsScreensTest {
     @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
     fun theThemeGridShowsEveryBuiltInAndChoosesOne() {
         var chosen by mutableStateOf("penmoss")
-        var full by mutableStateOf(false)
         compose.setContent {
             PenmossTheme {
-                AppearanceScreen("system", systemDark = false, themes = cards, chosen = chosen, fullWidth = full, editorWidth = 52, enabled = true, onMode = {}, onTheme = { chosen = it }, onFullWidth = { full = it }, onBack = {})
+                AppearanceScreen("system", systemDark = false, themes = cards, chosen = chosen, enabled = true, onMode = {}, onTheme = { chosen = it }, onBack = {})
             }
         }
         for (id in listOf("penmoss", "paper", "slate", "nord", "solarized", "gruvbox", "rose-pine", "high-contrast")) {
@@ -296,19 +299,74 @@ class SettingsScreensTest {
         assertEquals("nord", chosen)
         compose.onNodeWithTag("theme-nord").assertIsSelected()
         compose.onNodeWithTag("theme-penmoss").assertIsNotSelected()
-        // Note width: the theme's, or the whole screen (ST11).
-        compose.onNodeWithText("The Theme’s Width").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("appearanceTabs").assertExists()
-        compose.onNodeWithTag("width-full").performScrollTo().performClick()
+        // Note Width moved to Settings → Note, as on the Mac (A1634).
+        compose.onNodeWithTag("width-full").assertDoesNotExist()
+    }
+
+    /** A1634: Settings → Note holds Note Width, the theme's or the whole screen (ST11), kept on this phone. */
+    @Test
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h900dp")
+    fun noteChoosesTheNoteWidthOnItsSettingsTab() {
+        var full by mutableStateOf(false)
+        compose.setContent {
+            PenmossTheme { NoteSettingsScreen(fullWidth = full, editorWidth = 52, enabled = true, onFullWidth = { full = it }, onBack = {}) }
+        }
+        compose.onNodeWithTag("noteSettingsTab").assertIsSelected()
+        compose.onNodeWithText("Layout").assertIsDisplayed()
+        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).assertCountEquals(1)
+        compose.onNodeWithText("The theme’s is 52 rem.", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag("width-theme").assertIsSelected()
+        compose.onNodeWithTag("width-full").performClick()
         assertTrue(full)
         compose.onNodeWithTag("width-full").assertIsSelected()
+        compose.onNodeWithTag("width-theme").performClick()
+        assertFalse(full)
+    }
+
+    /** A1633, A1634: Note's Preview tab is the note itself, inert, with a line naming its font and size. */
+    @Test
+    fun notesPreviewIsTheNoteItselfAndTakesNoTouch() {
+        var touched = false
+        compose.setContent {
+            PenmossTheme {
+                NoteSettingsScreen(
+                    fullWidth = true, editorWidth = 52, enabled = true, onFullWidth = {}, onBack = {},
+                    noteFont = "Serif", noteSize = 18,
+                    notePreview = { modifier -> Box(modifier.clickable { touched = true }.testTag("previewNote")) },
+                )
+            }
+        }
+        compose.onNodeWithTag("notePreviewApp").assertDoesNotExist()
+        compose.onNodeWithTag("notePreviewTab").performClick()
+        compose.onNodeWithTag("notePreviewTab").assertIsSelected()
+        compose.onNodeWithTag("width-full").assertDoesNotExist()
+        compose.onNodeWithTag("notePreviewCaption").assertTextEquals("A note as the app draws it, with these settings. Change them on Settings.")
+        compose.onNodeWithTag("notePreviewFont").assertTextEquals("Note · Serif · 18 px, at its real size. The fonts are on Appearance.")
+        compose.onNodeWithTag("previewNote").assertDoesNotExist()
+        compose.onNodeWithTag("notePreviewApp").assertIsDisplayed().performTouchInput { click(center) }
+        compose.waitForIdle()
+        assertFalse(touched)
+        compose.onNodeWithTag("noteSettingsTab").performClick()
+        compose.onNodeWithTag("width-full").assertIsSelected()
+    }
+
+    @Test
+    fun noteWaitsForTheSettingsAndSaysWhy() {
+        compose.setContent {
+            PenmossTheme { NoteSettingsScreen(fullWidth = false, editorWidth = 52, enabled = false, onFullWidth = {}, onBack = {}) }
+        }
+        compose.onNodeWithText(SETTINGS_WAIT).assertIsDisplayed()
+        compose.onNodeWithTag("width-full").assertIsNotEnabled()
+        assertEquals("The theme’s width", noteSummary(false))
+        assertEquals("Full width", noteSummary(true))
     }
 
     @Test
     fun beforeTheServerSendsSettingsNothingCanBeChangedAndTheScreenSaysWhy() {
         compose.setContent {
             PenmossTheme {
-                AppearanceScreen("system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52, enabled = false, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {})
+                AppearanceScreen("system", systemDark = false, themes = cards, chosen = "penmoss", enabled = false, onMode = {}, onTheme = {}, onBack = {})
             }
         }
         compose.onNodeWithText(SETTINGS_WAIT).assertIsDisplayed()

@@ -573,7 +573,7 @@ class GitNotebooksScreenTest {
     fun theSettingsGroupsKeepAppearanceFirstAndNothingOfTheAccount() {
         val ids = settingsGroups(Settings(), "Penmoss").flatMap { it.sections }.map { it.id }
         assertEquals("appearance", ids.first())
-        assertEquals(listOf("appearance", "home", "symbols", "daily", "capture", "shortcuts", "git", "agent-activity", "storage", "github", "whatsnew"), ids)
+        assertEquals(listOf("appearance", "home", "note", "symbols", "daily", "capture", "shortcuts", "git", "agent-activity", "storage", "github", "whatsnew"), ids)
         for (account in listOf("notebooks", "mirror", "status", "devices", "phone", "sync", "about")) assertFalse(account, account in ids)
         assertEquals("Add a notebook from a private GitHub repository", gitSummary(0))
         assertEquals("Add, Primary Notebook, Between Notebooks", gitSummary(2))

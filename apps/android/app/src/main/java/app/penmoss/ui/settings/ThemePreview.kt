@@ -55,7 +55,14 @@ val EDITOR_PREVIEW = PreviewViews { context, channel, onReady, onGone ->
  * with it, and Reload makes another.
  */
 @Composable
-fun ThemePreview(theme: JsonObject, variant: String, modifier: Modifier, views: PreviewViews = EDITOR_PREVIEW) {
+fun ThemePreview(
+    theme: JsonObject,
+    variant: String,
+    modifier: Modifier,
+    views: PreviewViews = EDITOR_PREVIEW,
+    /** The note's width, as Note Width makes it (Settings → Note's preview, A1634); the page's own when null. */
+    fullWidth: Boolean? = null,
+) {
     val live by EditorWebView.live.collectAsStateWithLifecycle()
     var view by remember { mutableStateOf<View?>(null) }
     var ready by remember { mutableStateOf(false) }
@@ -116,4 +123,5 @@ fun ThemePreview(theme: JsonObject, variant: String, modifier: Modifier, views: 
     }
     LaunchedEffect(ready, made) { if (ready) channel.send(BridgeProtocol.encode(ToEditor.Preview)) }
     LaunchedEffect(ready, made, theme, variant) { if (ready) channel.send(BridgeProtocol.encode(ToEditor.Theme(theme, variant))) }
+    LaunchedEffect(ready, made, fullWidth) { if (ready && fullWidth != null) channel.send(BridgeProtocol.encode(ToEditor.Width(fullWidth))) }
 }
