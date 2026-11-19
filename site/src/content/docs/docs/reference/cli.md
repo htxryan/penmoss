@@ -63,6 +63,8 @@ Add a notebook once with `penmoss notebook add <remote>` ([below](#git-notebooks
 | `notebook …`                                                                                                        | Adds, lists, syncs and removes notebooks on this machine ([below](#git-notebooks)).                                                                                                                                                                                                                                                                                                                                                                    |
 | `mcp [--notebook <name>] [--channel [--name <name>]]`                                                               | Runs the MCP server on every notebook with an agent copy, or on that one notebook ([MCP tools](/docs/reference/mcp/)).                                                                                                                                                                                                                                                                                                                                 |
 | `models status`, `models fetch`, `models remove`                                                                    | The model for semantic search: whether it is here and turned on, download it into `~/.penmoss/models`, or delete it and its index. Only the Mac app's `penmoss` has these.                                                                                                                                                                                                                                                                             |
+| `analytics [status\|on\|off\|reset\|forget]`, `analytics show [--client] [--state] [--limit] [--before <id>]`       | Shows or changes [usage data](/docs/help/usage-data/), as **Settings → Privacy** does: whether it is shared, the analytics ID, the record on this Mac (newest first, 100 at a time) and its `limits`. It never asks. See [Usage analytics](#usage-analytics).                                                                                                                                                                                          |
+| `analytics limits [set <key> <value> \| reset [<key>]]`                                                             | Lists the limits on what is kept, with their defaults and ranges; `set` changes one (out of range exits 2) and `reset` puts one, or all, back.                                                                                                                                                                                                                                                                                                         |
 
 Every note command accepts `--json`, `--notebook <name>` and `--no-sync`. `penmoss --version` prints the version. An option that takes a value never takes another option as it: `--text --json` is an error, and `--text=--json` passes the text `--json`.
 
@@ -145,6 +147,23 @@ Commits carry your git identity (read for each commit), or the notebook's own (`
 ### On disk
 
 `~/.penmoss/notebooks.json` lists the notebooks, and `~/.penmoss/git/<id>/` holds each clone. One `penmoss` uses a clone at a time; another waits up to 10 seconds, then exits 5. `PENMOSS_HOME` moves the whole folder.
+
+## Usage analytics
+
+Each run of `penmoss` records one event on this machine: the command's name, the names of the options given (never their values or any other argument), the exit code, how long it took, and whether it ran in a terminal, by a person, an agent or a script. The MCP server records each tool call by name, with the agent and whether it worked, never what it was asked or answered. They go in `~/.penmoss/analytics/events.db`, the record the Mac app keeps, and leave the machine only if you share it: the Mac app sends them, so the CLI never waits on the network. See [Usage data](/docs/help/usage-data/).
+
+```sh
+penmoss analytics                  # sharing, the ID, what is recorded, the limits
+penmoss analytics off              # stop sharing: what waits to be sent stays here
+penmoss analytics show --client cli
+penmoss analytics limits set events.days 30
+```
+
+- **`on`** and **`off`** answer as **Share Usage Data** and **Don't Share** do. As your first answer, `on` shares what was recorded before it and `off` keeps it here; later, `on` shares from then on. The CLI never asks.
+- **`reset`** gives this machine a new analytics ID; what was not sent yet stays here. **`forget`** asks Penmoss's server to delete everything shared under your ID, then gives a new one. Offline, or if the server refuses, it exits 1 and nothing changes.
+- **`show`** lists the record newest first, 100 events at a time. Its last line gives the command for the earlier ones (`--before <id>`). `--client app|cli|mcp` and `--state pending|waiting|sent|local|refused` filter it, and `--json` prints one event a line.
+- **`limits`** lists `events.days`, `events.max`, `logs.fileKb`, `logs.files`, `logs.days`, `report.hours`, `report.lines` and `report.kb` with their values, defaults and ranges, the same as **Settings → Privacy → Advanced**. `limits set <key> <value>` refuses a value out of range ("Between 1 and 360", exit 2). Lowering `events.days` or `events.max` deletes the events outside the new limit at once.
+- **`DO_NOT_TRACK=1`** or **`PENMOSS_ANALYTICS=off`** keeps what that shell records on this machine, whatever your answer.
 
 ## Agents and the CLI
 
