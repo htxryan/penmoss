@@ -28,10 +28,12 @@ await build({
   // (cli-mode.ts, A992); both are inlined into it.
   // embed-worker.cjs: search by meaning's worker thread for `penmoss mcp` (T75, A1152), and
   // embed-utility.cjs, the app's embedding service in a utilityProcess (T76).
+  // analytics-worker.cjs: the usage record's worker thread, which owns events.db (PEN-137).
   entryPoints: {
     boot: 'src/boot.ts',
     'embed-worker': '../../packages/embed/src/embed-worker.ts',
     'embed-utility': 'src/embed-utility.ts',
+    'analytics-worker': 'src/analytics-worker.ts',
   },
   // onnxruntime-web's Node build finds its WASM from import.meta.url, which a CommonJS bundle
   // lacks (T70): each bundle gets its own file's URL.

@@ -127,6 +127,8 @@ const config = {
     'dist/preload.cjs',
     'dist/embed-worker.cjs',
     'dist/embed-utility.cjs',
+    // The usage record's worker thread (PEN-137).
+    'dist/analytics-worker.cjs',
     'dist/ort/*',
     'dist/tray/*.png',
     'dist/web/**/*',
