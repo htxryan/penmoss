@@ -508,6 +508,8 @@
 }
 
 .tabs-sheet-row[data-active] {
+  /* Tinted in the accent, with the accent bar at its start (ac13). */
+  background: var(--pm-accent-soft);
   box-shadow: inset 3px 0 0 var(--pm-accent);
 }
 

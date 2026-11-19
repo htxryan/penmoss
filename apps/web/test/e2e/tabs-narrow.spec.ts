@@ -66,6 +66,9 @@ test('a narrow window lists the tabs in a sheet from the app bar (AC13)', async 
   await expect(button(page)).toHaveAccessibleName('Tabs, 2');
   // The app bar keeps the note's place (A181).
   await expect(page.getByTestId('note-view').getByTestId('app-bar-path')).toBeVisible();
+  // The Tabs button comes before Search, as the mockup has it (ac13).
+  const search = page.getByTestId('note-view').getByTestId('app-bar').getByLabel('Search Notes');
+  expect((await button(page).boundingBox())!.x).toBeLessThan((await search.boundingBox())!.x);
 
   await button(page).click();
   await expect(sheet(page)).toBeVisible();
@@ -75,6 +78,12 @@ test('a narrow window lists the tabs in a sheet from the app bar (AC13)', async 
   // no × (ac13).
   await expect(sheet(page).getByTestId('tabs-sheet-heading')).toHaveText('2 Tabs');
   await expect(rows.nth(0)).toHaveAttribute('aria-current', 'true');
+  // The active row is tinted, not only marked by its accent bar (ac13).
+  const tint = await rows
+    .nth(0)
+    .locator('xpath=..')
+    .evaluate((row) => getComputedStyle(row).backgroundColor);
+  expect(tint).not.toBe('rgba(0, 0, 0, 0)');
   await expect(rows.nth(0)).toContainText(ALPHA);
   const pin = (await rows.nth(0).getByTestId('tabs-sheet-pin').boundingBox())!;
   const badge = (await rows.nth(0).getByTestId('notebook-badge').boundingBox())!;
