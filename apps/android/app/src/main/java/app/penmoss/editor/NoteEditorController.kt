@@ -668,6 +668,24 @@ class NoteEditorController(
     /** What [setTag] did. */
     enum class TagChange { SENT, OPENING, READ_ONLY }
 
+    /**
+     * The Info sheet's description and AI Description (PEN-161): the page changes the note's
+     * document, and noteInfo follows. Not sent while the note opens, nor when it is read-only.
+     */
+    fun describe(message: ToEditor): TagChange {
+        val current = _state.value
+        if (current.readOnly) return TagChange.READ_ONLY
+        if (!opened || current.phase != EditorUiState.Phase.READY) return TagChange.OPENING
+        send(BridgeProtocol.encode(message))
+        return TagChange.SENT
+    }
+
+    fun setDescription(text: String) = describe(ToEditor.SetDescription(noteId, text.take(BridgeProtocol.MAX_DESCRIPTION_CHARS)))
+
+    fun setAiDescription(value: String) = describe(ToEditor.SetAiDescription(noteId, value))
+
+    fun answerDescription(keep: Boolean) = describe(ToEditor.AnswerDescription(noteId, if (keep) "keep" else "update"))
+
     /** Tells the person something about the note (a picture the phone could not read). */
     fun notify(message: String) {
         _notices.tryEmit(message)

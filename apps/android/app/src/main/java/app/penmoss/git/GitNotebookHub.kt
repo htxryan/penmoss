@@ -760,7 +760,7 @@ class GitNotebookHub(
                 engine.closed("The notebook's page stopped")
                 current = null
             }
-            engine = GitEngine(localId, port, notebooks, io, asks, withheld = RoomOldCopies(graph.database))
+            engine = GitEngine(localId, port, notebooks, io, asks, withheld = RoomOldCopies(graph.database), ai = main().aiDescriptions)
             engine.onChanged = { made?.sync?.requestSync() }
             io.launch {
                 var phase: String? = null

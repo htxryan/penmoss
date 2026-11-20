@@ -342,6 +342,30 @@ export type ToEditor =
       readonly on: boolean;
     }
   /**
+   * The open note's description, written by hand in the Info sheet (PEN-161): an empty one
+   * clears it. While AI Descriptions is on for the note, the page asks to keep it.
+   */
+  | {
+      readonly v: 1;
+      readonly type: 'setDescription';
+      readonly noteId: string;
+      readonly text: string;
+    }
+  /** The open note's own AI Description setting (PEN-161): Inherit, On or Off. */
+  | {
+      readonly v: 1;
+      readonly type: 'setAiDescription';
+      readonly noteId: string;
+      readonly value: 'inherit' | 'on' | 'off';
+    }
+  /** Keep Your Description?'s answer (PEN-161): Keep Mine (Off for the note) or Let Claude Update It. */
+  | {
+      readonly v: 1;
+      readonly type: 'answerDescription';
+      readonly noteId: string;
+      readonly answer: 'keep' | 'update';
+    }
+  /**
    * Copy as Markdown or as rich text (T40 P8, ED9): the whole note, or the
    * selection captured when the menu showed (never the whole note instead:
    * with nothing selected the page says so). The page answers `clipboard`
@@ -789,6 +813,11 @@ export type FromEditor =
       readonly period: string | null;
       readonly fields: readonly InfoField[];
       readonly links: readonly string[];
+      /** Its description (PEN-161), who wrote it, its own AI Description setting, and whether Keep Your Description? asks. */
+      readonly description: string | null;
+      readonly descriptionBy: 'ai' | 'hand' | null;
+      readonly ai: 'inherit' | 'on' | 'off';
+      readonly descriptionAsks: boolean;
     }
   /**
    * The open note's plain text, capped as the server caps it (`capNoteText`), for the
@@ -839,6 +868,8 @@ const ATTACHMENT_PATH = /^attachments\/[0-9a-f]{64}\.(png|jpg|gif|webp|avif)$/;
  * with the shared rules. Checked against apps/android/contract/tags-v1.json.
  */
 export const MAX_TAG_CHARS = 1000;
+/** The longest description the app may send (core's `DESCRIPTION_MAX_CHARS`). */
+export const MAX_DESCRIPTION_CHARS = 600;
 
 /** A note's remembered toggles, or null when malformed or too many (T40 P8, ED8). */
 export function foldsOf(value: unknown): Record<string, boolean> | null {
@@ -1078,6 +1109,21 @@ export function parseToEditor(raw: string): ToEditor | null {
       if (!isString(tag) || !tag.trim() || tag.length > MAX_TAG_CHARS) return null;
       if (typeof on !== 'boolean') return null;
       return { v: 1, type: 'setTag', noteId, tag, on };
+    }
+    case 'setDescription': {
+      const { text } = value;
+      if (!isString(text) || text.length > MAX_DESCRIPTION_CHARS) return null;
+      return { v: 1, type: 'setDescription', noteId, text };
+    }
+    case 'setAiDescription': {
+      const { value: setting } = value;
+      if (setting !== 'inherit' && setting !== 'on' && setting !== 'off') return null;
+      return { v: 1, type: 'setAiDescription', noteId, value: setting };
+    }
+    case 'answerDescription': {
+      const { answer } = value;
+      if (answer !== 'keep' && answer !== 'update') return null;
+      return { v: 1, type: 'answerDescription', noteId, answer };
     }
     case 'copy': {
       const { format, scope } = value;

@@ -36,6 +36,7 @@ import {
 } from '@penmoss/git-notebook/host';
 import { LocalNotebook } from '@penmoss/git-notebook/local';
 import type { BridgeTransport } from './bridge-transport';
+import { NotebookDescriber, type AiPort } from './describer';
 import {
   emptyState,
   LocalServer,
@@ -134,6 +135,8 @@ export interface HostOptions {
   /** Tests shorten CLOSING_SYNC_MS. */
   readonly closingSyncMs?: number;
   readonly log?: (message: string) => void;
+  /** AI Descriptions (PEN-161): the app's settings and its call; none, nothing is described. */
+  readonly ai?: AiPort;
 }
 
 export class AndroidGitHost {
@@ -163,6 +166,7 @@ export class AndroidGitHost {
   private closingLeaves = false;
   private onlineTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly offs: Array<() => void> = [];
+  private describer: NotebookDescriber | null = null;
   /** The repository is on the phone (or the loopback): the network says nothing about it. */
   private readonly local: boolean;
 
@@ -236,6 +240,28 @@ export class AndroidGitHost {
     );
     // Before anything is answered, so Room's old copies are never replaced first (A886).
     this.server.holdOldCopies(this.options.roomEpochs ?? []);
+    if (this.options.ai) {
+      const describer = new NotebookDescriber(
+        {
+          note: (id) => engine.replica.note(id),
+          get workspace() {
+            return ops.workspace;
+          },
+          write: (change) =>
+            engine.exclusive(async () => {
+              change();
+              await hooks.changed();
+            }),
+          name: this.options.name,
+        },
+        this.options.ai,
+        this.now,
+      );
+      this.describer = describer;
+      // Every change, typed here or brought by a sync (its description's own write too, which
+      // the text hash then skips).
+      this.offs.push(engine.replica.onChange((ids) => describer.changed(ids)));
+    }
     this.set({});
     if (typeof window !== 'undefined') {
       // The network went or came back (#170 F9 on Android too, #174 review).
@@ -501,6 +527,7 @@ export class AndroidGitHost {
       head: report.head,
     });
     if (pendingOf(engine).length > 0) this.schedulePush();
+    this.describer?.synced();
   }
 
   private failed(error: unknown): void {
@@ -600,6 +627,7 @@ export class AndroidGitHost {
 
   stop(): void {
     this.stopped = true;
+    this.describer?.stop();
     for (const off of this.offs.splice(0)) off();
     if (this.pushTimer) clearTimeout(this.pushTimer);
     if (this.pullTimer) clearInterval(this.pullTimer);

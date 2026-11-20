@@ -151,7 +151,7 @@ class SettingsScreensTest {
         val groups = settingsGroups(Settings(), "Penmoss")
         assertEquals(listOf("Look and Feel", "Writing", "Notebooks", "Agents", "This Phone"), groups.map { it.title })
         assertEquals(listOf("appearance", "home", "note", "symbols"), groups[0].sections.map { it.id })
-        assertEquals(listOf("daily", "capture", "shortcuts"), groups[1].sections.map { it.id })
+        assertEquals(listOf("daily", "capture", "shortcuts", "ai-descriptions"), groups[1].sections.map { it.id })
         assertEquals(listOf("git"), groups[2].sections.map { it.id })
         assertEquals(listOf("agent-activity"), groups[3].sections.map { it.id })
         assertEquals(listOf("storage", "github", "whatsnew"), groups[4].sections.map { it.id })

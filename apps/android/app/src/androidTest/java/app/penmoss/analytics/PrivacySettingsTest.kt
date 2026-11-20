@@ -57,8 +57,9 @@ class PrivacySettingsTest {
                 }
             }
             val screen = OnScreen(scenario)
-            val row = screen.tagged("section-privacy")
-            screen.reveal(row, margin = 900f)
+            // This Phone from its first row, so all four are laid out below it (Writing grew with
+            // AI Descriptions, PEN-161).
+            screen.reveal(screen.tagged("section-storage"), margin = 160f)
             val tags = listOf("section-storage", "section-github", "section-whatsnew", "section-privacy")
             val tops = screen.layoutTops(tags)
             assertEquals(tops.toString(), tops.sorted(), tops)

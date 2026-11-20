@@ -19,6 +19,7 @@ import type { WriterSecrets } from '@penmoss/git-notebook';
 import { PULL_EVERY_MIN, PUSH_DELAY_S, type EngineKv } from '@penmoss/git-notebook/host';
 import { BridgeTransport } from './bridge-transport';
 import { Channel, ChannelError, type FramePort } from './channel';
+import { parseAiAnswer, parseAiConfig } from './describer';
 import { AndroidGitHost, type GitSyncStatus } from './host';
 import { fromBase64 } from 'lib0/buffer';
 
@@ -141,6 +142,12 @@ export function serveEngine(port: FramePort, storage: PageStorage): Channel {
         },
         confirmRestore: async (noteId, version, revert) => {
           await channel.call('owner.restore', { noteId, version, revert });
+        },
+        // AI Descriptions (PEN-161): the app says what is set and holds the key; the page asks.
+        ai: {
+          config: async () => parseAiConfig(await channel.call('ai.config', null, 10_000)),
+          describe: async (prompt) =>
+            parseAiAnswer(await channel.call('ai.describe', { prompt }, 120_000)),
         },
         onStatus: (status: GitSyncStatus) => channel.emit('status', status),
         onChanged: () => channel.emit('changed'),

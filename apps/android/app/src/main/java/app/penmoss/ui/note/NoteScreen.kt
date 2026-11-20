@@ -497,6 +497,22 @@ private fun NoteInfoTab(note: NoteScreenState, onOpenNote: (String) -> Unit) {
         inline = remember(allTags, tags) { inlineTags(allTags, tags) },
         canTag = note.ready,
         fields = info?.fields,
+        description = info?.let { known ->
+            val settings by graph.device.settings.collectAsStateWithLifecycle()
+            val key by graph.device.aiDescriptions.key.collectAsStateWithLifecycle()
+            DescriptionUi(
+                text = known.description,
+                by = known.descriptionBy,
+                ai = known.ai,
+                asks = known.descriptionAsks,
+                ready = key.saved && !key.refused && graph.device.aiDescriptions.provider == app.penmoss.ai.AiKeys.ANTHROPIC,
+                global = (settings.settings.values[app.penmoss.ai.AiKeys.GLOBAL] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true",
+                editable = note.ready && !note.editor.readOnly,
+                onText = { note.controller.setDescription(it) },
+                onAi = { note.controller.setAiDescription(it) },
+                onAnswer = { keep -> note.controller.answerDescription(keep) },
+            )
+        },
         backlinks = backlinksUi,
         titleOf = { titles[it] },
         onTags = { note.tagging = true },
