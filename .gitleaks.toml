@@ -25,3 +25,8 @@ description = "The relay's PEM parser matches the header text; no key is in the 
 paths = ['''^apps/relay/src/github-auth\.ts$''']
 regexTarget = "match"
 regexes = ['''-----BEGIN RSA PRIVATE KEY-----/\.test\(''']
+
+[[allowlists]]
+description = "A Cloudflare Access application's AUD tag: public, sent in every Access login redirect and JWT"
+regexTarget = "line"
+regexes = ['''^\s*"ACCESS_AUD": "[0-9a-f]{64}",?$''']
