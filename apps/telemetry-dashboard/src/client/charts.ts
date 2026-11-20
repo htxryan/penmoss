@@ -361,9 +361,12 @@ export function lineChart(spec: TimeChart, width: number): SVGSVGElement {
     frame.left + (n <= 1 ? plotWidth(frame) / 2 : (plotWidth(frame) * i) / (n - 1));
   const y = (v: number) => frame.top + plotHeight(frame) * (1 - v / max);
   xLabels(chart, frame, spec.categories, x);
-  for (const series of spec.series) {
+  spec.series.forEach((series, index) => {
     const d = series.values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(v)}`).join('');
-    chart.append(svg('path', { d, class: 'line', stroke: series.color }));
+    // Earlier series are wider, so a later one drawn over the same values leaves an edge of
+    // each showing (PEN-170).
+    const width = 2 + 3 * (spec.series.length - 1 - index);
+    chart.append(svg('path', { d, class: 'line', stroke: series.color, 'stroke-width': width }));
     if (n === 1)
       chart.append(
         svg('circle', {
@@ -374,7 +377,7 @@ export function lineChart(spec: TimeChart, width: number): SVGSVGElement {
           class: 'dot',
         }),
       );
-  }
+  });
   crosshair(chart, frame, spec, x, (i) =>
     spec.series.map((s) =>
       svg('circle', { cx: x(i), cy: y(s.values[i] ?? 0), r: 4, fill: s.color, class: 'dot' }),
