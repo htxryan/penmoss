@@ -56,7 +56,7 @@ A prop is one of: an enum, a boolean, a count bucket, a duration bucket, a norma
 ## The Workers
 
 - `apps/telemetry` (t.penmoss.app): `POST /v1/batch`, `POST /v1/forget`. Schema in `migrations/`, named queries in `queries/`, a nightly cron for rollups and pruning.
-- `apps/telemetry-dashboard` (stats.penmoss.app): read-only views over the named queries and rollups, behind Cloudflare Access; it verifies the Access JWT on every request. Its Sessions tab (PEN-173, A-NEW-1) lists recent sessions and shows one session's events in order, split by screen, beside its install's other sessions; it reads raw events from the last 90 days and shows an install only by its first 8 hex characters.
+- `apps/telemetry-dashboard` (stats.penmoss.app): read-only views over the named queries and rollups, behind Cloudflare Access; it verifies the Access JWT on every request. Its Sessions tab (PEN-173, A1661) lists recent sessions and shows one session's events in order, split by screen, beside its install's other sessions; it reads raw events from the last 90 days and shows an install only by its first 8 hex characters.
 
 | Task                               | Does                                                        |
 | ---------------------------------- | ----------------------------------------------------------- |

@@ -1,7 +1,7 @@
 /**
  * The dashboard's page (PEN-137): a filter bar, eight views, and for each chart a legend (two
  * series or more), a Table toggle and Download CSV. Everything comes from /api/<view>. Nothing is
- * per install outside Sessions (PEN-173, A-NEW-1), which lists sessions and shows one session's
+ * per install outside Sessions (PEN-173, A1661), which lists sessions and shows one session's
  * events and its install's sessions, the install shown only by its first 8 hex characters.
  */
 import {
