@@ -1079,6 +1079,7 @@ export const CLICK_NAMES: readonly string[] = [
   'settings.ai.when',
   'folder.ai.mode',
   'folder.ai.describe-all',
+  'settings.ai.describe-all',
   'describe-all.start',
   'describe-all.stop',
   'settings.ai.test',

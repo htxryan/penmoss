@@ -2,7 +2,8 @@
  * Settings → AI Descriptions (PEN-161, A1656), in the Writing group: whether notes are described
  * (the global value, Off unset), when (After a Pause, or At Sync), the pause, this device's AI
  * Provider (filled from the providers the Mac offers; Not Set Up until chosen, never synced), the
- * model, and the prompt with its tokens and Reset to Default.
+ * model, and the prompt with its tokens and Reset to Default. Describe All Notes describes every
+ * notebook's notes that want it now, as a notebook's Describe Notes Now does for one.
  */
 import {
   AI_DESCRIPTION_GLOBAL_SETTING,
@@ -28,7 +29,9 @@ import { Select } from '@penmoss/ui/controls/Select';
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState } from 'react';
 import { desktop, type DesktopAiStatus } from '../desktop/bridge';
+import { useAllSources } from '../sources/hooks';
 import { useAiStatus } from './ai-status';
+import { DescribeNotesDialog, type DescribeGroup } from './DescribeAllDialog';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { GroupHead, SettingRow } from '../theme/look-rows';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
@@ -92,6 +95,9 @@ export function AiDescriptionsSettings() {
   const providers = status?.providers ?? [];
   const model = modelOf(settings, provider);
   const prompt = promptOf(settings);
+  const { all } = useAllSources();
+  // What there was when Describe All Notes was chosen: the dialog counts these once.
+  const [describing, setDescribing] = useState<readonly DescribeGroup[] | null>(null);
   return (
     <section
       className="settings-section ai-settings"
@@ -178,7 +184,40 @@ export function AiDescriptionsSettings() {
             </Select>
           </SettingRow>
         ) : null}
+        <SettingRow
+          setting="describe-all-notes"
+          label="Describe All Notes"
+          help={
+            provider === 'none'
+              ? 'Pick an AI provider below first.'
+              : 'Every notebook’s notes with no description, or changed since theirs, now. Notes set to Off are left out.'
+          }
+          testId="ai-describe-all-setting"
+        >
+          <button
+            data-ui="submit"
+            data-event="settings.ai.describe-all"
+            type="button"
+            className="btn"
+            disabled={provider === 'none'}
+            data-testid="ai-describe-all"
+            onClick={() =>
+              setDescribing(
+                all.map((source) => ({
+                  source,
+                  noteIds: source.notes.list().map((note) => note.id),
+                })),
+              )
+            }
+          >
+            <Icon name="sparkle" size={14} />
+            Describe Notes Now…
+          </button>
+        </SettingRow>
       </div>
+      {describing ? (
+        <DescribeNotesDialog groups={describing} onClose={() => setDescribing(null)} />
+      ) : null}
       <GroupHead scope="device">AI Provider</GroupHead>
       <div className="lf-group">
         <SettingRow

@@ -199,6 +199,10 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     help: 'After a pause, or at each sync',
     aliases: ['ai', 'description', 'when'],
   }),
+  at('ai-descriptions')('Describe All Notes', {
+    help: 'Every notebook’s notes that want a description, now',
+    aliases: ['ai', 'description', 'describe notes now', 'bulk', 'every note', 'all notebooks'],
+  }),
   at('ai-descriptions', 'AI Provider')('AI Provider', {
     help: 'Anthropic with an API key, or Claude Code on this Mac',
     aliases: ['ai', 'provider', 'claude', 'claude code', 'anthropic', 'api key', 'key'],

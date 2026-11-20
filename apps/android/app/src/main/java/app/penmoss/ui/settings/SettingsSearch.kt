@@ -47,6 +47,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Saves To", "Quick Capture", SettingsRoutes.CAPTURE, "Today’s note or a new note in Inbox", "capture", "inbox", "share", "widget", "tile"),
     entry("Describe Notes", "AI Descriptions", SettingsRoutes.AI, "AI writes a short description of each note for agents", "ai", "claude", "anthropic", "summary", "description"),
     entry("Describe a Note", "AI Descriptions", SettingsRoutes.AI, "After a pause, or at sync", "ai", "when", "pause"),
+    entry("Describe All Notes", "AI Descriptions", SettingsRoutes.AI, "Every notebook’s notes that want a description, now", "ai", "describe notes now", "bulk", "every note", "all notebooks"),
     entry("AI Provider", "AI Descriptions", SettingsRoutes.AI, "Anthropic with an API key, or Not Set Up", "ai", "anthropic", "api key", "claude"),
     entry("Prompt", "AI Descriptions", SettingsRoutes.AI, "What is sent for each note", "ai", "tokens", "template"),
     entry("Keyboard Shortcuts", "Keyboard Shortcuts", CommandRoutes.SHORTCUTS, "For a hardware keyboard", "keys", "hotkey", "keybindings"),

@@ -1,8 +1,8 @@
 /**
  * AI Descriptions (PEN-161) in the app, with a stubbed provider (support/fake-bridge.ts): the
  * Metadata tab in layout A, choosing a provider and turning it on in Settings, Describe Now
- * writing the description, a hand edit asking Keep Mine or Let Claude Update It, and the
- * description under the title once Settings → Note shows it.
+ * writing the description, a hand edit asking Keep Mine or Let Claude Update It, Settings'
+ * Describe All Notes, and the description under the title once Settings → Note shows it.
  */
 import { expect, type Page, test } from './fixtures';
 import { collectErrors, newNote } from './support/app';
@@ -87,6 +87,51 @@ test('Describe Now writes the description; a hand edit asks first', async ({ pag
   // Clear removes it.
   await panel.getByTestId('ai-clear').click();
   await expect(field).toHaveValue('');
+  expect(errors).toEqual([]);
+});
+
+test('Settings → Describe All Notes counts, asks, then describes every note that wants it', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await newNote(page, `Plans ${RUN}`, 'Book the train.');
+  await newNote(page, `Ideas ${RUN}`, 'A garden shed.');
+  await page.goto('/settings/ai-descriptions');
+  const settings = page.getByTestId('ai-descriptions-settings');
+  // Nothing to send with until a provider is picked.
+  await expect(settings.getByTestId('ai-describe-all-setting')).toContainText('Describe All Notes');
+  await expect(settings.getByTestId('ai-describe-all')).toBeDisabled();
+  await setUp(page);
+  const button = settings.getByTestId('ai-describe-all');
+  await expect(button).toHaveText('Describe Notes Now…');
+  await button.click();
+  const dialog = page.getByTestId('describe-all');
+  await expect(dialog.getByRole('heading')).toHaveText('Describe All Notes?');
+  const count = dialog.getByTestId('describe-all-count');
+  await expect(count).toContainText(/\d+ notes have no description/);
+  const wanted = Number((await count.innerText()).match(/(\d+) notes/)![1]);
+  expect(wanted).toBeGreaterThanOrEqual(2);
+  // Nothing goes until it is confirmed.
+  expect(await calls(page)).toBe(0);
+  await dialog.getByRole('button', { name: `Describe ${wanted} Notes` }).click();
+  await expect(dialog.getByTestId('describe-all-progress')).toHaveText(
+    `Described ${wanted} of ${wanted}.`,
+  );
+  expect(await calls(page)).toBe(wanted);
+  const prompts = await page.evaluate(
+    () => (window as unknown as { __aiCalls: string[] }).__aiCalls,
+  );
+  expect(prompts.some((prompt) => prompt.includes('Book the train.'))).toBe(true);
+  expect(prompts.some((prompt) => prompt.includes('A garden shed.'))).toBe(true);
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+
+  // Described now: asked again, there is nothing left to send.
+  await button.click();
+  await expect(dialog.getByTestId('describe-all-count')).toContainText('described already');
+  await expect(dialog.getByRole('button', { name: 'Describe', exact: true })).toBeDisabled();
   expect(errors).toEqual([]);
 });
 
