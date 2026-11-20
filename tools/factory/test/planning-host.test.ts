@@ -89,6 +89,79 @@ describe('the planning session', () => {
     expect(started).toEqual({ id: '0ff38e2e' });
   });
 
+  /**
+   * `claude` as 2.1.330 behaves on a resume (20 Nov 2026): one still listed in `claude agents`, or
+   * given flags, gets a copy with a new id; a stopped one given none is woken under its own id.
+   */
+  function resumingClaude(listedAtFirst: boolean) {
+    const calls: string[][] = [];
+    let listed = listedAtFirst;
+    const exec: Exec = (_cmd, args) => {
+      calls.push([...args]);
+      if (args[0] === 'agents')
+        return Promise.resolve({
+          code: 0,
+          stdout: JSON.stringify(
+            listed
+              ? [{ id: '0ff38e2e', kind: 'background', sessionId: SESSION, status: 'idle' }]
+              : [],
+          ),
+          stderr: '',
+        });
+      if (args[0] === 'stop') {
+        listed = false;
+        return Promise.resolve({ code: 0, stdout: 'stopped 0ff38e2e', stderr: '' });
+      }
+      const copy = listed || args.indexOf('--bg') !== args.indexOf('--') - 1;
+      return Promise.resolve({
+        code: 0,
+        stdout: copy
+          ? 'note: session 0ff38e2e is already running in the background, so this started a copy as 1bbc4b13. `claude attach 0ff38e2e` opens the original.\nbackgrounded · 1bbc4b13\n'
+          : 'note: woke session 0ff38e2e with its saved options (--name, --remote-control, --model).\nbackgrounded · 0ff38e2e · [PF] Penmoss PEN-70 plan\n',
+        stderr: '',
+      });
+    };
+    return { exec, calls };
+  }
+  const noJobs = { dir: mkdtempSync(join(tmpdir(), 'claude-jobs-')), waitMs: 0 };
+
+  it('is resumed as the same session: stopped first, then woken with no flags (A1665)', async () => {
+    const c = config();
+    const { exec, calls } = resumingClaude(true);
+    const sleep = () => Promise.resolve();
+    const resumed = await launchSession(c, exec, planFiles(c, 70), 70, 'Ryan said', {}, SESSION, {
+      ...noJobs,
+      sleep,
+    });
+    expect(calls.find((a) => a[0] === 'stop')).toEqual(['stop', '0ff38e2e']);
+    const launch = calls.find((a) => a.includes('--bg'))!;
+    // Its saved options carry the name, Remote Control, model and tools: flags would start a copy.
+    expect(launch).toEqual(['--resume', SESSION, '--bg', '--', 'Ryan said']);
+    expect(resumed).toMatchObject({ id: '0ff38e2e', resumed: true });
+    expect(resumed.note).toMatch(/^woke session 0ff38e2e/);
+  });
+
+  it('is not stopped again when it has already stopped, and says when only a copy could start (A1665)', async () => {
+    const c = config();
+    const stopped = resumingClaude(false);
+    await expect(
+      launchSession(c, stopped.exec, planFiles(c, 70), 70, 'go on', {}, SESSION, noJobs),
+    ).resolves.toMatchObject({ id: '0ff38e2e', resumed: true });
+    expect(stopped.calls.some((a) => a[0] === 'stop')).toBe(false);
+    // A session `claude stop` can't stop is still listed: Claude Code starts a copy, and says so.
+    const stuck = resumingClaude(true);
+    const exec: Exec = (cmd, args, o) =>
+      args[0] === 'stop'
+        ? Promise.resolve({ code: 1, stdout: '', stderr: 'no' })
+        : stuck.exec(cmd, args, o);
+    const copy = await launchSession(c, exec, planFiles(c, 70), 70, 'go on', {}, SESSION, {
+      ...noJobs,
+      sleep: () => Promise.resolve(),
+    });
+    expect(copy).toMatchObject({ id: '1bbc4b13', resumed: false });
+    expect(copy.note).toMatch(/started a copy as 1bbc4b13/);
+  });
+
   it("runs on Ryan's own Claude.ai login: no setup token or API key in its environment (A1286)", () => {
     const env = planningEnv({
       PATH: '/opt/homebrew/bin:/usr/bin',

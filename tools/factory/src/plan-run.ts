@@ -38,7 +38,10 @@ export interface PlanDeps {
   mainChanges?(from: string | undefined, to: string): Promise<string>;
   /** The factory's design check of the session's current output (A1649): its problems. */
   designCheck?(state: PlanState, main: string | undefined): string[];
-  /** Starts the session with a message, or resumes it by ID. */
+  /**
+   * Starts the session with a message, or resumes it by ID: the same session, under the same id,
+   * unless it truly can't be continued (A1665).
+   */
   launch(message: string, resume?: string): Promise<{ sessionId?: string; chatUrl?: string }>;
   stop(sessionId: string): Promise<void>;
   /** A line for the daemon's log. */
@@ -197,8 +200,7 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
         ...(refreshed.main ? { mainCommit: refreshed.main } : {}),
         // Ryan's words reached the session: the design check's tries start again.
         designFixes: 0,
-        // A resumed session has a new link; the old one would reach the stopped session.
-        chatUrl: resumed.chatUrl,
+        chatUrl: chatAfter(meta, resumed),
         deliveredAt: [delivered, others.at(-1)?.createdAt]
           .filter((t): t is string => !!t)
           .sort()
@@ -225,7 +227,7 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
         const next: PlanMeta = {
           ...meta,
           ...resumed,
-          chatUrl: resumed.chatUrl,
+          chatUrl: chatAfter(meta, resumed),
           deliveredAt: delivered,
           messagedAt: now.toISOString(),
           askedAt: undefined,
@@ -314,7 +316,7 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
         const next: PlanMeta = {
           ...meta,
           ...resumed,
-          chatUrl: resumed.chatUrl,
+          chatUrl: chatAfter(meta, resumed),
           deliveredAt: delivered,
           messagedAt: now.toISOString(),
           askedAt: undefined,
@@ -412,13 +414,26 @@ async function refreshMain(
   };
 }
 
+/**
+ * The chat link after a resume: the same session keeps its Remote Control chat (A1665), so its
+ * link stays when Claude Code reports none in time; a copy with a new id gets only its own.
+ */
+function chatAfter(
+  meta: PlanMeta,
+  resumed: { readonly sessionId?: string; readonly chatUrl?: string },
+): string | undefined {
+  if (resumed.chatUrl) return resumed.chatUrl;
+  return resumed.sessionId && resumed.sessionId === meta.sessionId ? meta.chatUrl : undefined;
+}
+
 /** Every message to a resumed session says where the issue's images are (A1277). */
 const imagesReminder = (images: string): string =>
   `The issue's images are on disk for you, in place of any uploads.linear.app link you couldn't open.\n\n${images}`;
 
 /**
- * A resumed session has a new chat link (F0.5): the issue gets it, so Ryan's chat in the Claude
- * app reaches the session that is running, with the new terminal command beside it (A1286).
+ * A resume that could only start a copy has a new chat link (A1665): the issue gets it, so
+ * Ryan's chat in the Claude app reaches the session that is running, with the new terminal
+ * command beside it (A1286). The same session resumed keeps its link, and nothing is posted.
  */
 async function postNewChat(
   deps: PlanDeps,

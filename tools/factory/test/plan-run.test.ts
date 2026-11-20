@@ -228,6 +228,28 @@ describe('advancePlanning', () => {
     expect(readMeta(t.files).sessionId).toBe('S3');
     expect(readMeta(t.files).chatUrl).toBeUndefined();
   });
+  it('keeps the chat link when the same session is resumed and Claude Code reports none in time (A1665)', async () => {
+    const t = setup();
+    t.setChat('https://claude.ai/code/session_1');
+    const card = item(5, { status: 'Planning' });
+    await advancePlanning(t.deps, input(t.files, card));
+    t.state('waiting', min(3));
+    t.at(min(4));
+    await advancePlanning(t.deps, input(t.files, card));
+    t.setChat(undefined);
+    t.at(min(9));
+    const answered = issue([
+      { author: 'htxryan', body: 'A sheet', createdAt: min(8).toISOString() },
+    ]);
+    expect((await advancePlanning(t.deps, input(t.files, card, answered))).kind).toBe('resume');
+    expect(readMeta(t.files)).toMatchObject({
+      sessionId: 'S1',
+      chatUrl: 'https://claude.ai/code/session_1',
+    });
+    // The same link: nothing new to post.
+    expect(t.calls).not.toContain('comment Planning resumed.');
+  });
+
   it('ignores comments from anyone but Ryan, and the factory’s own', async () => {
     const t = setup();
     const card = item(5, { status: 'Planning' });

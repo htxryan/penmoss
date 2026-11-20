@@ -27,7 +27,7 @@ export interface PlanFiles {
 
 export interface PlanMeta {
   readonly sessionId?: string | undefined;
-  /** The session's chat on claude.ai, which Remote Control serves; each resume gets a new one. */
+  /** The session's chat on claude.ai, which Remote Control serves; a resume keeps it (A1665). */
   readonly chatUrl?: string | undefined;
   /** When the newest issue comment the session has been given was posted. */
   readonly deliveredAt?: string | undefined;
@@ -359,7 +359,65 @@ export function planningEnv(
   };
 }
 
-/** Starts (or resumes) the session in the background; returns its short id and chat link. */
+/** Claude Code's note when `--resume` couldn't continue the session itself: "… started a copy as <id>". */
+const COPY = /started a copy as ([0-9a-f]{6,})\b/;
+/** Claude Code's note when it woke the stopped session itself: "woke session <id> with its saved options". */
+const WOKE = /woke session ([0-9a-f]{6,})\b/;
+
+/** What a launch did: the short id it printed, its chat link, and for a resume, what happened. */
+export interface Launched {
+  readonly id?: string;
+  readonly chatUrl?: string;
+  /**
+   * For a resume: whether Claude Code continued the session itself (`true`), or could not and
+   * started a copy with a new id (`false`), with its own words why in `note` (A1665).
+   */
+  readonly resumed?: boolean;
+  readonly note?: string;
+}
+
+/**
+ * Stops the background session with this id, if `claude agents` lists it, and waits until it no
+ * longer does: `claude --bg --resume` continues a session under its own id only once it has
+ * stopped; one still running, even idle, gets a copy with a new id instead (A1665). Only that
+ * exact session: never another of the card's found by name.
+ */
+async function stopForResume(
+  config: FactoryConfig,
+  exec: Exec,
+  sessionId: string,
+  env: Record<string, string>,
+  jobs: JobOptions,
+): Promise<void> {
+  const listed = async () => {
+    const r = await exec(config.agents.claude.bin, ['agents', '--json'], { env });
+    if (r.code !== 0) return undefined;
+    try {
+      return (JSON.parse(r.stdout || '[]') as { id?: string; sessionId?: string }[]).find(
+        (s) => s.sessionId === sessionId,
+      );
+    } catch {
+      return undefined;
+    }
+  };
+  const running = await listed();
+  if (!running) return;
+  await exec(config.agents.claude.bin, ['stop', running.id ?? sessionId.slice(0, 8)], { env });
+  const sleep = jobs.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  for (let waited = 0; waited < STOP_WAIT_MS && (await listed()); waited += 1_000)
+    await sleep(1_000);
+}
+
+/** How long a resume waits for the session it stopped to leave `claude agents`. */
+const STOP_WAIT_MS = 15_000;
+
+/**
+ * Starts the session in the background, or resumes it by its session id; returns its short id
+ * and chat link. A resume continues the same session, under the same id, with the conversation it
+ * has (A1665): the factory stops it first, if it is still running, and passes no flags, since
+ * Claude Code starts a copy for a resume of a running session or one given flags, and wakes a
+ * stopped one with the options it was started with (its name, Remote Control, model and tools).
+ */
 export async function launchSession(
   config: FactoryConfig,
   exec: Exec,
@@ -369,33 +427,46 @@ export async function launchSession(
   env: Record<string, string>,
   resume?: string,
   jobs: JobOptions = {},
-): Promise<{ id?: string; chatUrl?: string }> {
+): Promise<Launched> {
   const cwd = join(expandHome(config.stateDir), 'plans');
-  const args = [
-    ...(resume ? ['--resume', resume] : []),
-    '--bg',
-    // The display name `claude agents` shows; without it Claude Code titles the session itself.
-    '--name',
-    sessionName(config, issue),
-    // Its chat in the Claude app and on claude.ai, which needs Ryan's own login (planningEnv).
-    '--remote-control',
-    sessionName(config, issue),
-    ...planningModelFlags(config),
-    ...planningFlags(files),
-    '--',
-    message,
-  ];
+  if (resume) await stopForResume(config, exec, resume, env, jobs);
+  const args = resume
+    ? ['--resume', resume, '--bg', '--', message]
+    : [
+        '--bg',
+        // The display name `claude agents` shows; without it Claude Code titles the session itself.
+        '--name',
+        sessionName(config, issue),
+        // Its chat in the Claude app and on claude.ai, which needs Ryan's own login (planningEnv).
+        '--remote-control',
+        sessionName(config, issue),
+        ...planningModelFlags(config),
+        ...planningFlags(files),
+        '--',
+        message,
+      ];
   const r = await exec(config.agents.claude.bin, args, { cwd, env });
   if (r.code !== 0)
     throw new Error(
       `claude --bg failed: ${(r.stderr || r.stdout).trim().split('\n').slice(-2).join(' ')}`,
     );
-  const id = BACKGROUNDED.exec(r.stdout + r.stderr)?.[1];
+  const out = r.stdout + r.stderr;
+  const id = BACKGROUNDED.exec(out)?.[1];
   const dir = jobs.dir ?? claudeJobsDir(env);
   const chatUrl =
-    CHAT_URL.exec(r.stdout + r.stderr)?.[0] ??
-    (id && dir ? await waitForChatUrl(dir, id, jobs) : undefined);
-  return { ...(id ? { id } : {}), ...(chatUrl ? { chatUrl } : {}) };
+    CHAT_URL.exec(out)?.[0] ?? (id && dir ? await waitForChatUrl(dir, id, jobs) : undefined);
+  const copied = resume ? COPY.test(out) || (!!id && !resume.startsWith(id)) : false;
+  const note = out
+    .split('\n')
+    .find((l) => COPY.test(l) || WOKE.test(l))
+    ?.replace(/^note:\s*/, '')
+    .trim();
+  return {
+    ...(id ? { id } : {}),
+    ...(chatUrl ? { chatUrl } : {}),
+    ...(resume ? { resumed: !copied } : {}),
+    ...(resume && note ? { note } : {}),
+  };
 }
 
 export async function stopSession(
