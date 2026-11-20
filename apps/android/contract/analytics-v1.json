@@ -1313,7 +1313,10 @@
       "settings.ai.reset-prompt",
       "note.ai.source",
       "note.ai.open-settings",
-      "firstrun.ai.check-key"
+      "firstrun.ai.check-key",
+      "settings.ai.pause",
+      "settings.ai.model",
+      "settings.ai.save-prompt"
     ],
     "menu": [
       "about",

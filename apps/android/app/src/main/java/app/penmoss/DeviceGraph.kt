@@ -80,6 +80,10 @@ class DeviceGraph(
      * made by `PenmossApp`; null in tests that give none, where nothing is recorded or asked.
      */
     val analytics: app.penmoss.analytics.AnalyticsService? = null,
+    /** What seals the Anthropic key (PEN-161): a Keystore key of its own; tests give a software one. */
+    aiBox: SecretBox = KeystoreSecretBox("penmoss.ai"),
+    /** Anthropic's API (PEN-161): its own, or a fake in tests. */
+    anthropicApi: String = "https://api.anthropic.com",
 ) {
     private val appContext = context.applicationContext
 
@@ -150,6 +154,17 @@ class DeviceGraph(
     val appearance: StateFlow<Appearance> = store.observeSettings().map { state ->
         Appearance.of(ThemeCatalogue.bundled.resolve(state.settings)).copy(interfaceFont = state.settings.interfaceFont)
     }.stateIn(scope, SharingStarted.Eagerly, Appearance())
+
+    /**
+     * AI Descriptions (PEN-161, A1656): the Anthropic key, sealed by a Keystore key of its own, and
+     * what each notebook's engine page asks. Reads the settings as shown, this phone's own over the
+     * Journal notebook's.
+     */
+    val aiDescriptions: app.penmoss.ai.AiDescriptions = app.penmoss.ai.AiDescriptions(
+        app.penmoss.ai.AiKeyStore(context.getSharedPreferences(app.penmoss.ai.AiKeyStore.PREFS, Context.MODE_PRIVATE), aiBox),
+        app.penmoss.ai.AnthropicClient(app.penmoss.ai.okHttpAi(http), anthropicApi),
+        settings = { settings.value.settings.values },
+    )
 
     /** Changes a device setting (null: back to its default), written to the Journal notebook's device map (A1014). */
     fun changeSetting(key: String, value: JsonElement?) {

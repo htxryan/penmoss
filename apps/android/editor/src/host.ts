@@ -106,6 +106,15 @@ import type { LinkResolver } from '@penmoss/core';
 import type { CommentAuthor } from '@penmoss/model/comments';
 import { conflictCopy } from '@penmoss/model/records';
 import { frontmatterTags, noteTags, setFrontmatterTag } from '@penmoss/model/tags';
+import {
+  answerDescriptionAsk,
+  descriptionAsks,
+  descriptionAuthor,
+  readAiSetting,
+  readDescription,
+  setAiSetting,
+  setHandDescription,
+} from '@penmoss/model/description';
 import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import {
   applyThemeTo,
@@ -779,6 +788,11 @@ export class EditorHost {
       case 'keys':
         this.keys.set(message.bindings, message.app);
         return;
+      case 'setDescription':
+      case 'setAiDescription':
+      case 'answerDescription':
+        this.describe(message);
+        break;
       case 'setTag':
         this.setTag(message.noteId, message.tag, message.on);
         return;
@@ -964,6 +978,10 @@ export class EditorHost {
       period: identity.period ?? null,
       fields,
       links,
+      description: readDescription(doc),
+      descriptionBy: descriptionAuthor(doc),
+      ai: readAiSetting(doc),
+      descriptionAsks: descriptionAsks(doc),
     };
   }
 
@@ -1395,6 +1413,36 @@ export class EditorHost {
       return;
     }
     setFrontmatterTag(open.replica.doc, tag, on);
+  }
+
+  /**
+   * The Info sheet's description and AI Description (PEN-161), on the open note's document: the
+   * change goes to the app as any edit does, and noteInfo follows with the new values.
+   */
+  private describe(
+    message: Extract<
+      ToEditor,
+      { type: 'setDescription' | 'setAiDescription' | 'answerDescription' }
+    >,
+  ): void {
+    const open = this.current;
+    const editable = this.editableEditor(message.noteId) !== null && !this.elements.title.readOnly;
+    if (!open || open.noteId !== message.noteId || !editable) {
+      this.notice(message.noteId, 'This note cannot be changed here');
+      return;
+    }
+    const doc = open.replica.doc;
+    if (message.type === 'setDescription') {
+      // Asked about only while AI Descriptions could rewrite it: the page asks whenever the note
+      // itself does not say Off, and the sheet shows the question only while it comes to On.
+      setHandDescription(doc, message.text, {
+        ask: readAiSetting(doc) !== 'off' && message.text.trim() !== '',
+      });
+    } else if (message.type === 'setAiDescription') {
+      setAiSetting(doc, message.value);
+    } else {
+      answerDescriptionAsk(doc, message.answer);
+    }
   }
 
   /**

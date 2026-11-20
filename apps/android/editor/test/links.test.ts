@@ -429,7 +429,31 @@ describe('the Info sheet’s details (T40 P7, NT23, A473, A475)', () => {
         { key: 'created', value: '2026-10-23T10:00:00-05:00' },
       ],
       links: [GARDEN],
+      description: null,
+      descriptionBy: null,
+      ai: 'inherit',
+      descriptionAsks: false,
     });
+  });
+
+  it('writes the description, its AI setting and the answer to Keep Your Description? (PEN-161)', () => {
+    vi.useFakeTimers();
+    const { host, sent } = page();
+    openNote(host, noteOf(NOTE, 'Weekly review', []));
+    host.handle({ v: 1, type: 'setAiDescription', noteId: NOTE, value: 'on' });
+    vi.advanceTimersByTime(INFO_EVERY_MS);
+    expect(of(sent, 'noteInfo').at(-1)).toMatchObject({ ai: 'on', description: null });
+    host.handle({ v: 1, type: 'setDescription', noteId: NOTE, text: 'My plans for the week.' });
+    vi.advanceTimersByTime(INFO_EVERY_MS);
+    expect(of(sent, 'noteInfo').at(-1)).toMatchObject({
+      description: 'My plans for the week.',
+      descriptionBy: 'hand',
+      descriptionAsks: true,
+    });
+    host.handle({ v: 1, type: 'answerDescription', noteId: NOTE, answer: 'keep' });
+    vi.advanceTimersByTime(INFO_EVERY_MS);
+    expect(of(sent, 'noteInfo').at(-1)).toMatchObject({ ai: 'off', descriptionAsks: false });
+    vi.useRealTimers();
   });
 
   it('follows edits at most every 300 ms, never per keystroke', () => {

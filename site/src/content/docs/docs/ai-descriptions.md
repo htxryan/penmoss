@@ -22,11 +22,11 @@ Until you pick a provider, nothing is sent and notes wait.
 Each note, folder and notebook has its own setting, **Inherit**, **On** or **Off**. The closest one that isn't Inherit wins:
 
 1. The note's own, in its **Metadata** tab under **AI Description**.
-2. Its folder's, then each folder above it: right-click a folder in the sidebar (long-press on Android) and pick under **AI Descriptions**.
-3. The notebook's, on its page in **Settings → All Notebooks**.
+2. Its folder's, then each folder above it: right-click a folder in the sidebar on the Mac and pick under **AI Descriptions**.
+3. The notebook's, on its page in **Settings → All Notebooks** on the Mac.
 4. **Describe Notes**, in **Settings → AI Descriptions**, for everything else. It is Off until you turn it on.
 
-The Metadata tab shows what a note comes to, such as **● On**, and where that comes from: a folder, the notebook, or **Everywhere** (Settings).
+The Metadata tab shows what a note comes to, such as **● On**, and where that comes from: a folder, the notebook, or **Everywhere** (Settings). Android follows the folder and notebook settings made on the Mac, and its Metadata tab sets the note's own.
 
 ## When a note is described
 

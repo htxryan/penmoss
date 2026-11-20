@@ -105,6 +105,10 @@ describe('EditorHost', () => {
           { key: 'created', value: '2026-10-23T10:00:00-05:00' },
         ],
         links: [],
+        description: null,
+        descriptionBy: null,
+        ai: 'inherit',
+        descriptionAsks: false,
       },
       // And its comment threads (T48), none here.
       { v: 1, type: 'comments', noteId: NOTE, open: 0, active: null, threads: [] },

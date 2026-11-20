@@ -62,6 +62,9 @@ internal object SettingsRoutes {
     const val ZONE = "settings/daily/zone"
     const val CAPTURE = "settings/capture"
 
+    /** Settings → AI Descriptions (PEN-161): Describe Notes, when, this phone's provider and key, the prompt. */
+    const val AI = "settings/ai-descriptions"
+
     /** A notebook's page (PEN-146), on a tab: overview, sync or git. */
     const val NOTEBOOK = "settings/git/{id}?tab={tab}"
     const val AGENT_ACTIVITY = AgentActivityRoutes.ACTIVITY
@@ -185,6 +188,8 @@ internal fun settingsGroups(
     agentActivity: String = "What agents changed, with Undo",
     /** Whether the usage record is shared, and its size (PEN-137); null leaves Privacy out. */
     privacy: String? = null,
+    /** AI Descriptions (PEN-161): on or off, and with which provider. */
+    ai: String = "Off",
 ): List<SettingsGroup> = listOf(
     SettingsGroup(
         "Look and Feel",
@@ -202,6 +207,7 @@ internal fun settingsGroups(
             SettingsSection("capture", "Quick Capture", destinationLabel(settings.captureDestination), SettingsIcons.Inbox, SettingsRoutes.CAPTURE),
             // A hardware keyboard's shortcuts (T40 P9, ST8): how many the person changed.
             SettingsSection("shortcuts", "Keyboard Shortcuts", shortcutsSummary(settings), SettingsIcons.Keyboard, CommandRoutes.SHORTCUTS),
+            SettingsSection("ai-descriptions", "AI Descriptions", ai, SettingsIcons.Sparkle, SettingsRoutes.AI),
         ),
     ),
     SettingsGroup(
@@ -266,6 +272,7 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
             storage = storage,
             github = github,
             privacy = privacy,
+            ai = app.penmoss.ui.settings.aiSummary(state.settings.values, device.aiDescriptions.ready),
         ),
         onOpen = { route -> host.nav.open(route) },
         onBack = onBack,
@@ -564,6 +571,7 @@ internal fun NavGraphBuilder.settingsRoutes(host: SettingsHost) {
     composable(SettingsRoutes.DAILY) { entry -> DailyNotesRoute(host, onTimeZone = { nav.open(SettingsRoutes.ZONE) }, onBack = back(entry)) }
     composable(SettingsRoutes.ZONE) { entry -> TimeZoneRoute(host, onBack = back(entry)) }
     composable(SettingsRoutes.CAPTURE) { entry -> QuickCaptureRoute(host, onNotebooks = { nav.open(CommandRoutes.GIT_NOTEBOOKS) }, onBack = back(entry)) }
+    composable(SettingsRoutes.AI) { entry -> AiDescriptionsRoute(host, onBack = back(entry)) }
     // What changed in this version and earlier ones (PEN-109).
     composable(SettingsRoutes.WHATS_NEW) { entry -> WhatsNewRoute(onBack = back(entry)) }
     // Settings → Privacy and its Analytics Data (PEN-137).

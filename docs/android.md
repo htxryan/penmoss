@@ -532,6 +532,15 @@ Install the APK. Have the web app open on the Mac. There is no emulator walk-thr
 6. **The slash menu (ED23).** Type `/sym` in a paragraph: **Symbol** opens the same picker.
 7. **Links and agents (A748).** In another note, link `[[That note#Open questions]]`: tapping it scrolls to `## ? Open questions`. Ask an agent to `update_section` the heading "Open questions": it finds it, symbol and all, and the heading keeps its ?.
 
+## Test AI Descriptions on the Pixel (PEN-161 T6, A1656)
+
+Each notebook's engine page runs the Mac's describer on its own notes (`editor/src/git/describer.ts`): it asks the app what is set (`ai.config`) and has the app make the call (`ai.describe`, `AiDescriptions.kt`), so the page never sees the key. The Anthropic key is sealed by the Keystore in its own preferences (`penmoss.ai`), never backed up. With no key the page sends nothing, and the Mac describes the phone's notes after they sync. Folder and notebook levels are set on the Mac; the phone follows them.
+
+1. Settings → AI Descriptions: paste a key and Save. A wrong key says Anthropic refused it and is not kept; a good one shows Test Key and Remove.
+2. Turn Describe Notes on and pick After a Pause Of 30 Seconds. Edit a note and wait: its Metadata tab shows the description, Written by AI Descriptions, and the frontmatter has it after the push.
+3. Type a description of your own: Keep Your Description? asks. Keep Mine sets the note's AI Description to Off.
+4. Airplane mode, then edit: nothing is written. Back online, the next sync describes it.
+
 ## Test in-app feedback on the Pixel (T49)
 
 The phone files feedback with its own GitHub account, from Settings → GitHub (A1010, A1552; [`feedback.md`](feedback.md)). Install the APK, with a GitHub account in Settings → GitHub. Have the [Penmoss board](https://github.com/users/htxryan/projects/8) open on the Mac. There is no emulator walk-through (no KVM on the worker); the tests that cover each step are `FeedbackMarkdownTest`, `FeedbackContextTest`, `FeedbackFormTest`, `MarkdownToolbarTest`, `FeedbackOutboxTest`, `FeedbackImagesTest`, `FeedbackScreenTest` and `MigrationTest` in the app.
