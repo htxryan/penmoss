@@ -6,8 +6,11 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
+import kotlin.math.abs
+import kotlin.math.roundToLong
 
 /**
  * The names an event may carry, by kind (PEN-137): core's `catalogue.ts`, shipped with the app as
@@ -21,6 +24,8 @@ class AnalyticsCatalogue(
     private val settingWords: Map<String, Set<String>> = emptyMap(),
     /** The CLI's own flags (core's CLI_FLAGS): a cli event names only these. */
     private val cliFlags: Set<String> = emptySet(),
+    /** The clients that may send a kind at all (core's KIND_CLIENTS): a scroll only from the apps. */
+    private val kindClients: Map<String, Set<String>> = KIND_CLIENTS,
 ) {
     fun has(kind: String, name: String): Boolean = names[kind]?.contains(name) == true
 
@@ -42,6 +47,7 @@ class AnalyticsCatalogue(
         if (!OS_VERSION.matches(event.osVersion)) return "osVersion"
         if (event.sizeClass != null && event.sizeClass !in AnalyticsFormat.SIZE_CLASSES) return "sizeClass"
         if (event.kind !in AnalyticsFormat.KINDS) return "kind"
+        if (kindClients[event.kind]?.contains(event.client) == false) return "client"
         if (!has(event.kind, event.name)) return "name"
         val checks = props(event.kind, event.name)
         for ((key, value) in event.props) {
@@ -93,6 +99,8 @@ class AnalyticsCatalogue(
             "sync" -> mapOf("result" to oneOf(listOf("ok", "conflict", "offline", "failed")), "took" to TOOK, "changed" to COUNT)
             "cli" -> mapOf("flags" to flags, "exit" to oneOf(CLI_EXITS), "took" to TOOK, "tty" to BOOL)
             "tool" -> mapOf("agentClient" to oneOf(AGENT_CLIENTS), "result" to oneOf(listOf("ok", "invalid", "notFound", "conflict", "failed")), "took" to TOOK)
+            // PEN-175: the area is the event's name; how far down it is, in hundredths.
+            "scroll" -> mapOf("position" to FRACTION)
             else -> emptyMap()
         }
     }
@@ -130,6 +138,19 @@ class AnalyticsCatalogue(
                 primitive.longOrNull?.let { it in 0..AnalyticsFormat.MAX_LENGTH.toLong() && it % 10 == 0L } == true
         }
 
+        /**
+         * A scrolled area's position (PEN-175): a number from 0 to 1 that is a whole number of
+         * hundredths, never a string or a boolean (core's `fraction`).
+         */
+        private val FRACTION: (JsonElement) -> Boolean = { value ->
+            val primitive = value as? JsonPrimitive
+            val number = primitive?.takeUnless { it.isString || it.booleanOrNull != null }?.doubleOrNull
+            number != null && number.isFinite() && number in 0.0..1.0 && abs(number * 100 - (number * 100).roundToLong()) < 1e-9
+        }
+
+        /** Core's KIND_CLIENTS: the clients that may send a kind; a kind not listed comes from any. */
+        val KIND_CLIENTS: Map<String, Set<String>> = mapOf("scroll" to setOf("mac", "android"))
+
         val WINDOWS = listOf("main", "note", "capture")
         val SIDEBAR_STATES = listOf("shown", "rail", "hidden")
         val PANEL_STATES = listOf("open", "closed", "none")
@@ -157,7 +178,7 @@ class AnalyticsCatalogue(
         const val MAX_FLAGS = 16
         const val MAX_SETTING_NUMBER = 10_000_000L
 
-        /** Reads the contract: its `catalogue` (kind → names), `settingValues` and `cliFlags`. */
+        /** Reads the contract: its `catalogue` (kind → names), `settingValues`, `cliFlags` and `kindClients`. */
         fun parse(text: String): AnalyticsCatalogue {
             val root = Json.parseToJsonElement(text) as JsonObject
             val catalogue = root["catalogue"] as? JsonObject ?: error("analytics-v1.json has no catalogue")
@@ -166,6 +187,7 @@ class AnalyticsCatalogue(
                 catalogue.mapValues { (_, names) -> words(names) },
                 (root["settingValues"] as? JsonObject)?.mapValues { (_, values) -> words(values) }.orEmpty(),
                 words(root["cliFlags"]),
+                (root["kindClients"] as? JsonObject)?.mapValues { (_, clients) -> words(clients) } ?: KIND_CLIENTS,
             )
         }
 

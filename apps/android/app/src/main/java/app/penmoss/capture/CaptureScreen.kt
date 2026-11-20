@@ -52,6 +52,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.Analytics
 import app.penmoss.analytics.TrackedDialog
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
@@ -131,13 +132,18 @@ fun CaptureScreen(
         // make the whole sheet a single button to TalkBack, hiding its fields and buttons.
         Modifier
             .fillMaxSize()
-            .pointerInput(onCancel) { detectTapGestures { onCancel() } }
+            .pointerInput(onCancel) {
+                detectTapGestures {
+                    Analytics.click("capture.outside")
+                    onCancel()
+                }
+            }
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .imePadding(),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Surface(
-            // Taps on the sheet itself stay on it.
+            // untracked: only keeps taps on the sheet from cancelling it
             Modifier.fillMaxWidth().widthIn(max = if (short) 960.dp else 640.dp).pointerInput(Unit) { detectTapGestures {} },
             shape = MaterialTheme.shapes.extraLarge,
             tonalElevation = 6.dp,

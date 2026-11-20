@@ -17,6 +17,7 @@ import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
@@ -471,6 +472,19 @@ sealed interface FromEditor {
     /** A key the page's dispatcher took for one of the app's commands (T40 P9, PL9, A493). */
     data class Command(val noteId: String?, val id: String) : FromEditor
 
+    /**
+     * How far down the open note is (PEN-175), for usage data's `scroll note`: 0 to 1 in
+     * hundredths, sent once its scrolling settles (core's ScrollGate runs in the page).
+     */
+    data class Scroll(val noteId: String, val position: Double) : FromEditor
+
+    /**
+     * A tracked control in the note was used (PEN-175): its `data-event` id, as the Mac's page
+     * records it, and on or off for a check box. The app records it only when its catalogue
+     * lists the id; the bridge checks only its shape.
+     */
+    data class Click(val id: String, val state: String? = null) : FromEditor
+
     /** [request] is the [ToEditor.CreatePeriodic] this error answers, when it answers one (T40 P9, N7). */
     data class Error(val noteId: String?, val message: String, val request: String? = null) : FromEditor
 }
@@ -481,6 +495,9 @@ object BridgeProtocol {
 
     /** A command's id, as `keys.<id>` and the registry name one (T40 P9; `@penmoss/editor/keys`). */
     val COMMAND_ID = Regex("^[A-Za-z][A-Za-z0-9-]*(\\.[A-Za-z0-9-]+)*$")
+
+    /** A tracked control's id (PEN-175), the catalogue's shape for a click: `area.thing`, lower case, 2 to 5 parts. */
+    val CLICK_ID = Regex("^[a-z][a-z0-9-]*(\\.[a-z0-9-]+){1,4}$")
 
     /** A request's tag (T40 P9): the app's own short id. */
     val REQUEST_ID = Regex("^[A-Za-z0-9_-]{1,64}$")
@@ -807,6 +824,15 @@ object BridgeProtocol {
                 type("openTag", message.noteId)
                 put("tag", message.tag)
             }
+            is FromEditor.Scroll -> {
+                type("scroll", message.noteId)
+                // 0 and 1 as whole numbers, as the page's JSON writes them.
+                when (message.position) {
+                    0.0 -> put("position", 0)
+                    1.0 -> put("position", 1)
+                    else -> put("position", message.position)
+                }
+            }
             is ParityFromEditor -> EditorParity.encode(this, message)
             is CommentFromEditor -> CommentsBridge.encode(this, message)
             is FromEditor.Error -> {
@@ -819,6 +845,11 @@ object BridgeProtocol {
                 put("type", "command")
                 put("noteId", message.noteId?.let(::JsonPrimitive) ?: JsonNull)
                 put("id", message.id)
+            }
+            is FromEditor.Click -> {
+                put("type", "click")
+                put("id", message.id)
+                message.state?.let { put("state", it) }
             }
         }
     }.toString()
@@ -849,6 +880,15 @@ object BridgeProtocol {
                 else -> value.string("request")?.takeIf(REQUEST_ID::matches) ?: return null
             }
             return FromEditor.Error(noteId, message, request)
+        }
+        if (type == "click") {
+            // A catalogue id's shape only (`editor.callout.fold`), and on or off when it says.
+            val id = value.string("id")?.takeIf(CLICK_ID::matches) ?: return null
+            val state = when (value["state"]) {
+                null -> null
+                else -> value.string("state")?.takeIf { it == "on" || it == "off" } ?: return null
+            }
+            return FromEditor.Click(id, state)
         }
         if (type == "command") {
             // Only a command's id: what runs is the app's own handler for it, or nothing.
@@ -967,6 +1007,13 @@ object BridgeProtocol {
             "openTag" -> FromEditor.OpenTag(
                 noteId,
                 value.string("tag")?.takeIf { it.length <= MAX_TAG_CHARS && app.penmoss.engine.notes.Tags.normalise(it) == it } ?: return null,
+            )
+            // A number from 0 to 1 in whole hundredths, never a string or a boolean.
+            "scroll" -> FromEditor.Scroll(
+                noteId,
+                (value["position"] as? JsonPrimitive)?.takeUnless { it.isString || it.booleanOrNull != null }?.doubleOrNull
+                    ?.takeIf { it.isFinite() && it in 0.0..1.0 && kotlin.math.abs(it * 100 - kotlin.math.round(it * 100)) < 1e-9 }
+                    ?: return null,
             )
             else -> EditorParity.decodeFromEditor(type, noteId, value)
                 ?: CommentsBridge.decodeFromEditor(type, noteId, value)

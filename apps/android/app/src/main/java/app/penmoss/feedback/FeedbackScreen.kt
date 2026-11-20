@@ -416,6 +416,7 @@ internal fun MarkdownPreviewView(markdown: String, modifier: Modifier = Modifier
         if (blocks.isEmpty()) Text("Nothing to preview", color = MaterialTheme.colorScheme.onSurfaceVariant)
         val codeBackground = MaterialTheme.colorScheme.surfaceVariant
         val link = MaterialTheme.colorScheme.primary
+        val uris = androidx.compose.ui.platform.LocalUriHandler.current
         fun text(runs: List<MarkdownPreview.Run>) = buildAnnotatedString {
             for (run in runs) {
                 val style = SpanStyle(
@@ -425,7 +426,18 @@ internal fun MarkdownPreviewView(markdown: String, modifier: Modifier = Modifier
                     background = if (run.code) codeBackground else androidx.compose.ui.graphics.Color.Unspecified,
                 )
                 if (run.url != null) {
-                    pushLink(LinkAnnotation.Url(run.url, TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline))))
+                    // A link's tap is counted (PEN-175), then opens it as the link's own would.
+                    val url = run.url
+                    pushLink(
+                        LinkAnnotation.Url(
+                            url,
+                            TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline)),
+                            linkInteractionListener = {
+                                app.penmoss.analytics.Analytics.click("markdown-preview.link")
+                                runCatching { uris.openUri(url) }
+                            },
+                        ),
+                    )
                     withStyleRun(style) { append(run.text) }
                     pop()
                 } else {

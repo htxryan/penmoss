@@ -79,7 +79,7 @@ internal fun FontsGroup(fonts: FontsUi, enabled: Boolean) {
                 Slider(
                     value = size,
                     onValueChange = { size = it.roundToInt().toFloat() },
-                    onValueChangeFinished = { if (size.roundToInt() != fonts.noteSize) fonts.onNoteSize(size.roundToInt()) },
+                    onValueChangeFinished = trackedClick("settings.font.size") { if (size.roundToInt() != fonts.noteSize) fonts.onNoteSize(size.roundToInt()) },
                     valueRange = FontSettings.SIZE_MIN.toFloat()..FontSettings.SIZE_MAX.toFloat(),
                     steps = FontSettings.SIZE_MAX - FontSettings.SIZE_MIN - 1,
                     enabled = enabled,

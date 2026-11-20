@@ -197,9 +197,9 @@ private fun ButtonWords(text: String) {
     Text(text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
 }
 
-/** The footer's primary button, counted as [event] (PEN-137; the Mac's `firstrun.continue`). */
+/** The footer's primary button, counted as [event] (PEN-175: its own id, as the Mac's; a plain Continue is `firstrun.continue`). */
 @Composable
-internal fun Primary(text: String, tag: String, icon: String, enabled: Boolean = true, busy: Boolean = false, event: String = "firstrun.continue", onClick: () -> Unit) {
+internal fun Primary(text: String, tag: String, icon: String, enabled: Boolean = true, busy: Boolean = false, event: String, onClick: () -> Unit) {
     Button(onClick = trackedClick(event, onClick), enabled = enabled && !busy, modifier = Modifier.testTag(tag)) {
         if (busy) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
@@ -211,22 +211,16 @@ internal fun Primary(text: String, tag: String, icon: String, enabled: Boolean =
     }
 }
 
-/** A plain footer or inline button, counted as [event] (PEN-137; the Mac's `firstrun.action`). */
+/** A plain footer or inline button, counted as [event] (PEN-175: its own id, as the Mac's). */
 @Composable
-internal fun Plain(text: String, tag: String, icon: String, enabled: Boolean = true, event: String = "firstrun.action", onClick: () -> Unit) {
+internal fun Plain(text: String, tag: String, icon: String, enabled: Boolean = true, event: String, onClick: () -> Unit) {
     OutlinedButton(onClick = trackedClick(event, onClick), enabled = enabled, modifier = Modifier.testTag(tag)) {
         ButtonIcon(icon)
         ButtonWords(text)
     }
 }
 
-/** A quiet button inside the screen (Paste a URL Instead, Refresh, Change), counted as `firstrun.link` (PEN-137), as the Mac's. */
-@Composable
-internal fun Link(text: String, tag: String, icon: String, onClick: () -> Unit) {
-    Link(text, tag, icon, event = "firstrun.link", onClick = onClick)
-}
-
-/** [Link], counted as [event]: Back, Cancel, More Options. */
+/** A quiet button inside the screen (Paste a URL Instead, Refresh, Back, More Options), counted as [event] (PEN-175: its own id, as the Mac's). */
 @Composable
 internal fun Link(text: String, tag: String, icon: String, event: String, onClick: () -> Unit) {
     TextButton(onClick = trackedClick(event, onClick), Modifier.testTag(tag)) {
@@ -285,12 +279,15 @@ internal fun Chip(text: String, tag: String? = null) {
     )
 }
 
-/** One of a screen's choices, drawn as a wide row. */
-internal data class Option<T>(val value: T, val title: String, val line: String, val tag: String, val chip: String? = null, val enabled: Boolean = true)
+/**
+ * One of a screen's choices, drawn as a wide row, its pick counted as [event] (PEN-175): a fixed
+ * choice's own id (`firstrun.goal.start-a-new-notebook`), or a list's (`firstrun.notebook`).
+ */
+internal data class Option<T>(val value: T, val title: String, val line: String, val tag: String, val chip: String? = null, val enabled: Boolean = true, val event: String)
 
-/** Radio choices drawn as wide rows: one picked, the footer's button goes on with it. A pick is counted as [event]. */
+/** Radio choices drawn as wide rows: one picked, the footer's button goes on with it. Each pick is counted as its option's event. */
 @Composable
-internal fun <T> Options(value: T, items: List<Option<T>>, event: String = "firstrun.option", onChange: (T) -> Unit) {
+internal fun <T> Options(value: T, items: List<Option<T>>, onChange: (T) -> Unit) {
     Column(Modifier.selectableGroup().fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (item in items) {
             val picked = item.value == value
@@ -298,7 +295,7 @@ internal fun <T> Options(value: T, items: List<Option<T>>, event: String = "firs
                 Modifier
                     .fillMaxWidth()
                     .border(1.dp, if (picked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                    .selectable(selected = picked, enabled = item.enabled, role = Role.RadioButton, onClick = trackedClick(event) { onChange(item.value) })
+                    .selectable(selected = picked, enabled = item.enabled, role = Role.RadioButton, onClick = trackedClick(item.event) { onChange(item.value) })
                     .padding(horizontal = 8.dp, vertical = 12.dp)
                     .testTag(item.tag),
                 verticalAlignment = Alignment.CenterVertically,

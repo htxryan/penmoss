@@ -50,15 +50,15 @@ internal fun AiQuestionStep(onNext: (on: Boolean) -> Unit) {
         "Describe Notes for Agents?",
         step = 3,
         actions = {
-            Primary(if (choice == "on") "Continue" else "Start Writing", "first-run-continue", "arrow-right") { onNext(choice == "on") }
+            Primary(if (choice == "on") "Continue" else "Start Writing", "first-run-continue", "arrow-right", event = "firstrun.continue") { onNext(choice == "on") }
         },
     ) {
         Lead("AI writes a short description into each note’s frontmatter, so agents see what a note holds before opening it.")
         Options(
             choice,
             listOf(
-                Option("on", "Turn On for All Notes", "Next, your Anthropic API key. Any notebook, folder or note can still say Off.", "first-run-ai-on"),
-                Option("off", "Not Now", "It stays off. Settings → AI Descriptions turns it on later.", "first-run-ai-off"),
+                Option("on", "Turn On for All Notes", "Next, your Anthropic API key. Any notebook, folder or note can still say Off.", "first-run-ai-on", event = "firstrun.ai.turn-on-for-all-notes"),
+                Option("off", "Not Now", "It stays off. Settings → AI Descriptions turns it on later.", "first-run-ai-off", event = "firstrun.ai.not-now"),
             ),
         ) { choice = it }
         Lead("A note’s text is sent to Anthropic. Nothing is sent while descriptions are off.", small = true)
@@ -83,7 +83,7 @@ internal fun AiKeyStep(ai: FirstRunAi, back: () -> Unit, onDone: () -> Unit) {
         back = back,
         actions = {
             Plain("Skip", "first-run-ai-skip", "arrow-right", event = "firstrun.ai.skip") { onDone() }
-            Primary("Turn On and Start Writing", "first-run-continue", "check", enabled = saved) {
+            Primary("Turn On and Start Writing", "first-run-continue", "check", enabled = saved, event = "firstrun.continue") {
                 ai.turnOn()
                 onDone()
             }

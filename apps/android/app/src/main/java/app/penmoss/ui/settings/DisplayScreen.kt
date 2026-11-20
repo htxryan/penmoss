@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedToggle
 import app.penmoss.engine.settings.SidebarLayout
@@ -68,7 +69,10 @@ fun DisplayScreen(
     // The tabs hold still under the title and each tab's page scrolls under them, as Appearance's.
     SectionScreen("Home", onBack, notice = if (enabled) null else SETTINGS_WAIT, fill = true) {
         SettingsPreviewTabs(previewing, "home") { previewing = it }
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "homePreviewPanel" else "homeSettingsPanel")) {
+        val panel = rememberScrollState()
+        // How far down the page is (PEN-175); the preview is no page of settings, so it records nothing.
+        if (!previewing) TrackScroll("settings", panel, "home")
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(panel).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "homePreviewPanel" else "homeSettingsPanel")) {
         if (previewing) {
             HomePreview(preview.copy(shortcuts = HomeShortcuts.of(choices), layout = layout))
             return@Column

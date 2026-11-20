@@ -399,7 +399,7 @@ internal fun RootNotices(root: RootUi) {
     // Once sent, wherever the app is: "Sent as #123" with a link to the issue (A796).
     LaunchedEffect(graph.feedbackOutbox) {
         graph.feedbackOutbox.sent.collect { filed ->
-            val result = root.snackbar.showSnackbar("Sent as #${filed.number}", actionLabel = "Open", withDismissAction = true, duration = SnackbarDuration.Long)
+            val result = root.snackbar.say("Sent as #${filed.number}", SnackbarTone.Info, actionLabel = "Open", dismissEvent = "toast.feedback.dismiss", duration = SnackbarDuration.Long)
             if (result == SnackbarResult.ActionPerformed) {
                 runCatching { androidx.browser.customtabs.CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(filed.url)) }
             }

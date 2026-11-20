@@ -256,8 +256,9 @@ fun GitNotebooksScreen(
         if (ui.home) "Penmoss" else "All Notebooks",
         onBack,
         notice = null,
-        // The app's home is not a Settings screen: no (i) there.
+        // The app's home is not a Settings screen: no (i) there, and its scrolling is no Settings page's.
         info = !ui.home,
+        scrollArea = if (ui.home) null else "settings",
         actions = {
             if (onSettings != null) {
                 app.penmoss.ui.common.IconButton(onClick = trackedClick("home.settings", onSettings), modifier = Modifier.testTag("homeSettingsGear")) {

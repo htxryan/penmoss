@@ -51,14 +51,20 @@ fun snackbarGlyphTag(tone: SnackbarTone) = "penmoss-snackbar-glyph-${tone.name.l
  */
 enum class SnackbarTone { Done, Error, Trash, Info }
 
-/** A snackbar's visuals with its [tone]; shown with [say]. */
+/**
+ * A snackbar's visuals with its [tone]; shown with [say]. A snackbar with a dismiss (×) names
+ * the id its tap is counted as, [dismissEvent] (`toast.feedback.dismiss`, PEN-175), as the web's
+ * toasts each name theirs.
+ */
 data class PenmossSnackbarVisuals(
     override val message: String,
     val tone: SnackbarTone,
     override val actionLabel: String? = null,
-    override val withDismissAction: Boolean = false,
+    val dismissEvent: String? = null,
     override val duration: SnackbarDuration = if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
-) : SnackbarVisuals
+) : SnackbarVisuals {
+    override val withDismissAction: Boolean get() = dismissEvent != null
+}
 
 /**
  * What an action says once it is done (A1535): a short sentence and its tone, for the snackbar.
@@ -66,14 +72,14 @@ data class PenmossSnackbarVisuals(
  */
 data class Said(val text: String, val tone: SnackbarTone)
 
-/** Shows [message] with [tone]'s leading glyph, as `showSnackbar` does otherwise. */
+/** Shows [message] with [tone]'s leading glyph, as `showSnackbar` does otherwise; with a dismiss (×) counted as [dismissEvent] when one is named. */
 suspend fun SnackbarHostState.say(
     message: String,
     tone: SnackbarTone,
     actionLabel: String? = null,
-    withDismissAction: Boolean = false,
+    dismissEvent: String? = null,
     duration: SnackbarDuration = if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
-): SnackbarResult = showSnackbar(PenmossSnackbarVisuals(message, tone, actionLabel, withDismissAction, duration))
+): SnackbarResult = showSnackbar(PenmossSnackbarVisuals(message, tone, actionLabel, dismissEvent, duration))
 
 /** What a snackbar is drawn with: the theme's raised surface, text, accent and border. */
 internal data class SnackbarColours(val container: Color, val content: Color, val action: Color, val muted: Color, val border: Color, val danger: Color)
@@ -145,7 +151,14 @@ fun PenmossSnackbar(data: SnackbarData, modifier: Modifier = Modifier) {
                     }
                 }
                 if (visuals.withDismissAction) {
-                    IconButton(onClick = trackedClick("toast.dismiss") { data.dismiss() }) {
+                    // Counted as the snackbar's own dismiss id (PEN-175); only [say] gives one a dismiss.
+                    val dismissEvent = (visuals as? PenmossSnackbarVisuals)?.dismissEvent
+                    IconButton(
+                        onClick = {
+                            dismissEvent?.let { app.penmoss.analytics.Analytics.click(it) }
+                            data.dismiss()
+                        },
+                    ) {
                         Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = colours.muted)
                     }
                 }

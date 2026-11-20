@@ -133,7 +133,7 @@ fun TrashScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
     ) { padding ->
-        PullToRefreshBox(isRefreshing = ui.loading, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().padding(padding)) {
+        PullToRefreshBox(isRefreshing = ui.loading, onRefresh = trackedClick("trash.pull-to-refresh", onRefresh), modifier = Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(Modifier.fillMaxSize().testTag("trashList"), contentPadding = PaddingValues(bottom = 24.dp)) {
                 item {
                     Text(

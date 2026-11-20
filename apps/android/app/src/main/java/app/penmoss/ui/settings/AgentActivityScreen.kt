@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
@@ -22,6 +23,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.ui.common.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -78,7 +80,10 @@ fun AgentActivityScreen(
         topBar = { TopAppBar(title = { Text("Agent Activity") }, navigationIcon = { BackButton(onBack) }) },
         snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("agentActivity"), contentPadding = PaddingValues(bottom = 24.dp)) {
+        val list = rememberLazyListState()
+        // How far down the page is (PEN-175): a Settings page.
+        TrackScroll("settings", list, "agent-activity")
+        LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("agentActivity"), state = list, contentPadding = PaddingValues(bottom = 24.dp)) {
             item {
                 if (ui.loading || ui.busy != null) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("activityLoading"))
                 Help(

@@ -110,12 +110,12 @@ internal fun GitHubAccess(
         deps.signIn?.start(scope) {}
     }
     // In the screen, not the footer: a phone's footer holds Back and one button (A1404 on Android).
-    val urlInstead = @Composable { Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl) }
+    val urlInstead = @Composable { Link("Paste a URL Instead", "first-run-url-instead", "link", event = "firstrun.github.paste-a-url-instead", onClick = onUrl) }
     // Settings → GitHub's words for the same page.
-    val tokenLink = @Composable { Link(if (deps.accounts().isEmpty()) "Use a Token Instead" else "Add with a Token", "first-run-use-token", "key-round") { typing = true } }
+    val tokenLink = @Composable { Link(if (deps.accounts().isEmpty()) "Use a Token Instead" else "Add with a Token", "first-run-use-token", "key-round", event = "firstrun.github.use-token") { typing = true } }
     val signInButton = @Composable { words: String ->
-        if (deps.signIn?.available == true) Primary(words, "first-run-signin", "log-in", onClick = ::signIn)
-        else Primary("Try Again", "first-run-retry", "refresh-cw", onClick = ::again)
+        if (deps.signIn?.available == true) Primary(words, "first-run-signin", "log-in", onClick = ::signIn, event = "firstrun.github.sign-in")
+        else Primary("Try Again", "first-run-retry", "refresh-cw", onClick = ::again, event = "firstrun.github.try-again")
     }
 
     if (typing) {
@@ -152,7 +152,7 @@ internal fun GitHubAccess(
                     "Signed In to GitHub",
                     step = 2,
                     back = back,
-                    actions = { Primary("Continue", "first-run-continue", "arrow-right") { withAccount(app.penmoss.feedback.GitHubAccount(state.login, primary = false)) } },
+                    actions = { Primary("Continue", "first-run-continue", "arrow-right", event = "firstrun.continue") { withAccount(app.penmoss.feedback.GitHubAccount(state.login, primary = false)) } },
                 ) {
                     Text("Signed in", Modifier.testTag("first-run-signed-in"), style = MaterialTheme.roles.rowLabel, color = MaterialTheme.colorScheme.primary)
                     Lead("Kept with the Android Keystore. Sign out in Settings → GitHub.", small = true)
@@ -169,7 +169,7 @@ internal fun GitHubAccess(
                         back()
                     },
                     actions = {
-                        Primary("Copy Code and Open GitHub", "github-signin-open", "external-link") {
+                        Primary("Copy Code and Open GitHub", "github-signin-open", "external-link", event = "firstrun.github.copy-code") {
                             deps.copy(state.userCode)
                             deps.openUrl(state.verificationUri)
                         }
@@ -181,7 +181,7 @@ internal fun GitHubAccess(
                             small = true,
                             centered = true,
                         )
-                        Link("Cancel", "github-signin-cancel", "x") { deps.signIn?.cancel() }
+                        Link("Cancel", "github-signin-cancel", "x", event = "firstrun.github.cancel") { deps.signIn?.cancel() }
                     },
                 ) {
                     Lead("GitHub asks for this code. Copy it and open GitHub, enter it there and approve Penmoss, then come back: this screen goes on by itself.")
@@ -268,7 +268,7 @@ internal fun GitHubAccess(
                     back = back,
                     actions = { signInButton("Sign In with GitHub") },
                     below = {
-                        Link("Try Again", "first-run-retry", "refresh-cw", ::again)
+                        Link("Try Again", "first-run-retry", "refresh-cw", event = "firstrun.github.try-again", onClick = ::again)
                         tokenLink()
                         urlInstead()
                     },
@@ -283,7 +283,7 @@ internal fun GitHubAccess(
                     if (error.reason == BrowseReason.OFFLINE) "Can’t Reach GitHub" else "GitHub Didn’t Answer",
                     step = 2,
                     back = back,
-                    actions = { Primary("Try Again", "first-run-retry", "refresh-cw", onClick = ::again) },
+                    actions = { Primary("Try Again", "first-run-retry", "refresh-cw", onClick = ::again, event = "firstrun.github.try-again") },
                     below = { urlInstead() },
                 ) {
                     Problem(if (error.reason == BrowseReason.OFFLINE) "Check the connection, then try again." else error.message, "first-run-github-problem")

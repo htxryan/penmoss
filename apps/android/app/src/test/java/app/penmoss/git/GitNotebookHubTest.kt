@@ -195,6 +195,52 @@ class GitNotebookHubTest {
         assertNotEquals("Ryan <x>", hub.identity().name)
     }
 
+    /**
+     * PEN-175: a notebook's Push After, Pull Every, Wi-Fi Only and Sign Commits are recorded once
+     * the write succeeded, as the Mac's main process records them; a write refused records nothing.
+     */
+    @Test
+    fun aNotebooksSettingsAreRecordedOnlyOnceTheyAreWritten() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                val localId = (hub.add("file://${bare().absolutePath}", null, null, "Work", null) as AddResult.Added).notebook.localId
+                // Refused: out of range, and a notebook that isn't there.
+                for (refused in listOf<suspend () -> Unit>(
+                    { hub.update(localId, pushDelayS = 1) },
+                    { hub.update(localId, pullEveryMin = 0) },
+                    { hub.update("no-such-notebook", pushDelayS = 30, pullEveryMin = 10, wifiOnly = true) },
+                    { hub.setSignCommits("no-such-notebook", false) },
+                )) {
+                    try {
+                        refused()
+                        fail("written")
+                    } catch (expected: GitRefusal) {
+                        // Nothing written, so nothing recorded.
+                    }
+                }
+                harness.service.flush()
+                assertEquals(emptyList<String>(), harness.store.page(null, null, 50).filter { it.kind == "setting" }.map { it.name })
+                hub.update(localId, pushDelayS = 30, pullEveryMin = 10, wifiOnly = true)
+                hub.setSignCommits(localId, false)
+                harness.service.flush()
+                val recorded = harness.store.page(null, null, 50).filter { it.kind == "setting" }.sortedBy { it.seq }.map { it.name to it.props }
+                assertEquals(
+                    listOf(
+                        "git.pushAfter" to """{"value":30}""",
+                        "git.pullEvery" to """{"value":10}""",
+                        "git.wifiOnly" to """{"value":true}""",
+                        "git.signCommits" to """{"value":false}""",
+                    ),
+                    recorded,
+                )
+                assertEquals(30, hub.notebooks.entry(localId)!!.pushDelayS)
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
     @Test
     fun aCaptureStoredForAGitNotebookSchedulesARunSoon() {
         hub.storedForLater()

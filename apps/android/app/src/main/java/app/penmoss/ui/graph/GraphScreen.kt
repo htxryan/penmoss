@@ -342,7 +342,11 @@ fun GraphScreen(
                     when (message) {
                         FromGraph.Ready -> Unit
                         is FromGraph.Shown -> shown = message
-                        is FromGraph.Open -> onOpen(message.noteId)
+                        // The page's chip, the one control it hosts (PEN-175): counted here, as the page posts only its tap.
+                        is FromGraph.Open -> {
+                            app.penmoss.analytics.Analytics.click("graph.chip.open")
+                            onOpen(message.noteId)
+                        }
                     }
                 },
                 theme = theme?.let { ToGraph.Theme(it, if (dark) "dark" else "light") },

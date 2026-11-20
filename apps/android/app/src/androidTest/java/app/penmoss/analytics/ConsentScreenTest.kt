@@ -30,9 +30,9 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class ConsentScreenTest {
-    /** The What Is Recorded line that names the window's size and layout (PEN-174), scrolled to and held. */
+    /** The What Is Recorded line that names the window's size and layout (PEN-174) and scrolling (PEN-175), scrolled to and held. */
     private fun holdOnTheWindowLine(screen: OnScreen) {
-        assertEquals("The app’s and the system’s versions, and the window’s size and layout", AnalyticsCopy.text("consent.recorded.3"))
+        assertEquals("The app’s and the system’s versions, the window’s size and layout, and how far you scroll", AnalyticsCopy.text("consent.recorded.3"))
         screen.reveal(screen.tagged("consent-recorded"), margin = 120f)
         val line = screen.text(AnalyticsCopy.text("consent.recorded.3"))
         assertTrue("the line is on screen", line.boundsInWindow.height > 0f)
