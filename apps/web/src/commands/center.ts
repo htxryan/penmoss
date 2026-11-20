@@ -269,10 +269,14 @@ export class CommandCenter {
 
   /**
    * Runs a command; false when it is unavailable or declined. Each run is recorded by name
-   * (PEN-137): its id, its source and whether it ran.
+   * (PEN-137): its id, its source and whether it ran. A menu choice that can't run now is
+   * recorded too, as not run, since the menu offers it whatever the screen (PEN-170).
    */
   run(id: string, context: RunContext = { source: 'button' }): boolean {
-    if (!this.available(id)) return false;
+    if (!this.available(id)) {
+      if (context.source === 'menu' && this.definitions.has(id)) this.recordRun(id, context, false);
+      return false;
+    }
     const ran = this.execute(id, context);
     this.recordRun(id, context, ran);
     return ran;

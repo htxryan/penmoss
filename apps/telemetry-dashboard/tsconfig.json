@@ -11,5 +11,5 @@
     "vitest.workers.config.ts"
   ],
   // The page (DOM) and the Playwright spec (Node) have their own.
-  "exclude": ["src/client", "test/e2e"]
+  "exclude": ["src/client", "test/client", "test/e2e"]
 }

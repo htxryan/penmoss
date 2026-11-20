@@ -94,6 +94,19 @@ describe('commands by name', () => {
     center.dispose();
   });
 
+  it('records a menu choice that cannot run as not run, and nothing for other sources (PEN-170)', () => {
+    const center = new CommandCenter(COMMANDS, memoryBindings({}));
+    center.register('app.graph', { run: () => {}, enabled: () => false });
+    expect(center.run('app.graph', { source: 'menu' })).toBe(false);
+    expect(center.run('journal.calendar', { source: 'menu' })).toBe(false);
+    expect(center.run('app.graph', { source: 'button' })).toBe(false);
+    expect(recorded()).toEqual([
+      { kind: 'command', name: 'app.graph', props: { source: 'menu', ran: false } },
+      { kind: 'command', name: 'journal.calendar', props: { source: 'menu', ran: false } },
+    ]);
+    center.dispose();
+  });
+
   it('writes combinations as the event format does, or not at all', () => {
     expect(keysForEvent('Mod+Shift+Up')).toBe('Mod+Shift+ArrowUp');
     expect(keysForEvent('Mod+Alt+N')).toBe('Mod+Alt+N');

@@ -1,0 +1,9 @@
+{
+  // The page's own tests, in happy-dom (PEN-170).
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["."]
+}
