@@ -19,7 +19,7 @@
       "database_name": "penmoss-telemetry",
       // Ryan: `pnpm --filter @penmoss/telemetry exec wrangler d1 create penmoss-telemetry`, then put
       // the id it prints here and in apps/telemetry-dashboard/wrangler.jsonc.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "68e145aa-e209-4bc2-92dc-dfec57a854f5",
       "migrations_dir": "migrations",
     },
   ],

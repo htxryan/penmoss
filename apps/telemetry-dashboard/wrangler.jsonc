@@ -27,7 +27,7 @@
       "binding": "DB",
       "database_name": "penmoss-telemetry",
       // The same database as apps/telemetry/wrangler.jsonc: Ryan puts the id there and here.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "68e145aa-e209-4bc2-92dc-dfec57a854f5",
       "migrations_dir": "../telemetry/migrations",
     },
   ],
@@ -35,7 +35,7 @@
     // Ryan: the Zero Trust team's name (<team>.cloudflareaccess.com), and the Access
     // application's AUD tag (Zero Trust → Access → Applications → stats.penmoss.app → Overview).
     // Without both, every request is refused.
-    "ACCESS_TEAM": "",
-    "ACCESS_AUD": "",
+    "ACCESS_TEAM": "redhale",
+    "ACCESS_AUD": "2888e38f4c0687a10659b44dd8c9a31dda3c3a9c39cbdc684b1c9f2d323d8095",
   },
 }
