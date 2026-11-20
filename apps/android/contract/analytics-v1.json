@@ -1,5 +1,5 @@
 {
-  "$comment": "The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names, each one of `cliFlags`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`; `length`: a whole number, a multiple of 10, 0 to `maxLength`). An event whose `kind.name` is a key of `nameProps` takes the props of that entry instead of those of its kind, and no other name of the kind takes them. States are stored as their `code`. The catalogue only grows.",
+  "$comment": "The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names, each one of `cliFlags`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`; `length`: a whole number, a multiple of 10, 0 to `maxLength`; `fraction`: a number from 0 to 1 that is a whole number of hundredths). An event whose `kind.name` is a key of `nameProps` takes the props of that entry instead of those of its kind, and no other name of the kind takes them. A kind listed in `kindClients` comes only from those clients. A `scroll` event is recorded `scroll.settleMs` after its area stops moving, at most one per area every `scroll.minGapMs` (scroll-v1.json pins the rules). No control records a click id in `retiredClickNames`; they stay catalogued. States are stored as their `code`. The catalogue only grows.",
   "version": 1,
   "kinds": [
     "app",
@@ -13,7 +13,8 @@
     "feedback",
     "sync",
     "cli",
-    "tool"
+    "tool",
+    "scroll"
   ],
   "clients": ["mac", "android", "cli", "mcp"],
   "actors": ["person", "agent", "script"],
@@ -401,6 +402,11 @@
       "took": {
         "type": "duration"
       }
+    },
+    "scroll": {
+      "position": {
+        "type": "fraction"
+      }
     }
   },
   "nameProps": {
@@ -449,6 +455,13 @@
         "type": "count"
       }
     }
+  },
+  "kindClients": {
+    "scroll": ["mac", "android"]
+  },
+  "scroll": {
+    "settleMs": 300,
+    "minGapMs": 1000
   },
   "catalogue": {
     "app": ["launch", "quit", "foreground", "background", "window", "layout"],
@@ -1552,6 +1565,25 @@
       "create_comment_thread",
       "reply_to_comment_thread",
       "resolve_comment_thread"
+    ],
+    "scroll": [
+      "note",
+      "sidebar",
+      "sidebar.folders",
+      "sidebar.recent",
+      "sidebar.tags",
+      "settings",
+      "settings.nav"
     ]
-  }
+  },
+  "retiredClickNames": [
+    "menu.item",
+    "menu.open",
+    "settings.switch",
+    "sidebar.section.toggle",
+    "toast.dismiss",
+    "firstrun.action",
+    "firstrun.link",
+    "firstrun.option"
+  ]
 }

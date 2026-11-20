@@ -13,7 +13,12 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { AGENT_CLIENTS } from '../src/analytics/actors';
-import { CATALOGUE, CLI_FLAGS, SETTING_VALUES } from '../src/analytics/catalogue';
+import {
+  CATALOGUE,
+  CLI_FLAGS,
+  RETIRED_CLICK_NAMES,
+  SETTING_VALUES,
+} from '../src/analytics/catalogue';
 import {
   ACTORS,
   BATCH_VERSION,
@@ -40,8 +45,10 @@ import {
   STATES,
 } from '../src/analytics/events';
 import { LIMITS } from '../src/analytics/limits';
+import { SCROLL_MIN_GAP_MS, SCROLL_SETTLE_MS } from '../src/analytics/scroll';
 import {
   KEYS_PATTERN,
+  KIND_CLIENTS,
   MAX_FLAGS,
   MAX_SETTING_NUMBER,
   NAME_PROP_SPECS,
@@ -55,7 +62,7 @@ const FILE = fileURLToPath(
 );
 
 const COMMENT =
-  'The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names, each one of `cliFlags`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`; `length`: a whole number, a multiple of 10, 0 to `maxLength`). An event whose `kind.name` is a key of `nameProps` takes the props of that entry instead of those of its kind, and no other name of the kind takes them. States are stored as their `code`. The catalogue only grows.';
+  'The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names, each one of `cliFlags`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`; `length`: a whole number, a multiple of 10, 0 to `maxLength`; `fraction`: a number from 0 to 1 that is a whole number of hundredths). An event whose `kind.name` is a key of `nameProps` takes the props of that entry instead of those of its kind, and no other name of the kind takes them. A kind listed in `kindClients` comes only from those clients. A `scroll` event is recorded `scroll.settleMs` after its area stops moving, at most one per area every `scroll.minGapMs` (scroll-v1.json pins the rules). No control records a click id in `retiredClickNames`; they stay catalogued. States are stored as their `code`. The catalogue only grows.';
 
 /** A pattern as Kotlin's Regex takes it: the source, no flags. */
 const source = (pattern: RegExp) => {
@@ -102,7 +109,10 @@ function contract() {
     limits: LIMITS,
     props: PROP_SPECS,
     nameProps: NAME_PROP_SPECS,
+    kindClients: KIND_CLIENTS,
+    scroll: { settleMs: SCROLL_SETTLE_MS, minGapMs: SCROLL_MIN_GAP_MS },
     catalogue: CATALOGUE,
+    retiredClickNames: RETIRED_CLICK_NAMES,
   };
 }
 

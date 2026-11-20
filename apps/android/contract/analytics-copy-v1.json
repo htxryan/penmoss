@@ -86,8 +86,8 @@
       "android": "The screens and dialogs you open, and the settings you change"
     },
     "consent.recorded.3": {
-      "mac": "The app’s and the system’s versions, and the window’s size and layout",
-      "android": "The app’s and the system’s versions, and the window’s size and layout"
+      "mac": "The app’s and the system’s versions, the window’s size and layout, and how far you scroll",
+      "android": "The app’s and the system’s versions, the window’s size and layout, and how far you scroll"
     },
     "consent.recorded.4": {
       "mac": "CLI commands and agents’ MCP calls, by name",

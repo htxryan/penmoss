@@ -1095,6 +1095,11 @@ export const CLICK_NAMES: readonly string[] = [
   'settings.ai.pause',
   'settings.ai.model',
   'settings.ai.save-prompt',
+  // PEN-175: every control its own id. Controls the web and Android both have share one id.
+  // The web's (the page, packages/ui and the editor's widgets):
+  // (end of the web's PEN-175 ids)
+  // Android's own:
+  // (end of Android's PEN-175 ids)
 ];
 
 /** What app lifecycle events are called. */
@@ -1112,6 +1117,39 @@ export const APP_NAMES: readonly string[] = [
   'layout',
 ];
 export const FEEDBACK_NAMES: readonly string[] = ['sent'];
+
+/**
+ * The areas a `scroll` event names (PEN-175): the note, the sidebar and its own scrollers (the
+ * folder tree, Recent Notes and Tags), a Settings page, and Settings' list of pages. Android's
+ * drawer has no inner scrollers, so it records only `sidebar`.
+ */
+export const SCROLL_NAMES: readonly string[] = [
+  'note',
+  'sidebar',
+  'sidebar.folders',
+  'sidebar.recent',
+  'sidebar.tags',
+  'settings',
+  'settings.nav',
+];
+
+/**
+ * Click ids that said nothing about which control was used (PEN-175): a shared fallback that
+ * many controls recorded under. No control writes one any more, and the catalogue tests fail if
+ * a source does; they stay in CLICK_NAMES because the catalogue only grows (events already
+ * recorded under them stay valid). `firstrun.continue`, `firstrun.back` and `firstrun.cancel`
+ * are not here: each first-run step's own event already says which step it was.
+ */
+export const RETIRED_CLICK_NAMES: readonly string[] = [
+  'menu.item',
+  'menu.open',
+  'settings.switch',
+  'sidebar.section.toggle',
+  'toast.dismiss',
+  'firstrun.action',
+  'firstrun.link',
+  'firstrun.option',
+];
 export const SYNC_NAMES: readonly string[] = ['pass'];
 
 /** The CLI's commands (COMMANDS in packages/cli/src/main.ts), and help and version. */
@@ -1259,6 +1297,7 @@ export const CATALOGUE: Readonly<Record<EventKind, readonly string[]>> = {
   sync: SYNC_NAMES,
   cli: CLI_NAMES,
   tool: TOOL_NAMES,
+  scroll: SCROLL_NAMES,
 };
 
 const SETS = new Map(

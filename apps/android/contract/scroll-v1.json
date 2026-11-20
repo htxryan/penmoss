@@ -1,0 +1,464 @@
+{
+  "$comment": "Where an area is scrolled (PEN-175), written from packages/core/src/analytics/scroll.ts by packages/core/test/analytics-scroll.test.ts, which also checks it. `fraction`: [scrollTop, scrollHeight, clientHeight] and the position fractionOf gives (null: the area cannot scroll). `gate`: a ScrollGate run on a fake clock from 0; each step at its time moves the area to a position (null: it cannot scroll) or resets it (its content changed); `recorded` is each position the gate records, and when. Kotlin’s ScrollEvents replays every case.",
+  "settleMs": 300,
+  "minGapMs": 1000,
+  "fraction": [
+    [0, 2000, 500, 0],
+    [1500, 2000, 500, 1],
+    [630, 2000, 500, 0.42],
+    [7, 1500, 800, 0.01],
+    [3, 1500, 800, 0],
+    [693, 1500, 800, 0.99],
+    [697, 1500, 800, 1],
+    [-40, 2000, 500, 0],
+    [1600, 2000, 500, 1],
+    [100.5, 1201, 200, 0.1],
+    [0, 500, 500, null],
+    [0, 400, 500, null],
+    [0, 500.4, 500, null]
+  ],
+  "gate": [
+    {
+      "name": "records once the area has been still for the settle time",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.42
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.42
+        }
+      ]
+    },
+    {
+      "name": "waits while it keeps moving, then records where it rests",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0
+        },
+        {
+          "at": 50,
+          "move": 0.02
+        },
+        {
+          "at": 100,
+          "move": 0.04
+        },
+        {
+          "at": 150,
+          "move": 0.06
+        },
+        {
+          "at": 200,
+          "move": 0.08
+        },
+        {
+          "at": 250,
+          "move": 0.1
+        },
+        {
+          "at": 300,
+          "move": 0.12
+        },
+        {
+          "at": 350,
+          "move": 0.14
+        },
+        {
+          "at": 400,
+          "move": 0.16
+        },
+        {
+          "at": 450,
+          "move": 0.18
+        },
+        {
+          "at": 500,
+          "move": 0.2
+        },
+        {
+          "at": 550,
+          "move": 0.22
+        },
+        {
+          "at": 600,
+          "move": 0.24
+        },
+        {
+          "at": 650,
+          "move": 0.26
+        },
+        {
+          "at": 700,
+          "move": 0.28
+        },
+        {
+          "at": 750,
+          "move": 0.3
+        },
+        {
+          "at": 800,
+          "move": 0.32
+        },
+        {
+          "at": 850,
+          "move": 0.34
+        },
+        {
+          "at": 900,
+          "move": 0.36
+        },
+        {
+          "at": 950,
+          "move": 0.38
+        },
+        {
+          "at": 1000,
+          "move": 0.4
+        },
+        {
+          "at": 1050,
+          "move": 0.42
+        },
+        {
+          "at": 1100,
+          "move": 0.44
+        },
+        {
+          "at": 1150,
+          "move": 0.46
+        },
+        {
+          "at": 1200,
+          "move": 0.48
+        },
+        {
+          "at": 1250,
+          "move": 0.5
+        },
+        {
+          "at": 1300,
+          "move": 0.52
+        },
+        {
+          "at": 1350,
+          "move": 0.54
+        },
+        {
+          "at": 1400,
+          "move": 0.56
+        },
+        {
+          "at": 1450,
+          "move": 0.58
+        },
+        {
+          "at": 1500,
+          "move": 0.6
+        },
+        {
+          "at": 1550,
+          "move": 0.62
+        },
+        {
+          "at": 1600,
+          "move": 0.64
+        },
+        {
+          "at": 1650,
+          "move": 0.66
+        },
+        {
+          "at": 1700,
+          "move": 0.68
+        },
+        {
+          "at": 1750,
+          "move": 0.7
+        },
+        {
+          "at": 1800,
+          "move": 0.72
+        },
+        {
+          "at": 1850,
+          "move": 0.74
+        },
+        {
+          "at": 1900,
+          "move": 0.76
+        },
+        {
+          "at": 1950,
+          "move": 0.78
+        },
+        {
+          "at": 2000,
+          "move": 0.8
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 2300,
+          "position": 0.8
+        }
+      ]
+    },
+    {
+      "name": "records nothing for a screen that opens at the top",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0
+        }
+      ],
+      "until": 5000,
+      "recorded": []
+    },
+    {
+      "name": "drops a position equal to the last one recorded",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.3
+        },
+        {
+          "at": 2000,
+          "move": 0.35
+        },
+        {
+          "at": 2100,
+          "move": 0.3
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.3
+        }
+      ]
+    },
+    {
+      "name": "holds a position that settles within the gap, then records the latest when it is up",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.2
+        },
+        {
+          "at": 400,
+          "move": 0.25
+        },
+        {
+          "at": 600,
+          "move": 0.3
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.2
+        },
+        {
+          "at": 1300,
+          "position": 0.3
+        }
+      ]
+    },
+    {
+      "name": "a hold that ends while the area moves again waits for it to settle",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.2
+        },
+        {
+          "at": 400,
+          "move": 0.25
+        },
+        {
+          "at": 1200,
+          "move": 0.5
+        },
+        {
+          "at": 1400,
+          "move": 0.6
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.2
+        },
+        {
+          "at": 1700,
+          "position": 0.6
+        }
+      ]
+    },
+    {
+      "name": "a held position that comes back to the last one recorded records nothing",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.2
+        },
+        {
+          "at": 400,
+          "move": 0.5
+        },
+        {
+          "at": 800,
+          "move": 0.2
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.2
+        }
+      ]
+    },
+    {
+      "name": "a content change forgets the last position and drops what waits",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.6
+        },
+        {
+          "at": 1000,
+          "move": 0.7
+        },
+        {
+          "at": 1100,
+          "reset": true
+        },
+        {
+          "at": 1150,
+          "move": 0
+        },
+        {
+          "at": 3000,
+          "move": 0.6
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.6
+        },
+        {
+          "at": 3300,
+          "position": 0.6
+        }
+      ]
+    },
+    {
+      "name": "the app restoring a place in new content records it",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.5
+        },
+        {
+          "at": 2000,
+          "reset": true
+        },
+        {
+          "at": 2010,
+          "move": 0.42
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.5
+        },
+        {
+          "at": 2310,
+          "position": 0.42
+        }
+      ]
+    },
+    {
+      "name": "a content change keeps the gap: at most one a second still",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0.5
+        },
+        {
+          "at": 310,
+          "reset": true
+        },
+        {
+          "at": 320,
+          "move": 0.9
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 0.5
+        },
+        {
+          "at": 1300,
+          "position": 0.9
+        }
+      ]
+    },
+    {
+      "name": "an area that cannot scroll records nothing",
+      "steps": [
+        {
+          "at": 0,
+          "move": null
+        },
+        {
+          "at": 100,
+          "move": null
+        }
+      ],
+      "until": 5000,
+      "recorded": []
+    },
+    {
+      "name": "goes to the bottom and back to the top",
+      "steps": [
+        {
+          "at": 0,
+          "move": 1
+        },
+        {
+          "at": 2000,
+          "move": 0
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "position": 1
+        },
+        {
+          "at": 2300,
+          "position": 0
+        }
+      ]
+    }
+  ]
+}

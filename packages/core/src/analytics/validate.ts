@@ -3,7 +3,8 @@
  * one, and the ingest Worker again before it writes one to D1. A name must be catalogued and
  * every prop typed for its kind, or for its name where NAME_PROP_SPECS lists one, so no free text
  * can pass: strings are enums, buckets, flag names, a normalised key combination or one of the
- * words a setting may be (SETTING_VALUES), and numbers a limit's value or a rounded length.
+ * words a setting may be (SETTING_VALUES), and numbers a limit's value, a rounded length or a
+ * scrolled area's position in whole hundredths.
  */
 import { AGENT_CLIENTS } from './actors';
 import { CLI_FLAGS, isCatalogued, isSettingWord } from './catalogue';
@@ -79,6 +80,18 @@ const length: Check = (value) =>
   value >= 0 &&
   value <= MAX_LENGTH;
 
+/**
+ * A scrolled area's position (PEN-175): a number from 0 to 1 that is a whole number of
+ * hundredths (`fractionOf` rounds it). The third raw number A1636 allows, after a limit's value
+ * and a window's length.
+ */
+const fraction: Check = (value) =>
+  typeof value === 'number' &&
+  Number.isFinite(value) &&
+  value >= 0 &&
+  value <= 1 &&
+  Math.abs(value * 100 - Math.round(value * 100)) < 1e-9;
+
 const screenKind: Check = (value) => typeof value === 'string' && isCatalogued('screen', value);
 
 export const CLI_EXITS = [
@@ -106,14 +119,22 @@ export const FIRSTRUN_ERRORS = [
  * What a prop may hold, as data (the Kotlin twin reads it from `analytics-v1.json`): one of a
  * list; a boolean; a count or a duration bucket; a key combination (KEYS_PATTERN); a list of
  * the CLI's flag names (CLI_FLAGS, at most MAX_FLAGS); a setting's value (`settingValue`, by the
- * event's name); a catalogued screen; or a window's length (`length`: a whole multiple of 10,
- * 0 to MAX_LENGTH).
+ * event's name); a catalogued screen; a window's length (`length`: a whole multiple of 10,
+ * 0 to MAX_LENGTH); or a scrolled area's position (`fraction`: 0 to 1 in whole hundredths).
  */
 export type PropSpec =
   | { readonly type: 'enum'; readonly values: readonly (string | number | boolean)[] }
   | {
       readonly type:
-        'bool' | 'count' | 'duration' | 'keys' | 'flags' | 'setting' | 'screen' | 'length';
+        | 'bool'
+        | 'count'
+        | 'duration'
+        | 'keys'
+        | 'flags'
+        | 'setting'
+        | 'screen'
+        | 'length'
+        | 'fraction';
     };
 
 const enumOf = (values: readonly (string | number | boolean)[]): PropSpec => ({
@@ -164,6 +185,8 @@ export const PROP_SPECS: Readonly<Record<EventKind, Readonly<Record<string, Prop
     result: enumOf(['ok', 'invalid', 'notFound', 'conflict', 'failed']),
     took: TOOK,
   },
+  // PEN-175: the area is the event's name; how far down it is, in hundredths.
+  scroll: { position: { type: 'fraction' } },
 };
 
 /**
@@ -200,6 +223,14 @@ export const NAME_CLIENTS: Readonly<Record<string, readonly string[]>> = {
   'app.layout': ['mac', 'android'],
 };
 
+/**
+ * The clients that may send a kind at all (PEN-175): a scroll comes only from the apps, which have
+ * areas to scroll. A kind not listed may come from any client.
+ */
+export const KIND_CLIENTS: Readonly<Partial<Record<EventKind, readonly string[]>>> = {
+  scroll: ['mac', 'android'],
+};
+
 function checkOf(spec: PropSpec): Check {
   switch (spec.type) {
     case 'enum':
@@ -220,6 +251,8 @@ function checkOf(spec: PropSpec): Check {
       return screenKind;
     case 'length':
       return length;
+    case 'fraction':
+      return fraction;
   }
 }
 
@@ -276,6 +309,8 @@ export function eventProblem(event: unknown): string | null {
   }
   if (!KINDS.includes(value.kind as never)) return 'kind';
   const kind = value.kind as EventKind;
+  const kindClients = KIND_CLIENTS[kind];
+  if (kindClients && !kindClients.includes(value.client as string)) return 'client';
   if (typeof value.name !== 'string' || !isCatalogued(kind, value.name)) return 'name';
   const props = value.props;
   if (!props || typeof props !== 'object' || Array.isArray(props)) return 'props';

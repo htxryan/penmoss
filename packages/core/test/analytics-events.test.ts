@@ -11,6 +11,8 @@ import {
   CLI_FLAGS,
   CLICK_NAMES,
   isCatalogued,
+  RETIRED_CLICK_NAMES,
+  SCROLL_NAMES,
   SETTING_NAMES,
   SETTING_VALUES,
 } from '../src/analytics/catalogue';
@@ -39,11 +41,13 @@ import {
   type EventKind,
 } from '../src/analytics/events';
 import { Recorder } from '../src/analytics/recorder';
+import { fractionOf } from '../src/analytics/scroll';
 import { themeForEvent } from '../src/analytics/themes';
 import {
   eventProblem,
   isValidEvent,
   KEYS_PATTERN,
+  KIND_CLIENTS,
   NAME_PROP_SPECS,
   PROP_SPECS,
   validateBatch,
@@ -130,6 +134,7 @@ const VALID: Readonly<Record<EventKind, AnalyticsEvent>> = {
     name: 'search_notes',
     props: { agentClient: 'claude-code', result: 'ok', took: '<1s' },
   }),
+  scroll: event({ kind: 'scroll', name: 'note', props: { position: 0.42 } }),
 };
 
 describe('buckets', () => {
@@ -608,6 +613,75 @@ describe('app window and app layout (PEN-174)', () => {
 
   it('look up a name prop by own key only', () => {
     expect(eventProblem(event({ kind: 'app', name: 'toString', props: {} }))).toBe('name');
+  });
+});
+
+describe('scroll events (PEN-175)', () => {
+  const scroll = (
+    props: Record<string, unknown>,
+    overrides: Partial<Record<keyof AnalyticsEvent, unknown>> = {},
+  ) => event({ kind: 'scroll', name: 'sidebar.folders', props, ...overrides });
+
+  it('name a catalogued area and take a position in whole hundredths from 0 to 1', () => {
+    for (const name of SCROLL_NAMES) {
+      expect(
+        eventProblem(event({ kind: 'scroll', name, props: { position: 0.5 } })),
+        name,
+      ).toBeNull();
+    }
+    for (const position of [0, 0.01, 0.07, 0.29, 0.42, 0.57, 0.99, 1]) {
+      expect(eventProblem(scroll({ position })), String(position)).toBeNull();
+    }
+    for (let i = 0; i <= 100; i++) {
+      expect(eventProblem(scroll({ position: fractionOf(i, 100, 0) })), String(i)).toBeNull();
+    }
+  });
+
+  it('refuse a position off the hundredths, out of range, or not a number', () => {
+    for (const position of [
+      0.421,
+      0.005,
+      -0.01,
+      1.01,
+      2,
+      Number.NaN,
+      Infinity,
+      '0.42',
+      true,
+      null,
+      [0.4],
+    ]) {
+      expect(eventProblem(scroll({ position })), String(position)).toBe('prop position value');
+    }
+  });
+
+  it('take no other prop, and refuse an area outside the catalogue', () => {
+    expect(eventProblem(scroll({ position: 0.4, length: 1200 }))).toBe('prop length');
+    expect(eventProblem(scroll({ position: 0.4, state: 'on' }))).toBe('prop state');
+    expect(eventProblem(scroll({ position: 0.4 }, { name: 'notes.list' }))).toBe('name');
+    expect(eventProblem(scroll({ position: 0.4 }, { name: 'My plans for the week' }))).toBe('name');
+    // The props are a click's or an app's, not a scroll's.
+    expect(
+      eventProblem(event({ kind: 'click', name: 'note.more', props: { position: 0.4 } })),
+    ).toBe('prop position');
+  });
+
+  it('come only from the apps: the CLI and the MCP server never send one', () => {
+    expect(KIND_CLIENTS.scroll).toEqual(['mac', 'android']);
+    expect(eventProblem(scroll({ position: 0.4 }, { client: 'android' }))).toBeNull();
+    for (const client of ['cli', 'mcp']) {
+      expect(
+        eventProblem(scroll({ position: 0.4 }, { client, sizeClass: undefined })),
+        client,
+      ).toBe('client');
+    }
+  });
+
+  it('keep the retired click ids catalogued, so events already recorded stay valid', () => {
+    for (const id of RETIRED_CLICK_NAMES) expect(CLICK_NAMES, id).toContain(id);
+    for (const id of ['firstrun.continue', 'firstrun.back', 'firstrun.cancel']) {
+      expect(RETIRED_CLICK_NAMES, id).not.toContain(id);
+    }
   });
 });
 
