@@ -244,7 +244,7 @@ describe('the filters', () => {
   });
 });
 
-describe('nothing per install outside Sessions (PEN-173)', () => {
+describe('nothing per install outside Sessions (A-NEW-1)', () => {
   it('no other view’s JSON holds an install or session id', async () => {
     const ids = fixtureInstalls(NOW).flatMap(({ install, events }) => [
       install,

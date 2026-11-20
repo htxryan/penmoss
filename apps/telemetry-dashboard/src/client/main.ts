@@ -1,8 +1,8 @@
 /**
  * The dashboard's page (PEN-137): a filter bar, eight views, and for each chart a legend (two
  * series or more), a Table toggle and Download CSV. Everything comes from /api/<view>. Nothing is
- * per install outside Sessions (PEN-173), which lists sessions and shows one session's events and
- * its install's sessions, the install shown only by its first 8 hex characters.
+ * per install outside Sessions (PEN-173, A-NEW-1), which lists sessions and shows one session's
+ * events and its install's sessions, the install shown only by its first 8 hex characters.
  */
 import {
   bars,
@@ -1288,7 +1288,11 @@ function node<K extends keyof HTMLElementTagNameMap>(
 function linkButton(label: string, href: string | null): HTMLAnchorElement {
   const link = node('a', 'btn', label);
   if (href) link.href = href;
-  else link.setAttribute('aria-disabled', 'true');
+  else {
+    // Without an href an <a> is no link at all: it keeps the role, disabled.
+    link.setAttribute('role', 'link');
+    link.setAttribute('aria-disabled', 'true');
+  }
   return link;
 }
 
@@ -1340,7 +1344,8 @@ function sessionsList(answer: Answer): Rendered {
       took: row['took'] === null ? null : String(row['took'] ?? ''),
     });
   const os = (row: Row) => `${osName(String(row['os']))} ${String(row['os_version'])}`;
-  const screenId = (name: Row[string] | undefined) => (name ? eventName(`screen:${String(name)}`).id : '');
+  const screenId = (name: Row[string] | undefined) =>
+    name ? eventName(`screen:${String(name)}`).id : '';
   return {
     rangeDays: days,
     body: [

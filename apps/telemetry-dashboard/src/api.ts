@@ -4,9 +4,9 @@
  * (apps/telemetry/queries/*.sql); every filter is checked against its list or pattern and bound
  * as a parameter. No route takes SQL, and nothing here writes.
  *
- * Nothing is shown per install outside Sessions (PEN-173, amending A1641): every other row is a
- * count, and a path is shown only when at least MIN_SESSIONS sessions took it, to keep its chart
- * readable. Sessions (/api/sessions, /api/session) lists sessions and gives one session's events
+ * Nothing is shown per install outside Sessions (PEN-173, A-NEW-1, amending A1641): every other
+ * row is a count, and a path is shown only when at least MIN_SESSIONS sessions took it, to keep
+ * its chart readable. Sessions (/api/sessions, /api/session) lists sessions and gives one session's events
  * and its install's sessions; the page shows an install only by its first 8 hex characters.
  */
 import {

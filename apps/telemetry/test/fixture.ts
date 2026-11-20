@@ -271,3 +271,62 @@ export async function seedFixture(db: D1Database, now: number): Promise<void> {
   await db.batch(health);
   await refreshCatalogue(db);
 }
+
+/**
+ * An install with more sessions than This Install's Sessions holds (PEN-173): 520, one every 90
+ * minutes from 75 days back, so all are older than 30 days and the views' 30-day periods never
+ * see them. Each is a CLI run of one event, but the last, an agent's MCP connection.
+ */
+export const BIG_INSTALL = 'b5'.repeat(16);
+export const BIG_SESSIONS = 520;
+
+export function bigInstallEvents(now: number): AnalyticsEvent[] {
+  const start = now - 75 * 86_400_000;
+  return Array.from({ length: BIG_SESSIONS }, (_, i): AnalyticsEvent[] => {
+    const session = i.toString(16).padStart(16, '0');
+    const at = start + i * 90 * 60_000;
+    const base = {
+      session,
+      version: '1.4.0',
+      channel: 'stable',
+      os: 'macos',
+      osVersion: '26.1',
+    } as const;
+    if (i < BIG_SESSIONS - 1) {
+      return [
+        {
+          ...base,
+          seq: 0,
+          at,
+          client: 'cli',
+          actor: 'person',
+          kind: 'cli',
+          name: 'search',
+          props: { flags: ['json'], exit: 'OK', took: '1–2s', tty: true },
+        },
+      ];
+    }
+    return ['search_notes', 'read_note'].map((name, seq) => ({
+      ...base,
+      seq,
+      at: at + seq * 4_000,
+      client: 'mcp',
+      actor: 'agent',
+      kind: 'tool',
+      name,
+      props: { agentClient: 'claude-code', result: 'ok', took: '<1s' },
+    }));
+  }).flat();
+}
+
+/** Adds BIG_INSTALL's sessions to `db`, after seedFixture (its rollups leave them out). */
+export async function seedBigInstall(db: D1Database, now: number): Promise<void> {
+  const statements = bigInstallEvents(now).map((event) => {
+    if (!isValidEvent(event))
+      throw new Error(`fixture event ${event.kind}:${event.name} is not valid`);
+    return insertEvent(db, BIG_INSTALL, event, now);
+  });
+  for (let start = 0; start < statements.length; start += 100) {
+    await db.batch(statements.slice(start, start + 100));
+  }
+}
