@@ -49,6 +49,8 @@ export type RunEvent =
   | 'proof-waiting'
   | 'usage-limited'
   | 'validated'
+  | 'validation-incomplete'
+  | 'budgets-checked'
   | 'validation-reused'
   | 'resumed-at-ci'
   | 'release-note-refused';
@@ -188,6 +190,10 @@ export interface RunDeps {
   keepValidation(sandbox: RunSandbox): Promise<void>;
   readReview(sandbox: RunSandbox): Promise<string | null>;
   collectFidelity(sandbox: RunSandbox, rows: readonly FidelityRow[]): Promise<FidelityRow[]>;
+  /** captures.json, for validation's coverage check (A1650). */
+  readCaptures?(sandbox: RunSandbox): Promise<string | null>;
+  /** The proof's stills for the reviewer (A1650); see validate.ts. */
+  stageProof?(sandbox: RunSandbox, proof: readonly AttachedProof[]): Promise<string>;
   /** Runs `fn` holding one of the Mac's heavy-job slots (W12, A1216). */
   heavy<T>(label: string, fn: () => Promise<T>): Promise<T>;
   notify(title: string, message: string): Promise<void>;

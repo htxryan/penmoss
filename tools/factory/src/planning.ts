@@ -23,6 +23,19 @@ export interface PlanState {
     readonly planVersion: number;
     readonly designVersion: number | null;
   } | null;
+  /** The revision's self-review, if the session recorded one (A1649). */
+  readonly review: PlanReview | null;
+}
+
+/**
+ * The session's self-review of a revision (A1649), from a fresh-context reviewer: the commit of
+ * main it checked the design against, and each checklist item by id (design-check.ts).
+ */
+export interface PlanReview {
+  readonly main: string;
+  readonly checks: Readonly<Record<string, { readonly ok: boolean; readonly note: string }>>;
+  /** Labels left out of Title Case on purpose (a sentence, a product's own name), exactly. */
+  readonly titleCaseExceptions: readonly string[];
 }
 
 export interface PlanQuestion {
@@ -39,6 +52,30 @@ function parseQuestions(raw: unknown): PlanQuestion[] {
     const opts = options.filter((o): o is string => typeof o === 'string' && o.trim() !== '');
     return opts.length >= 2 ? [{ text, options: opts.slice(0, 6) }] : [];
   });
+}
+
+function parseReview(raw: unknown): PlanReview | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as { main?: unknown; checks?: unknown; titleCaseExceptions?: unknown };
+  if (typeof r.checks !== 'object' || r.checks === null || Array.isArray(r.checks)) return null;
+  const checks: Record<string, { ok: boolean; note: string }> = {};
+  for (const [id, v] of Object.entries(r.checks as Record<string, unknown>)) {
+    // `true`, or `{ "ok": true, "note": "…" }`.
+    if (typeof v === 'boolean') checks[id] = { ok: v, note: '' };
+    else if (typeof v === 'object' && v !== null && typeof (v as { ok?: unknown }).ok === 'boolean')
+      checks[id] = {
+        ok: (v as { ok: boolean }).ok,
+        note:
+          typeof (v as { note?: unknown }).note === 'string' ? (v as { note: string }).note : '',
+      };
+  }
+  return {
+    main: typeof r.main === 'string' ? r.main : '',
+    checks,
+    titleCaseExceptions: Array.isArray(r.titleCaseExceptions)
+      ? r.titleCaseExceptions.filter((e): e is string => typeof e === 'string')
+      : [],
+  };
 }
 
 /** The answer comment for a picked option: the session reads it as Ryan's answer. */
@@ -90,6 +127,7 @@ export function parsePlanState(text: string): PlanState | null {
       versions,
       questions: parseQuestions(r.questions),
       agreed,
+      review: parseReview((r as { review?: unknown }).review),
     };
   } catch {
     return null;

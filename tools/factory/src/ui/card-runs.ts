@@ -244,6 +244,10 @@ export function progressOf(e: LedgerEvent, config: FactoryConfig): string {
       return `Proof carried over from ${str(e['from']) ?? 'an earlier run'}`;
     case 'validated':
       return 'Validated against the plan';
+    case 'validation-incomplete':
+      return `Validation left ${num(e['missing']) ?? 'some'} criteri${num(e['missing']) === 1 ? 'on' : 'a'} uncaptured; asked again`;
+    case 'budgets-checked':
+      return `Performance budgets the branch changes passed ${num(e['runs']) ?? 'several'} runs`;
     case 'validation-reused':
       return `Validation carried over from ${str(e['from']) ?? 'an earlier run'}`;
     case 'pushed':

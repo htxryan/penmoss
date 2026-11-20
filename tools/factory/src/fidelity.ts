@@ -63,7 +63,62 @@ export function parseReview(
       ...(platform ? { platform } : {}),
     });
   }
-  return { ok: true, rows: out };
+  const extra = raw as { proofs?: unknown; code?: unknown };
+  return { ok: true, rows: [...out, ...proofRows(extra.proofs), ...codeRows(extra.code)] };
+}
+
+/**
+ * The reviewer's code review (the penmoss-review skill's checks on the branch's diff): each
+ * problem is a row the builder hears about like any other mismatch.
+ */
+export function codeRows(raw: unknown): FidelityRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((r: unknown) => {
+    if (typeof r !== 'object' || r === null) return [];
+    const c = r as Record<string, unknown>;
+    const note = typeof c['note'] === 'string' ? c['note'].trim() : '';
+    if (!note) return [];
+    const check = typeof c['check'] === 'string' && c['check'].trim() ? c['check'].trim() : 'code';
+    const where =
+      typeof c['where'] === 'string' && c['where'].trim() ? `: ${c['where'].trim()}` : '';
+    return [{ criterion: `Code review (${check})${where}`, verdict: 'mismatch' as const, note }];
+  });
+}
+
+/** The reviewer's verdicts on the proof (A1650). */
+const PROOF_VERDICTS = ['shown', 'thin', 'missing'] as const;
+
+/**
+ * The proof the reviewer found thin or missing, as rows the builder hears about like any other
+ * mismatch: a proof spec that stops short of what its criterion shows (PEN-137's Android Send
+ * Feedback spec never opened the preview) is fixed in the spec. A proof shown is no row.
+ */
+export function proofRows(raw: unknown): FidelityRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((r: unknown) => {
+    if (typeof r !== 'object' || r === null) return [];
+    const p = r as Record<string, unknown>;
+    const verdict = PROOF_VERDICTS.find((v) => v === p['verdict']);
+    if (!verdict || verdict === 'shown') return [];
+    if (typeof p['criterion'] !== 'string' || !p['criterion'].trim()) return [];
+    const platform = PLATFORMS.find((x) => x === p['platform']);
+    const note =
+      typeof p['note'] === 'string' && p['note'].trim()
+        ? p['note'].trim()
+        : verdict === 'missing'
+          ? 'No proof recording shows it.'
+          : "The proof recording doesn't show it clearly or hold on it.";
+    const screenshot =
+      typeof p['frame'] === 'string' && FILE.test(p['frame']) ? p['frame'] : undefined;
+    return [
+      {
+        criterion: `Proof of ${p['criterion'].trim()}${platform ? ` (${platform})` : ''}`,
+        verdict: 'mismatch' as const,
+        note: `${verdict === 'missing' ? 'Missing' : 'Too thin'}: ${note} Fix the proof spec so its recording brings it on screen, holds it and ends on it.`,
+        ...(screenshot ? { screenshot } : {}),
+      },
+    ];
+  });
 }
 
 /** What the implementing agent hears in a fix round. */

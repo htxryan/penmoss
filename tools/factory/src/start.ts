@@ -19,6 +19,7 @@ import { issueText, type Issue } from './issue.ts';
 import { ATTACHMENTS, localizeImages, type LocalImageOptions } from './attachments.ts';
 import { optedIn, parseIssueSpec, type IssueSpec } from './labels.ts';
 import { formatMarker } from './pick.ts';
+import { designProblems, readMockups } from './design-check.ts';
 import { advancePlanning, commentsSince, type PlanDeps } from './plan-run.ts';
 import {
   agreedPlanPath,
@@ -28,6 +29,8 @@ import {
   planningEnv,
   planText,
   prepareSnapshot,
+  mainCommit,
+  mainChanges,
   readMeta,
   stopSession,
 } from './planning-host.ts';
@@ -249,6 +252,16 @@ export async function executePlanning(
     setStatus: (i, status) => tracker.setStatus(i, status),
     setBlocked: (i) => tracker.setBlocked(i),
     snapshot: () => prepareSnapshot(config, files, nodeExec),
+    mainCommit: () => mainCommit(config, nodeExec),
+    mainChanges: (from, to) => mainChanges(config, nodeExec, from, to),
+    designCheck: (state, main) =>
+      designProblems({
+        designUrl: state.designUrl,
+        review: state.review,
+        mockups: readMockups(files.out),
+        main,
+      }),
+    log,
     launch: async (message, resume) => {
       const { id, chatUrl } = await launchSession(
         config,

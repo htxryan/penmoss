@@ -167,3 +167,55 @@ export async function framesToMp4(
   writeFileSync(list, framesList(windows, dirs));
   await toMp4(exec, list, output, ['-f', 'concat', '-safe', '0']);
 }
+
+/** Where in a recording the proof review looks: through it, and its very end (A1650). */
+export const FRAME_POINTS = [0.2, 0.4, 0.6, 0.8, 0.98] as const;
+
+/** ffmpeg arguments for one still at `seconds`, at most 960 px wide. */
+export function frameArgs(video: string, seconds: number, output: string): string[] {
+  return [
+    '-y',
+    '-loglevel',
+    'error',
+    '-ss',
+    seconds.toFixed(2),
+    '-i',
+    video,
+    '-frames:v',
+    '1',
+    '-vf',
+    "scale='min(960,iw)':-2",
+    output,
+  ];
+}
+
+/**
+ * Stills from a proof recording at FRAME_POINTS of its length, as `<base>-f<n>.png` in `dir`, so
+ * the reviewer can see what the recording showed and what it held at the end (A1650). Returns
+ * the files made; a recording ffprobe can't read gives none.
+ */
+export async function extractFrames(
+  exec: Exec,
+  video: string,
+  dir: string,
+  base: string,
+): Promise<string[]> {
+  const probe = await exec('ffprobe', [
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'csv=p=0',
+    video,
+  ]);
+  const duration = Number(probe.stdout.trim());
+  if (probe.code !== 0 || !Number.isFinite(duration) || duration <= 0) return [];
+  const made: string[] = [];
+  for (const [i, point] of FRAME_POINTS.entries()) {
+    const file = `${base}-f${i + 1}.png`;
+    const r = await exec('ffmpeg', frameArgs(video, duration * point, join(dir, file)));
+    if (r.code === 0) made.push(file);
+  }
+  return made;
+}

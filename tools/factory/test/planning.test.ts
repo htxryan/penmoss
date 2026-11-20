@@ -16,6 +16,7 @@ const waiting: PlanState = {
   questions: [],
   versions: null,
   agreed: null,
+  review: null,
 };
 const view = (v: Partial<PlanningView>): PlanningView => ({
   blocked: false,

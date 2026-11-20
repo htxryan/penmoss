@@ -629,3 +629,97 @@ describe('the agreed copies reach the build and the PR (F16)', () => {
     );
   });
 });
+
+describe('planning against main as it is, checked before Ryan sees it (A1648, A1649)', () => {
+  it('makes the snapshot again when main moved, and tells the session what changed', async () => {
+    const t = setup();
+    let main = 'aaaaaaaaaa';
+    let snapshots = 0;
+    const deps: PlanDeps = {
+      ...t.deps,
+      snapshot: () => {
+        snapshots++;
+        return Promise.resolve(main);
+      },
+      mainCommit: () => Promise.resolve(main),
+      mainChanges: (from, to) =>
+        Promise.resolve(`main moved from ${from} to ${to}: Settings in five groups (#204)`),
+    };
+    const card = item(5, { status: 'Planning' });
+    await advancePlanning(deps, input(t.files, card));
+    expect(readMeta(t.files).mainCommit).toBe('aaaaaaaaaa');
+    t.state('waiting', min(3));
+    t.at(min(4));
+    await advancePlanning(deps, input(t.files, card));
+    // Main doesn't move: the session resumes on the snapshot it has.
+    t.at(min(9));
+    const answered = issue([
+      { author: 'htxryan', body: 'A sheet', createdAt: min(8).toISOString() },
+    ]);
+    await advancePlanning(deps, input(t.files, card, answered));
+    expect(snapshots).toBe(1);
+    expect(t.messages.at(-1)).not.toMatch(/main moved/);
+    // Main moves before the next answer: a new snapshot, and the session hears what changed.
+    t.state('waiting', min(12));
+    t.at(min(13));
+    await advancePlanning(deps, input(t.files, card, answered));
+    main = 'bbbbbbbbbb';
+    t.at(min(20));
+    const again = issue([
+      ...answered.comments,
+      {
+        author: 'htxryan',
+        body: 'Draw Settings as main has them',
+        createdAt: min(19).toISOString(),
+      },
+    ]);
+    await advancePlanning(deps, input(t.files, card, again));
+    expect(snapshots).toBe(2);
+    expect(t.messages.at(-1)).toMatch(/## main moved since your last turn/);
+    expect(t.messages.at(-1)).toMatch(
+      /main moved from aaaaaaaaaa to bbbbbbbbbb: Settings in five groups/,
+    );
+    expect(readMeta(t.files).mainCommit).toBe('bbbbbbbbbb');
+  });
+
+  it('sends a revision the design check refuses back to the session, twice, then shows Ryan', async () => {
+    const t = setup();
+    const deps: PlanDeps = {
+      ...t.deps,
+      designCheck: () => ['a mockup label isn\'t in Title Case: ac1.html: "Share usage data"'],
+    };
+    const card = item(5, { status: 'Planning' });
+    await advancePlanning(deps, input(t.files, card));
+    for (const [n, at] of [
+      [1, 3],
+      [2, 13],
+    ] as const) {
+      t.state('waiting', min(at));
+      t.at(min(at + 1));
+      expect(await advancePlanning(deps, input(t.files, card))).toEqual({
+        kind: 'resume',
+        comments: [],
+      });
+      expect(t.messages.at(-1)).toMatch(/the factory's design check found these problems/);
+      expect(readMeta(t.files).designFixes).toBe(n);
+      expect(t.calls).not.toContain('blocked');
+    }
+    t.state('waiting', min(23));
+    t.at(min(24));
+    expect((await advancePlanning(deps, input(t.files, card))).kind).toBe('ask');
+    expect(t.calls.slice(-2)).toEqual(['blocked', 'stop']);
+    expect(t.bodies.find((b) => b.startsWith('The plan has open points'))).toMatch(
+      /design check still finds these after 2 round\(s\)[\s\S]*Share usage data/,
+    );
+  });
+
+  it('asks Ryan straight away when the design check finds nothing', async () => {
+    const t = setup();
+    const deps: PlanDeps = { ...t.deps, designCheck: () => [] };
+    const card = item(5, { status: 'Planning' });
+    await advancePlanning(deps, input(t.files, card));
+    t.state('waiting', min(3));
+    t.at(min(4));
+    expect((await advancePlanning(deps, input(t.files, card))).kind).toBe('ask');
+  });
+});
