@@ -425,7 +425,7 @@ class FolderScreensTest {
         compose.onNodeWithTag("folderMore").performClick()
         compose.onNodeWithText("Rename Folder").performClick()
         compose.onNodeWithTag("folderMore").performClick()
-        compose.onNodeWithText("Move to…").performClick()
+        compose.onNodeWithText("Move To…").performClick()
         compose.onNodeWithTag("folderMore").performClick()
         compose.onNodeWithText("Reorder").performClick()
         compose.onNodeWithTag("folderMore").performClick()

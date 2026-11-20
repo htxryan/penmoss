@@ -5,7 +5,16 @@
  */
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain, nativeTheme, type IpcMainEvent } from 'electron';
-import { config, mac, macWindows, state, storeRequests, titleBars, windows } from '../app-state';
+import {
+  config,
+  log,
+  mac,
+  macWindows,
+  state,
+  storeRequests,
+  titleBars,
+  windows,
+} from '../app-state';
 import { setMenus } from '../app-menu';
 import { sendEvent } from '../ipc';
 import { SEND, TITLE_BAR_ARG, VERSION_ARG, WINDOW_ARG } from '../ipc-contract';
@@ -116,6 +125,7 @@ export function track(
 ): void {
   windows.add(window, kind);
   titleBars.set(window, titleBar);
+  log(`${kind} window opened (${windows.all().length} open)`);
   if (macWindows) watchWindowState(window);
   window.on('focus', () => {
     windows.focused(window);

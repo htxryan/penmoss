@@ -1,7 +1,9 @@
+import { useTrackedDialog } from '../analytics/dialog';
 import { CaptureForm } from './CaptureForm';
 
 /** The app's Capture command (T30): the capture form over the page; a save or Escape closes it. */
 export function CaptureDialog({ onClose }: { onClose: (restoreFocus?: boolean) => void }) {
+  const tracked = useTrackedDialog('capture');
   return (
     <div
       className="overlay"
@@ -16,7 +18,13 @@ export function CaptureDialog({ onClose }: { onClose: (restoreFocus?: boolean) =
         aria-modal="true"
         aria-label="Quick Capture"
       >
-        <CaptureForm onSaved={() => onClose()} onCancel={() => onClose()} />
+        <CaptureForm
+          onSaved={() => {
+            tracked.done();
+            onClose();
+          }}
+          onCancel={() => onClose()}
+        />
       </div>
     </div>
   );

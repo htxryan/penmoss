@@ -95,6 +95,7 @@ export function TreeActions({
         type="button"
         className="icon-btn"
         data-ui="item"
+        data-event="tree.new-note"
         aria-label="New Note in This Notebook"
         data-tip="New Note in This Notebook"
         data-testid="notebook-new-note"
@@ -122,6 +123,7 @@ export function TreeActions({
         aria-label="More Notebook Actions"
         data-tip="More Notebook Actions"
         data-ui="menu"
+        data-event="tree.more"
         data-testid="notebook-more"
         onClick={() => {
           if (open) {
@@ -149,6 +151,7 @@ export function TreeActions({
             <MenuItem
               icon="pencil"
               data-testid="notebook-more-rename"
+              data-event="tree.more.rename"
               onClick={() => choose(onRename)}
             >
               Rename…
@@ -158,6 +161,7 @@ export function TreeActions({
             icon="sort"
             aria-haspopup="menu"
             data-testid="sort-order"
+            data-event="tree.more.sort-order"
             data-sort={sortMode}
             onClick={() => choose(() => setSortMenu(underMore()))}
           >
@@ -168,6 +172,7 @@ export function TreeActions({
             <MenuItem
               icon="history"
               data-testid="section-time-machine"
+              data-event="tree.more.time-machine"
               aria-current={timeMachine.current ? 'page' : undefined}
               onClick={() => choose(() => navigate(timeMachine.href))}
             >
@@ -179,6 +184,7 @@ export function TreeActions({
               icon="trash"
               data-command={trash.href === '/trash' ? 'app.trash' : undefined}
               data-testid={trash.testId}
+              data-event="tree.more.trash"
               aria-current={trash.current ? 'page' : undefined}
               onClick={() => choose(() => navigate(trash.href))}
             >
@@ -204,6 +210,7 @@ export function TreeActions({
               tabIndex={-1}
               className="menu-item"
               data-ui="item"
+              data-event="tree.sort-order.choose"
               onClick={() => {
                 workspace.setSortMode(current, mode);
                 closeMenus();

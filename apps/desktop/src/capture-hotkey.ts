@@ -1,13 +1,16 @@
 /** The capture hotkey (T30, A226): registered for the whole system, kept in preferences. */
 import { globalShortcut } from 'electron';
+import { KEYS_PATTERN } from '@penmoss/core/analytics';
 import { log, preferencesFile, state } from './app-state';
 import {
   defaultCaptureHotkey,
   HotkeyChangeGate,
+  hotkeyCombo,
   normaliseHotkey,
   registrationCertain,
 } from './hotkey';
 import { savePreferences } from './preferences';
+import { analytics } from './services';
 import { refreshTray } from './tray-control';
 import { showCapture } from './windows/capture-window';
 
@@ -32,11 +35,26 @@ export const hotkeyGate = new HotkeyChangeGate();
 /** The hotkey as it is now. */
 export const currentHotkey = (): HotkeyState => hotkey;
 
+/**
+ * The hotkey was pressed (PEN-137): recorded as the command it runs, Quick Capture, from the
+ * hotkey, with its normalised keys and whether they are this Mac's own choice (O8).
+ */
+function captureFromHotkey(accelerator: string): void {
+  const keys = hotkeyCombo(accelerator, process.platform);
+  analytics.record('command', 'app.capture', {
+    source: 'hotkey',
+    ...(keys && KEYS_PATTERN.test(keys) ? { keys } : {}),
+    custom: accelerator !== defaultCaptureHotkey(process.platform),
+  });
+  showCapture();
+}
+
 /** Registers the hotkey, and checks it took where the system can say so. */
 function registerHotkey(accelerator: string): boolean {
   try {
     return (
-      globalShortcut.register(accelerator, showCapture) && globalShortcut.isRegistered(accelerator)
+      globalShortcut.register(accelerator, () => captureFromHotkey(accelerator)) &&
+      globalShortcut.isRegistered(accelerator)
     );
   } catch {
     return false;

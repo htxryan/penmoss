@@ -3,6 +3,7 @@ import { PickerListbox, PickerOverlay } from '../shell/picker';
 import { usePickerList } from '../shell/picker-list';
 import { displayTitle, type NoteListEntry } from '../notes/list';
 import { Kbd } from './Kbd';
+import { useTrackedDialog } from '../analytics/dialog';
 
 export interface RecentSwitcherProps {
   /** Most recently used first; the open note (if any) first of all. */
@@ -45,6 +46,7 @@ export function RecentSwitcher({
   onClose,
 }: RecentSwitcherProps) {
   const id = useId();
+  const tracked = useTrackedDialog('recent');
   const latest = useRef({ notes, index, onChoose });
   useLayoutEffect(() => {
     latest.current = { notes, index, onChoose };
@@ -56,11 +58,13 @@ export function RecentSwitcher({
     const onKeyUp = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Meta' && event.key !== 'Control') return;
       const note = latest.current.notes[latest.current.index];
-      if (note) latest.current.onChoose(note.id);
+      if (!note) return;
+      tracked.done();
+      latest.current.onChoose(note.id);
     };
     window.addEventListener('keyup', onKeyUp, true);
     return () => window.removeEventListener('keyup', onKeyUp, true);
-  }, [held]);
+  }, [held, tracked]);
 
   const picker = usePickerList({
     items: notes,
@@ -68,7 +72,9 @@ export function RecentSwitcher({
     setActive: onIndexChange,
     onChoose: (at) => {
       const note = notes[at];
-      if (note) onChoose(note.id);
+      if (!note) return;
+      tracked.done();
+      onChoose(note.id);
     },
     onClose,
     optionName: 'recent',
@@ -98,7 +104,10 @@ export function RecentSwitcher({
               // The pointer does not move the highlight: letting go of ⌘ opens it.
               onMouseMove={undefined}
               className="opt"
-              onClick={() => onChoose(note.id)}
+              onClick={() => {
+                tracked.done();
+                onChoose(note.id);
+              }}
             >
               <span className="mru-num" aria-hidden="true">
                 {i + 1}

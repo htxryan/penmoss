@@ -35,6 +35,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
@@ -101,17 +102,18 @@ class FeedbackScreenTest {
 
     /** The form as its route lays it out, on a model of its own. */
     @Composable
-    private fun Form(model: FeedbackFormModel) {
+    private fun Form(model: FeedbackFormModel, logs: List<String> = emptyList()) {
         val draft by model.draft.collectAsStateWithLifecycle()
         val phase by model.phase.collectAsStateWithLifecycle()
         val problems by model.showProblems.collectAsStateWithLifecycle()
         val notice by model.notice.collectAsStateWithLifecycle()
         PenmossTheme {
             FeedbackScreen(
-                FeedbackUi(draft, context, phase, problems, notice),
+                FeedbackUi(draft, context, phase, problems, notice, logs = logs),
                 FeedbackActions(
                     close = { closed++ },
-                    send = { model.send(context) },
+                    send = { model.send(context, logs) },
+                    logs = model::setLogs,
                     type = model::setType,
                     priority = model::setPriority,
                     title = model::setTitle,
@@ -149,8 +151,8 @@ class FeedbackScreenTest {
         compose.onNodeWithContentDescription("Bold").performClick()
         compose.waitForIdle()
         assertEquals("It broke****", model.draft.value.description)
-        // Captured context: the exact markdown, and a group left out.
-        compose.onNodeWithTag("feedbackForm").performScrollToNode(hasText("Captured context"))
+        // Captured Context: the exact markdown, and a group left out.
+        compose.onNodeWithTag("feedbackForm").performScrollToNode(hasText("Captured Context"))
         compose.onNodeWithTag("contextToggle").performClick()
         compose.onNodeWithTag("feedbackForm").performScrollToNode(hasText("Include Where you are"))
         compose.onNodeWithTag("group-where").assertIsOn().performClick()
@@ -167,6 +169,49 @@ class FeedbackScreenTest {
         // Sent: the outbox and the draft are empty again.
         assertEquals(0, runBlocking { db.feedback().count() })
         assertFalse(File(dir, "draft/draft.json").exists())
+    }
+
+    /** PEN-137 (AC7, O6): a bug report attaches its anonymised logs unless unticked; a feature request never offers them. */
+    @Test
+    fun aBugAttachesItsAnonymisedLogsTickedAndAFeatureRequestHasNone() {
+        val logs = listOf("2026-11-19T11:54:16.525Z info Sync pass ok", "2026-11-19T11:54:17.001Z warn Git push failed: ‹token›")
+        val model = FeedbackFormModel(service, scope)
+        model.setType(FeedbackType.FEATURE)
+        compose.setContent { Form(model, logs) }
+        compose.onNodeWithTag("feedbackForm").performScrollToNode(hasText("Captured Context"))
+        compose.onNodeWithTag("feedbackLogs").assertDoesNotExist()
+        compose.onNodeWithTag("type-bug").performScrollTo().performClick()
+        compose.onNodeWithTag("feedbackForm").performScrollToNode(hasText("Attach Anonymised Logs"))
+        compose.onNodeWithTag("feedbackLogs").assertIsOn()
+        val size = FeedbackLogs.formatReportSize(FeedbackLogs.textBytes(logs))
+        compose.onNodeWithTag("feedbackLogsSummary", useUnmergedTree = true).assertTextEquals("Anonymised Logs · 2 lines · $size")
+        compose.onNodeWithTag("feedbackLogsHint").assertTextEquals(
+            "The app’s logs from the last 24 hours, at most 300 lines and 16 KB, with names, paths, IDs and secrets replaced. This is exactly what is attached.",
+        )
+        compose.onNodeWithTag("feedbackLogsToggle").performScrollTo().performClick()
+        compose.onNodeWithTag("feedbackLogsText").performScrollTo().assertTextEquals(logs.joinToString("\n"))
+        model.setPriority(2)
+        model.setTitle("Sync stalls")
+        compose.onNodeWithTag("feedbackSend").performClick()
+        compose.waitUntil(5_000) { model.phase.value == FeedbackFormModel.Phase.Sent }
+        val payload = Json.parseToJsonElement(sent.single()).jsonObject
+        assertEquals(logs, payload.getValue("logs").jsonArray.map { it.jsonPrimitive.content })
+    }
+
+    @Test
+    fun untickedTheLogsStayOnThePhone() {
+        val logs = listOf("2026-11-19T11:54:16.525Z info Sync pass ok")
+        val model = FeedbackFormModel(service, scope)
+        model.setType(FeedbackType.BUG)
+        model.setPriority(3)
+        model.setTitle("Odd")
+        compose.setContent { Form(model, logs) }
+        compose.onNodeWithTag("feedbackForm").performScrollToNode(hasText("Attach Anonymised Logs"))
+        compose.onNodeWithTag("feedbackLogs").assertIsOn().performClick()
+        compose.onNodeWithTag("feedbackLogs").assertIsOff()
+        compose.onNodeWithTag("feedbackSend").performClick()
+        compose.waitUntil(5_000) { model.phase.value == FeedbackFormModel.Phase.Sent }
+        assertFalse(Json.parseToJsonElement(sent.single()).jsonObject.containsKey("logs"))
     }
 
     @Test
@@ -382,7 +427,7 @@ class FeedbackScreenTest {
                 )
             }
         }
-        compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("Not signed in")
+        compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("Not Signed In")
         compose.onNodeWithTag("githubUserCode").assertTextEquals("WDJB-MJHT")
         compose.onNodeWithTag("githubSignIn").assertDoesNotExist()
         // The code shows first; GitHub's page opens only on the button (17 Nov 2026).

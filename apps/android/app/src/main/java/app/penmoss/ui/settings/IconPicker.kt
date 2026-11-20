@@ -49,6 +49,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.LucideIcon
 import app.penmoss.engine.settings.NotebookBadges
 import app.penmoss.ui.common.IconButton
@@ -126,7 +128,9 @@ fun IconPicker(current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit
     val opensAt = if ((cells.getOrNull(chosenAt) as? IconCell.Entry)?.section == "recent") 0 else chosenAt.coerceAtLeast(0)
     val grid = rememberLazyGridState(initialFirstVisibleItemIndex = opensAt)
     LaunchedEffect(icons != null) { if (icons != null && opensAt > 0 && query.isBlank()) grid.scrollToItem(opensAt) }
+    val tracked = rememberTrackedDialog("iconPicker")
     val pick = { icon: LucideIcon ->
+        tracked.done()
         val value = NotebookBadges.LUCIDE_PREFIX + icon.name
         recents.add(value)
         onPick(value)
@@ -146,7 +150,7 @@ fun IconPicker(current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit
                         style = MaterialTheme.roles.dialogTitle,
                         modifier = Modifier.weight(1f).semantics { heading() },
                     )
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Close") }
+                    IconButton(onClick = trackedClick("dialog.close", onDismiss)) { Icon(Icons.Default.Close, contentDescription = "Close") }
                 }
                 OutlinedTextField(
                     value = query,
@@ -193,7 +197,7 @@ fun IconPicker(current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit
                                         .size(48.dp)
                                         .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, RectangleShape)
                                         .border(1.dp, if (chosen) MaterialTheme.colorScheme.primary else Color.Transparent, RectangleShape)
-                                        .selectable(selected = chosen, role = Role.Button) { pick(cell.icon) }
+                                        .selectable(selected = chosen, role = Role.Button, onClick = trackedClick("icon-picker.icon") { pick(cell.icon) })
                                         .testTag("icon-${cell.icon.name}")
                                         .semantics { contentDescription = label },
                                     contentAlignment = Alignment.Center,

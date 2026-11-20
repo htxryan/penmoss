@@ -166,6 +166,7 @@ export class McpSession {
     const server = new LocalMcpServer(this.access, this.name, (text) => io.log(text), {
       meaning: this.meaningOn,
       env: this.options.env ?? {},
+      ...(io.onToolCall ? { onToolCall: (call) => io.onToolCall?.(call) } : {}),
       // A short reference of another notebook on this machine (PEN-69): its name, for the
       // refusal to say which server reads it.
       notebookNamed: async (tag) => {

@@ -11,8 +11,15 @@
  * Settings → All Notebooks → Add Notebook… (A1562) is this same flow, its screens and their state,
  * in a sheet over Settings (`AddNotebook`): it starts at Create or Open Notebook with Cancel in
  * Back's place, writes no welcome note, and ends on the notebook's page in Settings.
+ *
+ * The first run ends with the consent question (PEN-137), "Last Step", when this Mac has no answer
+ * yet: the app opens once it is answered. Add Notebook never asks it. Each step the first run
+ * leaves is recorded by name (`firstrun` events: done or back), on this Mac whatever the answer.
  */
 import { BrandMark } from '@penmoss/ui/icons';
+import { ConsentAnswers, ConsentQuestion, ExistingInstallConsent } from '../analytics/Consent';
+import { record } from '../analytics/record';
+import { analyticsBridge, copy } from '../analytics/status';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   desktop,
@@ -61,7 +68,15 @@ export function FirstRunGate({
   const state = useAllSources();
   /** A notebook is being set up (7.1): the first run stays until its first sync. */
   const [held, setHeld] = useState(false);
-  if (isOpen(state) && !held) return children;
+  if (isOpen(state) && !held) {
+    return (
+      <>
+        {children}
+        {/* An install with notebooks and no answer is asked once, over the app (PEN-137, ac8). */}
+        {capture ? null : <ExistingInstallConsent />}
+      </>
+    );
+  }
   if (!state.loaded) {
     return (
       <BareWindow>
@@ -116,6 +131,7 @@ function Options<T extends string>({
             name={label}
             value={item.value}
             checked={value === item.value}
+            data-event="firstrun.option"
             onChange={() => onChange(item.value)}
           />
           <span className="fr-option-text">
@@ -231,9 +247,45 @@ function NotebookSteps({
   }, [git]);
   const asked = useRef(new Set<string>());
   const screen = stack[stack.length - 1]!;
-  const go = (next: Screen) => setStack((now) => [...now, next]);
-  const replace = (next: Screen) => setStack((now) => [...now.slice(0, -1), next]);
-  const back = () => setStack((now) => (now.length > 1 ? now.slice(0, -1) : now));
+  /** The first run's step left, by name (PEN-137): Add Notebook's steps are not the first run's. */
+  const left = (result: 'done' | 'back') => {
+    if (firstRun) record('firstrun', screen.at, { result });
+  };
+  const go = (next: Screen) => {
+    left('done');
+    setStack((now) => [...now, next]);
+  };
+  const replace = (next: Screen) => {
+    left('done');
+    setStack((now) => [...now.slice(0, -1), next]);
+  };
+  const back = () => {
+    left('back');
+    setStack((now) => (now.length > 1 ? now.slice(0, -1) : now));
+  };
+  /** The notebook set up, once Setting Up is done (the consent question may follow it). */
+  const setUp = useRef<{ readonly notebookId: string | null } | null>(null);
+  const end = (notebookId: string | null) => {
+    onHold?.(false);
+    onDone?.(notebookId);
+  };
+  /**
+   * Setting Up is done: on the first run, the consent question when this Mac has no answer yet
+   * (PEN-137, O3), the app held back until it is answered; else the flow ends. Once only, though
+   * the first sync may say it is done more than once.
+   */
+  const finish = async (notebookId: string | null) => {
+    if (setUp.current) return;
+    setUp.current = { notebookId };
+    const analytics = firstRun ? analyticsBridge() : null;
+    const status = analytics ? await analytics.status().catch(() => null) : null;
+    if (status && status.consent === null) {
+      go({ at: 'consent' });
+      return;
+    }
+    left('done');
+    end(notebookId);
+  };
   /** GitHub as the account the switcher shows (A1618), else as main finds it. */
   const account = hub?.account;
   const browse = useMemo(() => asAccount(github, account), [github, account]);
@@ -548,13 +600,29 @@ function NotebookSteps({
           setup={screen.setup}
           add={add}
           welcomeNote={firstRun}
-          onDone={(notebookId) => {
-            onHold?.(false);
-            onDone?.(notebookId);
-          }}
+          onDone={(notebookId) => void finish(notebookId)}
           onNeedsName={(place) => replace({ at: 'name', place })}
           back={back}
         />
+      );
+      break;
+    case 'consent':
+      body = (
+        <Frame
+          name="consent"
+          last
+          title={copy('consent.title')}
+          actions={
+            <ConsentAnswers
+              onAnswer={() => {
+                left('done');
+                end(setUp.current?.notebookId ?? null);
+              }}
+            />
+          }
+        >
+          <ConsentQuestion />
+        </Frame>
       );
       break;
   }

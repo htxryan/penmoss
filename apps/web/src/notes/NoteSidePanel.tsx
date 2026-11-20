@@ -177,6 +177,7 @@ export function NoteSidePanel({
               type="button"
               className="icon-btn"
               data-ui="dismiss"
+              data-event="note.panel.close"
               aria-label="Close Panel"
               data-tip="Close Panel (Esc)"
               onClick={onClose}

@@ -5,6 +5,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import type { Io, MeaningIo, StdioIo } from './io';
+import { nodeAnalytics, type NodeAnalyticsOptions } from './node-analytics';
 import { nodeNotebooks } from './node-notebooks';
 import { childEnv } from './token-store';
 import { join } from 'node:path';
@@ -19,6 +20,8 @@ export function nodeIo(
     readonly self?: readonly string[];
     /** Search by meaning (T75): the Mac app's binary gives it. */
     readonly meaning?: MeaningIo;
+    /** Usage analytics (PEN-137): the Mac app gives its version and channel. */
+    readonly analytics?: Pick<NodeAnalyticsOptions, 'version' | 'channel'>;
   } = {},
 ): Io {
   selfCommand = options.self ?? null;
@@ -35,6 +38,7 @@ export function nodeIo(
     readFile: async (path) => new Uint8Array(await readFile(path)),
     fileSize: async (path) => (await stat(path)).size,
     stdio: nodeStdio(),
+    analytics: nodeAnalytics({ ...options.analytics, env }),
     ...(options.meaning ? { meaning: options.meaning } : {}),
     notebooks: nodeNotebooks({
       ...(options.meaning ? { meaning: options.meaning } : {}),

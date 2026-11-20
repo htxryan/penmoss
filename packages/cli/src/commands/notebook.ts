@@ -3,6 +3,7 @@
  * machine. A git notebook syncs only through a git repository (any host, HTTPS or SSH).
  */
 import { validCommitEmail, validCommitName } from '@penmoss/git-notebook/identity';
+import { ToolRecorder } from '../analytics';
 import { UsageError } from '../args';
 import type { Command, Context } from '../command';
 import { CliError, EXIT } from '../errors';
@@ -447,19 +448,28 @@ export const mcp: Command = {
     }
     const stdio = context.io.stdio;
     if (!stdio) throw new CliError(EXIT.ERROR, 'This penmoss cannot serve stdio here.');
-    await notebooks(context).serveMcp(
-      name,
-      {
-        lines: stdio.lines(),
-        write: (line) => context.io.stdout.write(`${line}\n`),
-        log: (text) => context.io.stderr.write(`${text}\n`),
-        ...(stdio.stopped ? { stopped: stdio.stopped() } : {}),
-        ...(stdio.detach
-          ? { detach: (args: readonly string[], log?: string) => stdio.detach!(args, log) }
-          : {}),
-      },
-      channel ? { channel: sessionName !== undefined ? { name: sessionName } : {} } : {},
-    );
+    // Each tool call by name, never its arguments (PEN-137): one session per connection.
+    const tools = context.io.analytics
+      ? new ToolRecorder(context.io.analytics, context.io.env)
+      : null;
+    try {
+      await notebooks(context).serveMcp(
+        name,
+        {
+          lines: stdio.lines(),
+          write: (line) => context.io.stdout.write(`${line}\n`),
+          log: (text) => context.io.stderr.write(`${text}\n`),
+          ...(stdio.stopped ? { stopped: stdio.stopped() } : {}),
+          ...(stdio.detach
+            ? { detach: (args: readonly string[], log?: string) => stdio.detach!(args, log) }
+            : {}),
+          ...(tools ? { onToolCall: tools.record } : {}),
+        },
+        channel ? { channel: sessionName !== undefined ? { name: sessionName } : {} } : {},
+      );
+    } finally {
+      tools?.close();
+    }
   },
 };
 

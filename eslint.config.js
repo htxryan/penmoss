@@ -54,7 +54,12 @@ export default defineConfig(
   },
   {
     // Tool config files and the Workers' entries must use default exports.
-    files: ['**/*.config.{js,mjs,ts}', 'apps/relay/src/index.ts'],
+    files: [
+      '**/*.config.{js,mjs,ts}',
+      'apps/relay/src/index.ts',
+      'apps/telemetry/src/index.ts',
+      'apps/telemetry-dashboard/src/index.ts',
+    ],
     rules: { 'no-restricted-exports': 'off' },
   },
   {
@@ -97,6 +102,12 @@ export default defineConfig(
     ignores: ['packages/ui/src/theme/builtins.ts'],
     plugins: { penmoss: penmossLintPlugin },
     rules: { 'penmoss/no-literal-colours': 'error' },
+  },
+  {
+    // PEN-137: every clickable control in the page has a data-command or a data-event id, so it
+    // is counted by name (packages/ui/lint/tracked-control.js). The plugin is the one above.
+    files: ['apps/web/src/**/*.tsx'],
+    rules: { 'penmoss/tracked-control': 'error' },
   },
   prettier,
 );

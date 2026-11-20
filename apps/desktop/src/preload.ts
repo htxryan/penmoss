@@ -144,8 +144,36 @@ const captureGit = {
   onChange: git.onChange,
 } satisfies CaptureGit;
 
+/** A call main refuses this window (it answers null): the page's promise rejects. */
+const required = <T>(value: T | null): T | Promise<never> =>
+  value ?? Promise.reject(new Error('Not available in this window'));
+
+/**
+ * Usage analytics and the log file (PEN-137): events and log lines go to main as messages, never
+ * waited for; the answer, the switch, the ID and the limits are the main window's (Settings →
+ * Privacy, the consent question), and turning sharing on carries the gesture.
+ */
+const analytics = {
+  record: (events) => send('analyticsRecord', Array.isArray(events) ? events : []),
+  log: (level, message) =>
+    send('analyticsLog', level === 'error' ? 'error' : 'warn', String(message)),
+  status: () => invoke('analyticsStatus').then(required),
+  onChange: (listener) => on('analyticsChanged', (status) => listener(status)),
+  answer: (consent) => invoke('analyticsAnswer', consent === 'yes' ? 'yes' : 'no').then(required),
+  setSharing: (on) => invoke('analyticsSetSharing', on === true).then(required),
+  resetId: () => invoke('analyticsResetId').then(required),
+  forget: () => invoke('analyticsForget').then(required),
+  page: (query) => invoke('analyticsPage', query ?? {}).then(required),
+  preview: (changes) => invoke('analyticsPreview', changes ?? {}).then(required),
+  setLimits: (changes) => invoke('analyticsSetLimits', changes ?? null).then(required),
+  showLogFile: () => invoke('analyticsShowLogFile').then((shown) => shown === true),
+  reportLogs: (names) =>
+    invoke('analyticsReportLogs', Array.isArray(names) ? names.map(String) : []).then(required),
+} satisfies NonNullable<PenmossDesktop['analytics']>;
+
 /** Main and note windows' own members: the capture window has none of them. */
 const appWindow = {
+  analytics,
   // Send feedback (T49, A798): the window as it is now, as PNG bytes (or null), taken by the main
   // process with capturePage before the form is drawn.
   feedback: {
@@ -190,7 +218,7 @@ const appWindow = {
     notes: () => invoke('updatesNotes'),
     onNotes: (listener) => on('updatesNotesChanged', (file) => listener(file)),
   },
-} satisfies Pick<PenmossDesktop, 'feedback' | 'githubToken' | 'meaning' | 'updates'>;
+} satisfies Pick<PenmossDesktop, 'analytics' | 'feedback' | 'githubToken' | 'meaning' | 'updates'>;
 
 /** Keep on top and the compact title bar (T46, T47; A720–A725), for `titleBar`'s windows. */
 const macWindow = (style: 'compact' | 'native') =>

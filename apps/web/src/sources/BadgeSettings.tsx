@@ -100,6 +100,7 @@ export function BadgeSettings({ source }: { source: GitSource }) {
           </PreviewZoom>
         </div>
         <button
+          data-event="settings.git-notebooks.badge.reset"
           data-ui="item"
           type="button"
           className="btn"
@@ -131,6 +132,7 @@ export function BadgeSettings({ source }: { source: GitSource }) {
             const current = preset ? checked : index === 0;
             return (
               <button
+                data-event="settings.git-notebooks.badge.preset"
                 key={each.id}
                 type="button"
                 role="radio"
@@ -192,6 +194,7 @@ export function BadgeSettings({ source }: { source: GitSource }) {
           {KINDS.map((each) => (
             <label key={each.kind} className="segment badge-kind">
               <input
+                data-event="settings.git-notebooks.badge.kind"
                 type="radio"
                 name={`${id}-kind`}
                 checked={glyph.kind === each.kind}

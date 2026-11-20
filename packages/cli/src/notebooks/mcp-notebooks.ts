@@ -445,6 +445,7 @@ export class McpNotebooks {
     const server = new LocalMcpServer(set, 'penmoss', (text) => io.log(text), {
       env: this.options.env ?? {},
       meaning: meaningOn,
+      ...(io.onToolCall ? { onToolCall: (call) => io.onToolCall?.(call) } : {}),
       ...(channels
         ? {
             channel: true,

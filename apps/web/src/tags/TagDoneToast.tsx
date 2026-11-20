@@ -71,6 +71,7 @@ export function TagDoneToast({
               type="button"
               className="toast-action"
               data-ui="submit"
+              data-event="tags.toast.undo"
               disabled={busy}
               onClick={() => void undo()}
               data-testid="tag-undo"

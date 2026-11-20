@@ -58,6 +58,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.NotebookGraph
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.keys.Bindings
 import app.penmoss.engine.keys.Combos
 import app.penmoss.engine.keys.ShortcutCommand
@@ -210,7 +212,7 @@ fun ShortcutsScreen(
         topBar = {
             TopAppBar(
                 title = { app.penmoss.ui.settings.PlatformHeadline("Keyboard Shortcuts", many = true) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                navigationIcon = { IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             )
         },
     ) { padding ->
@@ -354,7 +356,7 @@ private fun ShortcutViews(view: String, changed: Int, onView: (String) -> Unit) 
         options.forEachIndexed { index, (value, label) ->
             SegmentedButton(
                 selected = view == value,
-                onClick = { onView(value) },
+                onClick = trackedClick("settings.shortcuts.show") { onView(value) },
                 shape = SegmentedButtonDefaults.itemShape(index, options.size, app.penmoss.ui.common.SQUARE),
                 modifier = Modifier.testTag("shortcutView-$value"),
             ) { Text(label, maxLines = 1) }
@@ -384,7 +386,7 @@ private fun ShortcutRow(
 ) {
     val keysText = when {
         later != null -> "Not on Android yet: arrives with $later"
-        keys.isEmpty() -> "No shortcut"
+        keys.isEmpty() -> "No Shortcut"
         else -> keys.joinToString(" or ") { combo ->
             Combos.format(combo) + if (types(combo)) " (types a character on this keyboard)" else ""
         }
@@ -410,18 +412,18 @@ private fun ShortcutRow(
             trailingContent = {
                 if (later == null) Row {
                     if (canRecord) {
-                        IconButton(onClick = onChange, modifier = Modifier.testTag("change-${command.id}")) {
-                            Icon(Icons.Default.Edit, contentDescription = "Change the shortcut for ${command.title}")
+                        IconButton(onClick = trackedClick("settings.shortcuts.row.edit", onChange), modifier = Modifier.testTag("change-${command.id}")) {
+                            Icon(Icons.Default.Edit, contentDescription = "Change the Shortcut for ${command.title}")
                         }
                     }
                     if (canChange && keys.isNotEmpty()) {
-                        IconButton(onClick = onRemove, modifier = Modifier.testTag("remove-${command.id}")) {
-                            Icon(Icons.Default.Close, contentDescription = "Remove the shortcut for ${command.title}")
+                        IconButton(onClick = trackedClick("settings.shortcuts.row.remove", onRemove), modifier = Modifier.testTag("remove-${command.id}")) {
+                            Icon(Icons.Default.Close, contentDescription = "Remove the Shortcut for ${command.title}")
                         }
                     }
                     if (canChange && custom) {
-                        IconButton(onClick = onReset, modifier = Modifier.testTag("reset-${command.id}")) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Reset the shortcut for ${command.title}")
+                        IconButton(onClick = trackedClick("settings.shortcuts.row.reset", onReset), modifier = Modifier.testTag("reset-${command.id}")) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Reset the Shortcut for ${command.title}")
                         }
                     }
                 }
@@ -437,6 +439,8 @@ private fun ShortcutRow(
                 color = if (notice.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             is RowNotice.Clash -> Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("conflict-${command.id}")) {
+                // Its title, as the web's ConfirmBlock has it; the sentence below says why.
+                Text("Replace This Shortcut?", Modifier.semantics { heading() }, style = MaterialTheme.typography.titleSmall)
                 Text(
                     "${Combos.format(notice.combo)} is used by ${notice.others.joinToString(" and ") { "“${it.title}”" }}.",
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -444,8 +448,8 @@ private fun ShortcutRow(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { onMove(notice.combo) }, modifier = Modifier.testTag("useHere")) { Text("Use It Here Instead") }
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = trackedClick("settings.shortcuts.conflict.replace") { onMove(notice.combo) }, modifier = Modifier.testTag("useHere")) { Text("Use It Here Instead") }
+                    TextButton(onClick = trackedClick("settings.shortcuts.conflict.cancel", onDismiss)) { Text("Cancel") }
                 }
             }
         }
@@ -480,6 +484,7 @@ fun recorderKey(event: AndroidKeyEvent, chars: KeyChars): RecorderKey {
 @Composable
 private fun RecordDialog(title: String, chars: KeyChars, onCombo: (combo: String, typed: Boolean) -> Unit, onDismiss: () -> Unit) {
     val focus = remember { FocusRequester() }
+    val tracked = rememberTrackedDialog("shortcutRecorder")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Change the Shortcut") },
@@ -496,6 +501,8 @@ private fun RecordDialog(title: String, chars: KeyChars, onCombo: (combo: String
                             RecorderKey.Pass -> false
                             RecorderKey.Listen -> true
                             is RecorderKey.Combo -> {
+                                // Escape cancels: any other combination is what the dialog is for.
+                                if (key.combo != "Escape") tracked.done()
                                 onCombo(key.combo, key.typed)
                                 true
                             }
@@ -506,7 +513,7 @@ private fun RecordDialog(title: String, chars: KeyChars, onCombo: (combo: String
             )
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = trackedClick("settings.shortcuts.record.cancel", onDismiss)) { Text("Cancel") } },
     )
     // The dialog's own window takes focus a frame or two after it opens: asked earlier, the
     // recorder would stay unfocused and miss the keys.

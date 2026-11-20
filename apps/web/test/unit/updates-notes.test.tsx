@@ -113,7 +113,7 @@ describe('Settings → Updates: release notes', () => {
   it("shows the offered update's notes, this version's, and earlier versions collapsed", async () => {
     await show(state({ current: '0.2.1', phase: 'current' }), FILE);
     expect(block('release-notes-offered')).toBeNull();
-    expect(headings(block('release-notes-current'))).toEqual(['In this version', 'New', 'Fixed']);
+    expect(headings(block('release-notes-current'))).toEqual(['In This Version', 'New', 'Fixed']);
     expect(items(block('release-notes-current'))).toEqual([
       'Release notes in the app.',
       'The window keeps its size.',
@@ -127,7 +127,7 @@ describe('Settings → Updates: release notes', () => {
   it('shows what an offered update brings above this version', async () => {
     await show(state({ current: '0.2.0', phase: 'available', version: '0.2.1' }), FILE);
     const offered = block('release-notes-offered');
-    expect(headings(offered)).toEqual(["What's new in 0.2.1", 'New', 'Fixed']);
+    expect(headings(offered)).toEqual(["What's New in 0.2.1", 'New', 'Fixed']);
     expect(items(offered)).not.toContain('Android only.');
     expect(items(block('release-notes-current'))).toEqual(['Before 0.2.0.']);
     expect(offered?.compareDocumentPosition(block('release-notes-current')!)).toBe(
@@ -140,7 +140,7 @@ describe('Settings → Updates: release notes', () => {
       state({ current: '0.2.1-alpha.1178', channel: 'alpha', previousVersion: '0.2.1-alpha.1172' }),
       FILE,
     );
-    expect(headings(block('release-notes-current'))[0]).toBe('In this version (since build 1172)');
+    expect(headings(block('release-notes-current'))[0]).toBe('In This Version (Since Build 1172)');
     expect(items(block('release-notes-current'))).toContain(
       'The window keeps its size. (build 1178)',
     );

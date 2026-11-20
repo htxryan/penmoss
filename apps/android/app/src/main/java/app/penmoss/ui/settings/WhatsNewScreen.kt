@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import app.penmoss.updates.NotesBlock
 import app.penmoss.updates.NotesView
 import app.penmoss.updates.noteLine
@@ -50,7 +51,7 @@ fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Un
                 view.current?.let { Block(it, "whatsNewCurrent") }
                 if (view.earlier.isNotEmpty()) {
                     OutlinedButton(
-                        onClick = { earlier = !earlier },
+                        onClick = trackedClick("settings.updates.whats-new.earlier") { earlier = !earlier },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("whatsNewEarlierToggle"),
                     ) { Text(if (earlier) "Hide Earlier Versions" else "Earlier Versions") }
                     if (earlier) {
@@ -92,7 +93,7 @@ private fun VersionCard(version: String) {
 private fun Missing(text: String, onOpenReleases: () -> Unit) {
     Help(text, Modifier.testTag("whatsNewMissing"))
     Row(Modifier.padding(horizontal = 8.dp)) {
-        TextButton(onClick = onOpenReleases, modifier = Modifier.testTag("whatsNewReleases")) { Text("Open Releases on GitHub") }
+        TextButton(onClick = trackedClick("settings.whats-new.open-releases", onOpenReleases), modifier = Modifier.testTag("whatsNewReleases")) { Text("Open Releases on GitHub") }
     }
 }
 
@@ -107,7 +108,7 @@ private fun Heading(text: String, style: androidx.compose.ui.text.TextStyle, mod
 
 @Composable
 private fun Block(block: NotesBlock, tag: String) {
-    Heading(headingCase(block.title), MaterialTheme.typography.titleMedium, Modifier.testTag(tag))
+    Heading(block.title, MaterialTheme.typography.titleMedium, Modifier.testTag(tag))
     if (block.groups.isEmpty()) {
         Help("Nothing that people using Penmoss would notice.")
         return
@@ -124,13 +125,6 @@ private fun Block(block: NotesBlock, tag: String) {
         }
     }
 }
-
-/**
- * A release block's title as a heading (PEN-146): the shared model's "In this version (since
- * 0.2.0)", which the Mac's contract fixes, in Title Case on the screen. A version stays as it is.
- */
-internal fun headingCase(title: String): String =
-    title.replace("In this version", "In This Version").replace("(since ", "(Since ")
 
 /**
  * The version card's line (PEN-146; PEN-148): how each install updates. One from Google Play (its

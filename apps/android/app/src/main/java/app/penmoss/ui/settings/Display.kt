@@ -89,7 +89,7 @@ fun displayChoices(settings: Settings): List<DisplayChoice> = listOf(
 /** What the Settings list says of Home: which shortcuts are hidden. */
 fun displaySummary(settings: Settings): String {
     val hidden = displayChoices(settings).filterNot { it.shown }.map { it.label }
-    return if (hidden.isEmpty()) "Every shortcut on Home" else "Hidden: ${hidden.joinToString(", ")}"
+    return if (hidden.isEmpty()) "Every Shortcut on Home" else "Hidden: ${hidden.joinToString(", ")}"
 }
 
 @Composable

@@ -30,6 +30,9 @@ import { GitHubSettings } from '../feedback/GitHubSettings';
 import { MeaningSettings } from '../search/MeaningSettings';
 import { UpdatesSettings } from '../updates/UpdatesSettings';
 import { AppearanceSettings } from '../theme/AppearanceSettings';
+import { AnalyticsData } from '../analytics/AnalyticsData';
+import { PrivacyNavEntry } from '../analytics/PrivacyNavEntry';
+import { PrivacySettings } from '../analytics/PrivacySettings';
 import { SETTINGS_GROUPS, SETTINGS_PAGES, type SettingEntry } from './settings-index';
 import { SettingsHomeProvider } from './SettingsHeader';
 import { SettingsSearch, SettingsSearchResults } from './SettingsSearch';
@@ -59,9 +62,14 @@ const NAV: Readonly<
   github: { icon: 'key', command: 'app.status' },
   // Auto-Update (T64 item 2, A1112): the Mac app's.
   updates: { icon: 'refresh', command: 'app.checkForUpdates' },
+  // Usage analytics and the logs (PEN-137): the Mac app's.
+  privacy: { icon: 'shield', command: 'app.privacy' },
 };
 
-/** The sections this build shows: git, agents, updates and meaning need the Mac app's bridges. */
+/**
+ * The sections this build shows: git, agents, updates, meaning and privacy need the Mac app's
+ * bridges.
+ */
 function availableSections(): SettingsSection[] {
   const bridge = desktop();
   return SETTINGS_PAGES.map((page) => page.id).filter((id) => {
@@ -71,6 +79,7 @@ function availableSections(): SettingsSection[] {
     if (id === 'updates') return Boolean(bridge?.updates);
     if (id === 'meaning') return Boolean(bridge?.meaning);
     if (id === 'github') return Boolean(bridge?.githubToken);
+    if (id === 'privacy') return Boolean(bridge?.analytics);
     return true;
   });
 }
@@ -156,7 +165,7 @@ export function SettingsPage({
         <div className="settings-layout">
           <div className="settings-side">
             <SettingsSearch search={search} onOpen={open} />
-            <nav ref={nav} className="settings-nav" aria-label="Settings sections">
+            <nav ref={nav} className="settings-nav" aria-label="Settings Sections">
               {SETTINGS_GROUPS.map((group) => {
                 const inGroup = pages.filter((page) => page.group === group.id);
                 if (inGroup.length === 0) return null;
@@ -177,8 +186,11 @@ export function SettingsPage({
                     </p>
                     {inGroup.map((page) => {
                       const path = settingsPath(page.id);
-                      // A notebook's own page is its own entry's, not All Notebooks'.
-                      const current = page.id === section && !(page.id === 'git-notebooks' && item);
+                      // A notebook's own page is its own entry's, not All Notebooks' (and
+                      // Analytics Data is its own, not Privacy's).
+                      const current =
+                        page.id === section &&
+                        !((page.id === 'git-notebooks' || page.id === 'privacy') && item);
                       return (
                         <Fragment key={page.id}>
                           <a
@@ -197,6 +209,9 @@ export function SettingsPage({
                             <NotebookNavEntries
                               current={section === 'git-notebooks' ? item : undefined}
                             />
+                          ) : null}
+                          {page.id === 'privacy' ? (
+                            <PrivacyNavEntry current={section === 'privacy' && item === 'data'} />
                           ) : null}
                         </Fragment>
                       );
@@ -260,5 +275,7 @@ function SectionContent({
       return <GitHubSettings />;
     case 'updates':
       return <UpdatesSettings />;
+    case 'privacy':
+      return item === 'data' ? <AnalyticsData /> : <PrivacySettings />;
   }
 }

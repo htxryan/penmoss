@@ -54,7 +54,11 @@ export function WhatsNew({
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="lf-sub updates-whats-new-summary" data-testid="whats-new-summary">
+      <summary
+        data-event="settings.updates.whats-new"
+        className="lf-sub updates-whats-new-summary"
+        data-testid="whats-new-summary"
+      >
         <Icon name="chevR" size={14} className="updates-whats-new-chevron" />
         <h3 className="lf-sub-name" id={`${id}-h`}>
           What’s New
@@ -143,7 +147,7 @@ function ReleaseNotesView({ view }: { readonly view: NotesView }) {
       ) : null}
       {view.earlier.length > 0 ? (
         <details className="release-notes-earlier" data-testid="release-notes-earlier">
-          <summary>Earlier Versions</summary>
+          <summary data-event="settings.updates.whats-new.earlier">Earlier Versions</summary>
           {view.earlier.map((block) => (
             <Block key={block.title} block={block} testId="release-notes-release" />
           ))}

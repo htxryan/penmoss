@@ -26,6 +26,7 @@ import { parseBlock } from '../../../../scripts/ports.mjs';
 import { cliScript } from '../../src/local-agents';
 import { inVirtualMachine, refuseOnMacHost } from './host-guard';
 import {
+  answerAnalytics,
   bareRepository,
   dataDir,
   DESKTOP,
@@ -319,6 +320,9 @@ function world() {
     '[user]\n  name = Ryan on the Mac\n  email = ryan@example.invalid\n[commit]\n  gpgSign = false\n',
   );
   const app = { PENMOSS_HOME: join(root, 'penmoss'), GIT_CONFIG_GLOBAL: gitconfig };
+  // Usage analytics answered No (PEN-137), as launch() does: the first run's last step, the
+  // usage question, isn't this spec's (analytics-consent.spec.ts has it).
+  answerAnalytics(app.PENMOSS_HOME, 'no');
   const env = { ...process.env, ...app, GIT_CONFIG_NOSYSTEM: '1' };
   const cli = (exe: string, args: readonly string[]) =>
     spawnSync(exe, ['--penmoss-cli', ...args], { env, encoding: 'utf8', timeout: 90_000 });
@@ -591,7 +595,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   // On PATH, it is one line (PEN-146): Manage… opens the card.
   const manage = cliCard.getByTestId('git-cli-manage');
   if (await manage.isVisible()) await manage.click();
-  await cliCard.locator('summary', { hasText: 'Without the command' }).click();
+  await cliCard.locator('summary', { hasText: 'Without the Command' }).click();
   const direct = cliCard.getByTestId('git-cli-direct');
   await direct.scrollIntoViewIfNeeded();
   await expect(direct).toContainText(`'${CLI_EXE}' --penmoss-cli`);

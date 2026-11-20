@@ -789,7 +789,7 @@ test('the setting asks first, then reopens the windows with the other title bar;
   // (A click: Cancel puts the box back, so `uncheck` can find it unchanged and throw.)
   await answerDialog(app, 1);
   await setting.click();
-  await expect.poll(() => askedSoFar(app)).toEqual(['Use the standard title bar?']);
+  await expect.poll(() => askedSoFar(app)).toEqual(['Use the Standard Title Bar?']);
   await expect(setting).toBeChecked();
   await expect(setting).toBeEnabled();
   expect(page.isClosed()).toBe(false);
@@ -858,9 +858,9 @@ test('the setting asks first, then reopens the windows with the other title bar;
   const mainAgain = back.find((view) => !WINDOW.test(view.url()))!;
   await expect.poll(() => compactNow(mainAgain)).toBe('compact');
   expect(await askedSoFar(app)).toEqual([
-    'Use the standard title bar?',
-    'Use the standard title bar?',
-    'Use the compact title bar?',
+    'Use the Standard Title Bar?',
+    'Use the Standard Title Bar?',
+    'Use the Compact Title Bar?',
   ]);
 });
 
@@ -1184,7 +1184,7 @@ test('reopening never loses what was just typed, and stops when a window cannot 
   await setting.uncheck();
   await expect
     .poll(() => askedSoFar(app), { timeout: 10_000 })
-    .toEqual(['Use the standard title bar?', 'The title bar was not changed']);
+    .toEqual(['Use the Standard Title Bar?', 'The Title Bar Was Not Changed']);
   await expect(setting).toBeChecked();
   expect(window.isClosed()).toBe(false);
   expect(await titleBarOf(app, 0)).toBe('compact');

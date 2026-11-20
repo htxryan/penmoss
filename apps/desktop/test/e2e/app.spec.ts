@@ -82,6 +82,8 @@ test('edits a note in a git notebook, opens it again with the network blocked, a
     'undefined',
     'undefined',
     [
+      // Usage analytics and the log file (PEN-137): events by name, never note data.
+      'analytics',
       'capture',
       'clipboard',
       'feedback',

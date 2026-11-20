@@ -88,7 +88,13 @@ export function SidebarSettings() {
                 }
                 help={<span id={`${id}-search`}>Always shown</span>}
               >
-                <Switch checked disabled aria-describedby={`${id}-search`} aria-label="Search" />
+                <Switch
+                  checked
+                  disabled
+                  aria-describedby={`${id}-search`}
+                  aria-label="Search"
+                  data-event="settings.sidebar.item.search"
+                />
               </SettingRow>
               {ITEMS.map(({ item, label, icon }) => (
                 <SettingRow
@@ -107,6 +113,7 @@ export function SidebarSettings() {
                     checked={display.shows(item)}
                     disabled={!display.canChange}
                     data-testid={`display-${item}`}
+                    data-event="settings.sidebar.item"
                     onChange={(event) => display.set(item, event.target.checked)}
                   />
                 </SettingRow>
@@ -169,6 +176,7 @@ function SectionSettings({ layout }: { readonly layout: SidebarLayout }) {
                     type="button"
                     className="icon-btn lf-grip"
                     data-ui="item"
+                    data-event="settings.sidebar.section.move"
                     aria-label={`Move ${name}, ${index + 1} of ${layout.order.length}`}
                     aria-description="Drag, or press Alt and the up or down arrow"
                     data-tip={`Drag to Move ${name}`}
@@ -193,6 +201,7 @@ function SectionSettings({ layout }: { readonly layout: SidebarLayout }) {
                   checked={!layout.hidden.has(section)}
                   disabled={!layout.canChange}
                   data-testid={`display-section-${section}`}
+                  data-event="settings.sidebar.section.show"
                   onChange={(event) => layout.setHidden(section, !event.target.checked)}
                 />
               </SettingRow>
@@ -213,6 +222,7 @@ function QuickAccessNotebook({ layout }: { readonly layout: SidebarLayout }) {
     <label className="lf-suboption" data-setting="show-notebook-names">
       <input
         type="checkbox"
+        data-event="settings.sidebar.show-notebook-names"
         checked={layout.quickAccessNotebook}
         disabled={!layout.canChange}
         data-testid="quick-access-notebook"
@@ -234,6 +244,7 @@ function RecentCount({ layout }: { readonly layout: SidebarLayout }) {
         type="button"
         className="btn quiet"
         data-ui="item"
+        data-event="settings.sidebar.recent-count.fewer"
         aria-label="Fewer Recent Notes"
         data-tip="Fewer"
         data-testid="recent-count-fewer"
@@ -249,6 +260,7 @@ function RecentCount({ layout }: { readonly layout: SidebarLayout }) {
         type="button"
         className="btn quiet"
         data-ui="item"
+        data-event="settings.sidebar.recent-count.more"
         aria-label="More Recent Notes"
         data-tip="More"
         data-testid="recent-count-more"

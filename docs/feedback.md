@@ -70,8 +70,13 @@ The command has no default shortcut; bind one in Settings → Keyboard shortcuts
   window**: the Mac app's `capturePage()` and Android's `PixelCopy` take the window behind the
   form as it opens, offered unticked. Images are scaled down to 2560 px on the long side
   and encoded again (PNG stays PNG, the rest become JPEG at 0.85).
-- **Captured context**: shows exactly the markdown the issue will hold, with a checkbox per group
+- **Captured Context**: shows exactly the markdown the issue will hold, with a checkbox per group
   to leave that group out.
+- **Attach Anonymised Logs** (PEN-137, the Mac and Android; bug reports only, ticked): the app's
+  log lines from the last `report.hours`, at most `report.lines` lines and `report.kb` KB, after
+  scrub #2 with the open notebooks' note titles and folder, tag and attachment names. The form
+  shows the exact text under "Anonymised Logs · 184 lines · 9.6 KB"; a report made offline keeps
+  the lines it previewed.
 - **Drafts**: an unsent form is kept on the device (title, description, choices, screenshots)
   until it's sent or discarded.
 
@@ -83,12 +88,12 @@ other notes; a test note with a marker string in its body proves it on every cli
 1. **App**: client, version and build, OS, browser or WebView, window kind, viewport and pixel
    ratio, theme and appearance mode, locale and time zone; on the Mac the title bar and keep on
    top.
-2. **Where you are**: the route (ids kept, no query string), the screen, the open panel or
-   dialog, how the form was opened, the sidebar's state and the selected folder's path.
+2. **Where you are**: the kind of screen (never its route), the open panel or dialog, how the
+   form was opened and the sidebar's state.
 3. **Sync**: online or not, the git notebook's sync state, the last time sync finished, unsynced
    notes and the feedback outbox.
-4. **This note** (when one is open): id, title, folder path, tags, created and updated times,
-   word, character and attachment counts, size in bytes, engine and epoch, unsynced and Trash
+4. **This note** (when one is open): its kind, created and updated times (none for a git
+   notebook's note), word, character and attachment counts, size in bytes, engine and epoch, unsynced and Trash
    state, backlink and outgoing-link counts, and how many windows show it.
 5. **Recent errors**: the last 10 errors and unhandled rejections from an in-memory ring buffer,
    message and a stack trimmed to the app's frames, redacted like Android's error reports (A427):
@@ -100,8 +105,12 @@ other notes; a test note with a marker string in its body proves it on every cli
 - **Title**: the form's title.
 - **Labels**: `in-app feedback`, `bug` or `feature request`, and `P1`–`P4`.
 - **Body**: the description, then the screenshots as `![screenshot-1.png](…)`, then the context
-  inside `<details><summary>Captured context</summary>…</details>` (a table per group, then a
-  fenced JSON copy for agents), then `Sent from Penmoss <client> <version> · submission <id>`.
+  inside `<details><summary>Captured Context</summary>…</details>` (a table per group, then a
+  fenced JSON copy for agents), then a bug report's logs in a collapsed
+  `<summary>Anonymised Logs (n lines)</summary>` block in a fence no line can close (PEN-137; its
+  oldest lines cut so the body stays inside the Linear intake's 60,000 characters), then
+  `Sent from Penmoss <client> <version> · submission <id>`. `redactSecrets` runs over the whole
+  body before it is posted.
 
 Screenshots are native issue attachments (A793), uploaded as `gh issue create --attach` does:
 `POST https://uploads.github.com/user-attachments/assets?repository_id=1450019106&name=<file>` with

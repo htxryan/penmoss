@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.CaptureRequest
 
 /**
@@ -52,8 +54,8 @@ fun RefusedCapturesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Captures not added") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                title = { Text("Captures Not Added") },
+                navigationIcon = { IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             )
         },
     ) { padding ->
@@ -72,14 +74,14 @@ fun RefusedCapturesScreen(
                     Text(capture.text, maxLines = 6, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     Text(capture.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = { onCopy(capture) }, Modifier.testTag("refusedCopy")) { Text("Copy") }
-                        TextButton(onClick = { onRetry(capture) }, Modifier.testTag("refusedRetry")) { Text("Try Again") }
+                        TextButton(onClick = trackedClick("capture.refused.copy") { onCopy(capture) }, Modifier.testTag("refusedCopy")) { Text("Copy") }
+                        TextButton(onClick = trackedClick("capture.refused.retry") { onRetry(capture) }, Modifier.testTag("refusedRetry")) { Text("Try Again") }
                         if (capture.missingPictures) {
-                            TextButton(onClick = { onWithoutPictures(capture) }, Modifier.testTag("refusedWithoutPictures")) {
+                            TextButton(onClick = trackedClick("capture.refused.without-pictures") { onWithoutPictures(capture) }, Modifier.testTag("refusedWithoutPictures")) {
                                 Text("Send Without Them")
                             }
                         }
-                        TextButton(onClick = { discarding = capture.id }, Modifier.testTag("refusedDiscard")) { Text("Discard") }
+                        TextButton(onClick = trackedClick("capture.refused.discard") { discarding = capture.id }, Modifier.testTag("refusedDiscard")) { Text("Discard") }
                     }
                 }
                 HorizontalDivider()
@@ -87,20 +89,21 @@ fun RefusedCapturesScreen(
         }
     }
     captures.firstOrNull { it.id == discarding }?.let { capture ->
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { discarding = null },
-            title = { Text("Discard this capture?") },
+            title = { Text("Discard This Capture?") },
             text = { Text("It is only on this phone, so its text is lost. Copy it first to keep it.") },
             confirmButton = {
                 TextButton(
-                    onClick = {
+                    onClick = trackedClick("capture.refused.discard.confirm", tracked.done {
                         discarding = null
                         onDiscard(capture)
-                    },
+                    }),
                     Modifier.testTag("refusedDiscardConfirm"),
                 ) { Text("Discard") }
             },
-            dismissButton = { TextButton(onClick = { discarding = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = trackedClick("capture.refused.discard.cancel") { discarding = null }) { Text("Cancel") } },
         )
     }
 }

@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Usage analytics' ingest Worker (PEN-137): POST /v1/batch and POST /v1/forget, nothing else.
+  // It never reads events back out: the dashboard (apps/telemetry-dashboard) does, behind Access.
+  "name": "penmoss-telemetry",
+  "main": "src/index.ts",
+  // Same date as apps/relay: the latest the pinned Wrangler's workerd supports.
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "t.penmoss.app", "custom_domain": true }],
+  // The named queries (queries/*.sql) are imported as text.
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "penmoss-telemetry",
+      // Ryan: `pnpm --filter @penmoss/telemetry exec wrangler d1 create penmoss-telemetry`, then put
+      // the id it prints here and in apps/telemetry-dashboard/wrangler.jsonc.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  // The rate-limiting binding counts per key and never stores it: the IP is only a key here.
+  // Its period is 10 or 60 seconds, so forgets are limited per minute, not per hour.
+  "ratelimits": [
+    { "name": "INSTALL_LIMIT", "namespace_id": "13701", "simple": { "limit": 30, "period": 60 } },
+    { "name": "IP_LIMIT", "namespace_id": "13702", "simple": { "limit": 120, "period": 60 } },
+    { "name": "FORGET_LIMIT", "namespace_id": "13703", "simple": { "limit": 5, "period": 60 } },
+  ],
+  // 02:15 UTC: roll yesterday up, prune, refresh the catalogue (src/nightly.ts).
+  "triggers": { "crons": ["15 2 * * *"] },
+}

@@ -8,17 +8,17 @@ import app.penmoss.sync.SyncStatus
 enum class NoteSyncState(val label: String, val explanation: String) {
     SYNCED("Synced", "Penmoss has every edit made to this note on this phone."),
     SYNCING("Syncing", "This note's edits are being sent now."),
-    WAITING("Waiting to upload", "Edits or pictures made here are on this phone and go to Penmoss with the next sync."),
-    PICTURES_FAILED("Pictures failed", ""),
+    WAITING("Waiting to Upload", "Edits or pictures made here are on this phone and go to Penmoss with the next sync."),
+    PICTURES_FAILED("Pictures Failed", ""),
     OFFLINE("Offline", "Penmoss can't be reached. This note is as it was last synced, and edits made here stay on this phone until it can be."),
-    FAILING("Not synced", "Penmoss answered with an error at the last sync. Edits made here stay on this phone and are tried again."),
+    FAILING("Not Synced", "Penmoss answered with an error at the last sync. Edits made here stay on this phone and are tried again."),
 }
 
 /** The note's state, and how many of its pictures failed for good, in words. */
 data class NoteSync(val state: NoteSyncState, val picturesFailed: Int = 0) {
     /** As the web's pill says it ("2 images failed"), in the phone's word for them. */
     val label: String
-        get() = if (state == NoteSyncState.PICTURES_FAILED) "$picturesFailed picture${if (picturesFailed == 1) "" else "s"} failed" else state.label
+        get() = if (state == NoteSyncState.PICTURES_FAILED) "$picturesFailed Picture${if (picturesFailed == 1) "" else "s"} Failed" else state.label
 
     val explanation: String
         get() = when {

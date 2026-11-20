@@ -884,12 +884,18 @@ function NoteMenuItems({
             onTab={onTab ? () => onTab(only) : null}
             onWindow={() => onWindow(only)}
           />
-          <MenuItem icon="plus" data-testid="note-new-note" onClick={() => onNewNote(only)}>
+          <MenuItem
+            icon="plus"
+            data-testid="note-new-note"
+            data-event="tree.note-menu.new-note"
+            onClick={() => onNewNote(only)}
+          >
             New Note Here
           </MenuItem>
           <MenuItem
             icon="folderPlus"
             data-testid="note-new-folder"
+            data-event="tree.note-menu.new-folder"
             onClick={() => onNewFolder(only)}
           >
             New Folder Here
@@ -899,27 +905,43 @@ function NoteMenuItems({
             icon="agentRef"
             onClick={() => onCopyReference(only)}
             data-testid="note-menu-copy-agent-reference"
+            data-event="tree.note-menu.copy-agent-reference"
           >
             Copy Agent Reference
           </MenuItem>
           <MenuItem
             icon="pin"
             data-testid="note-menu-quick-access"
+            data-event={
+              quickAccess?.(only)
+                ? 'tree.note-menu.quick-access.unpin'
+                : 'tree.note-menu.quick-access.pin'
+            }
             disabled={quickAccess === null}
             onClick={() => onPin(only)}
           >
             {quickAccess?.(only) ? 'Unpin from Quick Access' : 'Pin to Quick Access'}
           </MenuItem>
           <div className="menu-sep" role="separator" />
-          <MenuItem icon="pencil" data-testid="note-menu-rename" onClick={() => onRename(only)}>
+          <MenuItem
+            icon="pencil"
+            data-testid="note-menu-rename"
+            data-event="tree.note-menu.rename"
+            onClick={() => onRename(only)}
+          >
             Rename
           </MenuItem>
-          <MenuItem icon="copy" data-testid="note-menu-duplicate" onClick={() => onDuplicate(only)}>
+          <MenuItem
+            icon="copy"
+            data-testid="note-menu-duplicate"
+            data-event="tree.note-menu.duplicate"
+            onClick={() => onDuplicate(only)}
+          >
             Duplicate
           </MenuItem>
         </>
       ) : null}
-      <MenuItem icon="folder" onClick={() => onMove(ids)}>
+      <MenuItem icon="folder" data-event="tree.note-menu.move" onClick={() => onMove(ids)}>
         {several ? `Move ${ids.length} Notes…` : 'Move to Folder…'}
       </MenuItem>
       {onTransfer ? (
@@ -929,7 +951,7 @@ function NoteMenuItems({
         />
       ) : null}
       <div className="menu-sep" role="separator" />
-      <MenuItem icon="trash" danger onClick={() => onTrash(ids)}>
+      <MenuItem icon="trash" danger data-event="tree.note-menu.trash" onClick={() => onTrash(ids)}>
         {several ? `Move ${ids.length} Notes to Trash` : 'Move to Trash'}
       </MenuItem>
     </>
@@ -959,10 +981,20 @@ function FolderMenuItems({
 }) {
   return (
     <>
-      <MenuItem icon="plus" data-testid="folder-new-note" onClick={() => onNewNote(id)}>
+      <MenuItem
+        icon="plus"
+        data-testid="folder-new-note"
+        data-event="tree.folder-menu.new-note"
+        onClick={() => onNewNote(id)}
+      >
         New Note Here
       </MenuItem>
-      <MenuItem icon="folderPlus" data-testid="folder-new-folder" onClick={() => onNewFolder(id)}>
+      <MenuItem
+        icon="folderPlus"
+        data-testid="folder-new-folder"
+        data-event="tree.folder-menu.new-folder"
+        onClick={() => onNewFolder(id)}
+      >
         New Folder Here
       </MenuItem>
       {onTransfer ? (
@@ -973,11 +1005,16 @@ function FolderMenuItems({
       ) : null}
       <div className="menu-sep" role="separator" />
       {/* The menu's own icon size, on its items' column; the row's 14px one sat 2px short (A988). */}
-      <MenuItem icon="pencil" onClick={() => onRename(id)}>
+      <MenuItem icon="pencil" data-event="tree.folder-menu.rename" onClick={() => onRename(id)}>
         Rename
       </MenuItem>
       <div className="menu-sep" role="separator" />
-      <MenuItem icon="trash" danger onClick={() => onDelete(id)}>
+      <MenuItem
+        icon="trash"
+        danger
+        data-event="tree.folder-menu.delete"
+        onClick={() => onDelete(id)}
+      >
         Delete Folder…
       </MenuItem>
     </>
@@ -1014,10 +1051,22 @@ function ConfirmDelete({
         You can restore it from Trash for 30 days.
       </p>
       <div className="confirm-actions">
-        <button type="button" className="btn" data-ui="dismiss" onClick={onCancel} autoFocus>
+        <button
+          type="button"
+          className="btn"
+          data-ui="dismiss"
+          data-event="tree.delete-folder.cancel"
+          onClick={onCancel}
+          autoFocus
+        >
           Cancel
         </button>
-        <button type="submit" className="btn danger-fill" data-ui="submit">
+        <button
+          type="submit"
+          className="btn danger-fill"
+          data-ui="submit"
+          data-event="tree.delete-folder.confirm"
+        >
           Delete Folder
         </button>
       </div>

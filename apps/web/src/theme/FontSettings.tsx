@@ -185,6 +185,7 @@ function NoteSizeField({
           type="button"
           className="btn quiet"
           data-ui="item"
+          data-event="settings.appearance.note-font-size.smaller"
           aria-label="Smaller"
           data-tip="Smaller"
           disabled={size <= NOTE_FONT_SIZE.min}
@@ -211,6 +212,7 @@ function NoteSizeField({
           type="button"
           className="btn quiet"
           data-ui="item"
+          data-event="settings.appearance.note-font-size.larger"
           aria-label="Larger"
           data-tip="Larger"
           disabled={size >= NOTE_FONT_SIZE.max}
@@ -225,6 +227,7 @@ function NoteSizeField({
           type="button"
           className="btn quiet"
           data-ui="item"
+          data-event="settings.appearance.note-font-size.reset"
           onClick={() => {
             // Already the default: nothing to store.
             if (draft !== null || workspace.settings()[NOTE_FONT_SIZE_SETTING] !== undefined)

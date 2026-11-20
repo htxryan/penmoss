@@ -111,6 +111,7 @@ export function PeriodNav({ replica }: { replica: Yjs14Replica | null }) {
               type="button"
               className="period-day"
               data-ui="item"
+              data-event="journal.period-nav.day"
               data-has-note={has('daily', day.toString()) ? 'true' : undefined}
               aria-label={longDate(day)}
               onClick={() => go('daily', day.toString())}

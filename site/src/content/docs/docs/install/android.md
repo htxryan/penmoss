@@ -57,7 +57,7 @@ Under **Notebooks**, each notebook has a row with its sync state; tap it for the
 **All Notebooks** lists them all, with **+ Add Notebook** (the first run's steps, from **Create or Open Notebook**), and:
 
 - **Between Notebooks:** **Primary Notebook** first (where Today, This Week and captures go on this phone, and where your app settings are kept), then **Keep Settings in Step** (each change to the Primary Notebook's settings goes to your other notebooks a moment later; this phone's choice), **Copy Tags When Copying Notes**, and **Copy Settings…**: pick **From** and **To** and choose **Copy Settings** to replace the other notebook's settings, once. Quick Access stays as it is. Keep Settings in Step and Copy Settings… show with two notebooks or more.
-- **Commits From This Phone:** the name and email the phone commits as, and its signing key.
+- **Commits from This Phone:** the name and email the phone commits as, and its signing key.
 - **Background Sync:** the last background sync and the next.
 
 The phone syncs over HTTPS with a token; SSH remotes are not supported.
@@ -82,7 +82,7 @@ With the app closed, Android syncs your notebooks about every 15 minutes, the sh
 
 - not while the battery is low or battery saver is on;
 - not on mobile data with Data Saver on;
-- on mobile data, it skips notebooks set to **Wi-Fi only** and fetches less;
+- on mobile data, it skips notebooks set to **Wi-Fi Only** and fetches less;
 - in Doze, when the phone has been still for a while.
 
 **Settings → All Notebooks → Background Sync** shows the last run and the next.
@@ -99,7 +99,7 @@ Removing a notebook, Delete for Good and restoring a version first ask for your 
 
 ## Storage and pictures from the web
 
-**Settings → Storage** shows the space **Files and Pictures in Notes** and **Pictures From the Web** take on the phone; **Clear…** empties the saved web pictures after asking. **Load Pictures From the Web** is **Always**, **On Wi-Fi** or **Never**: loading one lets its website see your phone's IP address. Files over 10 MB upload on Wi-Fi only.
+**Settings → Storage** shows the space **Files and Pictures in Notes** and **Pictures from the Web** take on the phone; **Clear…** empties the saved web pictures after asking. **Load Pictures from the Web** is **Always**, **On Wi-Fi** or **Never**: loading one lets its website see your phone's IP address. Files over 10 MB upload on Wi-Fi only.
 
 ## GitHub
 

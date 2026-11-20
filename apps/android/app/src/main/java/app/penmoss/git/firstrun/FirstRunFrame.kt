@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.Button
 import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.TextButton
@@ -63,6 +64,8 @@ internal fun Frame(
     name: String,
     title: String,
     step: Int? = null,
+    /** In the step bar's place of "Step n of 3", every bar filled: the consent's "Last Step" (PEN-137). */
+    stepLabel: String? = null,
     back: (() -> Unit)? = null,
     /** Cancel in Back's place: the flow's first screen when Add Notebook opened it (A1562). */
     cancel: (() -> Unit)? = null,
@@ -79,6 +82,13 @@ internal fun Frame(
     strip: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
+    // Each step is recorded by its kind (PEN-137): `firstrun.<name>`, never what it holds.
+    androidx.compose.runtime.LaunchedEffect(name) {
+        val catalogue = app.penmoss.analytics.AnalyticsCatalogue.bundled
+        // A screen's variant ("repo-empty") is its step's kind ("repo").
+        val kind = "firstrun.$name".takeIf { catalogue.has("screen", it) } ?: "firstrun.${name.substringBefore('-')}"
+        app.penmoss.analytics.Analytics.screen(kind)
+    }
     // The screen draws its own background, so its text takes the colour on it: without this,
     // words with no colour of their own were black on dark (Ryan, on his phone).
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
@@ -98,6 +108,7 @@ internal fun Frame(
                 // The welcome's words sit a third of the way down.
                 if (centered) Spacer(Modifier.height(96.dp))
                 if (step != null) StepBar(step)
+                if (stepLabel != null) StepBar(3, stepLabel)
                 above?.invoke()
                 Text(
                     title,
@@ -130,8 +141,8 @@ internal fun Frame(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     when {
-                        cancel != null && back == null -> Link("Cancel", "first-run-cancel", "x", cancel)
-                        back != null -> Link("Back", "first-run-back", "chevron-left", back)
+                        cancel != null && back == null -> Link("Cancel", "first-run-cancel", "x", event = "firstrun.cancel", onClick = cancel)
+                        back != null -> Link("Back", "first-run-back", "chevron-left", event = "firstrun.back", onClick = back)
                         start != null -> start()
                     }
                     Spacer(Modifier.weight(1f))
@@ -142,11 +153,11 @@ internal fun Frame(
     }
 }
 
-/** "Step n of 3" and its three bars. */
+/** "Step n of 3" (or [label]) and its three bars. */
 @Composable
-private fun StepBar(step: Int) {
+private fun StepBar(step: Int, label: String = "Step $step of 3") {
     Column(Modifier.fillMaxWidth().testTag("first-run-step-bar"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Step $step of 3", style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (each in 1..3) {
                 Box(
@@ -186,10 +197,10 @@ private fun ButtonWords(text: String) {
     Text(text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
 }
 
-/** The footer's primary button. */
+/** The footer's primary button, counted as [event] (PEN-137; the Mac's `firstrun.continue`). */
 @Composable
-internal fun Primary(text: String, tag: String, icon: String, enabled: Boolean = true, busy: Boolean = false, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled && !busy, modifier = Modifier.testTag(tag)) {
+internal fun Primary(text: String, tag: String, icon: String, enabled: Boolean = true, busy: Boolean = false, event: String = "firstrun.continue", onClick: () -> Unit) {
+    Button(onClick = trackedClick(event, onClick), enabled = enabled && !busy, modifier = Modifier.testTag(tag)) {
         if (busy) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
             Spacer(Modifier.width(8.dp))
@@ -200,19 +211,25 @@ internal fun Primary(text: String, tag: String, icon: String, enabled: Boolean =
     }
 }
 
-/** A plain footer or inline button. */
+/** A plain footer or inline button, counted as [event] (PEN-137; the Mac's `firstrun.action`). */
 @Composable
-internal fun Plain(text: String, tag: String, icon: String, enabled: Boolean = true, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.testTag(tag)) {
+internal fun Plain(text: String, tag: String, icon: String, enabled: Boolean = true, event: String = "firstrun.action", onClick: () -> Unit) {
+    OutlinedButton(onClick = trackedClick(event, onClick), enabled = enabled, modifier = Modifier.testTag(tag)) {
         ButtonIcon(icon)
         ButtonWords(text)
     }
 }
 
-/** A quiet button inside the screen (Paste a URL Instead, Refresh, Change). */
+/** A quiet button inside the screen (Paste a URL Instead, Refresh, Change), counted as `firstrun.link` (PEN-137), as the Mac's. */
 @Composable
 internal fun Link(text: String, tag: String, icon: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, Modifier.testTag(tag)) {
+    Link(text, tag, icon, event = "firstrun.link", onClick = onClick)
+}
+
+/** [Link], counted as [event]: Back, Cancel, More Options. */
+@Composable
+internal fun Link(text: String, tag: String, icon: String, event: String, onClick: () -> Unit) {
+    TextButton(onClick = trackedClick(event, onClick), Modifier.testTag(tag)) {
         ButtonIcon(icon)
         ButtonWords(text)
     }
@@ -271,9 +288,9 @@ internal fun Chip(text: String, tag: String? = null) {
 /** One of a screen's choices, drawn as a wide row. */
 internal data class Option<T>(val value: T, val title: String, val line: String, val tag: String, val chip: String? = null, val enabled: Boolean = true)
 
-/** Radio choices drawn as wide rows: one picked, the footer's button goes on with it. */
+/** Radio choices drawn as wide rows: one picked, the footer's button goes on with it. A pick is counted as [event]. */
 @Composable
-internal fun <T> Options(value: T, items: List<Option<T>>, onChange: (T) -> Unit) {
+internal fun <T> Options(value: T, items: List<Option<T>>, event: String = "firstrun.option", onChange: (T) -> Unit) {
     Column(Modifier.selectableGroup().fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (item in items) {
             val picked = item.value == value
@@ -281,7 +298,7 @@ internal fun <T> Options(value: T, items: List<Option<T>>, onChange: (T) -> Unit
                 Modifier
                     .fillMaxWidth()
                     .border(1.dp, if (picked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                    .selectable(selected = picked, enabled = item.enabled, role = Role.RadioButton) { onChange(item.value) }
+                    .selectable(selected = picked, enabled = item.enabled, role = Role.RadioButton, onClick = trackedClick(event) { onChange(item.value) })
                     .padding(horizontal = 8.dp, vertical = 12.dp)
                     .testTag(item.tag),
                 verticalAlignment = Alignment.CenterVertically,
@@ -316,7 +333,7 @@ internal fun PlaceCard(label: String, dir: String, branch: String, notebook: Str
 internal fun MoreOptions(branch: String, dir: String, onBranch: (String) -> Unit, onDir: (String) -> Unit) {
     var open by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().testTag("first-run-more"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Link("More Options", "first-run-more-toggle", if (open) "chevron-down" else "chevron-right") { open = !open }
+        Link("More Options", "first-run-more-toggle", if (open) "chevron-down" else "chevron-right", event = "firstrun.more-options") { open = !open }
         if (open) {
             OutlinedTextField(branch, onBranch, Modifier.fillMaxWidth().testTag("first-run-branch"), label = { Text("Branch") }, singleLine = true)
             OutlinedTextField(dir, onDir, Modifier.fillMaxWidth().testTag("first-run-dir"), label = { Text("Folder (Optional)") }, singleLine = true)

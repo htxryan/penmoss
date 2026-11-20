@@ -209,6 +209,19 @@ class GitHubFeedbackTest {
         assertEquals(before, github.calls.size)
     }
 
+    /** PEN-137 (AC7): a bug's anonymised logs are a collapsed block before the footer, redacted again. */
+    @Test
+    fun aBugsLogsAreFiledAsACollapsedBlockBeforeTheFooter() = runBlocking {
+        val logs = listOf("2026-11-19T11:54:16.525Z info Sync pass ok", "2026-11-19T11:54:17.001Z warn token=ghp_abcdefghijklmnopqrstuvwxyz0123456789 refused")
+        val withLogs = payload().removeSuffix("}") + ""","logs":${Json.encodeToString(kotlinx.serialization.json.JsonArray(logs.map { kotlinx.serialization.json.JsonPrimitive(it) }))}}"""
+        api.sendFeedback(withLogs, emptyList())
+        val body = github.issues.single().body
+        assertTrue(body, body.contains("<details>\n<summary>Anonymised Logs (2 lines)</summary>\n\n```text\n2026-11-19T11:54:16.525Z info Sync pass ok\n"))
+        assertFalse(body.contains("ghp_"))
+        assertTrue(body.indexOf("Anonymised Logs") > body.indexOf("Captured Context"))
+        assertTrue(body.indexOf("Anonymised Logs") < body.indexOf("Sent from Penmoss"))
+    }
+
     @Test
     fun aCreateWhoseAnswerWasLostIsFoundByItsFooterNeverFiledTwice() = runBlocking {
         // GitHub files it, then answers 502.
@@ -404,7 +417,7 @@ class GitHubFeedbackTest {
 
         store.remove("htxryan")
         assertNull(store.token())
-        assertEquals(FeedbackRoutes.tokenSummary(emptyList()), "Not signed in")
+        assertEquals(FeedbackRoutes.tokenSummary(emptyList()), "Not Signed In")
     }
 
     /** A work account beside a personal one (A1616): each kept sealed, either first, removing one keeps the other. */

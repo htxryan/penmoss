@@ -32,7 +32,10 @@ internal fun StorageRoute(device: DeviceGraph, onBack: () -> Unit) {
     StorageScreen(
         use,
         setting,
-        onWebPictures = device.webPictures.settings::set,
+        onWebPictures = { setting ->
+            app.penmoss.analytics.SettingEvents.recordValue("pictures.fromWeb", setting.key)
+            device.webPictures.settings.set(setting)
+        },
         onClearWebPictures = {
             scope.launch {
                 withContext(Dispatchers.IO) { device.webPictures.pictures.clear() }

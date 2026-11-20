@@ -82,7 +82,7 @@ class TrashScreensTest {
     fun deleteForGoodAsksFirstAndCancelSendsNothing() {
         trash(TrashUi(entries = listOf(sent)))
         compose.onNodeWithTag("deleteForGood-old").performClick()
-        compose.onNodeWithText("Delete “Old plan” for good?").assertIsDisplayed()
+        compose.onNodeWithText("Delete “Old plan” for Good?").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         assertTrue(events.isEmpty())
         compose.onNodeWithTag("deleteForGood-old").performClick()

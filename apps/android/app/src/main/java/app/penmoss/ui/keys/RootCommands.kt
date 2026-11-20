@@ -45,6 +45,9 @@ object CommandRoutes {
     const val GIT_NOTEBOOKS = "settings/git"
     /** Feedback still on the phone and the GitHub token (T59, A1046). */
     const val ABOUT = "settings/about"
+
+    /** Settings → Privacy (PEN-137). */
+    const val PRIVACY = "settings/privacy"
     const val TRASH = "trash"
     const val JOURNAL = "journal"
 }
@@ -65,6 +68,7 @@ fun RootCommands(actions: RootActions, inbox: DeepLinkInbox) {
     RegisterCommand("app.settings") { actions.open(CommandRoutes.SETTINGS) }
     RegisterCommand("app.gitNotebooks") { actions.open(CommandRoutes.GIT_NOTEBOOKS) }
     RegisterCommand("app.status") { actions.open(CommandRoutes.ABOUT) }
+    RegisterCommand("app.privacy") { actions.open(CommandRoutes.PRIVACY) }
     RegisterCommand("app.sendFeedback") { actions.feedback() }
     RegisterCommand("app.appearance") { actions.open(CommandRoutes.APPEARANCE) }
     RegisterCommand("app.display") { actions.open(CommandRoutes.DISPLAY) }

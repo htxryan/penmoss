@@ -85,6 +85,17 @@ export interface DesktopConfig {
    * `0.2.2-alpha.1185` (`PENMOSS_TEST_APP_VERSION`, unpackaged builds only); otherwise the app's.
    */
   readonly testVersion: string | null;
+  /**
+   * The log file's folder (PEN-137): the suite's own (`PENMOSS_LOG_DIR`, unpackaged builds only);
+   * otherwise `~/Library/Logs/Penmoss`.
+   */
+  readonly logDir: string | null;
+  /**
+   * Usage analytics' endpoint (PEN-137): the suite's stand-in (`PENMOSS_ANALYTICS_URL`, an http
+   * origin on loopback, unpackaged builds only); otherwise https://t.penmoss.app, so nothing in
+   * a packaged app's environment can send its usage elsewhere.
+   */
+  readonly analyticsUrl: string | null;
 }
 
 /**
@@ -141,6 +152,8 @@ export function desktopConfig(options: {
       dev('PENMOSS_TEST_GITHUB_CLIENT_ID') ??
       (dev('PENMOSS_TEST_GITHUB_API') ? null : GITHUB_CLIENT_ID),
     testVersion: dev('PENMOSS_TEST_APP_VERSION') ?? null,
+    logDir: dev('PENMOSS_LOG_DIR') ?? null,
+    analyticsUrl: loopbackOrigin(dev('PENMOSS_ANALYTICS_URL'), 'PENMOSS_ANALYTICS_URL'),
   };
 }
 

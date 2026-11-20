@@ -165,7 +165,7 @@ class EditorToolsTest {
             ),
         )
         compose.setContent { PenmossTheme { BlockSheet(BlockPurpose.TURN_INTO, choices, onQuery = {}, onPick = {}, onDismiss = {}) } }
-        compose.onNodeWithText("Turn into").assertExists()
+        compose.onNodeWithText("Turn Into").assertExists()
         compose.onNodeWithTag("block-paragraph").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
         compose.onNodeWithTag("block-heading1").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
         choices = BlockChoices(BlockPurpose.TURN_INTO, "", emptyList())

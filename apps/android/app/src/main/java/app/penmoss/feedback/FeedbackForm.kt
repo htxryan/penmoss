@@ -31,9 +31,14 @@ data class FeedbackDraft(
     val screenshots: List<DraftImage> = emptyList(),
     /** The context groups left out (their wire ids). */
     val omitted: List<String> = emptyList(),
+    /** Attach Anonymised Logs as ticked (PEN-137); null: as it starts, ticked for a bug. */
+    val logs: Boolean? = null,
 ) {
     /** Nothing typed, chosen or added: no draft worth keeping. */
     val blank: Boolean get() = type == null && priority == null && title.isBlank() && description.isBlank() && screenshots.isEmpty() && omitted.isEmpty()
+
+    /** Whether the logs go with it: a bug report's, ticked unless the person unticked it (O6). */
+    val attachesLogs: Boolean get() = type == FeedbackType.BUG.wire && logs != false
 }
 
 /** What is missing or wrong in a form, field by field (T49): said under each field and read out. */
@@ -63,7 +68,12 @@ object FeedbackValidation {
 object FeedbackPayload {
     private val json = Json { encodeDefaults = true }
 
-    fun of(draft: FeedbackDraft, version: String, context: FeedbackContextData): String {
+    /**
+     * [logs] are the anonymised lines the form showed: sent only for a bug report with Attach
+     * Anonymised Logs ticked, and kept with the payload, so a report sent later sends what it
+     * previewed (PEN-137).
+     */
+    fun of(draft: FeedbackDraft, version: String, context: FeedbackContextData, logs: List<String> = emptyList()): String {
         val type = requireNotNull(FeedbackType.of(draft.type)) { "no type" }
         val priority = requireNotNull(draft.priority) { "no priority" }
         return buildJsonObject {
@@ -74,6 +84,7 @@ object FeedbackPayload {
             put("description", draft.description)
             put("version", Js.trim(Js.collapseSpaces(version)).take(FeedbackLimits.VERSION_MAX))
             put("context", json.encodeToJsonElement(FeedbackContextData.serializer(), context.without(draft.omitted.toSet())))
+            if (draft.attachesLogs && logs.isNotEmpty()) put("logs", kotlinx.serialization.json.JsonArray(logs.map(::JsonPrimitive)))
         }.toString()
     }
 
@@ -84,7 +95,12 @@ object FeedbackPayload {
      * description and submission id, and the context it was sent with (the groups left out are
      * not in it). Null for one that is not a payload.
      */
-    fun formOf(payload: String): Pair<FeedbackDraft, FeedbackContextData>? = try {
+    fun formOf(payload: String): Pair<FeedbackDraft, FeedbackContextData>? = editOf(payload)?.let { it.draft to it.context }
+
+    /** What Edit puts back: the form, the context it was sent with, and the logs it attached. */
+    data class Sent(val draft: FeedbackDraft, val context: FeedbackContextData, val logs: List<String>)
+
+    fun editOf(payload: String): Sent? = try {
         val value = reader.parseToJsonElement(payload).jsonObject
         fun text(key: String) = (value[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
         val draft = FeedbackDraft(
@@ -95,7 +111,8 @@ object FeedbackPayload {
             description = text("description").orEmpty(),
         )
         val context = value["context"]?.let { reader.decodeFromJsonElement(FeedbackContextData.serializer(), it) } ?: FeedbackContextData()
-        draft to context
+        val logs = (value["logs"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }.orEmpty()
+        Sent(if (draft.type == FeedbackType.BUG.wire && logs.isEmpty() && value["logs"] == null) draft.copy(logs = false) else draft, context, logs)
     } catch (error: Exception) {
         if (error is kotlinx.coroutines.CancellationException) throw error
         null

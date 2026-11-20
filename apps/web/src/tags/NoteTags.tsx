@@ -123,6 +123,7 @@ export function NoteTags({
               type="button"
               className="tag-chip-name"
               data-ui="item"
+              data-event="tags.note-chip.show"
               data-tip={`Show Notes Tagged #${tag}`}
               onClick={() => showTag(tag)}
             >
@@ -133,6 +134,7 @@ export function NoteTags({
                 type="button"
                 className="tag-chip-remove"
                 data-ui="item"
+                data-event="tags.note-chip.remove"
                 aria-label={`Remove the Tag #${tag}`}
                 data-tip={`Remove the Tag #${tag}`}
                 onClick={() => setFrontmatterTag(replica.doc, tag, false)}

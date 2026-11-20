@@ -178,6 +178,7 @@ export function Calendar({
       <SectionHead
         name="Calendar"
         nameId="calendar-name"
+        data-event="calendar.section.toggle"
         collapsed={!open}
         onToggle={() => toggle(!open)}
         controls="calendar-body"
@@ -192,6 +193,7 @@ export function Calendar({
             type="button"
             className="icon-btn"
             data-ui="item"
+            data-event="calendar.previous-month"
             aria-label="Previous Month"
             data-tip="Previous Month"
             onClick={() => step(-1)}
@@ -210,6 +212,7 @@ export function Calendar({
             type="button"
             className="icon-btn"
             data-ui="item"
+            data-event="calendar.next-month"
             aria-label="Next Month"
             data-tip="Next Month"
             onClick={() => step(1)}
@@ -251,6 +254,7 @@ export function Calendar({
                       type="button"
                       className="calendar-week"
                       data-ui="item"
+                      data-event="calendar.week"
                       data-cell={cellKey(weekCell(days[0]!))}
                       tabIndex={tabStop === cellKey(weekCell(days[0]!)) ? 0 : -1}
                       onFocus={() => setCursor(weekCell(days[0]!))}
@@ -271,6 +275,7 @@ export function Calendar({
                           type="button"
                           className="calendar-day"
                           data-ui="item"
+                          data-event="calendar.day"
                           data-cell={cellKey(dayCell(date))}
                           tabIndex={tabStop === cellKey(dayCell(date)) ? 0 : -1}
                           onFocus={() => setCursor(dayCell(date))}

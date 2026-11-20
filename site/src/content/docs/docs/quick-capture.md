@@ -25,7 +25,7 @@ Inside Penmoss, **Quick Capture…** (⌘⇧K) opens the same form. The [menu ba
 
 ### Change the hotkey
 
-In **Settings → Quick Capture → Shortcut From Any App**, click **Change**, then press the keys you want, as you would for any other [shortcut](/docs/shortcuts/#change-a-shortcut). Escape cancels. It needs two modifiers or more, one of them ⌘ or ⌃, and not a combination that copies, pastes, undoes or edits text; if Penmoss can't use the keys you pressed, the row says why and keeps the old ones. macOS cannot tell Penmoss whether another app takes the keys first, so if the hotkey does nothing, choose another.
+In **Settings → Quick Capture → Shortcut from Any App**, click **Change**, then press the keys you want, as you would for any other [shortcut](/docs/shortcuts/#change-a-shortcut). Escape cancels. It needs two modifiers or more, one of them ⌘ or ⌃, and not a combination that copies, pastes, undoes or edits text; if Penmoss can't use the keys you pressed, the row says why and keeps the old ones. macOS cannot tell Penmoss whether another app takes the keys first, so if the hotkey does nothing, choose another.
 
 **Show in the Menu Bar**, under it, turns the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) on or off. Both are this Mac's own: they don't sync.
 

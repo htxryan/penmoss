@@ -15,6 +15,7 @@ import { errorRing } from './feedback/errors';
 import { FeedbackContext, FeedbackService } from './feedback/service';
 import { deviceStorage } from './shell/device-pref';
 import { installModalFocusTrap } from './shell/focus-trap';
+import { installClickTracking } from './analytics/track';
 import { installMainTabs } from './tabs/controller';
 import { shownNotes } from './tabs/state';
 import { setTabNotes } from './notes/kept-editors';
@@ -39,6 +40,9 @@ theme.start();
 
 // Tab stays inside an open modal dialog (T39).
 installModalFocusTrap(document);
+
+// Tracked controls' clicks, by their `data-event` ids (PEN-137).
+installClickTracking(document);
 
 // Back and Forward know where this window's history starts (a note window's, T45).
 startHistory();

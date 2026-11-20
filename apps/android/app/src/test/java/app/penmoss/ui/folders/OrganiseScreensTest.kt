@@ -94,7 +94,7 @@ class OrganiseScreensTest {
             PenmossTheme {
                 if (open) {
                     FolderPickerSheet(
-                        "Move “Soup” to…",
+                        "Move “Soup” To…",
                         choices,
                         current = "garden",
                         onPick = {
@@ -106,7 +106,7 @@ class OrganiseScreensTest {
                 }
             }
         }
-        compose.onNodeWithText("Move “Soup” to…").assertIsDisplayed()
+        compose.onNodeWithText("Move “Soup” To…").assertIsDisplayed()
         compose.onNodeWithTag("folderChoice:garden").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
         compose.onNodeWithTag("folderChoice:beds").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
         compose.onNodeWithText("Raised beds").performClick()
@@ -199,7 +199,7 @@ class OrganiseScreensTest {
         val deep = (1..12).map { FolderEntity("l$it", "Level $it", if (it == 1) null else "l${it - 1}", if (it == 1) "z9" else "a0", "manual") }
         val deepChoices = Items.folderChoices("manual", folders + deep)
         compose.setContent {
-            PenmossTheme { FolderPickerSheet("Move to…", deepChoices, current = null, onPick = {}, onDismiss = {}) }
+            PenmossTheme { FolderPickerSheet("Move To…", deepChoices, current = null, onPick = {}, onDismiss = {}) }
         }
         // Two folders of the same name are told apart: TalkBack hears the parent.
         compose.onNodeWithTag("folderChoice:beds").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "in Garden"))
@@ -333,7 +333,7 @@ class OrganiseScreensTest {
         }
         compose.onNodeWithContentDescription("New Note in This Folder").performClick()
         compose.onNodeWithContentDescription("More Options").performClick()
-        compose.onNodeWithText("New Note in…").performClick()
+        compose.onNodeWithText("New Note In…").performClick()
         compose.onNodeWithText("Plan").performTouchInput { longClick() }
         assertEquals(listOf("new here", "pick", "move:p"), events)
     }

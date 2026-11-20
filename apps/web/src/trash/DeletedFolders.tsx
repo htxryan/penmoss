@@ -58,6 +58,7 @@ export function DeletedFolderList({
                 type="button"
                 className="btn"
                 data-ui="item"
+                data-event="trash.folder.restore"
                 disabled={busy}
                 aria-label={`Restore the folder ${folder.name}`}
                 onClick={() => onRestore(folder)}

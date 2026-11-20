@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { DialogClose } from '../shell/DialogClose';
 import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
 import { usePickerList } from '../shell/picker-list';
+import { useTrackedDialog } from '../analytics/dialog';
 import { deviceTimeZone, timeZones, utcOffset, zoneName } from './time-zones';
 
 /** What a query matches a zone by: its name, with spaces for underscores, and its offset. */
@@ -36,6 +37,7 @@ export function TimeZonePicker({
   readonly onChoose: (zone: string) => void;
   readonly onClose: () => void;
 }) {
+  const tracked = useTrackedDialog('timeZone');
   const [query, setQuery] = useState('');
   const all = useMemo<ZoneChoice[]>(() => {
     const now = new Date();
@@ -71,7 +73,9 @@ export function TimeZonePicker({
     ),
   );
   const choose = (choice: ZoneChoice | undefined) => {
-    if (choice) onChoose(choice.zone);
+    if (!choice) return;
+    tracked.done();
+    onChoose(choice.zone);
   };
   const picker = usePickerList({
     items,

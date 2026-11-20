@@ -8,6 +8,7 @@ import { log, mac, macWindows, preferencesFile, state } from './app-state';
 import { currentHotkey } from './capture-hotkey';
 import { savePreferences } from './preferences';
 import { pinPath, TRAY_ICON, TRAY_TOOLTIP, trayMenuTemplate, type QuickAccessPin } from './tray';
+import { analytics } from './services';
 import { deliverToMain, openInMain } from './windows/main-window';
 import { showCapture } from './windows/capture-window';
 
@@ -33,13 +34,25 @@ function runInMain(id: string): void {
 function wantedTrayTemplate(): MenuItemConstructorOptions[] | null {
   if (!macWindows || state.preferences.menuBarIcon === false) return null;
   const hotkey = currentHotkey();
+  // Each item is recorded by its catalogue name (PEN-137), never a note's id or title.
+  const chosen = (name: string) => analytics.record('menu', name, { source: 'tray' });
   return trayMenuTemplate(quickAccessPins, hotkey.registered ? hotkey.accelerator : null, {
-    capture: () => showCapture(),
-    today: () => runInMain('journal.today'),
+    capture: () => {
+      chosen('tray.capture');
+      showCapture();
+    },
+    today: () => {
+      chosen('tray.today');
+      runInMain('journal.today');
+    },
     openNote: (id) => {
+      chosen('tray.quickAccess');
       if (!state.holdingInput) openInMain(pinPath(id));
     },
-    showMain: () => openInMain(null),
+    showMain: () => {
+      chosen('tray.open');
+      openInMain(null);
+    },
   });
 }
 

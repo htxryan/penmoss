@@ -225,9 +225,21 @@ class AppCommands(
     /** The commands that can run now, by id. */
     fun availableIds(): List<String> = synchronized(handlers) { handlers.keys.toList() }.filter(::available).sorted()
 
-    /** Runs [id]; false when nothing can run it now. */
-    fun run(id: String): Boolean {
-        val handler = handlerOf(id)?.takeIf { it.enabled() } ?: return false
+    /**
+     * Runs [id]; false when nothing can run it now. Recorded by name (PEN-137) with how it was
+     * asked for ([source]: `key`, `palette`, `button`, `editor`, …) and, for a key, the combination
+     * and whether it is the person's own binding.
+     */
+    fun run(id: String, source: String = "other", keys: String? = null): Boolean {
+        val handler = handlerOf(id)?.takeIf { it.enabled() }
+        app.penmoss.analytics.Analytics.command(
+            id,
+            source,
+            ran = handler != null,
+            keys = keys,
+            custom = keys?.let { bindings.value.isCustom(id) },
+        )
+        handler ?: return false
         handler.run()
         return true
     }
@@ -270,7 +282,7 @@ class AppCommands(
     /** Runs what [combo] means here: the first available global command bound to it. */
     fun dispatch(combo: String): Boolean {
         val id = runnable(combo) ?: return false
-        return run(id)
+        return run(id, source = "key", keys = combo)
     }
 
     /**

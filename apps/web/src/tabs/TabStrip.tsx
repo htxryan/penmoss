@@ -86,6 +86,7 @@ export function TabFaceView({
         <span
           className="tab-close"
           aria-hidden="true"
+          data-event="tabs.tab.close"
           data-testid="tab-close"
           data-tip={closeTip}
           onClick={(event) => {
@@ -263,6 +264,7 @@ export function TabStrip({
         key={face.id}
         role="tab"
         className="tab"
+        data-event="tabs.tab"
         id={`tab-${face.id}`}
         aria-selected={selected}
         aria-controls="tab-panel"
@@ -375,6 +377,7 @@ export function TabStrip({
           type="button"
           className="tab-all"
           data-ui="menu"
+          data-event="tabs.all"
           aria-label={`All Tabs, ${faces.length}`}
           aria-haspopup="dialog"
           aria-expanded={allOpen}

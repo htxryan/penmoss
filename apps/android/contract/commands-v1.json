@@ -102,6 +102,15 @@
       }
     },
     {
+      "id": "app.privacy",
+      "title": "Privacy Settings",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
       "id": "app.sendFeedback",
       "title": "Send Feedback",
       "area": "General",
@@ -1501,6 +1510,7 @@
       "ids": [
         "app.settings",
         "app.status",
+        "app.privacy",
         "app.gitNotebooks",
         "app.display",
         "app.home",

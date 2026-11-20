@@ -1,0 +1,439 @@
+/*
+ * Usage analytics' screens (PEN-137): the consent question (the first run's last step and the
+ * dialog over the app), Settings → Privacy with its Advanced limits, the inline confirmation,
+ * and Analytics Data. The rows are the Settings pages' (`lf-row`, theme/look-rows.tsx); this file
+ * has what these screens add.
+ */
+
+/* The question: a sentence, then What Is Recorded and Never Recorded side by side. */
+.consent {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.consent-lead,
+.consent-later {
+  margin: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-body);
+}
+
+.consent-later {
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
+}
+
+.consent-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.consent-list {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+}
+
+.consent-list h3 {
+  margin: 0 0 0.35rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
+}
+
+.consent-list ul {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
+}
+
+/* The two answers: the same button twice, each half of the row (ac1, ac8). */
+.consent-answers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.consent-answers > .btn {
+  width: 100%;
+}
+
+/*
+ * The first run's last step: a little wider for the two lists, only as tall as what it says (no
+ * band of empty card under the words), and a footer that is the two answers alone.
+ */
+.fr-screen[data-screen='consent'] {
+  width: min(100%, 36rem);
+  min-height: 0;
+}
+
+.fr-screen[data-screen='consent'] .fr-foot > :not(.fr-actions) {
+  display: none;
+}
+
+.fr-screen[data-screen='consent'] .fr-actions {
+  flex: 1 1 auto;
+  margin-inline-start: 0;
+}
+
+.consent-policy-line {
+  margin: 0;
+}
+
+/* The dialog over the app (an install asked once). */
+.confirm.consent-dialog {
+  width: min(36rem, calc(100vw - 2rem));
+  max-width: none;
+}
+
+.confirm.consent-dialog h2:focus {
+  outline: none;
+}
+
+.consent-dialog .consent {
+  margin-bottom: 1rem;
+}
+
+.consent-policy,
+.privacy-policy a {
+  color: var(--pm-link);
+  font-size: var(--pm-text-item);
+}
+
+/* Settings → Privacy. */
+.settings-content .privacy-settings > .lf-group {
+  margin-top: 1rem;
+}
+
+/* View Analytics Data: the whole row opens the viewer. */
+.privacy-row-link > .lf-row {
+  color: inherit;
+  text-decoration: none;
+}
+
+.privacy-row-link > .lf-row:hover {
+  background: var(--pm-hover);
+}
+
+.privacy-row-link > .lf-row:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.privacy-row-chevron {
+  flex: none;
+  margin-left: auto;
+  color: var(--pm-muted);
+}
+
+.privacy-id {
+  justify-self: start;
+  color: var(--pm-fg);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code-inline);
+}
+
+/*
+ * A confirmation under the control that asked (a row's, a field's): its own line, inside the
+ * row's padding as main's other confirmations sit inside theirs (border-box, so its padding and
+ * border never push it past the group's edge).
+ */
+.privacy-confirm {
+  display: grid;
+  box-sizing: border-box;
+  flex: 1 0 100%;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-danger-soft);
+}
+
+.privacy-confirm p {
+  margin: 0;
+}
+
+.privacy-confirm > .confirm-block-title {
+  margin: 0;
+  font-size: var(--pm-text-row-label);
+}
+
+.privacy-confirm-body {
+  color: var(--pm-fg);
+  font-size: var(--pm-text-item);
+  line-height: var(--pm-leading-help);
+}
+
+.privacy-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Advanced: a disclosure whose summary is the group head, a chevron that turns as it opens. */
+.privacy-advanced-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.privacy-advanced-summary::-webkit-details-marker {
+  display: none;
+}
+
+.privacy-advanced-summary:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.privacy-advanced-chevron {
+  flex: none;
+  color: var(--pm-muted);
+  transition: transform var(--pm-fast) var(--pm-ease);
+}
+
+/* Closed, the subhead says what is inside; open, the intro says it in full. */
+.privacy-advanced[open] .privacy-advanced-hint {
+  display: none;
+}
+
+.privacy-advanced[open] .privacy-advanced-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .privacy-advanced-chevron {
+    transition: none;
+  }
+}
+
+.privacy-advanced-intro {
+  margin: 0 0 1rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-body);
+}
+
+/* The three groups in columns on a wide page, one under another on a narrow one. */
+/* The gaps are the hairlines between groups, beside or under one another. */
+.privacy-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1px;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-border-soft);
+}
+
+.privacy-limit-group {
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+  min-width: 0;
+  padding: 0.75rem;
+  background: var(--pm-raised);
+}
+
+.privacy-limit-group-title {
+  margin: 0;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-group-head);
+}
+
+.privacy-limit {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.privacy-limit-label {
+  color: var(--pm-fg);
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
+}
+
+.privacy-limit-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.privacy-limit-input > .input {
+  width: 7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.privacy-limit-unit,
+.privacy-limit-hint {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
+}
+
+.privacy-limit-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+}
+
+.privacy-limit-refused {
+  color: var(--pm-danger);
+}
+
+.privacy-space {
+  margin: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
+}
+
+.privacy-limits-foot {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.privacy-limits-reset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.privacy-limits-hint {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-help);
+}
+
+.privacy-limits-hint code {
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code-inline);
+}
+
+.settings-section .privacy-policy {
+  margin: 2rem 0 0;
+}
+
+/* Analytics Data's counts by state, under the summary: "Waiting to Send 2 · Sent 41 · …". */
+.privacy-data-counts {
+  margin: 0.5rem 0 0;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* An event's state as a tinted chip: waiting amber, sent green, the rest neutral. */
+.chip.privacy-state {
+  background: color-mix(in oklab, var(--pm-fg) 8%, transparent);
+  white-space: nowrap;
+}
+
+.chip.privacy-state[data-state='waiting'] {
+  background: var(--pm-warn-bg);
+}
+
+.chip.privacy-state[data-state='sent'] {
+  background: color-mix(in oklab, var(--pm-success) 18%, transparent);
+}
+
+/* Analytics Data's entry in the nav, set in under Privacy as a notebook's is. */
+.settings-nav a.privacy-nav-entry {
+  padding-left: 1.6rem;
+}
+
+/* Analytics Data: the filters, the table and the pager. */
+.privacy-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1rem;
+}
+
+.privacy-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.privacy-filter-label {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
+}
+
+.privacy-table-wrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+}
+
+.privacy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--pm-text-meta);
+}
+
+.privacy-table th {
+  position: sticky;
+  top: 0;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  color: var(--pm-muted);
+  font-weight: var(--pm-weight-list-head);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.privacy-table td {
+  padding: 0.3rem 0.6rem;
+  border-top: 1px solid var(--pm-border-soft);
+  color: var(--pm-fg);
+  vertical-align: top;
+}
+
+.privacy-table-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.privacy-table-name,
+.privacy-table-props {
+  font-family: var(--pm-mono);
+  overflow-wrap: anywhere;
+}
+
+.privacy-data-empty {
+  margin: 1rem 0 0;
+  color: var(--pm-muted);
+}
+
+.privacy-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.privacy-pager-count {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.privacy-pager-buttons {
+  display: inline-flex;
+  gap: 0.4rem;
+}

@@ -128,7 +128,7 @@ describe('App', () => {
     for (const path of ['/settings', '/settings/journal', '/settings/sidebar']) {
       const html = render(path);
       expect(html, path).toContain('data-command="app.home"');
-      expect(html, path).toContain('aria-label="Settings sections"');
+      expect(html, path).toContain('aria-label="Settings Sections"');
       expect(html, path).toContain('aria-label="Search Settings"');
       for (const href of [
         '/settings/appearance',

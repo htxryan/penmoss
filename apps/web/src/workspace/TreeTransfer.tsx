@@ -35,11 +35,17 @@ export function TransferButtons({
       <MenuItem
         icon="notebook"
         data-testid="menu-move-to-notebook"
+        data-event="tree.transfer.move"
         onClick={() => onTransfer('move')}
       >
         {noun ? `Move ${noun} to Notebook…` : 'Move to Notebook…'}
       </MenuItem>
-      <MenuItem icon="copy" data-testid="menu-copy-to-notebook" onClick={() => onTransfer('copy')}>
+      <MenuItem
+        icon="copy"
+        data-testid="menu-copy-to-notebook"
+        data-event="tree.transfer.copy"
+        onClick={() => onTransfer('copy')}
+      >
         {noun ? `Copy ${noun} to Notebook…` : 'Copy to Notebook…'}
       </MenuItem>
     </>
@@ -58,7 +64,7 @@ export function TransferMenuItems({
 }) {
   if (!canTransfer) {
     return (
-      <MenuItem icon="notebook" disabled>
+      <MenuItem icon="notebook" data-event="tree.transfer.none" disabled>
         Open another notebook to move these to
       </MenuItem>
     );
@@ -126,6 +132,7 @@ export function TransferPicker({
           <label className="display-toggle">
             <input
               type="checkbox"
+              data-event="tree.transfer.copy-tags"
               checked={tags}
               data-testid="copy-tags"
               onChange={(event) => setTags(event.target.checked)}

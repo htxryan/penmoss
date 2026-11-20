@@ -105,6 +105,7 @@ export function NoteSettings() {
                   checked={metadata.underTitle.includes(field)}
                   disabled={!metadata.canChange}
                   testId={`metadata-title-${field}`}
+                  data-event="settings.note.under-title"
                   onChange={(on) => metadata.setUnderTitle(field, on)}
                 />
               ))}
@@ -127,6 +128,7 @@ export function NoteSettings() {
                   checked={metadata.statusBar.includes(field)}
                   disabled={!metadata.canChange}
                   testId={`metadata-status-${field}`}
+                  data-event="settings.note.status-bar"
                   onChange={(on) => metadata.setStatusBar(field, on)}
                 />
               ))}
@@ -169,17 +171,21 @@ function Chip({
   disabled,
   testId,
   onChange,
+  'data-event': tracked,
 }: {
   readonly label: string;
   readonly checked: boolean;
   readonly disabled: boolean;
   readonly testId: string;
   readonly onChange: (on: boolean) => void;
+  /** Its tracked id (PEN-137). */
+  readonly 'data-event'?: string;
 }) {
   return (
     <label className="lf-chip">
       <input
         type="checkbox"
+        data-event={tracked ?? 'settings.note.field'}
         checked={checked}
         disabled={disabled}
         data-testid={testId}
@@ -223,13 +229,25 @@ function NoteWidthSetting({ name }: { name: string }) {
     >
       <div className="seg" role="radiogroup" aria-labelledby={`${id}-l`}>
         <label className="seg-option">
-          <input type="radio" name={name} checked={!full} onChange={() => setFull(false)} />
+          <input
+            type="radio"
+            data-event="settings.note.width"
+            name={name}
+            checked={!full}
+            onChange={() => setFull(false)}
+          />
           <span className="bold-steady" data-label={themes}>
             {themes}
           </span>
         </label>
         <label className="seg-option">
-          <input type="radio" name={name} checked={full} onChange={() => setFull(true)} />
+          <input
+            type="radio"
+            data-event="settings.note.width"
+            name={name}
+            checked={full}
+            onChange={() => setFull(true)}
+          />
           <Icon name="widthFull" size={14} />
           <span className="bold-steady" data-label="Full Window">
             Full Window
@@ -262,6 +280,7 @@ function NotePanelSetting({ name }: { name: string }) {
           <label key={item.mode} className="seg-option">
             <input
               type="radio"
+              data-event="settings.note.panel-mode"
               name={name}
               value={item.mode}
               checked={mode === item.mode}

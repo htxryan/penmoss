@@ -481,7 +481,7 @@ test('the capture hotkey changes only from Settings, and only to one A90 allows'
   await expect(row).toHaveAttribute('data-accelerator', original);
   const record = async (keys: string) => {
     await row.getByRole('button', { name: 'Change', exact: true }).click();
-    await expect(row.getByRole('status')).toContainText('Press keys');
+    await expect(row.getByRole('status')).toContainText('Press Keys');
     await page.keyboard.press(keys);
   };
   // Redo in every app (⌘⇧Z on a Mac, where ⌃⇧Z is free; Ctrl+Shift+Z elsewhere): refused.

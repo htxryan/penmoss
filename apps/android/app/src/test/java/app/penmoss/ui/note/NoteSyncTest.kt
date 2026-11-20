@@ -34,7 +34,7 @@ class NoteSyncTest {
     @Test
     fun theSyncIconSaysItsStateAndExplainsIt() {
         compose.setContent { PenmossTheme { NoteSyncIcon(NoteSync(NoteSyncState.WAITING), onClick = { events += "tap" }) } }
-        compose.onNodeWithContentDescription("Sync: Waiting to upload").performClick()
+        compose.onNodeWithContentDescription("Sync: Waiting to Upload").performClick()
         assertEquals(listOf("tap"), events)
     }
 
@@ -48,7 +48,7 @@ class NoteSyncTest {
                 NoteSyncExplanation(sync, onSyncStorage = { events += "open" }, onRetryPictures = { events += "retry" }, onDismiss = { events += "close" })
             }
         }
-        compose.onNodeWithContentDescription("Sync: 2 pictures failed").assertExists()
+        compose.onNodeWithContentDescription("Sync: 2 Pictures Failed").assertExists()
         compose.onNodeWithText("2 pictures could not be uploaded", substring = true).assertIsDisplayed()
         compose.onNodeWithTag("retryNotePictures").performClick()
         assertEquals(listOf("close", "retry"), events)
@@ -113,9 +113,9 @@ class NoteSyncTest {
         assertEquals(NoteSyncState.PICTURES_FAILED, state(SyncStatus.Synced(1), waiting = 1, failed = 1))
         assertEquals(NoteSyncState.OFFLINE, state(offline, failed = 1))
         val one = noteSyncState(SyncStatus.Synced(1), 0, 0, 1)
-        assertEquals("1 picture failed", one.label)
+        assertEquals("1 Picture Failed", one.label)
         assertTrue(one.explanation.startsWith("1 picture could not be uploaded, so other devices show it as missing."))
-        assertEquals("2 pictures failed", noteSyncState(SyncStatus.Synced(1), 0, 0, 2).label)
-        assertEquals("Waiting to upload", noteSyncState(SyncStatus.Synced(1), 1, 0).label)
+        assertEquals("2 Pictures Failed", noteSyncState(SyncStatus.Synced(1), 0, 0, 2).label)
+        assertEquals("Waiting to Upload", noteSyncState(SyncStatus.Synced(1), 1, 0).label)
     }
 }

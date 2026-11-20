@@ -3,6 +3,7 @@ import { useId, useLayoutEffect, useRef } from 'react';
 import type { CommandDefinition } from './definitions';
 import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
+import { useTrackedDialog } from '../analytics/dialog';
 import { SPACES_CLASH, symbolKeysMayClash } from '../notes/symbols';
 
 /** Typing shortcuts that are not commands (markdown and the slash menu), for reference. */
@@ -24,6 +25,7 @@ export function Cheatsheet({
   const commands = useCommands();
   useCommandsVersion();
   const id = useId();
+  const tracked = useTrackedDialog('cheatsheet');
   const close = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => close.current?.focus(), []);
 
@@ -61,7 +63,10 @@ export function Cheatsheet({
               type="button"
               className="btn"
               data-command="app.shortcuts"
-              onClick={onCustomise}
+              onClick={() => {
+                tracked.done();
+                onCustomise();
+              }}
             >
               <Icon name="keyboard" />
               Customise
@@ -71,6 +76,7 @@ export function Cheatsheet({
               type="button"
               className="icon-btn"
               data-ui="dismiss"
+              data-event="cheatsheet.close"
               aria-label="Close"
               data-tip="Close (Esc)"
               onClick={onClose}

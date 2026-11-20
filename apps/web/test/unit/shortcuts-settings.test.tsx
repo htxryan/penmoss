@@ -100,7 +100,7 @@ describe('Settings → Keyboard Shortcuts', () => {
   it('offers Add Shortcut for a command with none, and says it has none', () => {
     render();
     const row = $('[data-command-row="note.move"]');
-    expect(row.textContent).toContain('No shortcut');
+    expect(row.textContent).toContain('No Shortcut');
     expect(row.querySelector('[data-testid="keys-note.move"] button')?.textContent).toBe(
       'Add Shortcut',
     );

@@ -81,6 +81,7 @@ export function QuickCaptureSettings() {
             <input
               id={`${id}-${item.value}`}
               type="radio"
+              data-event="settings.quick-capture.destination"
               name={`${id}-destination`}
               value={item.value}
               checked={destination === item.value}
@@ -136,6 +137,7 @@ function PrimaryNotebookRow() {
           <a
             className="btn quiet wr-go"
             data-ui="item"
+            data-event="settings.quick-capture.notebook-link"
             href={gitNotebookPath(journal.id)}
             onClick={linkHandler(gitNotebookPath(journal.id))}
           >

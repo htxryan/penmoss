@@ -10,6 +10,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 class PenmossApp : Application(), Configuration.Provider {
     /** The app's graph (A1469): each git notebook's screens run on a [NotebookGraph] its hub builds. */
@@ -30,7 +31,28 @@ class PenmossApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        graph = DeviceGraph(this)
+        // The app's own log (PEN-137): scrubbed, rotated and aged on this phone, whatever the answer below.
+        app.penmoss.log.PenmossLog.install(this)
+        // Usage analytics (PEN-137): recorded on this phone whatever the answer, sent only with it.
+        val analytics = runCatching {
+            app.penmoss.analytics.AnalyticsWork.create(
+                this,
+                okhttp3.OkHttpClient(),
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default),
+                onLimits = app.penmoss.log.PenmossLog::applyLimits,
+            )
+        }.getOrNull()
+        app.penmoss.analytics.Analytics.install(analytics)
+        graph = DeviceGraph(this, analytics = analytics)
+        analytics?.let { service ->
+            app.penmoss.analytics.Analytics.record("app", "launch")
+            graph.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { service.followLimits() }
+                runCatching { service.prune() }
+            }
+        }
+        // What scrub #1 knows: the GitHub login, the notebooks' names, repositories and branches.
+        graph.followLogNames()
         // What the Penmoss server's sign-in and sync left on a phone that had them (T59, A1041).
         ServerLeftovers.forget(this)
         graph.followJournalSettings()
@@ -41,8 +63,15 @@ class PenmossApp : Application(), Configuration.Provider {
         val connectivity = getSystemService(ConnectivityManager::class.java)
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {
+                private var inFront: kotlinx.coroutines.Job? = null
+                private var since = 0L
+
                 override fun onStart(owner: LifecycleOwner) {
                     graph.cameToFront()
+                    since = System.currentTimeMillis()
+                    app.penmoss.analytics.Analytics.record("app", "foreground")
+                    inFront?.cancel()
+                    inFront = graph.analytics?.whileInFront()
                     runCatching {
                         connectivity ?: return@runCatching
                         val active = connectivity.activeNetwork
@@ -56,6 +85,14 @@ class PenmossApp : Application(), Configuration.Provider {
                 override fun onStop(owner: LifecycleOwner) {
                     runCatching { connectivity?.unregisterNetworkCallback(graph.onlineAgain) }
                     graph.leftScreen()
+                    inFront?.cancel()
+                    inFront = null
+                    app.penmoss.analytics.Analytics.record(
+                        "app",
+                        "background",
+                        mapOf("active" to app.penmoss.analytics.AnalyticsFormat.durationBucket(System.currentTimeMillis() - since)),
+                    )
+                    graph.analytics?.leftScreen()
                 }
             },
         )

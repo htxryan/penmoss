@@ -184,7 +184,7 @@ test('no account: the one MCP server Settings → Agents gives writes the notebo
   await expect(server.getByTestId('agents-server-codex')).toContainText('[mcp_servers."penmoss"]');
   await expect(agentsPage.getByTestId('git-local-agent-label')).toHaveCount(0);
   await expect(agentsPage.getByTestId('agents-connect-open')).toHaveCount(0);
-  // Receive comments sent to Claude Code sessions (T60, A1073): the channel, and how to start it.
+  // Receive Comments Sent to Claude Code Sessions (T60, A1073): the channel, and how to start it.
   await server.getByTestId('agents-server-channel').check();
   await expect(server.getByTestId('agents-server-claude').locator('code')).toHaveText(
     `${claude} --channel`,

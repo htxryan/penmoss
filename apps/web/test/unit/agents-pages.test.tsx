@@ -166,7 +166,7 @@ describe('Settings → Agents, one page, folded (PEN-146)', () => {
     expect(all(root, 'notebook-agents')).toHaveLength(1);
     expect(find(rows[0]!, 'git-local-agent')?.textContent).toContain('Claude Code');
     expect(find(rows[0]!, 'agents-notebook-count')?.textContent).toBe('Claude Code');
-    expect(find(rows[1]!, 'agents-notebook-count')?.textContent).toBe('No agent copies');
+    expect(find(rows[1]!, 'agents-notebook-count')?.textContent).toBe('No Agent Copies');
     expect(rows[1]!.dataset['path']).toBe(`/settings/agents/${B}`);
     // A fold folds and unfolds in place.
     await click(find(rows[0]!, 'agents-notebook-fold'));
@@ -188,7 +188,7 @@ describe('Settings → Agents, one page, folded (PEN-146)', () => {
     const root = await mount(setUp(healthy), <AgentsSettings />);
     const line = find(root, 'git-cli')!;
     expect(line.dataset['compact']).toBe('true');
-    expect(line.textContent).toContain('penmoss command installed');
+    expect(line.textContent).toContain('penmoss Command Installed');
     expect(line.textContent).toContain('/Users/me/.local/bin/penmoss');
     expect(find(root, 'git-cli-install')).toBeNull();
     await click(find(root, 'git-cli-manage'));

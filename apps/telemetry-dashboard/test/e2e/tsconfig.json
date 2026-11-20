@@ -1,0 +1,9 @@
+{
+  // The Playwright spec and the server it starts, in Node.
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["."]
+}

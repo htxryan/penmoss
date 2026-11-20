@@ -7,6 +7,7 @@ import { facePath, useTabFaces, type TabFace } from './describe';
 import { useTabs, useTabsState } from './hooks';
 import { sheet } from './sheet';
 import { shownTabCount } from './state';
+import { useTrackedDialog } from '../analytics/dialog';
 
 /**
  * The narrow window's tabs (700 px and narrower, AC13, A1502): the strip is hidden, and the app
@@ -25,6 +26,7 @@ export function TabsButton() {
       type="button"
       className="icon-btn tabs-button"
       data-ui="menu"
+      data-event="tabs.sheet.open"
       aria-label={`Tabs, ${count}`}
       aria-haspopup="dialog"
       aria-expanded={open}
@@ -69,6 +71,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
   const faces = useTabFaces(state, badgeLook);
   const commands = useCommands();
   const panel = useRef<HTMLDivElement>(null);
+  const tracked = useTrackedDialog('tabs');
   useEffect(() => {
     panel.current?.querySelector<HTMLElement>('[aria-current="true"], button')?.focus();
   }, []);
@@ -100,6 +103,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
             type="button"
             className="icon-btn"
             data-ui="dismiss"
+            data-event="tabs.sheet.close"
             aria-label="Close Tabs"
             data-tip="Close Tabs"
             onClick={onClose}
@@ -114,9 +118,11 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
                 type="button"
                 className="tabs-sheet-tab"
                 data-ui="item"
+                data-event="tabs.sheet.tab"
                 aria-current={face.active ? 'true' : undefined}
                 data-testid="tabs-sheet-tab"
                 onClick={() => {
+                  tracked.done();
                   tabs.activate(face.id);
                   onClose();
                 }}
@@ -146,6 +152,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
                   type="button"
                   className="icon-btn"
                   data-ui="dismiss"
+                  data-event="tabs.sheet.close-tab"
                   aria-label={`Close ${face.title}`}
                   data-testid="tabs-sheet-close"
                   onClick={() => tabs.close(face.id)}

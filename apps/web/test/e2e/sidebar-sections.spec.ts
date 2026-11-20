@@ -10,7 +10,7 @@ const RUN = `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)
 async function toggleSection(page: Page, section: string): Promise<void> {
   await page.getByTestId('sidebar-settings').click();
   await page
-    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('navigation', { name: 'Settings Sections' })
     .getByRole('link', { name: 'Sidebar', exact: true })
     .click();
   await page.getByTestId(`display-section-${section}`).click();

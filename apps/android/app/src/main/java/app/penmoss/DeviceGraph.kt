@@ -75,6 +75,11 @@ class DeviceGraph(
     },
     /** The git notebooks' hub (T50 G7): the app's own, made on first use; tests give one with stand-in pages and keys. */
     makeHub: ((DeviceGraph) -> app.penmoss.git.GitNotebookHub)? = null,
+    /**
+     * Usage analytics (PEN-137): the record on this phone, the answer and the sender. The app's is
+     * made by `PenmossApp`; null in tests that give none, where nothing is recorded or asked.
+     */
+    val analytics: app.penmoss.analytics.AnalyticsService? = null,
 ) {
     private val appContext = context.applicationContext
 
@@ -155,8 +160,11 @@ class DeviceGraph(
      * Changes device settings, each shown at once, in the Journal notebook's device map (A1014).
      * False when nothing could take them: no Journal notebook, or its settings not read yet.
      */
-    private suspend fun setSettings(changes: List<Pair<String, JsonElement?>>): Boolean =
-        journalSettings.value?.change(changes.toMap()) ?: false
+    private suspend fun setSettings(changes: List<Pair<String, JsonElement?>>): Boolean {
+        // Recorded by name (PEN-137): an allowlisted setting, with its value only when it is a word, a number or a boolean.
+        for ((key, value) in changes) app.penmoss.analytics.SettingEvents.record(key, value)
+        return journalSettings.value?.change(changes.toMap()) ?: false
+    }
 
     /** The Journal notebook's device settings (A1014): null while there is no Journal notebook, or before it is read. */
     private val journalSettings = MutableStateFlow<app.penmoss.git.JournalDeviceSettings?>(null)
@@ -287,6 +295,26 @@ class DeviceGraph(
      * minute (A825).
      */
     val onlineAgain = OnlineAgain {}
+
+    /**
+     * Tells the log's scrubber (PEN-137, scrub #1) the names it replaces: the GitHub login and each
+     * notebook's name, repository and branch, as the notebooks on this phone change.
+     */
+    fun followLogNames() {
+        scope.launch {
+            val hub = gitIfAny ?: return@launch
+            hub.list.collect { views ->
+                app.penmoss.log.PenmossLog.known(
+                    app.penmoss.feedback.ErrorScrub.Known(
+                        login = runCatching { githubToken.login() }.getOrNull(),
+                        notebooks = views.map { it.name },
+                        repositories = views.flatMap { listOf(it.remote, it.repository) },
+                        branches = views.map { it.branch },
+                    ),
+                )
+            }
+        }
+    }
 
     /** The app came to the front: feedback that waited goes, and the Journal notebook pulls the device's settings. */
     fun cameToFront() {

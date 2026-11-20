@@ -69,6 +69,7 @@ import { TabsCommands } from './tabs/TabsCommands';
 import { TabsWatcher } from './tabs/TabsWatcher';
 import { TabsSheetHost } from './tabs/TabsSheet';
 import { useOnRevealNote } from './shell/reveal-notebooks';
+import { useScreenTracking } from './analytics/screen';
 
 // The graph (T17) loads with d3-force on first use, never with the shell.
 const GraphPage = lazy(() => import('./graph/GraphPage').then((m) => ({ default: m.GraphPage })));
@@ -79,6 +80,8 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
   const { pathname, search } = location ?? current;
   const route = parseRoute(pathname);
   const params = new URLSearchParams(search);
+  // The kind of screen on show, by name (PEN-137).
+  useScreenTracking(route);
   // The app opens where it was (it runs only in the Mac app, A1030): launched, or its window
   // reopened, on the home page, it goes to the note this device opened last, once the list has
   // loaded. Only at that start, so "Close the note" still reaches home. Every notebook's
@@ -390,6 +393,7 @@ function NotesShell({
               type="button"
               className="icon-btn drawer-close"
               data-ui="dismiss"
+              data-event="sidebar.drawer.close"
               aria-label="Close Navigation"
               data-tip="Close Navigation"
               onClick={dismissDrawer}

@@ -157,6 +157,7 @@ function SectionTools({
         type="button"
         className="icon-btn sb-part-grip"
         data-ui="item"
+        data-event="sidebar.section.move"
         draggable
         aria-label={`Move ${name}`}
         aria-description="Drag, or press the up or down arrow"
@@ -181,6 +182,7 @@ function SectionTools({
         type="button"
         className="icon-btn"
         data-ui="item"
+        data-event="sidebar.section.hide"
         aria-label={`Hide ${name}`}
         data-tip={`Hide ${name}`}
         data-testid="section-hide"

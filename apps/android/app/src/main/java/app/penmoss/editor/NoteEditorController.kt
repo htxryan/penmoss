@@ -1,6 +1,5 @@
 package app.penmoss.editor
 
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import app.penmoss.data.FoldStore
 import app.penmoss.data.NoteStore
@@ -356,7 +355,7 @@ class NoteEditorController(
     fun onPageMessage(raw: String) {
         val message = BridgeProtocol.decodeFromEditor(raw)
         if (message == null) {
-            Log.w(TAG, "Unreadable message from the editor page")
+            app.penmoss.log.PenmossLog.warn(TAG, "Unreadable message from the editor page")
             return
         }
         when (message) {
@@ -545,7 +544,7 @@ class NoteEditorController(
             is CommentFromEditor -> comments.onMessage(message)
             is FromEditor.NoteContent, is FromEditor.WatchNote -> Unit
             is FromEditor.Error -> {
-                Log.w(TAG, "Editor page: ${message.message}")
+                app.penmoss.log.PenmossLog.warn(TAG, "Editor page: ${message.message}")
                 onPageError(message.message)
                 // The period's note could not be made (T40 P5): say so instead of loading. Only the
                 // error of the request asked last ends the wait; any other error leaves it waiting

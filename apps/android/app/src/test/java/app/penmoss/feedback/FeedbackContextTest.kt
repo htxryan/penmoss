@@ -87,39 +87,34 @@ class FeedbackContextTest {
             assertFalse("an email is in the $what", text.contains("ryan@example.com"))
         }
 
-        // What it does hold: the note's metadata, its last edits' sizes, and the one error left.
+        // What it does hold (PEN-137, O5): the note's counts, never the server era's rows.
         val groups = context.groups.associateBy { it.id }
-        assertEquals(listOf("app", "where", "sync", "note", "edits", "errors"), context.groups.map { it.id })
+        assertEquals(listOf("app", "where", "sync", "note", "errors"), context.groups.map { it.id })
         val note = groups.getValue("note").rows.associate { it[0] to it[1] }
-        assertEquals("n1", note["Id"])
-        assertEquals("Shopping list", note["Title"])
-        assertEquals("Projects", note["Folder"])
-        // No notebook inside a git notebook (A912), and no epoch, a server-era field: neither row.
-        assertFalse(groups.getValue("note").rows.any { it[0] == "Notebook" || it[0] == "Epoch" })
-        assertFalse(groups.getValue("where").rows.any { it[0] == "Notebook" })
-        assertEquals("#home", note["Tags"])
+        for (row in listOf("Title", "Folder", "Tags", "Notebook", "Route", "Id", "Selected folder", "Epoch")) {
+            assertFalse("$row is a row", context.groups.any { group -> group.rows.any { it[0] == row } })
+        }
+        assertFalse(markdown.contains("Shopping list"))
+        // The screen and the note by kind, with counts and states: what the server era's rows left.
+        val whereRows = groups.getValue("where").rows.associate { it[0] to it[1] }
+        assertEquals("note", whereRows["Screen"])
+        assertEquals("none", whereRows["Open panel"])
+        assertEquals("the note's ⋮ menu", whereRows["Opened from"])
+        assertEquals("a git notebook", whereRows["Source"])
+        assertEquals("a git notebook", note["Source"])
+        assertEquals("no", note["In Trash"])
+        // No history: its authors and dates are the notebook's, and its summaries quote the note.
+        assertFalse(markdown.contains("Pixel 9"))
+        assertFalse(markdown.contains("Claude Code"))
+        assertFalse(markdown.contains("Projects"))
         assertEquals("17", note["Words"])
         assertEquals("${body.length}", note["Characters"])
-        assertEquals("yjs14", note["Engine"])
         assertEquals("1", note["Backlinks"])
         assertEquals("1", note["Outgoing links"])
-        assertEquals("2026-10-27T15:00:00.000Z", note["Updated"])
-        assertEquals("1", note["Open in windows"])
-        assertEquals(
-            listOf(
-                listOf("2026-10-27T16:00:00.000Z", "Pixel 9, Claude Code ✦ (agent)", "edits since the last version", ""),
-                listOf("2026-10-27T15:00:00.000Z", "Pixel 9", "typed", "+3 −1 lines"),
-                listOf("2026-10-27T14:00:00.000Z", "Claude Code ✦ (agent)", "agent edit", ""),
-                listOf("2026-10-27T13:00:00.000Z", "", "saved by hand", "Tags changed"),
-                listOf("2026-10-27T12:00:00.000Z", "", "import", "Title changed"),
-                listOf("2026-10-27T11:00:00.000Z", "Unknown", "version", "+1 −0 line"),
-            ),
-            groups.getValue("edits").rows,
-        )
         val errorRows = groups.getValue("errors").rows
         assertEquals(1, errorRows.size)
         assertEquals("IOException: timeout reading ‹name› from [token removed] at [email removed]", errorRows.single()[1])
-        assertTrue(markdown.startsWith("<details><summary>Captured context</summary>"))
+        assertTrue(markdown.startsWith("<details><summary>Captured Context</summary>"))
     }
 
     /**

@@ -18,6 +18,7 @@ import {
 } from '@penmoss/ui/theme';
 import { Select } from '@penmoss/ui/controls/Select';
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { useWorkspace } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
 import { PreviewZoom } from './PreviewZoom';
@@ -61,6 +62,7 @@ export function ThemeEditor({
             type="button"
             className="btn quiet"
             data-ui="item"
+            data-event="theme-editor.done"
             data-testid="theme-editor-done"
             onClick={onDone}
           >
@@ -80,6 +82,7 @@ export function ThemeEditor({
             type="button"
             className="btn primary"
             data-ui="item"
+            data-event="theme-editor.duplicate"
             onClick={() =>
               duplicateAndChoose(
                 workspace,
@@ -180,7 +183,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
     <div className="custom-theme lf-split" data-testid="custom-theme-editor">
       <div className="lf-controls">
         <fieldset className="theme-editor-head">
-          <legend className="sr-only">Name and variant</legend>
+          <legend className="sr-only">Name and Variant</legend>
           <label className="settings-field theme-name">
             <span>Name</span>
             <input
@@ -189,16 +192,17 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
               maxLength={60}
               onChange={(event) => edit({ ...current, name: event.target.value })}
               onBlur={() => {
-                if (!current.name.trim()) edit({ ...current, name: 'Untitled theme' });
+                if (!current.name.trim()) edit({ ...current, name: 'Untitled Theme' });
               }}
               aria-invalid={otherNames.includes(current.name.trim()) || undefined}
             />
           </label>
-          <div className="seg" role="radiogroup" aria-label="Variant to edit">
+          <div className="seg" role="radiogroup" aria-label="Variant to Edit">
             {(['light', 'dark'] as const).map((each) => (
               <label key={each} className="seg-option">
                 <input
                   type="radio"
+                  data-event="theme-editor.variant"
                   name={`${id}-variant`}
                   value={each}
                   checked={variant === each}
@@ -268,45 +272,50 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
           </label>
         </fieldset>
 
-        <div className="settings-actions theme-editor-actions">
-          {confirmDelete ? (
-            <>
-              <span>Delete “{current.name}” on every device?</span>
-              <button
-                type="button"
-                className="btn danger-fill"
-                data-ui="submit"
-                onClick={() => {
-                  if (save.current.timer !== null) clearTimeout(save.current.timer);
-                  save.current.timer = null;
-                  setDraft(null);
-                  deleteCustomTheme(workspace, theme);
-                }}
-              >
-                <Icon name="trash" size={14} />
-                Delete Theme
-              </button>
-              <button
-                type="button"
-                className="btn"
-                data-ui="dismiss"
-                onClick={() => setConfirmDelete(false)}
-              >
-                Keep It
-              </button>
-            </>
-          ) : (
+        {confirmDelete ? (
+          <ConfirmBlock
+            className="settings-actions theme-editor-actions"
+            title={`Delete “${current.name}” on Every Device?`}
+          >
+            <button
+              type="button"
+              className="btn danger-fill"
+              data-ui="submit"
+              data-event="theme-editor.delete.confirm"
+              onClick={() => {
+                if (save.current.timer !== null) clearTimeout(save.current.timer);
+                save.current.timer = null;
+                setDraft(null);
+                deleteCustomTheme(workspace, theme);
+              }}
+            >
+              <Icon name="trash" size={14} />
+              Delete Theme
+            </button>
+            <button
+              type="button"
+              className="btn"
+              data-ui="dismiss"
+              data-event="theme-editor.delete.cancel"
+              onClick={() => setConfirmDelete(false)}
+            >
+              Keep It
+            </button>
+          </ConfirmBlock>
+        ) : (
+          <div className="settings-actions theme-editor-actions">
             <button
               type="button"
               className="btn danger"
               data-ui="item"
+              data-event="theme-editor.delete"
               onClick={() => setConfirmDelete(true)}
             >
               <Icon name="trash" size={14} />
               Delete This Theme
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       <aside className="lf-preview-col" aria-label="Preview">
         <p className="lf-label">Preview</p>
@@ -363,7 +372,7 @@ function ColourRow({
       />
       <input
         className="input token-hex"
-        aria-label={`${label}, hex`}
+        aria-label={`${label}, Hex`}
         value={text ?? value}
         spellCheck={false}
         maxLength={7}

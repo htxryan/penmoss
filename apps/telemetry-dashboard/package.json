@@ -1,0 +1,30 @@
+{
+  "name": "@penmoss/telemetry-dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Usage analytics' dashboard (PEN-137) on stats.penmoss.app: a read-only Worker behind Cloudflare Access that runs the named queries, and its one page",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs && wrangler dev --local --port $(node ../../scripts/ports.mjs dashboard) --inspector-port $(node ../../scripts/ports.mjs inspector)",
+    "types": "wrangler types --strict-vars false",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p src/client && tsc --noEmit -p test/e2e",
+    "test": "node build.mjs && vitest run && vitest run --config vitest.workers.config.ts",
+    "e2e": "playwright test --config test/e2e/playwright.config.ts",
+    "deploy": "test -z \"$PENMOSS_FACTORY_RUN\" || { echo 'No production deploys from a factory run: they happen after merge (FD24).' >&2; exit 1; }; node build.mjs && wrangler deploy"
+  },
+  "dependencies": {
+    "@penmoss/core": "workspace:*",
+    "@penmoss/telemetry": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.6",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261019.1-beta",
+    "vitest": "5.0.5",
+    "wrangler": "4.151.3"
+  }
+}

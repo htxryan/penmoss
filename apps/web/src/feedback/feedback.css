@@ -306,6 +306,18 @@
   cursor: pointer;
 }
 
+/* Attach Anonymised Logs (PEN-137): the box, its sentence, then the text it attaches. */
+.feedback-logs-attach {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: var(--pm-control-sm);
+}
+
+.feedback-logs > .feedback-context {
+  margin-top: 0.6rem;
+}
+
 .feedback-groups {
   display: flex;
   flex-wrap: wrap;

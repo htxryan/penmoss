@@ -93,6 +93,9 @@ class GitNotebooksScreenTest {
         )
         assertEquals("Synced at 10:00 AM", gitStatusLine(GitEngineStatus(phase = "synced", lastSyncAt = at), "github.com", now = at, zone = zone))
         assertEquals("Delete for good waits.", gitStatusLine(GitEngineStatus(phase = "stopped", detail = "Delete for good waits."), "github.com"))
+        // Status words in Title Case (A938, PEN-137); a reason after them stays a sentence.
+        assertEquals("Sync Stopped", gitStatusLine(GitEngineStatus(phase = "stopped"), "github.com"))
+        assertEquals("Not Synced Yet", gitStatusLine(GitEngineStatus(), "github.com"))
     }
 
     /**
@@ -142,6 +145,7 @@ class GitNotebooksScreenTest {
         // #174 delta review: a new key replaces this phone's for every notebook, so it asks first,
         // naming what changes; Cancel keeps the key.
         compose.onNodeWithTag("gitSigningKeyNew").performScrollTo().performClick()
+        compose.onNodeWithText("Make a New P-256 Signing Key?").assertExists()
         compose.onNodeWithTag("gitSigningKeyWords").assertTextContains("Work", substring = true)
             .assertTextContains("add its public key to GitHub", substring = true)
             .assertTextContains("deletes this phone's signing key", substring = true)
@@ -153,6 +157,7 @@ class GitNotebooksScreenTest {
         assertEquals(listOf(CommitKeyType.P256), made)
         // #174 review: an Ed25519 key, where the phone's Keystore can make one; it asks as well.
         compose.onNodeWithTag("gitSigningKeyNewEd25519").performScrollTo().assertTextEquals("Make an Ed25519 Key").performClick()
+        compose.onNodeWithText("Make an Ed25519 Signing Key?").assertExists()
         compose.onNodeWithTag("gitSigningKeyWords").assertTextContains("Ed25519", substring = true)
         compose.onNodeWithTag("gitSigningKeyConfirm").performClick()
         assertEquals(listOf(CommitKeyType.P256, CommitKeyType.ED25519), made)

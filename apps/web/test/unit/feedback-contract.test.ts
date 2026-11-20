@@ -140,6 +140,24 @@ const bodies: Array<{ name: string; input: FeedbackIssueInput }> = [
       submissionId: '01JBXYZ0000000000000000003',
     },
   },
+  {
+    // PEN-137: a bug report's anonymised logs, a collapsed block before the footer, in a fence
+    // longer than any run of backticks in them.
+    name: 'a bug with anonymised logs',
+    input: {
+      description: 'Sync stopped.',
+      screenshots: [],
+      context: { groups: [fieldGroup('app', [['Client', 'Android']])] },
+      client: 'android',
+      version: '0.40 (build 440)',
+      submissionId: '01JBXYZ0000000000000000004',
+      logs: [
+        '2026-11-19T11:54:16.525Z info sync pass ok in 120 ms',
+        '2026-11-19T11:54:17.001Z error page Uncaught ‹quoted› in ```code```',
+        '    at <path>/index.js:1:2',
+      ],
+    },
+  },
 ];
 
 /** `fieldGroup`'s cuts (A791): every value and name to `cell`, and at most `groupRows` rows. */

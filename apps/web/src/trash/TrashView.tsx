@@ -4,6 +4,7 @@ import { useNoteList, useNotes } from '../notes/hooks';
 import { RestoreNeedsFolder, TRASH_DAYS, trashDaysLeft, type TrashEntry } from '../notes/service';
 import { useIsGitSource } from '../sources/hooks';
 import { navigate, notePath } from '../router';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { FolderPicker } from '../workspace/FolderPicker';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { folderChoices } from '../workspace/model';
@@ -121,20 +122,17 @@ export function TrashView() {
                   </span>
                 </div>
                 {confirming === entry.id ? (
-                  <div
-                    className="trash-actions"
-                    role="group"
-                    aria-label={`Delete ${title} for good?`}
-                  >
+                  <ConfirmBlock className="trash-actions" title="Delete for Good?">
                     <span className="trash-warning" data-testid="purge-warning">
                       {git
-                        ? 'Delete for good? It leaves this notebook on every device; the repository’s git history still keeps its content.'
-                        : 'Delete for good? This cannot be undone.'}
+                        ? 'It leaves this notebook on every device; the repository’s git history still keeps its content.'
+                        : 'This cannot be undone.'}
                     </span>
                     <button
                       type="button"
                       className="btn danger-fill"
                       data-ui="submit"
+                      data-event="trash.delete-for-good.confirm"
                       disabled={busy !== null}
                       onClick={() =>
                         void run(entry.id, async () => {
@@ -150,11 +148,12 @@ export function TrashView() {
                       type="button"
                       className="btn quiet"
                       data-ui="dismiss"
+                      data-event="trash.delete-for-good.cancel"
                       onClick={() => setConfirming(null)}
                     >
                       Cancel
                     </button>
-                  </div>
+                  </ConfirmBlock>
                 ) : needsPlace?.id === entry.id ? (
                   <div
                     className="trash-actions trash-needs-place"
@@ -166,6 +165,7 @@ export function TrashView() {
                       type="button"
                       className="btn"
                       data-ui="item"
+                      data-event="trash.choose-folder"
                       disabled={busy !== null}
                       onClick={() => setPicking({ id: entry.id, title })}
                     >
@@ -176,6 +176,7 @@ export function TrashView() {
                       type="button"
                       className="btn quiet"
                       data-ui="dismiss"
+                      data-event="trash.choose-folder.cancel"
                       onClick={() => setNeedsPlace(null)}
                     >
                       Cancel
@@ -187,6 +188,7 @@ export function TrashView() {
                       type="button"
                       className="btn"
                       data-ui="item"
+                      data-event="trash.restore"
                       disabled={busy !== null}
                       aria-label={`Restore ${title}`}
                       onClick={() =>
@@ -204,6 +206,7 @@ export function TrashView() {
                       type="button"
                       className="btn quiet danger"
                       data-ui="item"
+                      data-event="trash.delete-for-good"
                       disabled={busy !== null}
                       aria-label={`Delete ${title} for Good`}
                       onClick={() => setConfirming(entry.id)}

@@ -1,0 +1,40 @@
+{
+  "$comment": "PEN-137 (AC14): the canary notebook. Every string here is data a person owns; none may appear in the local usage record, a request to the analytics endpoint, D1, the dashboard's API or a filed issue's logs, whether exact, in another case or URL-encoded. Each contains `canary`, so a check can also look for that word alone. The notes beside this file use them; `strings` lists every one. Checked by packages/core/test/analytics-scrub.test.ts.",
+  "version": 1,
+  "pattern": "canary",
+  "notebook": "Wombatcanary Notebook",
+  "repository": "canary-owner/kiwicanary-repo",
+  "repositoryUrl": "https://github.com/canary-owner/kiwicanary-repo.git",
+  "branch": "tapircanary-branch",
+  "login": "lemurcanary",
+  "email": "ibis.canary@example.invalid",
+  "token": "ghp_CANARY000000000000000000000000000000",
+  "search": "slothcanary",
+  "notes": [
+    { "path": "Zebracanary Title Q7.md", "title": "Zebracanary Title Q7" },
+    { "path": "Axolotlcanary Target.md", "title": "Axolotlcanary Target" },
+    { "path": "Okapicanary Folder/Capybaracanary Note.md", "title": "Capybaracanary Note" }
+  ],
+  "folders": ["Okapicanary Folder"],
+  "tags": ["narwhalcanary"],
+  "attachments": ["quokkacanary.png"],
+  "links": ["Axolotlcanary Target"],
+  "body": ["pangolincanary"],
+  "strings": [
+    "Wombatcanary Notebook",
+    "canary-owner/kiwicanary-repo",
+    "kiwicanary-repo",
+    "tapircanary-branch",
+    "lemurcanary",
+    "ibis.canary@example.invalid",
+    "ghp_CANARY000000000000000000000000000000",
+    "slothcanary",
+    "Zebracanary Title Q7",
+    "Axolotlcanary Target",
+    "Capybaracanary Note",
+    "Okapicanary Folder",
+    "narwhalcanary",
+    "quokkacanary.png",
+    "pangolincanary"
+  ]
+}

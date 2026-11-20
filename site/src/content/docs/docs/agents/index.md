@@ -52,7 +52,7 @@ The setup commands Penmoss gives you run the CLI inside the app (`'/Applications
 
 :::note[Agents connected before November 2026]
 Their commands name `/Applications/Penmoss.app/Contents/MacOS/Penmoss` instead. They still work, but while one runs, opening Penmoss can take a moment longer. Copy the new command from **Settings → Agents** once and add the server again (in Claude Code, `claude mcp remove` the old one first).
-::: To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. Once it is installed and on your PATH, Agents shows it on one line, **penmoss command installed**; choose **Manage…** to reinstall or remove it. See [Install the CLI](/docs/reference/cli/#install).
+::: To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. Once it is installed and on your PATH, Agents shows it on one line, **penmoss Command Installed**; choose **Manage…** to reinstall or remove it. See [Install the CLI](/docs/reference/cli/#install).
 
 ## When agents sync
 

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.NotebookGraph
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.Button
 import app.penmoss.ui.common.roles
 import app.penmoss.ui.settings.SectionScreen
@@ -153,7 +154,7 @@ fun GitHubTokenForm(
             }
             // Tonal, as the design draws it: raised, with its border and an accent label.
             app.penmoss.ui.common.OutlinedButton(
-                onClick = { runCatching { uri.openUri(NEW_TOKEN_URL) } },
+                onClick = trackedClick("settings.github.token.open") { runCatching { uri.openUri(NEW_TOKEN_URL) } },
                 Modifier.testTag("githubTokenOpenGitHub"),
                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = colours.surfaceContainerHigh, contentColor = colours.primary),
                 border = androidx.compose.foundation.BorderStroke(1.dp, colours.outlineVariant),
@@ -175,7 +176,7 @@ fun GitHubTokenForm(
         }
         TokenStep(3, "Add the Account", last = true) {
             Button(
-                onClick = {
+                onClick = trackedClick("settings.github.token.save") {
                     busy = true
                     message = null
                     scope.launch {

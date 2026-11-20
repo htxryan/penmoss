@@ -75,6 +75,13 @@ class FirstRunDeps(
     val addToken: (suspend (String) -> app.penmoss.feedback.GitHubTokenModel.Saved)? = null,
     /** Send Feedback's repository, named on the token page. */
     val feedbackRepo: String? = null,
+    /**
+     * Whether the usage question still waits for an answer (PEN-137): the first run asks it as its
+     * last step. False where there is no analytics (tests), so the flow ends as before.
+     */
+    val consentPending: () -> Boolean = { false },
+    /** Keeps the answer: Share Usage Data or Don't Share. */
+    val answerConsent: suspend (app.penmoss.analytics.ConsentAnswer) -> Unit = {},
 ) {
     companion object {
         fun of(graph: app.penmoss.DeviceGraph, context: android.content.Context): FirstRunDeps {
@@ -88,6 +95,8 @@ class FirstRunDeps(
                 tokenFor = graph.githubToken::tokenFor,
                 addToken = app.penmoss.feedback.GitHubTokenModel(graph.githubToken, graph.githubFeedback::checkToken, graph.githubFeedback.repo)::save,
                 feedbackRepo = graph.githubFeedback.repo,
+                consentPending = { graph.analytics?.state?.value?.answered == false },
+                answerConsent = { answer -> graph.analytics?.answer(answer, app.penmoss.BuildConfig.VERSION_NAME) },
                 signIn = graph.githubSignIn.takeIf { it.available },
                 add = { place, name -> hub.add(place.remote, place.branch, place.dir, name, place.token) },
                 added = { hub.list.value.map { it.notebookId }.toSet() },
@@ -151,7 +160,7 @@ fun NotebookSteps(
     fun back() {
         if (stack.size > 1) stack = stack.dropLast(1)
     }
-    BackHandler(enabled = stack.size > 1 && screen !is Screen.SetUp) { back() }
+    BackHandler(enabled = stack.size > 1 && screen !is Screen.SetUp && screen !is Screen.Consent) { back() }
 
     /** The account the repositories are listed for, among the phone's (A1616). */
     fun listed(): app.penmoss.feedback.GitHubAccount? = deps.accounts().firstOrNull { it.login == hub?.login }
@@ -368,12 +377,34 @@ fun NotebookSteps(
                 screen.setup,
                 add,
                 onDone = { localId ->
-                    onHold(false)
-                    onDone(localId)
+                    // The first run's last step asks about usage data (PEN-137), still held on
+                    // screen; Add Notebook never asks.
+                    if (firstRun && deps.consentPending()) {
+                        replace(Screen.Consent(localId))
+                    } else {
+                        onHold(false)
+                        onDone(localId)
+                    }
                 },
                 onNeedsName = { replace(Screen.Name(it)) },
                 back = ::back,
             )
+            is Screen.Consent -> {
+                var answering by remember { mutableStateOf(false) }
+                ConsentStep(
+                    lastStep = true,
+                    busy = answering,
+                    onAnswer = { answer ->
+                        answering = true
+                        scope.launch {
+                            runCatching { deps.answerConsent(answer) }
+                            onHold(false)
+                            onDone(screen.localId)
+                        }
+                    },
+                    openUrl = deps.openUrl,
+                )
+            }
         }
     }
 }

@@ -22,6 +22,8 @@
  * `href='#abc'`), and colour words outside colours (`label: 'white'`).
  */
 
+import { trackedControl } from './tracked-control.js';
+
 const HEX_WHOLE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const HEX_ANY = /(?:^|[\s,(:])#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z_-])/i;
 const COLOUR_FUNCTION = /(?:^|[^\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|device-cmyk)\(/i;
@@ -234,4 +236,6 @@ export const noLiteralColours = {
   },
 };
 
-export const penmossLintPlugin = { rules: { 'no-literal-colours': noLiteralColours } };
+export const penmossLintPlugin = {
+  rules: { 'no-literal-colours': noLiteralColours, 'tracked-control': trackedControl },
+};

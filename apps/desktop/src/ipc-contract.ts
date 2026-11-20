@@ -10,9 +10,17 @@
  * Plain data only: the preload bundles this file, and no Electron is imported here.
  */
 import type {
+  ConsentAnswer,
+  ForgetResult,
+  LimitKey,
+  Page,
+  PageQuery,
+} from '@penmoss/core/analytics';
+import type {
   CaptureHotkey,
   CliInfo,
   ClipboardWrite,
+  DesktopAnalyticsStatus,
   DesktopFeedbackAnswer,
   DesktopGitHubTokenStatus,
   DesktopMenu,
@@ -31,12 +39,15 @@ import type {
   GitHubSignInState,
   GitNotebookInfo,
   GitPendingPurge,
+  LimitsPreview,
   LocalAgentInfo,
   MacWindowState,
   MenuBarPin,
   MenuCommandEvent,
+  PageEvent,
   RepoFolders,
   RepoList,
+  ReportLogs,
 } from '../../web/src/desktop/bridge';
 import type { StoreReply, StoreRequest } from './store-requests';
 
@@ -223,6 +234,19 @@ export interface Invokes {
     [accelerator: string],
     (CaptureHotkey & { readonly error?: string }) | null
   >;
+  analyticsStatus: Call<[], DesktopAnalyticsStatus | null>;
+  analyticsAnswer: Call<[consent: ConsentAnswer], DesktopAnalyticsStatus | null>;
+  analyticsSetSharing: Call<[on: boolean], DesktopAnalyticsStatus | null>;
+  analyticsResetId: Call<[], DesktopAnalyticsStatus | null>;
+  analyticsForget: Call<[], ForgetResult | null>;
+  analyticsPage: Call<[query: PageQuery], Page | null>;
+  analyticsPreview: Call<[changes: Partial<Record<LimitKey, number>> | null], LimitsPreview | null>;
+  analyticsSetLimits: Call<
+    [changes: Partial<Record<LimitKey, number>> | null],
+    DesktopAnalyticsStatus | null
+  >;
+  analyticsShowLogFile: Call<[], boolean | null>;
+  analyticsReportLogs: Call<[names: readonly string[]], ReportLogs | null>;
 }
 
 export type InvokeName = keyof Invokes;
@@ -381,6 +405,24 @@ export const INVOKE = {
   // in a main or note window, after a key press or click (HotkeyChangeGate decides).
   captureHotkey: { channel: 'penmoss:capture:hotkey', from: 'app' },
   captureSetHotkey: { channel: 'penmoss:capture:set-hotkey', from: 'window', gesture: 'handler' },
+  // Usage analytics and the log file (PEN-137): any main or note window reads them and asks for
+  // a bug report's logs; the answer, the switch, the ID and the limits are Settings → Privacy's
+  // and the consent question's, in the main window. Sharing turns on only after a key press or
+  // click (the handler decides: turning it off never needs one).
+  analyticsStatus: { channel: 'penmoss:analytics:status', from: 'window' },
+  analyticsAnswer: { channel: 'penmoss:analytics:answer', from: 'main', gesture: 'handler' },
+  analyticsSetSharing: {
+    channel: 'penmoss:analytics:set-sharing',
+    from: 'main',
+    gesture: 'handler',
+  },
+  analyticsResetId: { channel: 'penmoss:analytics:reset-id', from: 'main' },
+  analyticsForget: { channel: 'penmoss:analytics:forget', from: 'main' },
+  analyticsPage: { channel: 'penmoss:analytics:page', from: 'window' },
+  analyticsPreview: { channel: 'penmoss:analytics:preview', from: 'window' },
+  analyticsSetLimits: { channel: 'penmoss:analytics:set-limits', from: 'main' },
+  analyticsShowLogFile: { channel: 'penmoss:analytics:show-log-file', from: 'window' },
+  analyticsReportLogs: { channel: 'penmoss:analytics:report-logs', from: 'window' },
 } as const satisfies { readonly [K in InvokeName]: InvokeRule<InvokeResult<K>> };
 
 /** Every message a page sends main with no answer (`ipcRenderer.send`, `ipcMain.on`). */
@@ -397,6 +439,10 @@ export interface Sends {
   quickAccessSet: [pins: readonly MenuBarPin[]];
   /** A page's reply to main's ask to store (`save`), by its id (#174 review). */
   saved: [reply: StoreReply];
+  /** Usage events from a page (PEN-137): main stamps, checks and stores each. */
+  analyticsRecord: [events: readonly PageEvent[]];
+  /** A line for the log file from a page (console.warn/error, the error ring): ≤ 50 a minute. */
+  analyticsLog: [level: 'warn' | 'error', message: string];
 }
 
 export type SendName = keyof Sends;
@@ -408,6 +454,8 @@ export const SEND = {
   stored: { channel: 'penmoss:stored', from: 'app' },
   quickAccessSet: { channel: 'penmoss:quick-access:set', from: 'mac' },
   saved: { channel: 'penmoss:saved', from: null },
+  analyticsRecord: { channel: 'penmoss:analytics:record', from: 'window' },
+  analyticsLog: { channel: 'penmoss:analytics:log', from: 'window' },
 } as const satisfies { readonly [K in SendName]: SendRule };
 
 /** Every message main sends a page (`webContents.send`, `ipcRenderer.on`), and what it carries. */
@@ -428,6 +476,8 @@ export interface Events {
   meaningChanged: DesktopMeaningStatus;
   /** The git notebooks changed (added, removed, a token set): read them again. */
   gitChanged: undefined;
+  /** Usage analytics' answer, ID, limits or counts changed (here, or from the CLI). */
+  analyticsChanged: DesktopAnalyticsStatus;
 }
 
 export type EventName = keyof Events;
@@ -445,6 +495,7 @@ export const EVENT = {
   updatesNotesChanged: 'penmoss:updates:notes-changed',
   meaningChanged: 'penmoss:meaning:changed',
   gitChanged: 'penmoss:git:changed',
+  analyticsChanged: 'penmoss:analytics:changed',
 } as const satisfies { readonly [K in EventName]: string };
 
 /** The argument that tells the preload which window it is in. */

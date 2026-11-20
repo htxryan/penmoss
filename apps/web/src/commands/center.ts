@@ -21,6 +21,7 @@ import {
   isAltGraph,
   normaliseCombo,
 } from '@penmoss/editor/keys';
+import { recordCommand } from '../analytics/track';
 import { usableBindings } from './bindings';
 import type { CommandDefinition, CommandScope } from './definitions';
 
@@ -266,9 +267,29 @@ export class CommandCenter {
     return undefined;
   }
 
-  /** Runs a command; false when it is unavailable or declined. */
+  /**
+   * Runs a command; false when it is unavailable or declined. Each run is recorded by name
+   * (PEN-137): its id, its source and whether it ran.
+   */
   run(id: string, context: RunContext = { source: 'button' }): boolean {
     if (!this.available(id)) return false;
+    const ran = this.execute(id, context);
+    this.recordRun(id, context, ran);
+    return ran;
+  }
+
+  /** Records a run; for a key, its combination and whether it is the person's own binding. */
+  private recordRun(id: string, context: RunContext, ran: boolean, combo?: string): void {
+    recordCommand({
+      id,
+      source: context.source,
+      ran,
+      combo,
+      custom: combo === undefined ? undefined : this.isCustom(id),
+    });
+  }
+
+  private execute(id: string, context: RunContext): boolean {
     const definition = this.definitions.get(id)!;
     if (definition.scope === 'editor') {
       const command = this.editorCommands.get(id)!;
@@ -371,11 +392,18 @@ export class CommandCenter {
       .filter((definition) => !definition.pending && this.keysOf(definition.id).includes(combo))
       .filter((definition) => definition.scope !== 'editor' || inEditor)
       .sort((a, b) => SPECIFIC_FIRST[a.scope] - SPECIFIC_FIRST[b.scope]);
+    const context: RunContext = event ? { source: 'key', event } : { source: 'menu' };
+    let declined: string | null = null;
     for (const definition of candidates) {
       if (!this.available(definition.id)) continue;
-      const context: RunContext = event ? { source: 'key', event } : { source: 'menu' };
-      if (this.run(definition.id, context)) return true;
+      // One event per key (PEN-137): the command that took it, else the first that declined.
+      if (this.execute(definition.id, context)) {
+        this.recordRun(definition.id, context, true, combo);
+        return true;
+      }
+      declined ??= definition.id;
     }
+    if (declined !== null) this.recordRun(declined, context, false, combo);
     // The editor's own keymap still has the default: it must not act on a key moved elsewhere.
     return inEditor && this.reboundEditorDefault(combo);
   }

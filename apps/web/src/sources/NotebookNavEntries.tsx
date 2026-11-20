@@ -31,6 +31,7 @@ function NotebookNavEntry({ source, current }: { source: GitSource; current: boo
   const dot = dotState(status);
   return (
     <a
+      data-event="settings.nav.notebook"
       href={path}
       className="nset-nav-entry"
       data-ui="item"

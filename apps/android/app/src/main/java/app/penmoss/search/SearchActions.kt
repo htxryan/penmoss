@@ -20,6 +20,7 @@ object SearchActions {
         SearchAction("app.gitNotebooks", "Notebook Settings"),
         // The GitHub sign-in Send Feedback files with: Settings → GitHub (T59, A1046; PEN-148).
         SearchAction("app.status", "GitHub Settings"),
+        SearchAction("app.privacy", "Privacy Settings"),
         // In-app feedback (T49, D41): the same form as the overflow menu's, captured first.
         SearchAction("app.sendFeedback", "Send Feedback"),
         SearchAction("app.home", "Close the Note"),

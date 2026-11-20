@@ -10,7 +10,6 @@ import { docText, textStats } from '@penmoss/model/stats';
 import type { LocalLinks, OpenNote } from '../notes/service';
 import type { NoteListEntry } from '../notes/list';
 import { localLinked } from '../notes/backlinks';
-import { folderTrail } from '../notes/crumbs';
 import { parseRoute } from '../router';
 import type { ContextFacts, NoteFacts, SyncFacts } from './context';
 import type { RecentError } from './errors';
@@ -19,7 +18,12 @@ interface TextNode {
   readonly type: { readonly name: string };
   readonly content: { readonly size: number };
   textBetween(from: number, to: number, blockSeparator?: string): string;
-  descendants(visit: (node: { readonly type: { readonly name: string } }) => boolean | void): void;
+  descendants(
+    visit: (node: {
+      readonly type: { readonly name: string };
+      readonly attrs?: Readonly<Record<string, unknown>>;
+    }) => boolean | void,
+  ): void;
 }
 
 /** The parts of the app the context reads. */
@@ -39,7 +43,6 @@ export interface GatherDeps {
   /** Panels and dialogs on screen (read from the page). */
   readonly panels: readonly string[];
   readonly sidebar: string;
-  readonly selectedFolderId: string | null;
   readonly online: boolean;
   readonly sync: {
     readonly phase: string;
@@ -101,15 +104,7 @@ export function osOf(userAgent: string): string {
   return 'unknown';
 }
 
-/**
- * The path as the context names it: a Penmoss page's own path (ids kept, no query), or
- * `(not a Penmoss page)` for any other, which may hold whatever was typed or linked.
- */
-export function routeOf(pathname: string): string {
-  return parseRoute(pathname).name === 'not-found' ? '(not a Penmoss page)' : pathname;
-}
-
-/** What the route shows, in words; the path is kept as it is (ids, no query). */
+/** What the route shows, in words, never the path itself (PEN-137, O5). */
 function screenOf(pathname: string): string {
   const route = parseRoute(pathname);
   switch (route.name) {
@@ -127,11 +122,6 @@ function noteIdOf(pathname: string): string | null {
   return route.name === 'note' || route.name === 'window' ? route.id : null;
 }
 
-/** The folder path of a folder id, outermost first ("Projects / Penmoss"). */
-function folderPath(snapshot: WorkspaceSnapshot, folderId: string | null): string {
-  return folderTrail(snapshot.folders, folderId).join(' / ');
-}
-
 function countAttachments(doc: TextNode): number {
   let count = 0;
   doc.descendants((node) => {
@@ -140,9 +130,23 @@ function countAttachments(doc: TextNode): number {
   return count;
 }
 
+/** The names of the files a note embeds (`quokka.png`), for scrubbing a report's logs. */
+function attachmentNames(doc: TextNode): string[] {
+  const names: string[] = [];
+  doc.descendants((node) => {
+    if (node.type.name !== 'image' && node.type.name !== 'attachment') return;
+    for (const key of ['src', 'name', 'title', 'alt']) {
+      const value = node.attrs?.[key];
+      if (typeof value !== 'string' || value === '') continue;
+      const file = value.split(/[?#]/)[0]!.split('/').pop() ?? '';
+      names.push(...[value, file].filter((name) => name !== '' && !name.startsWith('data:')));
+    }
+  });
+  return names;
+}
+
 function noteFacts(deps: GatherDeps, id: string): { facts: NoteFacts; text: string } {
   const entry = deps.list.find((item) => item.id === id);
-  const registry = deps.snapshot.notes.find((item) => item.id === id);
   const copies = deps.opened(id);
   const copy = copies.find((note) => note.isLoaded) ?? copies[0] ?? null;
   const doc = copy?.isLoaded ? copy.replica.doc : null;
@@ -154,10 +158,6 @@ function noteFacts(deps: GatherDeps, id: string): { facts: NoteFacts; text: stri
   return {
     text,
     facts: {
-      id,
-      title: entry?.title ?? '',
-      folder: folderPath(deps.snapshot, registry?.folderId ?? null),
-      tags: entry?.tags ?? [],
       created: identity.created ?? null,
       updated: entry?.updatedAt || null,
       kind: identity.kind ?? null,
@@ -181,11 +181,6 @@ function gitNoteFacts(facts: NoteFacts): NoteFacts {
   return {
     ...facts,
     source: 'git',
-    id: '',
-    title: '',
-    folder: '',
-    notebook: '',
-    tags: [],
     created: null,
     updated: null,
     kind: null,
@@ -213,8 +208,13 @@ export function gatherContext(deps: GatherDeps): ContextFacts {
     ...deps.snapshot.folders.map((folder) => folder.name),
     ...(deps.gitNames ?? []),
   ];
-  const selected =
-    !git && deps.selectedFolderId ? folderPath(deps.snapshot, deps.selectedFolderId) || null : null;
+  // Scrub #2 of a bug report's logs (PEN-137): the notes' tags, file paths and attachments too.
+  const logNames = [
+    ...names,
+    ...deps.list.flatMap((item) => item.tags.flatMap((tag) => [tag, `#${tag}`])),
+    ...deps.snapshot.notes.flatMap((entry) => (entry.path ? pathNames(entry.path) : [])),
+    ...(deps.editorDoc ? attachmentNames(deps.editorDoc) : []),
+  ];
   return {
     app: {
       client: deps.client,
@@ -231,12 +231,10 @@ export function gatherContext(deps: GatherDeps): ContextFacts {
       ...(deps.mac ? { titleBar: deps.mac.titleBar, keepOnTop: deps.mac.keepOnTop } : {}),
     },
     where: {
-      route: git ? `/${screenOf(path)}` : routeOf(path),
       screen: screenOf(path),
       panels: deps.panels,
       openedFrom: deps.openedFrom,
       sidebar: deps.sidebar,
-      selectedFolder: selected,
       ...(git ? { git: true } : {}),
     },
     sync,
@@ -245,6 +243,7 @@ export function gatherContext(deps: GatherDeps): ContextFacts {
     private: {
       names,
       noteTexts: [...(note?.text ? [note.text] : []), ...deps.openTexts()].filter(Boolean),
+      logNames: [...new Set(logNames.filter((name) => name.trim() !== ''))],
     },
   };
 }
@@ -270,9 +269,8 @@ export function sidebarOn(doc: Pick<Document, 'querySelector'>): string {
   return 'expanded';
 }
 
-/** The folder row selected in the tree (`folder:<id>`), or null. */
-export function selectedFolderOn(doc: Pick<Document, 'querySelector'>): string | null {
-  const row = doc.querySelector('.folder-row[aria-selected="true"]');
-  const key = row?.getAttribute('data-key') ?? '';
-  return key.startsWith('folder:') ? key.slice('folder:'.length) : null;
+/** A note's file path and each of its parts (`Projects/Plan.md`: also `Projects`, `Plan`). */
+function pathNames(path: string): string[] {
+  const parts = path.split('/').filter(Boolean);
+  return [path, ...parts, ...parts.map((part) => part.replace(/\.md$/i, ''))];
 }

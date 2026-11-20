@@ -105,6 +105,12 @@ object FeedbackContextBuilder {
         else -> reason.ifEmpty { "version" }
     }
 
+    /**
+     * Every report comes from a git notebook (A826, A828, A889; PEN-137, O5): nothing of the
+     * notebook goes. Its screen and the note are named only by kind, with counts and sync states:
+     * no note id, title, folder path, notebook name, tags, route, dates or authors. The server
+     * era's rows (Title, Folder, Tags, Notebook, Route, Id, Selected folder) are gone.
+     */
     fun build(
         app: AppFacts,
         where: WhereFacts,
@@ -116,91 +122,7 @@ object FeedbackContextBuilder {
         noteText: String,
         /** Note titles and folder names to scrub errors of; null while the phone knows none. */
         names: Collection<String>?,
-        /**
-         * Opened from a git notebook (A826, A828, A889): nothing of the notebook goes to Penmoss's
-         * server. Its screen and the note are named only by kind, with counts and sync states:
-         * no note id, title, folder path, notebook name, tags, dates or authors.
-         */
-        gitNotebook: Boolean = false,
-    ): FeedbackContextData {
-        if (gitNotebook) return gitContext(app, where, sync, note, errors, noteText, names)
-        val groups = mutableListOf(
-            fieldGroup(
-                FeedbackGroupId.APP,
-                listOf(
-                    "Client" to "Android",
-                    "Version" to app.version,
-                    "OS" to app.os,
-                    "WebView" to app.webView,
-                    "Window" to app.window,
-                    "Screen" to app.screen,
-                    "Theme" to app.theme,
-                    "Appearance" to app.appearance,
-                    "Locale" to app.locale,
-                    "Time zone" to app.timeZone,
-                ),
-            ),
-            fieldGroup(
-                FeedbackGroupId.WHERE,
-                listOf(
-                    "Route" to where.route,
-                    "Screen" to where.screen,
-                    "Open panel" to (where.panel ?: "none"),
-                    "Opened from" to where.openedFrom,
-                    "Selected folder" to where.folderPath,
-                ),
-            ),
-            fieldGroup(
-                FeedbackGroupId.SYNC,
-                listOf(
-                    "Online" to sync.online,
-                    "Sync" to sync.sync,
-                    "Socket" to sync.socket,
-                    "Last synced" to (sync.lastSynced?.let(::iso) ?: "never"),
-                    "Unsynced notes" to sync.unsyncedNotes,
-                    "Outbox" to sync.outbox,
-                    "Feedback outbox" to sync.feedbackOutbox,
-                    "Last sync error" to sync.lastError,
-                ),
-            ),
-        )
-        if (note != null) {
-            groups += fieldGroup(
-                FeedbackGroupId.NOTE,
-                listOf(
-                    "Id" to note.id,
-                    "Title" to note.title,
-                    "Folder" to note.folderPath,
-                    "Tags" to note.tags.joinToString(", ") { "#$it" }.ifEmpty { "none" },
-                    "Created" to note.created,
-                    "Updated" to note.updated?.takeIf { it > 0 }?.let(::iso),
-                    "Words" to note.words,
-                    "Characters" to note.characters,
-                    "Attachments" to note.attachments,
-                    "Size in bytes" to note.sizeBytes,
-                    "Engine" to note.engine,
-                    "Unsynced" to note.unsynced,
-                    "In Trash" to note.inTrash,
-                    "Backlinks" to note.backlinks,
-                    "Outgoing links" to note.outgoingLinks,
-                    "Open in windows" to note.windows,
-                ),
-            )
-            groups += tableGroup(
-                FeedbackGroupId.EDITS,
-                EDIT_COLUMNS,
-                (edits.filter { it.unversioned } + edits.filterNot { it.unversioned }.sortedByDescending { it.at })
-                    .take(FeedbackLimits.RECENT)
-                    .map { edit ->
-                        val actors = edit.actors.joinToString(", ")
-                        if (edit.unversioned) listOf(iso(edit.at), actors, UNVERSIONED, "")
-                        else listOf(iso(edit.at), actors, kind(edit.reason), change(edit.summary))
-                    },
-            )
-        }
-        groups += tableGroup(FeedbackGroupId.ERRORS, ERROR_COLUMNS, errors(errors, noteText, names))
-        return FeedbackContextData(groups)
-    }
+    ): FeedbackContextData = gitContext(app, where, sync, note, errors, noteText, names)
 
     /** What [build] sends from a git notebook: kinds, counts and states only (A889). */
     const val GIT_NOTICE = "nothing of the notebook is sent: no note id, title, folder, tags, dates, authors or screen capture"

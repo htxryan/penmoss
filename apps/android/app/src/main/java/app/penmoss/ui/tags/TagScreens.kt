@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.ui.common.OutlinedTextField
@@ -122,7 +124,7 @@ fun TagsScreen(
                     Row(Modifier.fillMaxWidth().padding(start = (depth * 20).dp), verticalAlignment = Alignment.CenterVertically) {
                         if (node.children.isNotEmpty()) {
                             IconButton(
-                                onClick = { expanded = if (open) expanded - node.tag else expanded + node.tag },
+                                onClick = trackedClick(if (open) "tags.pane.collapse" else "tags.pane.expand") { expanded = if (open) expanded - node.tag else expanded + node.tag },
                                 modifier = Modifier.testTag("twisty-${node.tag}"),
                             ) {
                                 Icon(
@@ -143,7 +145,8 @@ fun TagsScreen(
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         onRename(node.tag)
                                     },
-                                ) { onOpenTag(node.tag) }
+                                    onClick = trackedClick("tags.pane.show") { onOpenTag(node.tag) },
+                                )
                                 .semantics(mergeDescendants = true) { contentDescription = "#${node.tag}, ${notesCount(node.count)}" }
                                 .padding(end = 16.dp, top = 12.dp, bottom = 12.dp)
                                 .testTag("tag-${node.tag}"),
@@ -236,11 +239,13 @@ fun RenameTagDialog(
     val scope = rememberCoroutineScope()
     val check = checkTagRename(from, value, known)
     val merge = (check as? TagRenameCheck.Ready)?.merge == true
+    val tracked = rememberTrackedDialog("tagRename")
     val submit: () -> Unit = {
         when (check) {
             is TagRenameCheck.Invalid -> error = check.message
             TagRenameCheck.Same -> onDone(null)
             is TagRenameCheck.Ready -> {
+                tracked.done()
                 busy = true
                 scope.launch {
                     val failed = onRename(check.to, check.merge)
@@ -288,12 +293,12 @@ fun RenameTagDialog(
         },
         confirmButton = {
             if (unsent > 0) {
-                TextButton(onClick = onSyncNow, modifier = Modifier.testTag("tagRenameSync")) { Text("Sync Now") }
+                TextButton(onClick = trackedClick("tags.pane.rename.sync-now", onSyncNow), modifier = Modifier.testTag("tagRenameSync")) { Text("Sync Now") }
             } else {
-                TextButton(onClick = submit, enabled = !busy, modifier = Modifier.testTag("tagRenameConfirm")) { Text(if (merge) "Merge" else "Rename") }
+                TextButton(onClick = trackedClick("tags.pane.rename.submit", submit), enabled = !busy, modifier = Modifier.testTag("tagRenameConfirm")) { Text(if (merge) "Merge" else "Rename") }
             }
         },
-        dismissButton = { TextButton(onClick = { onDone(null) }, enabled = !busy) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = trackedClick("tags.pane.rename.cancel") { onDone(null) }, enabled = !busy) { Text("Cancel") } },
     )
 }
 

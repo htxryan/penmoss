@@ -46,6 +46,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.trackedToggle
 import app.penmoss.engine.git.AddResult
 import app.penmoss.engine.git.GitEngineStatus
 import app.penmoss.engine.git.GitNotebookView
@@ -101,8 +104,8 @@ fun gitStatusLine(status: GitEngineStatus?, host: String, now: Long = System.cur
         "synced" -> (status.lastSyncAt?.let { "Synced at ${clock(it, zone)}" } ?: "Synced") + waiting
         "syncing" -> status.since.let { since -> if (since != null && now - since > WAITING_AFTER_MS) "Waiting for $host…$waiting" else "Syncing…$waiting" }
         "offline" -> "Offline: changes stay on this phone" + (status.nextRetryAt?.let { ". Tries again at ${clock(it, zone)}" } ?: "") + waiting
-        "stopped" -> status.detail ?: "Sync stopped."
-        else -> "Not synced yet$waiting"
+        "stopped" -> status.detail ?: "Sync Stopped"
+        else -> "Not Synced Yet$waiting"
     }
 }
 
@@ -223,7 +226,7 @@ class GitNotebooksActions(
 /**
  * Settings → All Notebooks (T50 G7, G8; A856, A825, A855; PEN-146): the notebooks on this phone, one
  * row each with its sync dot (a tap opens its page), Add Notebook (its form shows only after Add),
- * Between Notebooks (the Primary Notebook first), Commits From This Phone and the background runs. It is
+ * Between Notebooks (the Primary Notebook first), Commits from This Phone and the background runs. It is
  * also the app's home (A828, A1040), titled Penmoss with Settings in its bar, where a row opens the
  * notebook: with no notebook yet, the first run asks to add or create one.
  */
@@ -252,7 +255,7 @@ fun GitNotebooksScreen(
         info = !ui.home,
         actions = {
             if (onSettings != null) {
-                app.penmoss.ui.common.IconButton(onClick = onSettings, modifier = Modifier.testTag("homeSettingsGear")) {
+                app.penmoss.ui.common.IconButton(onClick = trackedClick("home.settings", onSettings), modifier = Modifier.testTag("homeSettingsGear")) {
                     androidx.compose.material3.Icon(app.penmoss.ui.settings.SettingsIcons.Gear, contentDescription = "Settings")
                 }
             }
@@ -264,7 +267,7 @@ fun GitNotebooksScreen(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitMessage").semantics { liveRegion = LiveRegionMode.Polite },
                 color = MaterialTheme.colorScheme.error,
             )
-            TextButton(onClick = actions.onDismissMessage, Modifier.padding(horizontal = 8.dp)) { Text("OK") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.message.dismiss", actions.onDismissMessage), Modifier.padding(horizontal = 8.dp)) { Text("OK") }
         }
         if (ui.rows.isEmpty() && onAddNotebook == null) {
             // The first run (A1040): nothing to open yet, so the screen says how to start.
@@ -274,14 +277,14 @@ fun GitNotebooksScreen(
                 style = MaterialTheme.typography.titleMedium,
             )
         }
-        for ((at, row) in ui.rows.withIndex()) NotebookRow(row, primary = ui.journal == row.view.localId, if (at == 0) Modifier.settingRow("all-notebooks") else Modifier) {
+        for ((at, row) in ui.rows.withIndex()) NotebookRow(row, primary = ui.journal == row.view.localId, if (at == 0) Modifier.settingRow("all-notebooks") else Modifier, event = if (ui.home) "home.notebook" else "settings.git-notebooks.row.open") {
             if (ui.home) actions.onOpen(row.view.localId) else actions.onPage(row.view.localId)
         }
         if (onAddNotebook == null && (adding || ui.rows.isEmpty())) {
             AddForm(ui, actions, onCancel = if (ui.rows.isEmpty()) null else ({ adding = false }))
         } else {
             Button(
-                onClick = { if (onAddNotebook != null) onAddNotebook() else adding = true },
+                onClick = trackedClick("settings.git-notebooks.add") { if (onAddNotebook != null) onAddNotebook() else adding = true },
                 Modifier.settingRow("add-notebook").padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitAddOpen"),
             ) { Text("+ Add Notebook") }
         }
@@ -300,6 +303,7 @@ fun GitNotebooksScreen(
         }
     }
     if (picking) {
+        val tracked = rememberTrackedDialog("primaryNotebook")
         AlertDialog(
             onDismissRequest = { picking = false },
             title = { Text("Primary Notebook") },
@@ -307,7 +311,8 @@ fun GitNotebooksScreen(
                 Column(Modifier.selectableGroup()) {
                     Help("Where Today, This Week and captures from the share sheet, the tile and the widget go on this phone.", Modifier.padding(0.dp))
                     for (row in ui.rows) {
-                        ChoiceRow(row.view.name, row.view.repository, ui.journal == row.view.localId, true, "gitJournal-${row.view.localId}") {
+                        ChoiceRow(row.view.name, row.view.repository, ui.journal == row.view.localId, true, "gitJournal-${row.view.localId}", event = "settings.git-notebooks.journal") {
+                            tracked.done()
                             picking = false
                             actions.onJournal(row.view.localId)
                         }
@@ -315,7 +320,7 @@ fun GitNotebooksScreen(
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = trackedClick("settings.git-notebooks.journal.cancel") { picking = false }) { Text("Cancel") } },
         )
     }
 }
@@ -338,7 +343,7 @@ private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions, o
         headlineContent = { DeviceOnlyHeadline("Primary Notebook") },
         supportingContent = { Text("Holds your journal, Inbox and these settings") },
         trailingContent = { Text("${chosen?.view?.name ?: "None"} ›", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-        modifier = Modifier.settingRow("primary-notebook").testTag("gitPrimary").clickable(role = Role.Button, onClick = onPickPrimary),
+        modifier = Modifier.settingRow("primary-notebook").testTag("gitPrimary").clickable(role = Role.Button, onClick = trackedClick("settings.git-notebooks.journal.open", onPickPrimary)),
     )
     if (several) {
         val primary = ui.rows.firstOrNull { it.view.localId == ui.journal } ?: ui.rows.first()
@@ -347,7 +352,7 @@ private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions, o
             supportingContent = { Text("A change to ${primary.view.name}’s settings goes to the other notebooks") },
             trailingContent = { Switch(checked = ui.inStep, onCheckedChange = null) },
             modifier = Modifier.settingRow("keep-settings-in-step").testTag("gitSettingsInStep")
-                .toggleable(value = ui.inStep, role = Role.Switch, onValueChange = actions.onInStep),
+                .toggleable(value = ui.inStep, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.in-step", actions.onInStep)),
         )
     }
     if (ui.copyTags != null) {
@@ -356,14 +361,14 @@ private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions, o
             supportingContent = { Text("Copy to Notebook on the Mac starts with this; it syncs from here.") },
             trailingContent = { Switch(checked = ui.copyTags, onCheckedChange = null) },
             modifier = Modifier.settingRow("copy-tags-when-copying-notes").testTag("gitCopyTags")
-                .toggleable(value = ui.copyTags, role = Role.Switch, onValueChange = actions.onCopyTags),
+                .toggleable(value = ui.copyTags, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.copy-tags", actions.onCopyTags)),
         )
     }
     if (several) {
         ListItem(
             headlineContent = { Text("Copy Settings…") },
             supportingContent = { Text("From one notebook to another, once") },
-            modifier = Modifier.settingRow("copy-settings").testTag("gitCopySettingsOpen").clickable(role = Role.Button) { copying = true },
+            modifier = Modifier.settingRow("copy-settings").testTag("gitCopySettingsOpen").clickable(role = Role.Button, onClick = trackedClick("settings.git-notebooks.copy-settings.open") { copying = true }),
         )
     }
     if (several && copying) {
@@ -388,17 +393,18 @@ internal fun CopySettingsDialog(rows: List<GitRow>, from: String, to: String?, o
     // Every other notebook, or one: the only other one when there is one, the first when the one
     // chosen became From.
     val target = if (chosen == null) others.singleOrNull() else others.firstOrNull { it.view.localId == chosen } ?: others.firstOrNull()
+    val tracked = rememberTrackedDialog("copySettings")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Copy Settings") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Picker("From", sourceRow.view.name, rows.map { it.view.localId to it.view.name }, "gitCopyFrom") {
+                Picker("From", sourceRow.view.name, rows.map { it.view.localId to it.view.name }, "gitCopyFrom", event = "settings.git-notebooks.copy-settings.from") {
                     source = it ?: source
                     done = null
                 }
                 val every = if (others.size > 1) listOf(null to "Every Other Notebook") else emptyList()
-                Picker("To", target?.view?.name ?: "Every Other Notebook", every + others.map { it.view.localId to it.view.name }, "gitCopyTo") {
+                Picker("To", target?.view?.name ?: "Every Other Notebook", every + others.map { it.view.localId to it.view.name }, "gitCopyTo", event = "settings.git-notebooks.copy-settings.to") {
                     chosen = it
                     done = null
                 }
@@ -413,7 +419,8 @@ internal fun CopySettingsDialog(rows: List<GitRow>, from: String, to: String?, o
         },
         confirmButton = {
             TextButton(
-                onClick = {
+                onClick = trackedClick("settings.git-notebooks.copy-settings.copy") {
+                    tracked.done()
                     copying = true
                     scope.launch {
                         try {
@@ -427,25 +434,25 @@ internal fun CopySettingsDialog(rows: List<GitRow>, from: String, to: String?, o
                 modifier = Modifier.testTag("gitCopySettings"),
             ) { Text(if (copying) "Copying…" else "Copy Settings") }
         },
-        dismissButton = { TextButton(onClick = onDismiss, Modifier.testTag("gitCopySettingsClose")) { Text(if (done != null) "Done" else "Cancel") } },
+        dismissButton = { TextButton(onClick = trackedClick("settings.git-notebooks.copy-settings.cancel", onDismiss), Modifier.testTag("gitCopySettingsClose")) { Text(if (done != null) "Done" else "Cancel") } },
     )
 }
 
 /** A choice in a dialog: its label, what is chosen, and a menu of the [options] (an id, null for every other, and a name). */
 @Composable
-private fun Picker(label: String, shown: String, options: List<Pair<String?, String>>, tag: String, onPick: (String?) -> Unit) {
+private fun Picker(label: String, shown: String, options: List<Pair<String?, String>>, tag: String, event: String, onPick: (String?) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         ListItem(
             headlineContent = { Text(label) },
             trailingContent = { Text("$shown ›", Modifier.testTag("$tag-shown"), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            modifier = Modifier.testTag(tag).clickable(role = Role.Button) { open = true },
+            modifier = Modifier.testTag(tag).clickable(role = Role.Button, onClick = trackedClick(event) { open = true }),
         )
         androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             for ((id, name) in options) {
                 androidx.compose.material3.DropdownMenuItem(
                     text = { Text(name) },
-                    onClick = {
+                    onClick = trackedClick("settings.git-notebooks.copy-settings.pick") {
                         open = false
                         onPick(id)
                     },
@@ -458,7 +465,7 @@ private fun Picker(label: String, shown: String, options: List<Pair<String?, Str
 
 /** A notebook's row (PEN-146): its dot, its badge and name (Primary when it is), its repository and sync. */
 @Composable
-private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modifier, event: String, onClick: () -> Unit) {
     val view = row.view
     ListItem(
         leadingContent = { Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { DotMarkOf(dotOf(row.status)) } },
@@ -478,7 +485,7 @@ private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modi
             )
         },
         trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
-        modifier = modifier.testTag("gitNotebook-${view.localId}").clickable(role = Role.Button, onClick = onClick),
+        modifier = modifier.testTag("gitNotebook-${view.localId}").clickable(role = Role.Button, onClick = trackedClick(event, onClick)),
     )
 }
 
@@ -511,16 +518,16 @@ fun RecoveryNotice(notice: GitRecoveryNotice, onSave: () -> Unit = {}, onDismiss
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                if (notice.titles.isEmpty()) "Notes not brought back" else "Notes brought back",
+                if (notice.titles.isEmpty()) "Notes Not Brought Back" else "Notes Brought Back",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Text(notice.words(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
             Row {
                 if (notice.unrecovered.isNotEmpty()) {
-                    TextButton(onClick = onSave, Modifier.testTag("gitRecoveredSave")) { Text("Save Their Text") }
+                    TextButton(onClick = trackedClick("settings.git-notebooks.recovered.save", onSave), Modifier.testTag("gitRecoveredSave")) { Text("Save Their Text") }
                 }
-                TextButton(onClick = onDismiss, Modifier.testTag("gitRecoveredDismiss")) { Text("Got It") }
+                TextButton(onClick = trackedClick("settings.git-notebooks.recovered.dismiss", onDismiss), Modifier.testTag("gitRecoveredDismiss")) { Text("Got It") }
             }
         }
     }
@@ -562,11 +569,11 @@ fun WithheldNotice(copies: List<WithheldView>, onSave: () -> Unit, onDelete: (St
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Row {
-                    TextButton(onClick = { onKeep(copy.noteId) }, Modifier.testTag("gitWithheldKeep-${copy.noteId}")) { Text("Keep and Sync") }
-                    TextButton(onClick = { onDelete(copy.noteId) }, Modifier.testTag("gitWithheldDelete-${copy.noteId}")) { Text("Delete for Good") }
+                    TextButton(onClick = trackedClick("settings.git-notebooks.withheld.keep") { onKeep(copy.noteId) }, Modifier.testTag("gitWithheldKeep-${copy.noteId}")) { Text("Keep and Sync") }
+                    TextButton(onClick = trackedClick("settings.git-notebooks.withheld.delete") { onDelete(copy.noteId) }, Modifier.testTag("gitWithheldDelete-${copy.noteId}")) { Text("Delete for Good") }
                 }
             }
-            TextButton(onClick = onSave, Modifier.testTag("gitWithheldSave")) { Text("Save Their Text") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.withheld.save", onSave), Modifier.testTag("gitWithheldSave")) { Text("Save Their Text") }
         }
     }
 }
@@ -577,7 +584,7 @@ internal fun Purges(row: GitRow, actions: GitNotebooksActions) {
     val id = row.view.localId
     val purges = row.purges
     LaunchedEffect(id, purges == null) { if (purges == null) actions.onShowPurges(id) }
-    Text("Delete for good, waiting", style = MaterialTheme.typography.titleSmall)
+    Text("Delete for Good, Waiting", style = MaterialTheme.typography.titleSmall)
     if (purges == null) {
         Text("Reading the notes from the branch…", style = MaterialTheme.typography.bodySmall)
         return
@@ -600,10 +607,10 @@ internal fun Purges(row: GitRow, actions: GitNotebooksActions) {
             supportingContent = { Text(if (purge.confirmedBefore) "You confirmed this on this phone; it ran out" else "Never confirmed on this phone") },
             trailingContent = {
                 Column(horizontalAlignment = Alignment.End) {
-                    TextButton(onClick = { actions.onKeep(id, purge.id) }, Modifier.testTag("gitKeep-${purge.id}")) { Text("Keep Note") }
+                    TextButton(onClick = trackedClick("settings.git-notebooks.reconfirm.keep-note") { actions.onKeep(id, purge.id) }, Modifier.testTag("gitKeep-${purge.id}")) { Text("Keep Note") }
                     // Never confirmed here: Delete for good, behind the phone's own check, as on the Mac (A913).
                     if (!purge.confirmedBefore) {
-                        TextButton(onClick = { actions.onConfirmPurge(id, purge.id) }, Modifier.testTag("gitPurgeNote-${purge.id}")) { Text("Delete for Good") }
+                        TextButton(onClick = trackedClick("settings.git-notebooks.reconfirm.purge-note") { actions.onConfirmPurge(id, purge.id) }, Modifier.testTag("gitPurgeNote-${purge.id}")) { Text("Delete for Good") }
                     }
                 }
             },
@@ -612,7 +619,7 @@ internal fun Purges(row: GitRow, actions: GitNotebooksActions) {
     }
     val again = purges.filter { it.confirmedBefore }.map { it.id }
     if (again.isNotEmpty()) {
-        OutlinedButton(onClick = { actions.onConfirmPurges(id, again) }, Modifier.testTag("gitConfirmPurges-$id")) {
+        OutlinedButton(onClick = trackedClick("settings.git-notebooks.reconfirm.confirm") { actions.onConfirmPurges(id, again) }, Modifier.testTag("gitConfirmPurges-$id")) {
             // The button the refusal names ("Confirm Delete for good again in Settings → Git notebooks"), as on the Mac (A894).
             Text(if (again.size == 1) "Confirm Delete for Good Again" else "Confirm Delete for Good Again: ${again.size} notes")
         }
@@ -629,7 +636,7 @@ internal fun Kept(row: GitRow, actions: GitNotebooksActions) {
                 Modifier.weight(1f).testTag("gitKept-${note.id}"),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            TextButton(onClick = { actions.onUndoKeep(row.view.localId, note.id) }, Modifier.testTag("gitKeepUndo-${note.id}")) { Text("Undo") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.reconfirm.undo-keep") { actions.onUndoKeep(row.view.localId, note.id) }, Modifier.testTag("gitKeepUndo-${note.id}")) { Text("Undo") }
         }
     }
 }
@@ -668,10 +675,10 @@ private fun AddForm(ui: GitNotebooksUi, actions: GitNotebooksActions, onCancel: 
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth().testTag("gitAddName"), label = { Text("Notebook Name") }, singleLine = true)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { actions.onAdd(form) }, enabled = remote.isNotBlank() && ui.busy != "add", modifier = Modifier.testTag("gitAdd")) {
+            Button(onClick = trackedClick("settings.git-notebooks.add.submit") { actions.onAdd(form) }, enabled = remote.isNotBlank() && ui.busy != "add", modifier = Modifier.testTag("gitAdd")) {
                 Text(if (ui.busy == "add") "Checking…" else "Add")
             }
-            if (onCancel != null) TextButton(onClick = onCancel, Modifier.testTag("gitAddCancel")) { Text("Cancel") }
+            if (onCancel != null) TextButton(onClick = trackedClick("settings.git-notebooks.add.cancel", onCancel), Modifier.testTag("gitAddCancel")) { Text("Cancel") }
         }
         Help("GitHub: a fine-grained token with Contents read and write and Metadata read on that repository only. SSH is not supported on Android.", Modifier.padding(0.dp))
     }
@@ -692,16 +699,18 @@ internal fun NewSigningKey(
     onConfirm: (app.penmoss.engine.git.CommitKeyType) -> Unit,
 ) {
     if (type == null) return
-    val kind = if (type == app.penmoss.engine.git.CommitKeyType.ED25519) "an Ed25519" else "a new P-256"
+    val ed25519 = type == app.penmoss.engine.git.CommitKeyType.ED25519
+    val kind = if (ed25519) "an Ed25519" else "a new P-256"
     val signing = ui.rows.filter { it.view.signCommits }.map { it.view.name }
     val who = when (signing.size) {
         0 -> "No notebook signs commits now; any you turn Sign commits on for uses it."
         1 -> "${signing.single()} signs with it from its next commit."
         else -> "${signing.dropLast(1).joinToString(", ")} and ${signing.last()} sign with it from their next commits."
     }
+    val tracked = rememberTrackedDialog("confirm")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Make $kind signing key?") },
+        title = { Text("Make ${if (ed25519) "an Ed25519" else "a New P-256"} Signing Key?") },
         text = {
             Text(
                 "This deletes this phone's signing key and makes $kind key in its place, for every git notebook on this phone. $who " +
@@ -710,16 +719,16 @@ internal fun NewSigningKey(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(type) }, Modifier.testTag("gitSigningKeyConfirm")) { Text("Make the Key") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.new.confirm", tracked.done { onConfirm(type) }), Modifier.testTag("gitSigningKeyConfirm")) { Text("Make the Key") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, Modifier.testTag("gitSigningKeyCancel")) { Text("Cancel") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.new.cancel", onDismiss), Modifier.testTag("gitSigningKeyCancel")) { Text("Cancel") }
         },
     )
 }
 
 /**
- * Commits From This Phone (PEN-146): the name and email this phone commits as, and its signing key,
+ * Commits from This Phone (PEN-146): the name and email this phone commits as, and its signing key,
  * one row that opens in place. A notebook's own name and email are on its Git tab.
  */
 @Composable
@@ -727,21 +736,21 @@ private fun CommitsFromThisPhone(ui: GitNotebooksUi, actions: GitNotebooksAction
     var open by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable(ui.identityName) { mutableStateOf(ui.identityName) }
     var email by rememberSaveable(ui.identityEmail) { mutableStateOf(ui.identityEmail) }
-    GroupTitle("Commits From This Phone", Modifier.settingRow("commits-from-this-phone"))
+    GroupTitle("Commits from This Phone", Modifier.settingRow("commits-from-this-phone"))
     ListItem(
-        headlineContent = { Text(ui.identityName.ifBlank { "No name set" }) },
+        headlineContent = { Text(ui.identityName.ifBlank { "No Name Set" }) },
         supportingContent = {
             Text(listOfNotNull(ui.identityEmail.ifBlank { null }, if (ui.signingKey != null) "signing key on this phone" else null).joinToString(" · ").ifEmpty { "Name and email for your commits" })
         },
         trailingContent = { Text(if (open) "⌃" else "›", style = MaterialTheme.typography.titleMedium) },
-        modifier = Modifier.testTag("gitCommits").clickable(role = Role.Button) { open = !open },
+        modifier = Modifier.testTag("gitCommits").clickable(role = Role.Button, onClick = trackedClick("settings.git-notebooks.commits.toggle") { open = !open }),
     )
     if (!open) return
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth().testTag("gitIdentityName"), label = { Text("Name") }, singleLine = true)
         OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth().testTag("gitIdentityEmail"), label = { Text("Email") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
         if (name != ui.identityName || email != ui.identityEmail) {
-            TextButton(onClick = { actions.onIdentity(name, email) }, Modifier.testTag("gitIdentitySave")) { Text("Save") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.identity.save") { actions.onIdentity(name, email) }, Modifier.testTag("gitIdentitySave")) { Text("Save") }
         }
         SigningKey(ui, actions)
     }
@@ -765,9 +774,9 @@ internal fun SigningKey(ui: GitNotebooksUi, actions: GitNotebooksActions) {
         )
         Text(key, Modifier.fillMaxWidth().testTag("gitSigningKey"), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { actions.onCopySigningKey(key) }, Modifier.testTag("gitSigningKeyCopy")) { Text("Copy") }
-            TextButton(onClick = { making = app.penmoss.engine.git.CommitKeyType.P256 }, Modifier.testTag("gitSigningKeyNew")) { Text("Make a New Key") }
-            TextButton(onClick = { making = app.penmoss.engine.git.CommitKeyType.ED25519 }, Modifier.testTag("gitSigningKeyNewEd25519")) { Text("Make an Ed25519 Key") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.copy") { actions.onCopySigningKey(key) }, Modifier.testTag("gitSigningKeyCopy")) { Text("Copy") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.new") { making = app.penmoss.engine.git.CommitKeyType.P256 }, Modifier.testTag("gitSigningKeyNew")) { Text("Make a New Key") }
+            TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.new-ed25519") { making = app.penmoss.engine.git.CommitKeyType.ED25519 }, Modifier.testTag("gitSigningKeyNewEd25519")) { Text("Make an Ed25519 Key") }
         }
         Text(
             "Make a New Key is P-256, which every phone's Keystore has; Ed25519 works where this phone's Keystore has it, and your key stays as it is where it does not.",

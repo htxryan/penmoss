@@ -21,6 +21,7 @@
  * trying again later may work (GitHub's 5xx, a primary or secondary rate limit, no answer),
  * otherwise a refusal that only a change of token or request fixes (a 401, 403, 404 or 422).
  */
+import { limitSpec } from './analytics/limits';
 import { isUlid } from './ids';
 import {
   contextWithoutSecrets,
@@ -359,6 +360,29 @@ export interface FeedbackSubmission {
   readonly description: string;
   readonly version: string;
   readonly context: FeedbackContext;
+  /** A bug report's anonymised log lines, oldest first (PEN-137); none when not attached. */
+  readonly logs: readonly string[];
+}
+
+/** At most the form's own maximums for the logs it attaches (`report.lines`, `report.kb`). */
+const MAX_LOG_LINES = limitSpec('report.lines').max;
+const MAX_LOG_BYTES = limitSpec('report.kb').max * 1024;
+
+/** The `logs` part of a payload, checked: lines of text within the form's maximums. */
+function readLogs(logs: unknown): string[] {
+  if (logs === undefined || logs === null) return [];
+  if (!Array.isArray(logs) || !logs.every((line): line is string => typeof line === 'string')) {
+    throw new FeedbackInvalid('logs must be a list of lines');
+  }
+  const lines: string[] = logs;
+  if (lines.length > MAX_LOG_LINES || lines.some((line) => line.includes('\n'))) {
+    throw new FeedbackInvalid(`logs must be at most ${MAX_LOG_LINES} single lines`, 413);
+  }
+  const bytes = new TextEncoder().encode(lines.join('\n')).length;
+  if (bytes > MAX_LOG_BYTES) {
+    throw new FeedbackInvalid(`logs must be at most ${MAX_LOG_BYTES / 1024} KB`, 413);
+  }
+  return lines;
 }
 
 export class FeedbackInvalid extends Error {
@@ -383,7 +407,7 @@ export function readFeedbackPayload(raw: unknown): FeedbackSubmission {
   } catch {
     throw new FeedbackInvalid('payload must be a JSON object');
   }
-  const { submissionId, type, priority, title, description, version, context } = payload;
+  const { submissionId, type, priority, title, description, version, context, logs } = payload;
   if (!isUlid(submissionId)) throw new FeedbackInvalid('submissionId must be a ULID');
   if (typeof type !== 'string' || !(FEEDBACK_TYPES as readonly string[]).includes(type)) {
     throw new FeedbackInvalid('type must be bug or feature');
@@ -419,6 +443,8 @@ export function readFeedbackPayload(raw: unknown): FeedbackSubmission {
     description: description ?? '',
     version: (version ?? '').replace(/\s+/g, ' ').trim().slice(0, FEEDBACK_LIMITS.versionMax),
     context: checked,
+    // A feature request attaches none (PEN-137, O6).
+    logs: type === 'bug' ? readLogs(logs) : [],
   };
 }
 
@@ -566,16 +592,20 @@ export async function fileFeedback(input: FileFeedbackInput): Promise<FeedbackAn
     throw error;
   }
   const id = submission.submissionId;
-  // No token reaches GitHub, whatever the form held (A791).
+  // No token reaches GitHub, whatever the form held (A791): the whole body is checked again,
+  // the logs included (PEN-137).
   const issueBody = (screenshots: ReadonlyArray<{ name: string; url: string }>) =>
-    feedbackIssueBody({
-      description: redactSecrets(submission.description),
-      screenshots,
-      context: contextWithoutSecrets(submission.context),
-      client: input.client,
-      version: submission.version,
-      submissionId: id,
-    });
+    redactSecrets(
+      feedbackIssueBody({
+        description: redactSecrets(submission.description),
+        screenshots,
+        context: contextWithoutSecrets(submission.context),
+        client: input.client,
+        version: submission.version,
+        submissionId: id,
+        logs: submission.logs,
+      }),
+    );
   const names = shots.map(
     (shot, index) => `screenshot-${index + 1}.${FEEDBACK_IMAGE_TYPES[shot.type]}`,
   );

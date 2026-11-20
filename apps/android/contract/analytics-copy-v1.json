@@ -1,0 +1,445 @@
+{
+  "$comment": "Every string of the analytics screens (PEN-137): consent, Settings → Privacy, Advanced, the viewer, the confirmations and Send Feedback’s logs box, as the Mac says it and as the phone does, `{device}` filled in; other `{name}`s are filled in by the client. Keys in `titleKeys` are Title Case (A938). Written and checked from packages/core/src/analytics/copy.ts by packages/core/test/analytics-copy.test.ts; read by the Kotlin AnalyticsCopyContractTest.",
+  "version": 1,
+  "titleKeys": [
+    "consent.title",
+    "consent.lastStep.label",
+    "consent.recorded.title",
+    "consent.never.title",
+    "consent.share.button",
+    "consent.dontShare.button",
+    "consent.policy.label",
+    "privacy.title",
+    "privacy.share.label",
+    "privacy.viewData.label",
+    "privacy.id.label",
+    "privacy.resetId.button",
+    "privacy.forget.button",
+    "privacy.logs.label",
+    "privacy.logs.button",
+    "privacy.advanced.label",
+    "privacy.policy.label",
+    "limits.usage.title",
+    "limits.logs.title",
+    "limits.report.title",
+    "limits.events.days.label",
+    "limits.events.max.label",
+    "limits.logs.fileKb.label",
+    "limits.logs.files.label",
+    "limits.logs.days.label",
+    "limits.report.hours.label",
+    "limits.report.lines.label",
+    "limits.report.kb.label",
+    "limits.reset.button",
+    "confirm.cancel.button",
+    "confirm.delete.button",
+    "forget.title",
+    "prune.events.title",
+    "prune.logs.title",
+    "viewer.title",
+    "viewer.filter.all.label",
+    "viewer.filter.app.label",
+    "viewer.filter.cli.label",
+    "viewer.filter.mcp.label",
+    "viewer.copyJson.button",
+    "viewer.earlier.button",
+    "viewer.later.button",
+    "viewer.empty.title",
+    "viewer.col.time.label",
+    "viewer.col.client.label",
+    "viewer.col.kind.label",
+    "viewer.col.name.label",
+    "viewer.col.props.label",
+    "viewer.col.state.label",
+    "feedback.logs.label",
+    "feedback.logs.block.title",
+    "feedback.context.title",
+    "state.pending",
+    "state.local",
+    "state.waiting",
+    "state.sent",
+    "state.refused"
+  ],
+  "copy": {
+    "consent.title": {
+      "mac": "Share How You Use Penmoss?",
+      "android": "Share How You Use Penmoss?"
+    },
+    "consent.lastStep.label": {
+      "mac": "Last Step",
+      "android": "Last Step"
+    },
+    "consent.body": {
+      "mac": "Penmoss keeps a record of what you do in it, by name, on this Mac, and Settings → Privacy shows it. Share Usage Data sends it, this setup included, to Penmoss’s developer. Don’t Share keeps it on this Mac.",
+      "android": "Penmoss keeps a record of what you do in it, by name, on this phone, and Settings → Privacy shows it. Share Usage Data sends it, this setup included, to Penmoss’s developer. Don’t Share keeps it on this phone."
+    },
+    "consent.recorded.title": {
+      "mac": "What Is Recorded",
+      "android": "What Is Recorded"
+    },
+    "consent.recorded.1": {
+      "mac": "The commands, shortcuts, buttons and menus you use, by name",
+      "android": "The commands, shortcuts, buttons and menus you use, by name"
+    },
+    "consent.recorded.2": {
+      "mac": "The screens and dialogs you open, and the settings you change",
+      "android": "The screens and dialogs you open, and the settings you change"
+    },
+    "consent.recorded.3": {
+      "mac": "The app’s version, the system’s version and the window’s size",
+      "android": "The app’s version, the system’s version and the window’s size"
+    },
+    "consent.recorded.4": {
+      "mac": "CLI commands and agents’ MCP calls, by name",
+      "android": ""
+    },
+    "consent.never.title": {
+      "mac": "Never Recorded",
+      "android": "Never Recorded"
+    },
+    "consent.never.1": {
+      "mac": "What you write: notes, titles, tags, links and searches",
+      "android": "What you write: notes, titles, tags, links and searches"
+    },
+    "consent.never.2": {
+      "mac": "The names of notebooks, folders, files and repositories",
+      "android": "The names of notebooks, folders, files and repositories"
+    },
+    "consent.never.3": {
+      "mac": "Your GitHub account, email address or tokens",
+      "android": "Your GitHub account, email address or tokens"
+    },
+    "consent.share.button": {
+      "mac": "Share Usage Data",
+      "android": "Share Usage Data"
+    },
+    "consent.dontShare.button": {
+      "mac": "Don’t Share",
+      "android": "Don’t Share"
+    },
+    "consent.policy.label": {
+      "mac": "Privacy Policy",
+      "android": "Privacy Policy"
+    },
+    "consent.later": {
+      "mac": "You can change this at any time in Settings → Privacy, and see what is recorded there.",
+      "android": "You can change this at any time in Settings → Privacy, and see what is recorded there."
+    },
+    "privacy.title": {
+      "mac": "Privacy",
+      "android": "Privacy"
+    },
+    "privacy.lead": {
+      "mac": "Penmoss records what you do in it, by name, on this Mac, and never anything you write or name.",
+      "android": "Penmoss records what you do in it, by name, on this phone, and never anything you write or name."
+    },
+    "privacy.share.label": {
+      "mac": "Share Usage Data",
+      "android": "Share Usage Data"
+    },
+    "privacy.share.hint": {
+      "mac": "Sends the record to Penmoss’s developer from now on. Off, it stays on this Mac.",
+      "android": "Sends the record to Penmoss’s developer from now on. Off, it stays on this phone."
+    },
+    "privacy.viewData.label": {
+      "mac": "View Analytics Data",
+      "android": "View Analytics Data"
+    },
+    "privacy.id.label": {
+      "mac": "Analytics ID",
+      "android": "Analytics ID"
+    },
+    "privacy.id.hint": {
+      "mac": "A random ID you can reset. It says nothing about you.",
+      "android": "A random ID you can reset. It says nothing about you."
+    },
+    "privacy.resetId.button": {
+      "mac": "Reset My Analytics ID",
+      "android": "Reset My Analytics ID"
+    },
+    "privacy.resetId.done": {
+      "mac": "A new ID is in use. Events not yet sent stay on this Mac.",
+      "android": "A new ID is in use. Events not yet sent stay on this phone."
+    },
+    "privacy.forget.button": {
+      "mac": "Delete My Shared Data",
+      "android": "Delete My Shared Data"
+    },
+    "privacy.logs.label": {
+      "mac": "Logs",
+      "android": "Logs"
+    },
+    "privacy.logs.button": {
+      "mac": "Show Log File",
+      "android": "Share Log File"
+    },
+    "privacy.logs.hint": {
+      "mac": "The last {days} days, on this Mac. They leave only when you attach them to a bug report.",
+      "android": "The last {days} days, on this phone. They leave only when you attach them to a bug report or share them."
+    },
+    "privacy.advanced.label": {
+      "mac": "Advanced",
+      "android": "Advanced"
+    },
+    "privacy.advanced.hint": {
+      "mac": "How long and how much Penmoss keeps on this Mac",
+      "android": "How long and how much Penmoss keeps on this phone"
+    },
+    "privacy.advanced.intro": {
+      "mac": "How much Penmoss keeps on this Mac. Lowering a limit asks first, then deletes what falls outside it.",
+      "android": "How much Penmoss keeps on this phone. Lowering a limit asks first, then deletes what falls outside it."
+    },
+    "privacy.policy.label": {
+      "mac": "Privacy Policy",
+      "android": "Privacy Policy"
+    },
+    "limits.usage.title": {
+      "mac": "Usage Record",
+      "android": "Usage Record"
+    },
+    "limits.logs.title": {
+      "mac": "Logs",
+      "android": "Logs"
+    },
+    "limits.report.title": {
+      "mac": "Bug Reports",
+      "android": "Bug Reports"
+    },
+    "limits.events.days.label": {
+      "mac": "Keep Events For",
+      "android": "Keep Events For"
+    },
+    "limits.events.max.label": {
+      "mac": "Keep at Most",
+      "android": "Keep at Most"
+    },
+    "limits.logs.fileKb.label": {
+      "mac": "Log File Size",
+      "android": "Log File Size"
+    },
+    "limits.logs.files.label": {
+      "mac": "Log Files Kept",
+      "android": "Log Files Kept"
+    },
+    "limits.logs.days.label": {
+      "mac": "Keep Log Lines For",
+      "android": "Keep Log Lines For"
+    },
+    "limits.report.hours.label": {
+      "mac": "Attach Logs from the Last",
+      "android": "Attach Logs from the Last"
+    },
+    "limits.report.lines.label": {
+      "mac": "At Most",
+      "android": "At Most"
+    },
+    "limits.report.kb.label": {
+      "mac": "At Most",
+      "android": "At Most"
+    },
+    "limits.default": {
+      "mac": "Default: {value}",
+      "android": "Default: {value}"
+    },
+    "limits.range": {
+      "mac": "Between {min} and {max}",
+      "android": "Between {min} and {max}"
+    },
+    "limits.usage.space": {
+      "mac": "About {size} of events at most on this Mac",
+      "android": "About {size} of events at most on this phone"
+    },
+    "limits.logs.space": {
+      "mac": "Up to {size} of logs on this Mac (at most 400 MB)",
+      "android": "Up to {size} of logs on this phone (at most 400 MB)"
+    },
+    "limits.report.space": {
+      "mac": "A bug report attaches the last {hours} hours, at most {lines} lines and {kb} KB.",
+      "android": "A bug report attaches the last {hours} hours, at most {lines} lines and {kb} KB."
+    },
+    "limits.reset.button": {
+      "mac": "Reset to Defaults",
+      "android": "Reset to Defaults"
+    },
+    "limits.reset.hint": {
+      "mac": "Or run penmoss analytics limits in a terminal.",
+      "android": ""
+    },
+    "confirm.cancel.button": {
+      "mac": "Cancel",
+      "android": "Cancel"
+    },
+    "confirm.delete.button": {
+      "mac": "Delete",
+      "android": "Delete"
+    },
+    "forget.title": {
+      "mac": "Delete Your Shared Data?",
+      "android": "Delete Your Shared Data?"
+    },
+    "forget.body": {
+      "mac": "Penmoss’s server deletes everything this Mac shared under ID {id}, and this Mac gets a new ID. The record on this Mac stays.",
+      "android": "Penmoss’s server deletes everything this phone shared under ID {id}, and this phone gets a new ID. The record on this phone stays."
+    },
+    "forget.offline": {
+      "mac": "You’re offline, so nothing was deleted. Try again when you’re online.",
+      "android": "You’re offline, so nothing was deleted. Try again when you’re online."
+    },
+    "forget.failed": {
+      "mac": "Penmoss’s server didn’t answer, so nothing was deleted. Try again later.",
+      "android": "Penmoss’s server didn’t answer, so nothing was deleted. Try again later."
+    },
+    "forget.done": {
+      "mac": "Your shared data was deleted, and this Mac has a new ID.",
+      "android": "Your shared data was deleted, and this phone has a new ID."
+    },
+    "prune.events.title": {
+      "mac": "Delete {count} Events?",
+      "android": "Delete {count} Events?"
+    },
+    "prune.logs.title": {
+      "mac": "Delete {size} of Logs?",
+      "android": "Delete {size} of Logs?"
+    },
+    "prune.body": {
+      "mac": "They’re {reason}. They’re deleted from this Mac now, and raising the limit later won’t bring them back.",
+      "android": "They’re {reason}. They’re deleted from this phone now, and raising the limit later won’t bring them back."
+    },
+    "prune.reason.age": {
+      "mac": "older than {days} days",
+      "android": "older than {days} days"
+    },
+    "prune.reason.cap": {
+      "mac": "beyond the newest {max}",
+      "android": "beyond the newest {max}"
+    },
+    "prune.reason.size": {
+      "mac": "beyond the new size",
+      "android": "beyond the new size"
+    },
+    "viewer.title": {
+      "mac": "Analytics Data",
+      "android": "Analytics Data"
+    },
+    "viewer.summary": {
+      "mac": "On this Mac, kept {days} days. ID {id}. {sharing}",
+      "android": "On this phone, kept {days} days. ID {id}. {sharing}"
+    },
+    "viewer.sharing.on": {
+      "mac": "Sharing since {date}.",
+      "android": "Sharing since {date}."
+    },
+    "viewer.sharing.off": {
+      "mac": "Not shared.",
+      "android": "Not shared."
+    },
+    "viewer.sharing.unanswered": {
+      "mac": "Waiting for your answer.",
+      "android": "Waiting for your answer."
+    },
+    "viewer.filter.all.label": {
+      "mac": "All",
+      "android": "All"
+    },
+    "viewer.filter.app.label": {
+      "mac": "App",
+      "android": "App"
+    },
+    "viewer.filter.cli.label": {
+      "mac": "CLI",
+      "android": "CLI"
+    },
+    "viewer.filter.mcp.label": {
+      "mac": "MCP",
+      "android": "MCP"
+    },
+    "viewer.copyJson.button": {
+      "mac": "Copy as JSON",
+      "android": "Copy as JSON"
+    },
+    "viewer.earlier.button": {
+      "mac": "Earlier",
+      "android": "Earlier"
+    },
+    "viewer.later.button": {
+      "mac": "Later",
+      "android": "Later"
+    },
+    "viewer.showing": {
+      "mac": "Showing {from}–{to} of {total}",
+      "android": "Showing {from}–{to} of {total}"
+    },
+    "viewer.empty.title": {
+      "mac": "Nothing Recorded Yet",
+      "android": "Nothing Recorded Yet"
+    },
+    "viewer.col.time.label": {
+      "mac": "Time",
+      "android": "Time"
+    },
+    "viewer.col.client.label": {
+      "mac": "Client",
+      "android": "Client"
+    },
+    "viewer.col.kind.label": {
+      "mac": "Kind",
+      "android": "Kind"
+    },
+    "viewer.col.name.label": {
+      "mac": "Name",
+      "android": "Name"
+    },
+    "viewer.col.props.label": {
+      "mac": "Props",
+      "android": "Props"
+    },
+    "viewer.col.state.label": {
+      "mac": "State",
+      "android": "State"
+    },
+    "feedback.logs.label": {
+      "mac": "Attach Anonymised Logs",
+      "android": "Attach Anonymised Logs"
+    },
+    "feedback.logs.summary": {
+      "mac": "Anonymised Logs · {lines} lines · {size}",
+      "android": "Anonymised Logs · {lines} lines · {size}"
+    },
+    "feedback.logs.hint": {
+      "mac": "The app’s logs from the last {hours} hours, at most {maxLines} lines and {kb} KB, with names, paths, IDs and secrets replaced. This is exactly what is attached.",
+      "android": "The app’s logs from the last {hours} hours, at most {maxLines} lines and {kb} KB, with names, paths, IDs and secrets replaced. This is exactly what is attached."
+    },
+    "feedback.logs.empty": {
+      "mac": "There are no logs from the last {hours} hours.",
+      "android": "There are no logs from the last {hours} hours."
+    },
+    "feedback.logs.block.title": {
+      "mac": "Anonymised Logs",
+      "android": "Anonymised Logs"
+    },
+    "feedback.context.title": {
+      "mac": "Captured Context",
+      "android": "Captured Context"
+    },
+    "state.pending": {
+      "mac": "Waiting for Your Answer",
+      "android": "Waiting for Your Answer"
+    },
+    "state.local": {
+      "mac": "Not Shared",
+      "android": "Not Shared"
+    },
+    "state.waiting": {
+      "mac": "Waiting to Send",
+      "android": "Waiting to Send"
+    },
+    "state.sent": {
+      "mac": "Sent",
+      "android": "Sent"
+    },
+    "state.refused": {
+      "mac": "Refused",
+      "android": "Refused"
+    }
+  }
+}

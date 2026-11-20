@@ -516,7 +516,7 @@ internal fun RootDialogs(root: RootUi) {
         null -> Unit
         is Choosing.NewNote -> FolderPickerFor(
             graph,
-            title = "New Note in…",
+            title = "New Note In…",
             current = choice.current,
             onPick = { folder ->
                 root.choosing = null
@@ -526,7 +526,7 @@ internal fun RootDialogs(root: RootUi) {
         )
         is Choosing.Move -> FolderPickerFor(
             graph,
-            title = "Move “${choice.title}” to…",
+            title = "Move “${choice.title}” To…",
             current = choice.current,
             onPick = { folder ->
                 root.choosing = null
@@ -552,7 +552,7 @@ internal fun RootDialogs(root: RootUi) {
             val current = remember(parents) { parents.firstOrNull { it.id == choice.folderId }?.parentId }
             FolderPickerForMove(
                 graph,
-                title = "Move “${choice.title}” to…",
+                title = "Move “${choice.title}” To…",
                 current = current,
                 exclude = choice.folderId,
                 onPick = { folder ->

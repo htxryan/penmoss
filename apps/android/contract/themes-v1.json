@@ -11,7 +11,7 @@
     },
     {
       "id": "states",
-      "label": "Accent and states"
+      "label": "Accent and States"
     },
     {
       "id": "code",
@@ -29,7 +29,7 @@
   "tokens": [
     {
       "key": "bg",
-      "label": "Page background",
+      "label": "Page Background",
       "group": "surfaces"
     },
     {
@@ -39,7 +39,7 @@
     },
     {
       "key": "raised",
-      "label": "Raised (menus, cards, dialogs)",
+      "label": "Raised (Menus, Cards, Dialogs)",
       "group": "surfaces"
     },
     {
@@ -54,7 +54,7 @@
     },
     {
       "key": "muted",
-      "label": "Secondary text and icons",
+      "label": "Secondary Text and Icons",
       "group": "text"
     },
     {
@@ -69,7 +69,7 @@
     },
     {
       "key": "onAccent",
-      "label": "Text on accent",
+      "label": "Text on Accent",
       "group": "states"
     },
     {
@@ -84,27 +84,27 @@
     },
     {
       "key": "warnBg",
-      "label": "Warning background",
+      "label": "Warning Background",
       "group": "states"
     },
     {
       "key": "agent",
-      "label": "Agent edits",
+      "label": "Agent Edits",
       "group": "states"
     },
     {
       "key": "highlight",
-      "label": "Highlighted text",
+      "label": "Highlighted Text",
       "group": "states"
     },
     {
       "key": "searchMatch",
-      "label": "Search matches",
+      "label": "Search Matches",
       "group": "states"
     },
     {
       "key": "shadow",
-      "label": "Shadow tint",
+      "label": "Shadow Tint",
       "group": "states"
     },
     {
@@ -144,27 +144,27 @@
     },
     {
       "key": "codeMeta",
-      "label": "Meta and punctuation",
+      "label": "Meta and Punctuation",
       "group": "code"
     },
     {
       "key": "codeTag",
-      "label": "Tags and attributes",
+      "label": "Tags and Attributes",
       "group": "code"
     },
     {
       "key": "codeAddition",
-      "label": "Added lines",
+      "label": "Added Lines",
       "group": "code"
     },
     {
       "key": "codeDeletion",
-      "label": "Removed lines",
+      "label": "Removed Lines",
       "group": "code"
     },
     {
       "key": "calloutNote",
-      "label": "Note, info, to-do",
+      "label": "Note, Info, To-Do",
       "group": "callouts"
     },
     {
@@ -194,7 +194,7 @@
     },
     {
       "key": "calloutFailure",
-      "label": "Failure, danger, bug",
+      "label": "Failure, Danger, Bug",
       "group": "callouts"
     },
     {
@@ -209,12 +209,12 @@
     },
     {
       "key": "graphFocus",
-      "label": "Focused note",
+      "label": "Focused Note",
       "group": "graph"
     },
     {
       "key": "graphUngrouped",
-      "label": "Notes outside a group",
+      "label": "Notes Outside a Group",
       "group": "graph"
     },
     {
@@ -260,15 +260,15 @@
   ],
   "fonts": [
     {
-      "label": "System sans-serif",
+      "label": "System Sans-Serif",
       "stack": "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
     },
     {
-      "label": "Serif (book)",
+      "label": "Serif (Book)",
       "stack": "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif"
     },
     {
-      "label": "Humanist sans-serif",
+      "label": "Humanist Sans-Serif",
       "stack": "Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif"
     },
     {

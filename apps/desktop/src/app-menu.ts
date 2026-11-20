@@ -4,6 +4,7 @@ import { config, state, windows } from './app-state';
 import { sendEvent } from './ipc';
 import { menuTemplate, type MenuModel } from './menu';
 import { ClipboardGate } from './security';
+import { analytics } from './services';
 import { openInMain } from './windows/main-window';
 
 /** The clipboard is written only just after a key press or click, or a menu command (A224). */
@@ -35,8 +36,12 @@ export function setMenus(menus: readonly MenuModel[]): void {
         platform: process.platform,
         appName: app.name,
         devTools: config.devTools,
+        // A command's click is recorded by the page, which runs it (source `menu`): not here too.
         onCommand: sendMenuCommand,
-        onShowMain: () => openInMain(null),
+        onShowMain: () => {
+          analytics.record('menu', 'window.main', { source: 'menubar' });
+          openInMain(null);
+        },
       }),
     ),
   );

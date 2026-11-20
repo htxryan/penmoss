@@ -136,11 +136,12 @@ export function SymbolsSettings() {
       <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
         {symbols.map((symbol, index) => {
           const grip = (
+            // eslint-disable-next-line penmoss/tracked-control -- a drag handle (drag, or Alt+arrow), no click: the move is the change the settings record
             <button
               type="button"
               className="icon-btn lf-grip"
               data-ui="item"
-              aria-label={`Move ${symbol.kind ? symbol.name : symbolSpokenName(symbol)}, symbol ${index + 1} of ${symbols.length}`}
+              aria-label={`Move ${symbol.kind ? symbol.name : symbolSpokenName(symbol)}, Symbol ${index + 1} of ${symbols.length}`}
               aria-description="Drag, or press Alt and the up or down arrow"
               data-tip={`Drag to Move ${callOf(symbol)}`}
               data-testid={`symbol-move-${index + 1}`}
@@ -156,6 +157,7 @@ export function SymbolsSettings() {
                 type="button"
                 className="btn quiet danger"
                 data-ui="item"
+                data-event="settings.symbols.row.remove"
                 aria-label={`Remove ${symbol.kind ? symbol.name : symbolSpokenName(symbol)}`}
                 data-tip={`Remove ${callOf(symbol)}`}
                 data-testid={`symbol-remove-${index + 1}`}
@@ -254,12 +256,14 @@ export function SymbolsSettings() {
           title="Add a Symbol or List Item"
           className="btn"
           testId="symbol-add"
+          data-event="settings.symbols.add"
           setting="add-a-symbol-or-list-item"
           disabled={disabled || symbols.length >= MAX_SYMBOLS}
         >
           <MenuItem
             icon="star"
             data-testid="symbol-add-symbol"
+            data-event="settings.symbols.add.symbol"
             onClick={() => {
               const glyph = nextGlyph(symbols);
               change(
@@ -278,6 +282,7 @@ export function SymbolsSettings() {
                 key={kind}
                 icon={KINDS[kind].icon}
                 data-testid={`symbol-add-${kind}`}
+                data-event="settings.symbols.add.list-item"
                 disabled={there}
                 hint={there ? <span className="muted">In the List</span> : undefined}
                 onClick={() =>
@@ -306,6 +311,7 @@ export function SymbolsSettings() {
             type="button"
             className="btn quiet"
             data-ui="submit"
+            data-event="settings.symbols.restore-defaults"
             data-setting="restore-defaults"
             disabled={disabled || !custom}
             onClick={() => {

@@ -289,7 +289,7 @@ Pass 1's findings, fixes and evidence are in [`docs/evidence/t39/android/pass1.m
 Pass 2's are in [`docs/evidence/t39/android/pass2.md`](evidence/t39/android/pass2.md). On the Pixel:
 
 1. **Tap below.** Open a short note and tap the blank space under its text: the caret goes to the end and the keyboard opens. Type `/` on a middle line and choose Heading 1 from low on the screen: the caret stays on that line (A527).
-2. **Capture.** Type in the capture sheet (from the widget or the tile), then press Back, Cancel or tap outside it: it asks "Discard this capture?", and Keep editing keeps the text (A528). Turn the phone on its side with the keyboard up: the sheet is one row, with the text and Save in view; at the largest text size the destinations take a second row, which the sheet scrolls to (A529).
+2. **Capture.** Type in the capture sheet (from the widget or the tile), then press Back, Cancel or tap outside it: it asks "Discard This Capture?", and Keep editing keeps the text (A528). Turn the phone on its side with the keyboard up: the sheet is one row, with the text and Save in view; at the largest text size the destinations take a second row, which the sheet scrolls to (A529).
 3. **TalkBack.** With TalkBack on, turn on airplane mode while on Home: TalkBack reads the Offline status without moving focus, also with Home's list scrolled down; while online, Synced at… is not read out on each pass (A530). Swipe through Home, a note and the capture sheet: every control is read with a name.
 4. **Long note.** Fling a long note quickly: no blank bands linger (on the emulator they did, which is its software rendering).
 
@@ -324,9 +324,9 @@ The emulator walk-through is in [`docs/evidence/t40/p1/p1b.md`](evidence/t40/p1/
 
 1. **Duplicate.** Choose Nord, then Appearance → Duplicate Nord: the editor opens on "Nord copy", which is chosen. The web shows Nord copy in its theme list and uses it after its next sync.
 2. **Preview.** The strip at the top shows "Garden plan" in the theme. Change Accent in its sheet (try the square, then a hex such as `#d8b04a`) and tap Use colour: the preview, the editor's own controls and the rest of the app change at once; the web follows within a pass.
-3. **Contrast.** That yellow accent fails WCAG AA on the light page: the summary says how many pairs fail, and a warning shows beside Page background and the other colours it concerns. The theme still saves (A419).
+3. **Contrast.** That yellow accent fails WCAG AA on the light page: the summary says how many pairs fail, and a warning shows beside Page Background and the other colours it concerns. The theme still saves (A419).
 4. **Dark.** Tap Dark: the preview shows the dark variant, and the screen says which one the app is showing. A change there leaves the light variant alone.
-5. **Type and layout.** Choose Serif (book) as the note font and a narrower note width: the preview's text changes, and on the web a note uses both.
+5. **Type and layout.** Choose Serif (Book) as the note font and a narrower note width: the preview's text changes, and on the web a note uses both.
 6. **Both at once.** With the theme open on the phone in airplane mode, change its Accent on the phone and its Text colour on the web. Turn airplane mode off: both edits are kept (A416, A417).
 7. **Delete.** Menu → Delete this theme → Delete theme: the editor closes, Appearance chooses Nord again, and the theme leaves the web's list. Delete a theme on the web while the phone has it open: on the phone's next pass the editor says the theme was deleted, and an edit the phone had not sent is not kept.
 8. **One WebView.** Open a note, go back, and open the theme editor at once: the preview opens once the note's WebView has gone (A418).
@@ -342,7 +342,7 @@ The emulator walk-through is in [`docs/evidence/t40/p3/p3a.md`](evidence/t40/p3/
 5. **Restore.** Restore a note that was in a folder: "Restored “…”…" with **Open**; Open shows the note with its content, and after a sync it is back in that folder on the phone and the web. Delete a folder on the web while a note from it is in Trash, then restore it on the phone: it ends at the top level (A430).
 6. **Undo after it was sent.** Move a note to Trash and wait for a sync (the web's Trash lists it), then Restore it on the phone and move it to Trash again at once: it ends in Trash on the web, never refused, whatever the phone's clock says. Move another note to Trash and tap Undo straight away while a sync runs: it ends out of Trash, on the web too (A430).
 7. **A restore elsewhere wins.** In airplane mode, move a note to Trash on the phone. On the web, move the same note to Trash and restore it. Back online, Sync now: the phone's request is refused, since the phone had not seen that restore, the note stays out of Trash on the phone and the web, and the phone says “… was restored on another device, so it was left out of Trash.” (A431).
-8. **Delete for good.** In Trash, Delete for good → "Delete “…” for good?" → Delete for good → the prompt "Penmoss is trying to delete a note for good."; cancel it: "Not done: this phone did not confirm it was you.", and the note stays. Again with the sensor: "Deleted “…” for good.", and the web's Trash no longer lists it (A433).
+8. **Delete for good.** In Trash, Delete for Good → "Delete “…” for Good?" → Delete for good → the prompt "Penmoss is trying to delete a note for good."; cancel it: "Not done: this phone did not confirm it was you.", and the note stays. Again with the sensor: "Deleted “…” for good.", and the web's Trash no longer lists it (A433).
 9. **The copy notice.** Hard to cause on purpose: it needs the note's server copy restored (A5), as from a backup, while the phone holds edits to it that the restored copy lacks. If that happens, the open note shows the notice above the editor naming the conflict copy, and **Open the copy** shows the phone's text (A434). Robolectric covers it otherwise.
 
 ## Test version history on the Pixel (T40 P3b)
@@ -435,13 +435,13 @@ The flows are covered by page, Kotlin and Robolectric tests; the emulator has no
 
 1. **Attach from the bar.** In a note, tap **Attach a file** (the paper clip after the picture button): Android's document picker opens on any type. Pick a PDF and a `.csv` from Downloads: two chips go in at the caret, each with its type badge, name and size. Within a sync they show on the web with the same name and size, and the web's Download gives the same bytes.
 2. **Attach from the menu.** Type `/file` and pick **File**, or pick it from the **+** sheet: the document picker again (not the photo picker). Pick a photo through it: it goes in as a picture, not a chip.
-3. **Offline.** In airplane mode, attach a file: the chip goes in at once and the sync icon says Waiting to upload. Turn the network back on: it uploads, and the web shows it.
+3. **Offline.** In airplane mode, attach a file: the chip goes in at once and the sync icon says Waiting to Upload. Turn the network back on: it uploads, and the web shows it.
 4. **Open.** Tap **Open** on the PDF chip: it opens in Android's PDF viewer (or Drive), titled with the file's name. Tap Open on the `.csv`: Sheets or another app offers to open it. A type no app opens: the snackbar says so and offers **Save a copy**.
 5. **Open a file from another device.** Attach a file on the web, then open the note on the phone: its chip shows the name and size. Tap **Open**: the phone fetches it and opens it. Offline, the same tap says it is not available yet.
 6. **Save a copy.** Tap **Save a copy** on a chip: Android's save dialog suggests the file's name. Save to Downloads, then open it from the Files app: same file. Again, but rotate the phone (or switch dark mode in Quick Settings) while the save dialog is open, then save: the copy is still written in full and the snackbar says "Saved a copy."; there is no empty file in Downloads.
 7. **Paste or drop a file.** In split screen with Files, drag a PDF into the note: the chip goes in once it is stored. A file over 50 MB is refused with the web's message.
 8. **Web pictures.** Open a note on the web, add `![Cat](https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg)`. On the phone the picture shows. Add `![Router](https://192.168.1.1/x.png)`, `![Short](https://192.168.1/x.png)`, `![Number](https://3232235777/x.png)` and an `http://` picture: each shows only its alt text, and the router's log (if it keeps one) shows no connection from the phone.
-9. **Wi-Fi only.** Settings → Storage → **Load Pictures From the Web** → **On Wi-Fi**. On mobile data, open the note again: the picture shows its alt text and **Tap to load**. Tap it: that picture loads. On Wi-Fi, reopen the note: it loads at once. **Off**: the alt text only, even after a tap.
+9. **Wi-Fi only.** Settings → Storage → **Load Pictures from the Web** → **On Wi-Fi**. On mobile data, open the note again: the picture shows its alt text and **Tap to load**. Tap it: that picture loads. On Wi-Fi, reopen the note: it loads at once. **Off**: the alt text only, even after a tap.
 10. **Storage.** Settings → Storage shows the space files and pictures in notes take, and the web pictures kept. **Clear…** asks first, then empties the web pictures' cache; the pictures load again the next time they are shown (A1552).
 11. **Large files.** On mobile data (Wi-Fi off), attach a file over 10 MB and a small one: the small one uploads, and the large one waits (Storage says files over 10 MB upload on Wi-Fi). Turn Wi-Fi on: it uploads. Pick ten large files at once: the app stays responsive and they go in one by one.
 
@@ -632,25 +632,22 @@ What is already in place:
    - data safety: the answers below, which match the privacy policy (A607);
    - target audience: adults (18 and over).
 
-   **Play Data safety answers (A607).** If the policy changes, change these with it.
+   **Play Data safety answers (A607, amended by PEN-137).** If the policy (`site/src/pages/privacy.astro`) changes, change these with it. The app records usage on the phone always; it leaves the phone only if the person chooses Share Usage Data, so every data type below is **optional**.
    - Does the app collect or share any of the required user data types? **Yes.**
    - Is all of the user data collected by the app encrypted in transit? **Yes** (HTTPS only; the app refuses cleartext).
-   - Do you provide a way for users to request that their data is deleted? **Yes.** Notes are deleted in the app (Trash, then **Delete for good**, or after 30 days); the account on request. Deletion link: `https://penmoss.app/privacy#delete`.
-   - Shared: **none.** Cloudflare (hosting, sign-in, Workers AI embeddings) and GitHub (the private mirror) process data for the developer, which Play does not count as sharing. No data goes to advertisers, analytics or other apps.
-   - Collected, each **not shared**, **not processed ephemerally**, and **required** (the app does not work without an account and sync):
+   - Do you provide a way for users to request that their data is deleted? **Yes.** In the app: **Settings → Privacy → Delete My Shared Data** deletes everything the phone shared from the developer's server. Deletion link: `https://penmoss.app/privacy`.
+   - Shared: **none.** Cloudflare runs the developer's own server (t.penmoss.app) for the developer, and GitHub holds the feedback issues a person files with their own account, which Play does not count as sharing. No data goes to advertisers, analytics companies or other apps.
+   - Collected, each **not shared**, **not processed ephemerally**, and **optional** (the person chooses it):
 
-     | Play data type                              | What it is in Penmoss                                                                                                  | Purposes                              |
-     | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-     | Personal info → Email address               | The address you sign in with (Cloudflare Access), and a display name taken from it                                     | App functionality, account management |
-     | Photos and videos → Photos                  | Pictures you attach to notes                                                                                           | App functionality                     |
-     | Files and docs                              | Files you attach to notes                                                                                              | App functionality                     |
-     | App info and performance → Crash logs       | Error reports (message, stack, app version, device description), note names removed                                    | App functionality                     |
-     | App info and performance → Diagnostics      | The same reports for errors that are not crashes (a failed sync, the editor)                                           | App functionality                     |
-     | Device or other IDs                         | The server's record of this phone: a random device id, the phone model, last seen                                      | App functionality, account management |
-     | App activity → Other user-generated content | Your notes, folders, tags, settings and version history                                                                | App functionality                     |
-     | App activity → In-app search history        | What you type into search: sent to the server and to Workers AI, kept only in Cloudflare's request logs for a few days | App functionality                     |
+     | Play data type                              | What it is in Penmoss                                                                                                                                 | Purposes          |
+     | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+     | App activity → App interactions             | Which commands, shortcuts, buttons, screens, dialogs and settings are used, by name, never any text; only with Share Usage Data, kept 13 months       | Analytics         |
+     | Device or other IDs                         | The random analytics ID, which the person can reset or delete with their shared data                                                                  | Analytics         |
+     | App info and performance → Crash logs       | Error lines in the anonymised logs, only when the person attaches them to a bug report                                                                | App functionality |
+     | App info and performance → Diagnostics      | The anonymised logs and the captured context (app version, system, screen kind, sync state, counts), only in a bug report the person sends            | App functionality |
+     | App activity → Other user-generated content | The title, description and screenshots of a bug report or feature request the person writes and sends, filed as a GitHub issue with their own account | App functionality |
 
-     Not collected: location, contacts, calendar, financial info, health, audio, web browsing, messages, app interactions, installed apps. The fingerprint or face check stays on the phone.
+     Not collected: personal info (name, email address), location, contacts, calendar, financial info, health, audio, the photos and files in notes, web browsing, messages, search history, installed apps. Notes never reach the developer. The fingerprint or face check stays on the phone.
 
 2. **Testers.** In Test and release → Testing → Internal testing → Testers, create an email list containing your own Google account, save, and copy the tester opt-in link.
 

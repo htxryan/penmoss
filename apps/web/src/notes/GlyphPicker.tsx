@@ -46,6 +46,7 @@ export function GlyphPicker({
         type="button"
         className="btn glyph-trigger"
         data-ui="menu"
+        data-event="glyph-picker.open"
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}

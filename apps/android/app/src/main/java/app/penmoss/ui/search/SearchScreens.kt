@@ -32,6 +32,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -216,7 +218,7 @@ fun SearchScreen(
                         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
                         trailingIcon = {
                             if (query.isNotEmpty()) {
-                                IconButton(onClick = {
+                                IconButton(onClick = trackedClick("search.clear") {
                                     onQuery("")
                                     runCatching { focus.requestFocus() }
                                 }) { Icon(Icons.Default.Close, contentDescription = "Clear") }
@@ -238,15 +240,15 @@ fun SearchScreen(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterMenuChip(filters.folderName ?: "All folders", filters.folderId != null, "folderFilter") { picking = "folder" }
-                FilterMenuChip(filters.tag?.let { "#$it" } ?: "Any tag", filters.tag != null, "tagFilter") { picking = "tag" }
+                FilterMenuChip(filters.folderName ?: "All folders", filters.folderId != null, "folderFilter", event = "search.filter.folder") { picking = "folder" }
+                FilterMenuChip(filters.tag?.let { "#$it" } ?: "Any tag", filters.tag != null, "tagFilter", event = "search.filter.tag") { picking = "tag" }
                 Box {
-                    FilterMenuChip(DATE_RANGES[filters.range].first, filters.range != 0, "dateFilter") { picking = "date" }
+                    FilterMenuChip(DATE_RANGES[filters.range].first, filters.range != 0, "dateFilter", event = "search.filter.date") { picking = "date" }
                     DropdownMenu(expanded = picking == "date", onDismissRequest = { picking = null }) {
                         DATE_RANGES.forEachIndexed { index, (label, days) ->
                             DropdownMenuItem(
                                 text = { Text(label) },
-                                onClick = {
+                                onClick = trackedClick("search.filter.date.choose") {
                                     picking = null
                                     onFilters(filters.copy(range = index, updatedAfter = days?.let { now() - it * DAY_MS }))
                                 },
@@ -280,7 +282,7 @@ fun SearchScreen(
                         Text(
                             action.title,
                             Modifier.fillMaxWidth()
-                                .clickable(role = Role.Button, onClickLabel = "Run") { onAction(action) }
+                                .clickable(role = Role.Button, onClickLabel = "Run", onClick = trackedClick("search.action") { onAction(action) })
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
                                 .testTag("action-${action.id}"),
                             style = MaterialTheme.typography.bodyLarge,
@@ -315,10 +317,10 @@ fun SearchScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FilterMenuChip(label: String, selected: Boolean, tag: String, onClick: () -> Unit) {
+private fun FilterMenuChip(label: String, selected: Boolean, tag: String, event: String, onClick: () -> Unit) {
     FilterChip(
         selected = selected,
-        onClick = onClick,
+        onClick = trackedClick(event, onClick),
         label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
         modifier = Modifier.testTag(tag),
@@ -329,6 +331,7 @@ private fun FilterMenuChip(label: String, selected: Boolean, tag: String, onClic
 @Composable
 private fun TagFilterSheet(tags: List<String>, current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tracked = rememberTrackedDialog("tagFilter")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Text("Tag", Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.titleMedium)
         LazyColumn(Modifier.fillMaxWidth().testTag("tagChoices")) {
@@ -342,7 +345,7 @@ private fun TagFilterSheet(tags: List<String>, current: String?, onPick: (String
                             fontWeight = if (tag == current) FontWeight.SemiBold else null,
                         )
                     },
-                    onClick = { onPick(tag) },
+                    onClick = trackedClick("search.filter.tag.choose", tracked.done { onPick(tag) }),
                     modifier = Modifier.semantics { if (tag == current) contentDescription = "${tag?.let { "#$it" } ?: "Any tag"}, chosen" },
                 )
             }
@@ -400,7 +403,8 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
                         press(item)
                     }
                 },
-            ) { onOpen(result.id) }
+                onClick = trackedClick("search.result") { onOpen(result.id) },
+            )
             .padding(horizontal = 16.dp, vertical = 10.dp)
             .testTag("result-${result.id}"),
     ) {

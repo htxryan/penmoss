@@ -13,6 +13,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { DialogClose } from '../shell/DialogClose';
+import { useTrackedDialog } from '../analytics/dialog';
 
 export function PreviewZoom({
   name,
@@ -39,6 +40,7 @@ export function PreviewZoom({
         type="button"
         className="preview-zoom-button"
         data-ui="item"
+        data-event="settings.preview.enlarge"
         data-testid={testId}
         aria-label={`Enlarge ${name} Preview`}
         aria-haspopup="dialog"
@@ -69,6 +71,7 @@ function PreviewDialog({
   readonly children: ReactNode;
 }) {
   const id = useId();
+  useTrackedDialog('previewZoom');
   const dialog = useRef<HTMLDivElement>(null);
   // The focus starts on Close, the dialog's one control.
   useLayoutEffect(() => {

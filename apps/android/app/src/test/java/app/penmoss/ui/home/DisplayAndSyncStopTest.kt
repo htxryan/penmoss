@@ -196,7 +196,7 @@ class DisplayAndSyncStopTest {
 
     @Test
     fun theSettingsListSaysWhatHomeHides() {
-        assertEquals("Every shortcut on Home", displaySummary(Settings()))
+        assertEquals("Every Shortcut on Home", displaySummary(Settings()))
         assertEquals("Hidden: This Week, Graph", displaySummary(settings(DisplayKeys.THIS_WEEK to false, DisplayKeys.GRAPH to false, DisplayKeys.TODAY to true)))
         assertEquals("Hidden: Tags", displaySummary(settings(DisplayKeys.TAGS to false)))
         // Look and Feel: Appearance, Home, Note, Symbols (PEN-146, A1634).

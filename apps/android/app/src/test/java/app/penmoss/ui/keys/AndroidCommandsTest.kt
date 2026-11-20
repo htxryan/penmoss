@@ -143,6 +143,7 @@ class AndroidCommandsTest {
             "app.cheatsheet" to "open:settings/shortcuts",
             "app.shortcuts" to "open:settings/shortcuts",
             "app.settings" to "open:settings",
+            "app.privacy" to "open:settings/privacy",
             "app.sendFeedback" to "feedback",
             "app.appearance" to "open:settings/appearance",
             "app.display" to "open:settings/display",

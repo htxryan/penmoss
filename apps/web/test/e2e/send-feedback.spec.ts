@@ -154,7 +154,7 @@ test('files an issue from the sidebar, beside a note, with screenshots and conte
     /!\[screenshot-1\.png\]\(https:\/\/github\.com\/user-attachments\/assets\/[0-9a-f-]+\)/,
   );
   expect(issue.body).toContain('![screenshot-2.png](https://github.com/user-attachments/assets/');
-  expect(issue.body).toContain('<details><summary>Captured context</summary>');
+  expect(issue.body).toContain('<details><summary>Captured Context</summary>');
   expect(issue.body).toContain('#### This note');
   expect(issue.body).not.toContain('#### Recent errors');
   expect(issue.body).toMatch(/Sent from Penmoss Mac .+ · submission [0-9A-HJKMNP-TV-Z]{26}/);
@@ -217,7 +217,7 @@ test('with no GitHub token, a report waits until one is saved in Settings → Gi
   // stand-in Mac has no Penmoss GitHub app, so the token's field shows without Use a Token.
   await page.keyboard.press('ControlOrMeta+Comma');
   await page
-    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('navigation', { name: 'Settings Sections' })
     .getByRole('link', { name: 'GitHub' })
     .click();
   const waiting = page.getByTestId('github-feedback-waiting');
@@ -226,7 +226,7 @@ test('with no GitHub token, a report waits until one is saved in Settings → Gi
   await page.getByTestId('github-token-input').fill(GITHUB_TOKEN);
   await page.getByTestId('github-token-save').click();
   await expect(page.getByTestId('github-account')).toContainText('htxryan');
-  await expect(page.getByTestId('github-token-saved')).toContainText('Token saved');
+  await expect(page.getByTestId('github-token-saved')).toContainText('Token Saved');
   // Saving it sends what waited for one (A1012).
   await expect(waiting).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => Boolean(fakeIssue(host, title)), { timeout: 10_000 }).toBe(true);
@@ -361,7 +361,7 @@ test('Edit in Waiting to Send reopens a refused report with the context it was c
   await page.goto('/');
   await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
   host.github.fail('/repos/htxryan/penmoss/issues', 422, 1);
-  // Made from Home: its context names Home's route.
+  // Made from Home: its context names Home's screen.
   await page.getByTestId('sidebar-feedback').click();
   const title = `[e2e] Edited from Status ${RUN}`;
   await fillForm(page, title, 'Taken back from the outbox.');
@@ -373,7 +373,7 @@ test('Edit in Waiting to Send reopens a refused report with the context it was c
   // Settings → GitHub → Send Feedback's Open (PEN-146): the form, with the report waiting in it.
   await page.keyboard.press('ControlOrMeta+Comma');
   await page
-    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('navigation', { name: 'Settings Sections' })
     .getByRole('link', { name: 'GitHub' })
     .click();
   await expect(page.getByTestId('github-feedback-waiting')).toHaveText('· 1 report waiting');
@@ -390,6 +390,8 @@ test('Edit in Waiting to Send reopens a refused report with the context it was c
   await form.getByTestId('feedback-send').click();
   await expect(page.getByTestId('feedback-sent-toast')).toBeVisible({ timeout: 15_000 });
   const issue = fakeIssue(host, title);
-  expect(issue?.body).toMatch(/\| Route +\| \/ +\|/);
-  expect(issue?.body).not.toMatch(/\| Route +\| \/settings/);
+  expect(issue?.body).toMatch(/\| Screen +\| home +\|/);
+  expect(issue?.body).not.toMatch(/\| Screen +\| settings/);
+  // The server era's rows are gone (PEN-137, O5): no route, ids or names.
+  expect(issue?.body).not.toMatch(/\| (Route|Selected folder|Id|Title|Folder|Notebook|Tags) +\|/);
 });

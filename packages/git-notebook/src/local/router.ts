@@ -53,7 +53,11 @@ export interface NotebookSet {
 type Args = Record<string, unknown>;
 type Outcome =
   | { readonly data: Record<string, unknown>; readonly text?: readonly string[] }
-  | { readonly error: string };
+  | {
+      readonly error: string;
+      /** How it failed, for usage analytics (PEN-137): `failed` when not said. */
+      readonly result?: 'invalid' | 'notFound' | 'conflict' | 'failed';
+    };
 
 /** Runs one tool on one notebook, as the one-notebook server would. */
 export type RunOn = (
@@ -239,10 +243,15 @@ export class NotebookRouter {
     let wanted: ServedNotebook | null = null;
     if (typeof asked === 'string') {
       wanted = pickNotebook(asked, served);
-      if (!wanted) return { error: `No notebook here is called “${asked}”. ${listing(served)}` };
+      if (!wanted) {
+        return {
+          error: `No notebook here is called “${asked}”. ${listing(served)}`,
+          result: 'notFound',
+        };
+      }
     }
     const located = await this.locate(tool.name, args, served);
-    if (located.kind === 'error') return { error: located.error };
+    if (located.kind === 'error') return { error: located.error, result: 'notFound' };
     let target: ServedNotebook | null = wanted;
     if (located.kind === 'some') {
       const { candidates, what } = located;
@@ -251,11 +260,13 @@ export class NotebookRouter {
         if (!candidates.some((each) => each.name === asked)) {
           return {
             error: `${what} is in the notebook “${candidates[0]!.name}”, not “${wanted.name}”. Leave out notebook, or pass "${candidates[0]!.name}".`,
+            result: 'invalid',
           };
         }
       } else if (candidates.length > 1) {
         return {
           error: `${what} is in more than one notebook (${candidates.map((each) => `“${each.name}”`).join(', ')}): pass notebook to say which.`,
+          result: 'invalid',
         };
       } else {
         target = candidates[0]!;
@@ -263,13 +274,14 @@ export class NotebookRouter {
     }
     if (target) {
       const refused = await this.crossNotebook(tool.name, args, target, served);
-      if (refused) return { error: refused };
+      if (refused) return { error: refused, result: 'invalid' };
       return this.one(target, tool, args, session);
     }
     if (SPANS.has(tool.name)) return this.span(tool, args, served);
     if (served.length === 1) return this.one(served[0]!, tool, args, session);
     return {
       error: `${tool.name} needs notebook here, since this server serves ${served.length} notebooks: pass the notebook's name. ${listing(served)}`,
+      result: 'invalid',
     };
   }
 
@@ -399,6 +411,7 @@ export class NotebookRouter {
       if (ok.length > 1) {
         return {
           error: `${String(args['path'])} is a folder in more than one notebook (${ok.map((each) => `“${each.notebook.name}”`).join(', ')}): pass notebook to say which.`,
+          result: 'invalid',
         };
       }
     }

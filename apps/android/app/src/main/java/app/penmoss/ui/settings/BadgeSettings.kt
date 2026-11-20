@@ -37,6 +37,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.BadgeGlyph
 import app.penmoss.engine.settings.NotebookBadge
 import app.penmoss.engine.settings.NotebookBadges
@@ -103,7 +105,7 @@ fun BadgeSettings(
         )
         Row(Modifier.padding(horizontal = 8.dp)) {
             TextButton(
-                onClick = {
+                onClick = trackedClick("settings.git-notebooks.badge.reset") {
                     numberText = null
                     onChange(NotebookBadges.COLOR, null)
                     onChange(NotebookBadges.GLYPH, null)
@@ -132,7 +134,7 @@ fun BadgeSettings(
                         .size(40.dp)
                         .background(badgeColour(preset.hex), RectangleShape)
                         .border(2.dp, if (checked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface, RectangleShape)
-                        .selectable(selected = checked, role = Role.RadioButton) { if (!checked) setColour(preset.id) }
+                        .selectable(selected = checked, role = Role.RadioButton, onClick = trackedClick("settings.git-notebooks.badge.preset") { if (!checked) setColour(preset.id) })
                         .testTag("badgePreset-${preset.id}")
                         .semantics { contentDescription = preset.label },
                     contentAlignment = Alignment.Center,
@@ -140,7 +142,7 @@ fun BadgeSettings(
                     if (checked) Icon(Icons.Default.Check, contentDescription = null, tint = badgeColour(NotebookBadges.ink(preset.hex)))
                 }
             }
-            TextButton(onClick = { custom = true }, modifier = Modifier.testTag("badgeCustom")) {
+            TextButton(onClick = trackedClick("colour-picker.open") { custom = true }, modifier = Modifier.testTag("badgeCustom")) {
                 Text(if (badge.preset == null) "Custom: ${badge.color.uppercase()}" else "Custom…")
             }
         }
@@ -150,7 +152,7 @@ fun BadgeSettings(
             Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
             style = MaterialTheme.roles.groupHead,
         )
-        Segments(KINDS, glyph.kind, enabled = true, tag = "badgeKind", onChoose = ::chooseKind)
+        Segments(KINDS, glyph.kind, enabled = true, tag = "badgeKind", event = "settings.git-notebooks.badge.kind", onChoose = ::chooseKind)
         when (glyph.kind) {
             BadgeGlyph.LETTER -> OutlinedTextField(
                 value = glyph.value,
@@ -193,6 +195,7 @@ fun BadgeSettings(
         )
     }
     if (custom) {
+        val tracked = rememberTrackedDialog("colourPicker")
         AlertDialog(
             onDismissRequest = { custom = false },
             title = { Text("Custom Colour") },
@@ -203,7 +206,7 @@ fun BadgeSettings(
                     Help("A badge’s colour is the same in light and dark.", Modifier.padding(0.dp))
                 }
             },
-            confirmButton = { TextButton(onClick = { custom = false }, modifier = Modifier.testTag("badgeCustomDone")) { Text("Done") } },
+            confirmButton = { TextButton(onClick = trackedClick("colour-picker.done", tracked.done { custom = false }), modifier = Modifier.testTag("badgeCustomDone")) { Text("Done") } },
         )
     }
 }
@@ -222,7 +225,7 @@ private fun BadgeIconRow(value: String, onChoose: () -> Unit) {
         headlineContent = { Text("Icon") },
         supportingContent = { Text(characterLabel(lucide ?: value), Modifier.testTag("badgeIconName")) },
         trailingContent = {
-            OutlinedButton(onClick = onChoose, modifier = Modifier.testTag("badgeIconChoose")) { Text("Choose Icon…") }
+            OutlinedButton(onClick = trackedClick("settings.git-notebooks.badge.choose-icon", onChoose), modifier = Modifier.testTag("badgeIconChoose")) { Text("Choose Icon…") }
         },
     )
 }

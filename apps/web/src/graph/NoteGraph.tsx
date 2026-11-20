@@ -121,6 +121,7 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
         type="button"
         className="btn quiet note-graph-open"
         data-ui="item"
+        data-event="graph.open-full"
         data-testid="open-full-graph"
         onClick={() => navigate(graphPath(noteId, true))}
       >

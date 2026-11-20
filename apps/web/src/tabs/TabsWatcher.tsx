@@ -172,12 +172,14 @@ function TabClosedToast() {
         <ActionToast
           tone="info"
           testId="tab-trashed-toast"
+          data-event="tabs.trashed-toast.dismiss"
           icon={<Icon name="trash" />}
           actions={
             <button
               type="button"
               className="toast-action"
               data-ui="submit"
+              data-event="tabs.trashed-toast.restore"
               data-testid="tab-trashed-restore"
               onClick={() => void restore()}
             >
