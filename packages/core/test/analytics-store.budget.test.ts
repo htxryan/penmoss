@@ -2,8 +2,18 @@
 // record at its largest limit (PEN-137, AC35, "Staying fast at the maximums"): 800,000 events in
 // a database file, as the Mac keeps it. What the store does is unit tested in
 // analytics-store.test.ts; here only how long it takes. The budgets are the plan's ceilings,
-// with 2× slack on CI's slower runners.
-import { closeSync, fsyncSync, mkdtempSync, openSync, rmSync } from 'node:fs';
+// with 2× slack on CI's slower runners. On CI the record is in /dev/shm, in memory, so the
+// budgets time the store's work and not a hosted runner's disk, which stalled single steps for
+// seconds (A1638).
+import {
+  accessSync,
+  closeSync,
+  constants,
+  fsyncSync,
+  mkdtempSync,
+  openSync,
+  rmSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -60,12 +70,24 @@ function best(runs: number, work: () => unknown): number {
   return Math.min(...Array.from({ length: runs }, () => timed(work).ms));
 }
 
+/** Where the record goes: /dev/shm on CI where there is one (Linux), else the temp folder. */
+function baseDir(): string {
+  if (!ON_CI) return tmpdir();
+  try {
+    accessSync('/dev/shm', constants.W_OK);
+    return '/dev/shm';
+  } catch {
+    return tmpdir();
+  }
+}
+
 let dir: string;
 let path: string;
 let store: AnalyticsStore;
 
 beforeAll(() => {
-  dir = mkdtempSync(join(tmpdir(), 'penmoss-analytics-budget-'));
+  dir = mkdtempSync(join(baseDir(), 'penmoss-analytics-budget-'));
+  process.stderr.write(`usage record budget: ${dir}\n`);
   path = join(dir, 'analytics', 'events.db');
   const seeding = AnalyticsStore.open(path);
   const CHUNK = 50_000;
@@ -171,9 +193,9 @@ describe('the usage record at 800,000 events', () => {
     // between commands): DELETEs until STEP_MS is up, a checkpoint of what that step wrote, or
     // vacuum slices until STEP_MS is up. The plan's 16 ms holds for nearly all of them (p95),
     // and the slowest have a looser ceiling. Locally (`task budgets` on the Mac) that ceiling
-    // holds for the slowest step of each kind; on CI it holds for the p99, since one small
-    // DELETE stalled on a shared runner's disk is not the store's work, and main's thread is
-    // proven free separately (apps/desktop's budget test). The log names the max either way.
+    // holds for the slowest step of each kind; on CI, with the record in memory, it holds for
+    // the p99, since a shared runner can still pause any step, and main's thread is proven free
+    // separately (apps/desktop's budget test). The log names the max either way.
     const slowest = [...steps].sort((a, b) => b.ms - a.ms).slice(0, 5);
     const named = slowest.map(({ step, ms }) => `${step} ${ms.toFixed(1)} ms`).join(', ');
     for (const kind of ['delete', 'checkpoint', 'vacuum'] as const) {
