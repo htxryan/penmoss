@@ -75,11 +75,7 @@ export class LayoutTracker {
   ) {}
 
   /** `owner` gives `key` this value (undefined: gives it no more). */
-  set<K extends keyof LayoutParts>(
-    owner: object,
-    key: K,
-    value: LayoutParts[K] | undefined,
-  ): void {
+  set<K extends keyof LayoutParts>(owner: object, key: K, value: LayoutParts[K] | undefined): void {
     const held = this.given.get(key);
     if (value === undefined) {
       if (held?.owner !== owner) return;
