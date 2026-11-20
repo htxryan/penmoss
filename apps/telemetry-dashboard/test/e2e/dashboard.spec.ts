@@ -7,7 +7,7 @@
  * install's sessions and a copied link", which ends on a session page with a stretch heading
  * pinned; the tests after it cover its other states.
  */
-import { expect, test as base, type Page } from '@playwright/test';
+import { expect, test as base, type Locator, type Page } from '@playwright/test';
 import { startDashboard, type Dashboard } from './server';
 
 const test = base.extend<{ signedIn: Page }, { dashboard: Dashboard }>({
@@ -510,6 +510,23 @@ async function settled(page: Page): Promise<void> {
   await expect(page.locator('main')).not.toHaveAttribute('aria-busy', 'true');
 }
 
+/**
+ * Waits for the session `href` names to be drawn. `settled` alone can pass before a navigation's
+ * render marks `main` busy, so after a click or a hash change wait for what the new page shows.
+ */
+async function sessionShown(page: Page, href: string): Promise<void> {
+  const session = new URLSearchParams(href.slice(href.indexOf('?') + 1)).get('session')!;
+  await expect(page.locator('.ids')).toContainText(`Session ${session}`);
+  await settled(page);
+}
+
+/** Opens the session `link` names and waits for it to be drawn. */
+async function openSession(page: Page, link: Locator): Promise<void> {
+  const href = (await link.getAttribute('href'))!;
+  await link.click();
+  await sessionShown(page, href);
+}
+
 /** The text a download handed the browser (recorded by keepBlobs). */
 const lastBlob = (page: Page) =>
   page.evaluate(() => (window as unknown as { blobs: Blob[] }).blobs.at(-1)!.text());
@@ -763,9 +780,8 @@ test("Sessions: the list, a session's timeline, its install's sessions and a cop
   await earlier.scrollIntoViewIfNeeded();
   const scrolled = await page.evaluate(() => window.scrollY);
   expect(scrolled).toBeGreaterThan(100);
-  await earlier.click();
-  await expect(page.getByRole('heading', { level: 1, name: sessionTitle })).toBeHidden();
-  await settled(page);
+  const shownHref = page.url().slice(page.url().indexOf('#'));
+  await openSession(page, earlier);
   // A session opens at the top; Previous Session and Next Session are its neighbours.
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await expect(page.getByRole('link', { name: 'Next Session' })).toHaveAttribute(
@@ -776,8 +792,8 @@ test("Sessions: the list, a session's timeline, its install's sessions and a cop
 
   // AC15: Back shows the session before, where it was scrolled.
   await page.goBack();
+  await sessionShown(page, shownHref);
   await expect(page.getByRole('heading', { level: 1, name: sessionTitle })).toBeVisible();
-  await settled(page);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrolled);
 
   // AC6: Copy Link says so, and the copied address opens straight to the session.
@@ -854,8 +870,7 @@ test('Sessions: an install’s first and last sessions, and its side list held t
   expect(Math.abs(entry!.y + entry!.height / 2 - middle)).toBeLessThan(entry!.height);
 
   // Its last session, an agent's MCP connection: Next Session disabled.
-  await page.getByRole('link', { name: 'Next Session' }).click();
-  await settled(page);
+  await openSession(page, page.getByRole('link', { name: 'Next Session' }));
   await expect(page).toHaveURL(new RegExp(`session=${bigSession(261)}$`));
   await page.goto(
     `${dashboard.url}/#sessions?days=30&install=${BIG_INSTALL}&session=${bigSession(519)}`,
@@ -880,12 +895,11 @@ test('Sessions: an install’s first and last sessions, and its side list held t
 
   // A fixture install's first session was its first run, which reported no screens.
   await page.goto(`${dashboard.url}/#sessions`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Sessions' })).toBeVisible();
   await settled(page);
-  await sessionRows(page).first().locator('a').click();
-  await settled(page);
+  await openSession(page, sessionRows(page).first().locator('a'));
   const own = page.getByRole('region', { name: /^This Install's Sessions [\d,]+$/ });
-  await own.locator('a.ss-item').first().click();
-  await settled(page);
+  await openSession(page, own.locator('a.ss-item').first());
   await expect(own.locator('.cut')).toHaveCount(0);
   await expect(page.locator('.stretch-title')).toHaveText(['First Run']);
   await hold(page);
@@ -968,8 +982,7 @@ test('Sessions: Copy Link refused shows the address to copy by hand', async ({
   });
   await page.goto(`${dashboard.url}/#sessions`);
   await settled(page);
-  await sessionRows(page).nth(5).locator('a').click();
-  await settled(page);
+  await openSession(page, sessionRows(page).nth(5).locator('a'));
   await page.getByRole('button', { name: 'Copy Link' }).click();
   const field = page.getByLabel('Session Link');
   await expect(field).toHaveValue(page.url());
@@ -993,13 +1006,20 @@ test('Sessions: Back puts back the page, the filters and the session; a filter g
   await page.goto(`${dashboard.url}/#sessions`);
   await settled(page);
   await page.getByLabel('Client', { exact: true }).selectOption('mac');
-  await settled(page);
   await expect(page).toHaveURL(/#sessions\?days=30&client=mac$/);
+  // The Mac list is drawn: its Older link carries the filter.
   const pager = page.getByRole('region', { name: 'Recent Sessions' }).getByLabel('Pages');
-  await pager.getByRole('link', { name: 'Older' }).click();
-  await expect(page).toHaveURL(/#sessions\?days=30&client=mac&page=2$/);
+  const older = pager.getByRole('link', { name: 'Older' });
+  await expect(older).toHaveAttribute('href', /client=mac&page=2$/);
   await settled(page);
-  await sessionRows(page).first().locator('a').click();
+  await older.click();
+  await expect(page).toHaveURL(/#sessions\?days=30&client=mac&page=2$/);
+  // Page 2 is drawn before a row of it is opened.
+  await expect(pager.locator('.pager-range')).toHaveText(/^51–100 of /);
+  await settled(page);
+  const row = sessionRows(page).first().locator('a');
+  await expect(row).toHaveAttribute('href', /client=mac&page=2&install=/);
+  await openSession(page, row);
   await expect(page.getByRole('heading', { level: 1, name: /^Session on / })).toBeVisible();
   await expect(page).toHaveURL(/client=mac&page=2&install=/);
   // A tab keeps the filters but not the session.
@@ -1046,8 +1066,7 @@ test('Sessions on a phone: the list scrolls in its box, a session stacks, a head
   expect(await overflow()).toBeLessThanOrEqual(0);
   await hold(page);
   const link = await appSession(page, dashboard);
-  await link.click();
-  await settled(page);
+  await openSession(page, link);
   expect(await overflow()).toBeLessThanOrEqual(0);
   // Tiles two to a row.
   const tiles = page.locator('.tile');
