@@ -65,12 +65,15 @@ On Android, pick Anthropic with a key, or leave it **Not Set Up**: your Mac desc
 
 **Prompt**, in Settings → AI Descriptions, is what is sent for each note. These tokens are replaced with the note's own:
 
-| Token        | Replaced with                            |
-| ------------ | ---------------------------------------- |
-| `{{title}}`  | The note's title                         |
-| `{{tags}}`   | Its tags                                 |
-| `{{folder}}` | Its folder's path                        |
-| `{{body}}`   | Its text, cut short for a very long note |
+| Token             | Replaced with                            |
+| ----------------- | ---------------------------------------- |
+| `{{title}}`       | The note's title                         |
+| `{{tags}}`        | Its tags                                 |
+| `{{folder}}`      | Its folder's path                        |
+| `{{body}}`        | Its text, cut short for a very long note |
+| `{{notebook}}`    | Its notebook's name                      |
+| `{{description}}` | Its description now, if it has one       |
+| `{{date}}`        | Today's date                             |
 
 Click a token to insert it. A prompt without `{{body}}` gets a warning, since the model can't see the note. **Reset to Default** brings back Penmoss's prompt. The prompt syncs with your settings.
 
