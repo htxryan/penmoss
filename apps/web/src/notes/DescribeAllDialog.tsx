@@ -95,6 +95,7 @@ export function DescribeAllDialog({
       <div className="confirm-actions">
         {running ? (
           <button
+            data-ui="dismiss"
             type="button"
             className="btn"
             data-event="describe-all.stop"

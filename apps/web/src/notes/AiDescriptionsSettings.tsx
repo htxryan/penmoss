@@ -35,11 +35,11 @@ import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import './ai-descriptions.css';
 
 const PAUSE_LABELS: Readonly<Record<number, string>> = {
-  30: '30 seconds',
-  60: '1 minute',
-  120: '2 minutes',
-  300: '5 minutes',
-  600: '10 minutes',
+  30: '30 Seconds',
+  60: '1 Minute',
+  120: '2 Minutes',
+  300: '5 Minutes',
+  600: '10 Minutes',
 };
 
 function Segmented<T extends string>({
@@ -307,6 +307,7 @@ function ProviderDetail({
         testId="ai-claude-code"
       >
         <button
+          data-ui="submit"
           data-event="settings.ai.test"
           type="button"
           className="btn"
@@ -345,6 +346,7 @@ function ProviderDetail({
       {anthropic?.saved ? (
         <span className="ai-key-actions">
           <button
+            data-ui="submit"
             data-event="settings.ai.test"
             type="button"
             className="btn"
@@ -355,6 +357,7 @@ function ProviderDetail({
             Test Key
           </button>
           <button
+            data-ui="submit"
             data-event="settings.ai.remove-key"
             type="button"
             className="btn"
@@ -392,6 +395,7 @@ function ProviderDetail({
             onChange={(event) => setKey(event.target.value)}
           />
           <button
+            data-ui="submit"
             type="button"
             className="btn"
             data-event="settings.ai.show-key"
@@ -400,6 +404,7 @@ function ProviderDetail({
             {shown ? 'Hide' : 'Show'}
           </button>
           <button
+            data-ui="submit"
             data-event="settings.ai.save-key"
             type="submit"
             className="btn primary"
@@ -451,6 +456,7 @@ function PromptEditor({
         <span className="muted">Insert:</span>
         {PROMPT_TOKENS.map((token) => (
           <button
+            data-ui="submit"
             data-event="settings.ai.token"
             key={token}
             type="button"
@@ -475,6 +481,7 @@ function PromptEditor({
           </button>
         ))}
         <button
+          data-ui="submit"
           data-event="settings.ai.reset-prompt"
           type="button"
           className="btn ai-reset"

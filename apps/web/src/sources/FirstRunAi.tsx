@@ -168,6 +168,7 @@ export function AiProviderStep({ back, onDone }: { back: () => void; onDone: () 
                 onChange={(event) => setKey(event.target.value)}
               />
               <button
+                data-ui="submit"
                 type="submit"
                 className="btn"
                 disabled={busy || !key.trim()}

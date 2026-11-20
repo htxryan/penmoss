@@ -41,7 +41,7 @@ Only one Penmoss window on a device describes notes at a time.
 
 ## Your own description
 
-Type in the **Description** field of the Metadata tab to write one yourself. It is marked **Written by you**. While AI Descriptions is on for the note, Penmoss asks **Keep your description?**:
+Type in the **Description** field of the Metadata tab to write one yourself. It is marked **Written by you**. While AI Descriptions is on for the note, Penmoss asks **Keep Your Description?**:
 
 - **Keep Mine** turns AI Descriptions Off for the note, so yours stays.
 - **Let Claude Update It** lets the next change rewrite it.

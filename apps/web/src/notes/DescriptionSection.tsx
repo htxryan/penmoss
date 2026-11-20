@@ -4,7 +4,7 @@
  * (● On, with where it is inherited from), the describer's status, Describe Now and Clear.
  *
  * Editing the description by hand marks it written by hand; while AI Descriptions is on for the
- * note, Penmoss then asks "Keep your description?" (Keep Mine turns the note Off; Let Claude
+ * note, Penmoss then asks "Keep Your Description?" (Keep Mine turns the note Off; Let Claude
  * Update It lets the next change rewrite it).
  */
 import { aiProviderOf, type AiEffective } from '@penmoss/core/ai-description';
@@ -21,6 +21,7 @@ import {
 import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import type { AiSetting } from '@penmoss/core/ai-description';
 import { Icon } from '@penmoss/ui/icons';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { gitNotebookPath, linkHandler, settingsPath } from '../router';
 import { shortWhen } from '../shell/when';
@@ -68,6 +69,7 @@ function SourceChip({ effective, sourceId }: { effective: AiEffective; sourceId:
   const name = notebook ? source.name : 'Everywhere';
   return (
     <a
+      data-ui="submit"
       data-event="note.ai.source"
       className="ai-src-chip"
       data-testid="ai-source"
@@ -106,15 +108,12 @@ export function DescriptionSection({
   const app = useAppWorkspace();
   useDocVersion(replica);
   // The folder tree and the notebook's own value, and the app's settings, as they change.
-  useSyncExternalStore(
-    source?.workspace.subscribe ?? NEVER,
-    source ? source.workspace.getState : () => null,
-  );
+  const workspaceState = source ? source.workspace.getState : () => null;
+  useSyncExternalStore(source?.workspace.subscribe ?? NEVER, workspaceState, workspaceState);
   useSyncExternalStore(app.subscribe, app.getState, app.getState);
   const describer = windowDescriber();
-  const status = useSyncExternalStore(describer?.subscribe ?? NEVER, () =>
-    describer && source ? describer.status(source.id, noteId) : IDLE,
-  );
+  const readStatus = () => (describer && source ? describer.status(source.id, noteId) : IDLE);
+  const status = useSyncExternalStore(describer?.subscribe ?? NEVER, readStatus, readStatus);
   const doc = replica?.doc ?? null;
   const description = doc ? (readDescription(doc) ?? '') : '';
   const [draft, setDraft] = useState<string | null>(null);
@@ -164,18 +163,11 @@ export function DescriptionSection({
         </span>
       ) : null}
       {asking && effective.on ? (
-        <div
-          className="ai-ask"
-          role="alertdialog"
-          aria-labelledby={`${id}-ask`}
-          data-testid="ai-ask"
-        >
-          <div>
-            <b id={`${id}-ask`}>Keep your description?</b>
-            <span className="muted">Claude would rewrite it the next time this note changes.</span>
-          </div>
+        <ConfirmBlock className="ai-ask" testId="ai-ask" title="Keep Your Description?">
+          <span className="muted">Claude would rewrite it the next time this note changes.</span>
           <div className="ai-ask-buttons">
             <button
+              data-ui="submit"
               type="button"
               className="btn primary"
               data-event="note.ai.keep-mine"
@@ -184,6 +176,7 @@ export function DescriptionSection({
               Keep Mine
             </button>
             <button
+              data-ui="submit"
               type="button"
               className="btn"
               data-event="note.ai.let-claude"
@@ -192,7 +185,7 @@ export function DescriptionSection({
               Let Claude Update It
             </button>
           </div>
-        </div>
+        </ConfirmBlock>
       ) : null}
       <h4 className="info-subsub" id={`${id}-ai`}>
         AI Description
@@ -232,6 +225,7 @@ export function DescriptionSection({
         <div className="ai-actions">
           {!provider || (failed && /Settings/.test(status.message)) ? (
             <a
+              data-ui="submit"
               data-event="note.ai.open-settings"
               className="btn primary"
               href={settingsPath('ai-descriptions')}
@@ -242,6 +236,7 @@ export function DescriptionSection({
             </a>
           ) : null}
           <button
+            data-ui="submit"
             type="button"
             className="btn"
             data-testid="ai-describe-now"
@@ -255,6 +250,7 @@ export function DescriptionSection({
             {failed ? 'Try Again' : 'Describe Now'}
           </button>
           <button
+            data-ui="submit"
             type="button"
             className="btn"
             data-testid="ai-clear"

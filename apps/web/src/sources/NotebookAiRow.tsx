@@ -26,9 +26,13 @@ const CHOICES: readonly { readonly value: AiSetting; readonly label: string }[] 
 export function NotebookAiRow({ source }: { source: GitSource }) {
   const id = useId();
   const app = useAppWorkspace();
-  useSyncExternalStore(source.workspace.subscribe, source.workspace.getState);
-  useSyncExternalStore(app.subscribe, app.getState);
-  const notes = useSyncExternalStore(source.notes.subscribe, source.notes.list);
+  useSyncExternalStore(
+    source.workspace.subscribe,
+    source.workspace.getState,
+    source.workspace.getState,
+  );
+  useSyncExternalStore(app.subscribe, app.getState, app.getState);
+  const notes = useSyncExternalStore(source.notes.subscribe, source.notes.list, source.notes.list);
   const [describing, setDescribing] = useState(false);
   const value = parseAiSetting(source.workspace.settings()[AI_DESCRIPTION_NOTEBOOK_SETTING]);
   const global = aiGlobalOf(app.settings());
@@ -67,6 +71,7 @@ export function NotebookAiRow({ source }: { source: GitSource }) {
           ))}
         </div>
         <button
+          data-ui="submit"
           type="button"
           className="btn"
           data-event="folder.ai.describe-all"
