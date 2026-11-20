@@ -36,12 +36,11 @@ const NEW_NOTE = mac ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
 const SCROLL_LINE =
   'The app’s and the system’s versions, the window’s size and layout, and how far you scroll';
 /**
- * The area scrolling the folder tree records as (core's SCROLL_NAMES). The tree scrolls by
- * itself (`sidebar.folders`) only where `.folders` is its own scroller; in a window under 54rem,
- * as this 720 px one, the sidebar scrolls as one (A521), so the tree's scrolling is the list's:
- * `sidebar`. The spec reads the position of whatever scrolls around the tree either way.
+ * The area scrolling the folder tree records as (core's SCROLL_NAMES). In a window taller than
+ * 54rem the notebooks' trees scroll by themselves (A521), as `sidebar.folders`; this spec's
+ * window is 1000 px tall for that.
  */
-const TREE_AREA = 'sidebar';
+const TREE_AREA = 'sidebar.folders';
 
 const opened: Launched[] = [];
 const endpoints: FakeAnalytics[] = [];
@@ -188,7 +187,8 @@ test('scrolling the note, the folder tree and Settings, Note Actions and the men
   const launched = await launch({ analytics: 'yes', env: analyticsEnv(fake) });
   opened.push(launched);
   const { app, page } = launched;
-  await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
+  // Taller than 54rem, so the folder tree scrolls by itself, not the sidebar as one (A521).
+  await mainBounds(app, { x: 0, y: 0, width: 1280, height: 1000 });
   await gitNotebook(launched);
 
   // Enough notes that the sidebar's folder tree runs past its foot, then a long note, open.
@@ -220,8 +220,13 @@ test('scrolling the note, the folder tree and Settings, Note Actions and the men
   await scrollArea(page, page.getByTestId('note-scroll'), 'note');
   await holdForProof(page, 1_000);
 
-  // The sidebar scrolled over the folder tree.
-  await scrollArea(page, page.getByTestId('note-list').first(), TREE_AREA);
+  // The folder tree scrolled by itself, the sidebar's list staying where it is.
+  const listTop = () => page.locator('nav.sb-list').evaluate((list) => list.scrollTop);
+  const listBefore = await listTop();
+  // The wheel over the notebooks' body, the trees' own scroller, not a tree's rows (whose box
+  // runs past the part of them in view).
+  await scrollArea(page, page.locator('.sb-notebooks-body'), TREE_AREA);
+  expect(await listTop()).toBe(listBefore);
   await holdForProof(page, 1_000);
 
   // Settings → Quick Capture → Show in the Menu Bar, off: the switch's click, then main records

@@ -361,7 +361,7 @@ describe('the app’s scrollers (PEN-175)', () => {
   const scrollers = (within: ParentNode) =>
     ({
       sidebar: within.querySelector('.sb-list'),
-      'sidebar.folders': within.querySelector('.folders'),
+      'sidebar.folders': within.querySelector('.sb-notebooks-body'),
       'sidebar.recent': within.querySelector('.sb-part[data-section="recent"]'),
       'sidebar.tags': within.querySelector('.sb-part[data-section="tags"]'),
     }) as const;

@@ -42,7 +42,7 @@ A prop is one of: an enum, a boolean, a count bucket, a duration bucket, a norma
 
 ## Scroll events
 
-`scroll <area>` with one prop, `position`: how far down the area is, 0 at the top to 1 at the bottom, in hundredths (PEN-175). The areas are `SCROLL_NAMES`: `note`, `sidebar`, `sidebar.folders`, `sidebar.recent`, `sidebar.tags`, `settings` and `settings.nav` (Android's drawer has no inner scrollers, so it records only `sidebar`). Only the apps send them (`KIND_CLIENTS`).
+`scroll <area>` with one prop, `position`: how far down the area is, 0 at the top to 1 at the bottom, in hundredths (PEN-175). The areas are `SCROLL_NAMES`: `note`, `sidebar`, `sidebar.folders`, `sidebar.recent`, `sidebar.tags`, `settings` and `settings.nav` (Android's drawer has no inner scrollers, so it records only `sidebar`). `sidebar.folders` is the notebooks' trees (`.sb-notebooks-body`), which scroll on their own in a window taller than 54rem; in a shorter one the sidebar scrolls as one (A521) and records `sidebar`. Only the apps send them (`KIND_CLIENTS`).
 
 - One copy of the rules, core's `ScrollGate`: recorded 300 ms after the area stops moving; at most one per area a second, a position that settles sooner held and the latest recorded when the second is up; a position equal to the area's last dropped; that memory goes back to the top when the area's content changes (another note, another Settings page), so a screen that opens at the top records nothing. Scrolls the app makes (restoring a tab's place, a jump to a heading) count too.
 - The page: `useScrollArea(area, ref, contentKey)` in `apps/web/src/analytics/scroll.ts` on each scroller. A preview passes no ref and records nothing.

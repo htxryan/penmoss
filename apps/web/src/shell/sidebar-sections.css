@@ -28,14 +28,16 @@
   flex-direction: column;
 }
 
+/*
+ * The notebooks' trees scroll on their own, in the room the section has, never less than 12rem
+ * (A521). Their rows never size the body (size containment), so the sections above it keep the
+ * section to that room, and the sidebar's list scrolls only under 54rem (PEN-175).
+ */
 .sb-notebooks-body {
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
-}
-
-.sb-notebooks-body > .folders {
-  flex: 1 1 0;
+  contain: size;
   min-height: 12rem;
   overflow-y: auto;
 }
@@ -318,9 +320,9 @@
     min-height: 0;
   }
 
-  .sb-notebooks-body,
-  .sb-notebooks-body > .folders {
+  .sb-notebooks-body {
     flex: 1 0 auto;
+    contain: none;
     min-height: 0;
     overflow-y: visible;
   }

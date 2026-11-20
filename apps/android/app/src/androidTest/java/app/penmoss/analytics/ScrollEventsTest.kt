@@ -37,6 +37,7 @@ import org.json.JSONTokener
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -53,10 +54,12 @@ import java.util.concurrent.TimeUnit
  *   `scroll settings`; a long note with a callout, a code block and a task list, scrolled in the
  *   editor page, records `scroll note` with its position in hundredths (AC7); a tap on the
  *   callout's fold in the editor page records `click editor.callout.fold`, the id the Mac records
- *   (AC5). Settings → Privacy → Analytics Data then holds with those four rows in view (AC10).
+ *   (AC5); Note Actions opened records `click note.actions.open` (AC4). Settings → Privacy →
+ *   Analytics Data then holds on Note Actions' row with the fold's and two scrolls, then ends on
+ *   the fold's row with the three scrolls (AC4, AC10).
  *
- * The phone's own record, answered Don't Share, so nothing leaves it. Run with
- * `task proof:android -- app.penmoss.analytics.ScrollEventsTest`.
+ * The phone's own record, answered Don't Share, so nothing leaves it. Each test is its own proof,
+ * with its own recording: `task proof:android -- app.penmoss.analytics.ScrollEventsTest#<test>`.
  */
 @RunWith(AndroidJUnit4::class)
 class ScrollEventsTest {
@@ -92,7 +95,8 @@ class ScrollEventsTest {
                 val line = screen.text(AnalyticsCopy.text("consent.recorded.3"))
                 assertTrue("the line is on screen", line.boundsInWindow.height > 0f)
                 assertFalse("the old line is gone", screen.has("The app’s and the system’s versions, and the window’s size and layout"))
-                hold()
+                // Held long enough that the recording's stills reach it.
+                SystemClock.sleep(6_000)
                 assertTrue(screen.has(AnalyticsCopy.text("consent.recorded.3")))
                 ProofShot.take()
             }
@@ -159,8 +163,23 @@ class ScrollEventsTest {
             assertEquals("the fold's tap scrolled nothing more", listOf(note), scrolls("note"))
             hold()
 
-            // Analytics Data, from All Notebooks: a finger first, so the large title folds away,
-            // then the fold's row, the newest of the four, at the top, the older three below it.
+            // Note Actions, the note's ⋯: its own id, the Mac's too (AC4), never `menu.open`.
+            val noteScreen = OnScreen.inFront()
+            noteScreen.tap("noteMore")
+            val actions = until("click note.actions.open") { stored().firstOrNull { it.kind == "click" && it.name == "note.actions.open" && it.id > fold.id } }
+            assertFalse("no generic id", stored().any { it.kind == "click" && it.name == "menu.open" })
+            // Its menu open on screen a moment (a popup of its own), then closed by Back.
+            SystemClock.sleep(1_500)
+            back()
+            SystemClock.sleep(400)
+            until("the note, its menu closed") { tag(noteScreen, "noteMore") }
+
+            // Analytics Data, from All Notebooks: a finger first, so the large title folds away.
+            // The five rows, with the screens and layouts recorded between them, run past a
+            // phone's screen even at Display → Font Size's Small, as a person may have it (put back
+            // after): first Note Actions' row, the newest, at the top, held; then the fold's row at
+            // the top, the three scrolls below it, held to the end (AC10).
+            smallerText()
             context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             val home = OnScreen.inFront()
             home.tap("homeSettingsGear")
@@ -168,18 +187,19 @@ class ScrollEventsTest {
             home.tap("privacyViewData")
             home.text(AnalyticsCopy.text("viewer.title"))
             scrollBy(home, "viewerList", 0.3f)
-            home.reveal(home.text("click · editor.callout.fold"), margin = 4f)
-            for (row in listOf(fold, note, settings, sidebar)) {
-                assertTrue(
-                    "the row ${row.kind} · ${row.name} ${row.text} is on screen; it shows ${home.texts()}; recorded since: ${stored().map { "${it.kind} ${it.name} ${it.text}" }}",
-                    home.has("${row.kind} · ${row.name}") && (row.text == "{}" || home.has(row.text)),
-                )
-            }
+            home.reveal(home.text("click · note.actions.open"), margin = 48f)
+            val first = listOf("click · note.actions.open", "click · editor.callout.fold", "scroll · note", "scroll · sidebar")
+            for (row in first) assertTrue("$row is in view; it shows ${home.texts()}", inView(home, row))
+            SystemClock.sleep(3_000)
+            for (row in first) assertTrue("$row is still in view", inView(home, row))
+
+            home.reveal(home.text("click · editor.callout.fold"), margin = 48f)
+            val last = listOf("click · editor.callout.fold", "scroll · note", "scroll · sidebar", "scroll · settings")
+            for (row in last) assertTrue("$row is in view; it shows ${home.texts()}", inView(home, row))
+            // Each scroll's row shows the position it recorded.
+            for (row in listOf(note, sidebar, settings)) assertTrue("${row.name}'s ${row.text} shows", home.has(row.text))
             hold()
-            assertTrue(home.has("scroll · note"))
-            assertTrue(home.has("scroll · sidebar"))
-            assertTrue(home.has("scroll · settings"))
-            assertTrue(home.has("click · editor.callout.fold"))
+            for (row in last) assertTrue("$row is still in view", inView(home, row))
             ProofShot.take()
         }
     }
@@ -329,6 +349,36 @@ class ScrollEventsTest {
         instrumentation.waitForIdleSync()
         SystemClock.sleep(800)
         screen.nodes()
+    }
+
+    /** Whether the text [text] shows whole inside Analytics Data's list, not under its bar or below it. */
+    private fun inView(screen: OnScreen, text: String): Boolean {
+        val list = tag(screen, "viewerList")?.boundsInWindow ?: return false
+        val node = screen.nodes().firstOrNull { text in it.texts() } ?: return false
+        val at = node.boundsInWindow
+        return at.height > 0f && at.top >= list.top && at.bottom <= list.bottom
+    }
+
+    /** The system's font size before [smallerText], put back after each test. */
+    private var fontScale: String? = null
+
+    private fun shell(command: String): String =
+        instrumentation.uiAutomation.executeShellCommand(command).let { fd ->
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).bufferedReader().use { it.readText().trim() }
+        }
+
+    /** Display → Font Size a step smaller (0.85, Android's own "Small"). */
+    private fun smallerText() {
+        fontScale = shell("settings get system font_scale")
+        shell("settings put system font_scale 0.85")
+        SystemClock.sleep(500)
+    }
+
+    @After
+    fun putTextBack() {
+        val was = fontScale ?: return
+        shell(if (was == "null" || was.isEmpty()) "settings delete system font_scale" else "settings put system font_scale $was")
+        fontScale = null
     }
 
     private fun back() {
