@@ -300,6 +300,13 @@ const PATHS = {
     </>
   ),
   // T44: line symbols (Settings → Symbols, the phone's symbol button).
+  // AI Descriptions (PEN-161): Describe Now, and the only place the AI's mark shows.
+  sparkle: (
+    <>
+      <path d="M12 3.5l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z" />
+      <path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" />
+    </>
+  ),
   star: <path d="m12 3.8 2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z" />,
   sun: (
     <>

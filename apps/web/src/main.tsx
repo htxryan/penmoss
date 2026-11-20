@@ -32,6 +32,8 @@ import { StorePuller, storeSync } from './window/store-sync';
 import { browserThemeEnvironment, ThemeController } from './theme/controller';
 import { ThemeProvider } from './theme/ThemeProvider';
 import type { Workspace } from './workspace/service';
+import { aiBridge } from './notes/ai-bridge';
+import { Describer, installDescriber } from './notes/describer';
 
 // Before anything renders: the theme this device last showed (T28); the notebook's choice
 // replaces it once its workspace has been read.
@@ -154,6 +156,19 @@ const feedback = new FeedbackService({
 if (bridge?.window !== 'capture') feedback.start(window);
 
 const capture = bridge?.window === 'capture';
+// AI Descriptions (PEN-161): one window describes changed notes on its own; any answers Describe
+// Now. Never the capture window.
+if (!capture) {
+  installDescriber(
+    new Describer({
+      sources: () => sources.getState().all,
+      subscribeSources: sources.subscribe,
+      settings: () => sources.getState().journal?.workspace.settings() ?? {},
+      bridge: aiBridge(),
+      locks: typeof navigator !== 'undefined' && 'locks' in navigator ? navigator.locks : null,
+    }),
+  );
+}
 // The main window's note tabs (PEN-140, A1496): its history, restored from the last launch.
 // A note window and the capture window have none (D37).
 const tabs =

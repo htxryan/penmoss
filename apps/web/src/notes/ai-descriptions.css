@@ -1,0 +1,208 @@
+/*
+ * AI Descriptions (PEN-161, A1656): the Metadata tab's Description section, the description under
+ * the title, and Settings → AI Descriptions. Three type levels in the panel (Ryan, 20 Nov 2026):
+ * the panel's title, its section headings, and a label nested under a section.
+ */
+.note-info > .info-heading {
+  margin-bottom: 0.6rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.note-info > .info-heading + .info-subheading {
+  margin-top: 0;
+}
+
+.info-subsub {
+  margin: 0.9rem 0 0.4rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-semibold);
+}
+
+.ai-desc-edit {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  min-height: 4.5rem;
+  padding: 0.45rem 0.55rem;
+  font-size: var(--pm-text-field);
+  line-height: var(--pm-leading-relaxed);
+  resize: vertical;
+}
+
+.ai-desc-by {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--pm-color-meta);
+  font-size: var(--pm-text-meta);
+}
+
+.ai-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--pm-border);
+}
+
+.ai-eff {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--pm-text-meta);
+}
+
+.ai-res {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--pm-fg);
+  font-weight: var(--pm-weight-semibold);
+}
+
+.ai-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--pm-accent);
+}
+
+.ai-dot.off {
+  background: var(--pm-muted);
+}
+
+.ai-src-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  text-decoration: none;
+}
+
+a.ai-src-chip:hover {
+  border-color: var(--pm-accent);
+  color: var(--pm-fg);
+}
+
+.ai-status {
+  color: var(--pm-color-meta);
+  font-size: var(--pm-text-meta);
+}
+
+.ai-warn {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  background: var(--pm-warn-bg);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-snug);
+}
+
+.ai-actions,
+.ai-ask-buttons,
+.ai-key-actions,
+.ai-key-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ai-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin: 0.5rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid color-mix(in oklab, var(--pm-accent) 40%, transparent);
+  background: color-mix(in oklab, var(--pm-accent) 8%, var(--pm-bg));
+}
+
+.ai-ask b {
+  display: block;
+}
+
+.ai-ask .muted {
+  font-size: var(--pm-text-help);
+}
+
+.doc-meta-description {
+  flex-basis: 100%;
+  max-width: 42rem;
+  margin: 0.2rem 0 0;
+  color: var(--pm-color-meta);
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-relaxed);
+}
+
+.info-id {
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code-inline);
+}
+
+/* Settings → AI Descriptions. */
+.ai-via {
+  max-width: 36rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.ai-key-input {
+  width: 18rem;
+  font-family: var(--pm-mono);
+}
+
+.ai-prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 44rem;
+}
+
+.ai-prompt {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  min-height: 12rem;
+  padding: 0.5rem 0.6rem;
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code);
+  line-height: var(--pm-leading-relaxed);
+  resize: vertical;
+}
+
+.ai-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.btn.ai-token {
+  height: var(--pm-control-sm);
+  padding: 0 0.45rem;
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-badge);
+}
+
+.btn.ai-reset {
+  height: var(--pm-control-sm);
+  margin-left: auto;
+}
+
+.note-info .btn.tag-add-btn {
+  height: var(--pm-control-sm);
+}
+
+.ai-actions .btn {
+  height: var(--pm-control-sm);
+}

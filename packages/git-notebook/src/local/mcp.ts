@@ -97,7 +97,7 @@ const MEANING_SEARCH_DESCRIPTION =
   'Search the notes of this git notebook by their words and their meaning: "hybrid" (the default) finds notes that use your words and notes about what you mean in other words, ' +
   '"semantic" by meaning alone, and "full-text" by words exactly ("a phrase", prefix*, -excluded, title:word). ' +
   'Filter by folderId (with its subfolders), tag (with nested tags) and updated time. ' +
-  'Results give each note id, title, a snippet with matches in **bold**, the heading of the passage that matched, tags, when it was last updated and foundBy; ' +
+  'Results give each note id, title, a snippet with matches in **bold**, the heading of the passage that matched, tags, its description when it has one, when it was last updated and foundBy; ' +
   'while the notebook is still being indexed a notice says how many notes meaning covers so far. Call read_note for the full text.';
 
 const DESCRIPTIONS: Readonly<Record<string, string>> = {
@@ -105,7 +105,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = {
     'Search the notes of this git notebook by their words: "full-text" matches words exactly ("a phrase", prefix*, -excluded, title:word); ' +
     '"hybrid" (the default) is the same here, since a git notebook has no meaning search, and "semantic" is refused. ' +
     'Filter by folderId (with its subfolders), tag (with nested tags) and updated time. ' +
-    'Results give each note id, title, a snippet with matches in **bold**, tags and when it was last updated; call read_note for the full text.',
+    'Results give each note id, title, a snippet with matches in **bold**, tags, its description when it has one, and when it was last updated; call read_note for the full text.',
   list_folder:
     'List the folders and notes in a folder, in the order the app shows them. ' +
     'Give folderId, or path (folder names from the top, e.g. "Journal/2026"), or neither for the top level. ' +
@@ -132,6 +132,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = {
 
 export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (words only here), list_recent, list_folder or list_tags; read one with read_note.
+- Many notes have a description: a sentence or two on what the note is about, written by Ryan or by AI Descriptions. search_notes, list_recent, list_folder and get_backlinks give it, and read_note gives the description of each note it links to (links). Read descriptions to choose which notes to open before reading their whole text.
 - Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
@@ -143,6 +144,7 @@ export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes th
 /** `LOCAL_INSTRUCTIONS` where search by meaning is set up (A1156). */
 export const LOCAL_MEANING_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (by their words and their meaning: describe what you are looking for in your own words), list_recent, list_folder or list_tags; read one with read_note.
+- Many notes have a description: a sentence or two on what the note is about, written by Ryan or by AI Descriptions. search_notes, list_recent, list_folder and get_backlinks give it, and read_note gives the description of each note it links to (links). Read descriptions to choose which notes to open before reading their whole text.
 - Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
@@ -246,6 +248,8 @@ function noteOutcome(note: ReturnType<LocalNotebook['view']>, extra: Args = {}):
     id: note.id,
     title: note.title,
     tags: note.tags,
+    ...(note.description ? { description: note.description } : {}),
+    ...(note.links.length > 0 ? { links: note.links } : {}),
     headings: note.headings,
     baseVersion: note.baseVersion,
     ...(note.deleted ? { deleted: true } : {}),
@@ -364,6 +368,7 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
           snippet: markdownMarks(hit.snippet),
           ...(hit.heading ? { heading: hit.heading } : {}),
           tags: hit.tags,
+          ...(hit.description ? { description: hit.description } : {}),
           updatedAt: iso(hit.updatedAt),
           foundBy: hit.sources,
         })),
@@ -452,6 +457,7 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
           kind: note.kind,
           ...(note.period ? { period: note.period } : {}),
           tags: note.tags,
+          ...(note.description ? { description: note.description } : {}),
           excerpt: note.excerpt,
           updatedAt: iso(note.updatedAt),
         })),
@@ -510,7 +516,7 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
     }),
     true,
   ),
-  set_properties: edit((args) => propertiesOp(pick(args, ['title', 'tags']))),
+  set_properties: edit((args) => propertiesOp(pick(args, ['title', 'tags', 'description']))),
   tag_note: edit((args) => ({
     op: 'tag',
     add: (args['add'] as string[] | undefined) ?? [],

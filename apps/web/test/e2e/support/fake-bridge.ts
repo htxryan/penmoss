@@ -108,6 +108,8 @@ export function installFakeBridge(config: {
   readonly macWindow?: boolean;
   /** Usage analytics (PEN-137); none unless a spec asks. */
   readonly analytics?: FakeAnalyticsConfig | null;
+  /** AI Descriptions' providers (PEN-161), stubbed; none unless a spec asks. */
+  readonly ai?: boolean;
 }): void {
   const toBase64 = (bytes: Uint8Array): string => {
     let text = '';
@@ -590,6 +592,76 @@ export function installFakeBridge(config: {
         }
       : {}),
     ...(config.analytics ? { analytics: fakeAnalytics(config.analytics) } : {}),
+    // AI Descriptions (PEN-161): a stubbed provider. Each describe is kept in `__aiCalls`; the
+    // answer names the note's title (the prompt's `Title:` line). `sk-ant-good` is the one key
+    // Anthropic accepts here.
+    ...(config.ai
+      ? {
+          ai: (() => {
+            const listeners = new Set<() => void>();
+            let saved = false;
+            let asked = false;
+            const calls: string[] = [];
+            (window as unknown as { __aiCalls: string[] }).__aiCalls = calls;
+            const status = () => ({
+              providers: [
+                {
+                  id: 'anthropic',
+                  label: 'Anthropic (API Key)',
+                  signIn: 'key' as const,
+                  models: [{ id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' }],
+                },
+                {
+                  id: 'claude-code',
+                  label: 'Claude Code on This Mac',
+                  signIn: 'cli' as const,
+                  models: [{ id: 'haiku', label: 'Claude Haiku' }],
+                },
+              ],
+              anthropic: { saved, problem: null, keychain: true },
+              claudeCode: { state: 'ready' as const, version: '2.1.328' },
+              asked,
+            });
+            const changed = () => {
+              for (const listener of listeners) listener();
+            };
+            return {
+              status: () => Promise.resolve(status()),
+              saveKey: (key: string) => {
+                if (key.trim() !== 'sk-ant-good') {
+                  return Promise.resolve({
+                    ok: false as const,
+                    message:
+                      'Anthropic refused the API key. Check it in Settings → AI Descriptions.',
+                  });
+                }
+                saved = true;
+                changed();
+                return Promise.resolve({ ok: true as const, status: status() });
+              },
+              asked: () => {
+                asked = true;
+                return Promise.resolve(status());
+              },
+              removeKey: () => {
+                saved = false;
+                changed();
+                return Promise.resolve({ ok: true as const, status: status() });
+              },
+              test: (provider: string) =>
+                Promise.resolve({ ok: true, message: `${provider} works.` }),
+              describe: (provider: string, model: string, prompt: string) => {
+                calls.push(`${provider}|${model}|${prompt}`);
+                const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'a note';
+                return new Promise<{ ok: true; text: string }>((resolve) =>
+                  setTimeout(() => resolve({ ok: true, text: `A note about ${title}.` }), 50),
+                );
+              },
+              onChange: (listener: () => void) => listen(listeners, listener),
+            };
+          })(),
+        }
+      : {}),
     onBeforeClose: () => () => undefined,
     onStoreChanged: (listener) => listen(storeListeners, listener),
     stored: (ids) => store?.postMessage({ ids }),

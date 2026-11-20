@@ -18,6 +18,8 @@ export interface BoundedExecOptions {
   readonly command: string;
   readonly args: readonly string[];
   readonly env?: NodeJS.ProcessEnv;
+  /** Where it runs; the main process's own folder when absent. */
+  readonly cwd?: string;
   /** Written to stdin, which is then closed; absent, stdin is not opened. */
   readonly input?: string;
   readonly timeoutMs: number;
@@ -59,6 +61,7 @@ export function boundedExec(options: BoundedExecOptions): Promise<BoundedResult>
     try {
       child = spawn(options.command, [...options.args], {
         env: options.env ?? process.env,
+        ...(options.cwd ? { cwd: options.cwd } : {}),
         stdio: [options.input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
         detached: true,
         shell: false,

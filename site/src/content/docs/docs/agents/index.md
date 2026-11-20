@@ -22,6 +22,10 @@ Agents reach your notes through one MCP server, `penmoss mcp`, which serves ever
 
 Agents connected by name in earlier versions keep their own copies and servers until you remove them in **Settings → Agents**.
 
+## Note descriptions
+
+A note's [description](/docs/ai-descriptions/) is a sentence or two on what it holds. Agents see it wherever a note is named (search results, lists, backlinks and each link `read_note` gives), so they can read descriptions first and open only the notes that matter. Write descriptions yourself, or let AI Descriptions write them.
+
 ## Point an agent at a note
 
 **Copy Agent Reference**, in a note's ⋯ menu (⋮ on Android), its title bar or its right-click menu in the sidebar, copies one line to paste into an agent's conversation:

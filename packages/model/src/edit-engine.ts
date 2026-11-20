@@ -19,6 +19,8 @@ import {
   type LinkResolver,
 } from '@penmoss/core';
 import { schema } from '@penmoss/core/schema';
+import { DESCRIPTION_MAX_CHARS } from '@penmoss/core/ai-description';
+import { readDescription, setHandDescription } from './description';
 import {
   blocksOf,
   findSection,
@@ -70,6 +72,8 @@ export type EditOp =
       readonly op: 'properties';
       readonly title?: string | undefined;
       readonly tags?: readonly string[] | undefined;
+      /** The note's description (A1656); an empty one clears it. */
+      readonly description?: string | undefined;
     }
   | {
       readonly op: 'tag';
@@ -121,6 +125,9 @@ export function headingRefs(body: PMNode): string[] {
 /** The properties a note keeps (A16, A73): all an agent may set, on create or afterwards. */
 export const NOTE_PROPERTIES: readonly string[] = ['title', 'tags'];
 
+/** What set_properties sets: the properties, and the note's description (A1656). */
+export const SETTABLE_PROPERTIES: readonly string[] = [...NOTE_PROPERTIES, 'description'];
+
 /** 422 for properties a note does not keep, on create (frontmatter) and in `properties` alike. */
 export function unknownProperties(keys: readonly string[]): EditFailure {
   return fail(
@@ -141,6 +148,8 @@ export interface EditPlan {
   readonly removeTags?: readonly string[];
   /** Replaces the frontmatter tags with exactly these. */
   readonly setTags?: readonly string[];
+  /** The note's description, written by hand (A1656); empty clears it. */
+  readonly description?: string;
   readonly renameTag?: { readonly from: string; readonly to: string };
   readonly deleteTag?: string;
   /** For the version's summary, e.g. `Replaced section “Plans”`. */
@@ -351,8 +360,15 @@ function planOp(live: Y.Doc, op: EditOp, links: LinkResolver): EditPlan | EditFa
       };
     }
     case 'properties': {
-      if (op.title === undefined && op.tags === undefined) {
-        return fail(400, 'invalid_request', 'Set title or tags');
+      if (op.title === undefined && op.tags === undefined && op.description === undefined) {
+        return fail(400, 'invalid_request', 'Set title, tags or description');
+      }
+      if (op.description !== undefined && op.description.length > DESCRIPTION_MAX_CHARS) {
+        return fail(
+          422,
+          'description_too_long',
+          `A description is at most ${DESCRIPTION_MAX_CHARS} characters: a sentence or two`,
+        );
       }
       const tags = op.tags === undefined ? undefined : validTags(op.tags);
       if (tags && !Array.isArray(tags)) return tags;
@@ -360,6 +376,7 @@ function planOp(live: Y.Doc, op: EditOp, links: LinkResolver): EditPlan | EditFa
         ok: true,
         ...(op.title !== undefined ? { title: op.title } : {}),
         ...(tags ? { setTags: tags } : {}),
+        ...(op.description !== undefined ? { description: op.description } : {}),
         label: 'Set properties',
       };
     }
@@ -434,6 +451,8 @@ export function applyPlan(live: Y.Doc, plan: EditPlan): void {
   }
   for (const tag of plan.removeTags ?? []) setFrontmatterTag(live, tag, false);
   for (const tag of plan.addTags ?? []) setFrontmatterTag(live, tag, true);
+  // An agent's description is written by hand: AI Descriptions asks before rewriting it (A1656).
+  if (plan.description !== undefined) setHandDescription(live, plan.description, { ask: true });
   if (plan.renameTag) renameTagInDoc(live, plan.renameTag.from, plan.renameTag.to);
   if (plan.deleteTag) changeTagInDoc(live, { from: plan.deleteTag, to: null });
 }
@@ -497,6 +516,9 @@ export function baseConflict(
       const was = frontmatterTags(base).join(' ');
       const now = frontmatterTags(live).join(' ');
       if (was !== now) return conflict('The tags', was, now);
+    }
+    if (op.description !== undefined && readDescription(base) !== readDescription(live)) {
+      return conflict('The description', readDescription(base) ?? '', readDescription(live) ?? '');
     }
   }
   return null;

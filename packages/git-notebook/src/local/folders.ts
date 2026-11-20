@@ -107,7 +107,12 @@ export class LocalFolders {
         name: each.name,
         path: folderPath(folders, each.id) ?? each.name,
       })),
-      notes: shown.map((note) => ({ id: note.id, title: note.title, updatedAt: note.updatedAt })),
+      notes: shown.map((note) => ({
+        id: note.id,
+        title: note.title,
+        ...(note.description ? { description: note.description } : {}),
+        updatedAt: note.updatedAt,
+      })),
       ...(notes.length > shown.length && limit > 0 ? { truncated: true } : {}),
     };
   }

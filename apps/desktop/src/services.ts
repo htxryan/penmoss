@@ -18,9 +18,11 @@ import {
   readConsentFile,
 } from '@penmoss/core/analytics/node';
 import { AdminCheck, runHelper } from './admin-check';
+import { AiProviders } from './ai-provider';
 import { Analytics, macFields, watchConsent } from './analytics';
 import { WorkerStore } from './analytics-store';
 import { config, dataFile, log, logAt, logFile, mac } from './app-state';
+import { boundedExec } from './bounded-exec';
 import { broadcast } from './broadcast';
 import { EmbeddingService } from './embedding-service';
 import { GitNotebooks } from './git-notebooks';
@@ -164,6 +166,25 @@ export const githubToken = new GitHubToken({
     broadcast('githubTokenChanged');
     refreshKnown();
   },
+});
+/**
+ * AI Descriptions' providers (PEN-161, A1656): the Anthropic key sealed like the GitHub token, and
+ * Claude Code on this Mac, run only when the person chose it.
+ */
+export const aiProviders = new AiProviders({
+  dir: app.getPath('userData'),
+  seal: async (plain) =>
+    (await sealable()) ? (await safeStorage.encryptStringAsync(plain)).toString('base64') : null,
+  unseal: async (sealed) => {
+    if (!(await sealable())) return null;
+    return (await safeStorage.decryptStringAsync(Buffer.from(sealed, 'base64'))).result;
+  },
+  fetch: (url, init) => net.fetch(url instanceof Request ? url : String(url), chromiumInit(init)),
+  exec: boundedExec,
+  loginPath: () => loginShellPath(process.env['SHELL'] ?? '/bin/zsh'),
+  api: config.anthropicApi,
+  log,
+  onChange: () => broadcast('aiChanged'),
 });
 /**
  * Add a Git Notebook's GitHub browsing (T81, A1163–A1165): git's own credential, asked for on

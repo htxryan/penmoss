@@ -37,6 +37,7 @@ export const SETTINGS_PAGES: ReadonlyArray<{
   { id: 'journal', label: 'Daily Notes', group: 'writing' },
   { id: 'quick-capture', label: 'Quick Capture', group: 'writing' },
   { id: 'shortcuts', label: 'Keyboard Shortcuts', group: 'writing' },
+  { id: 'ai-descriptions', label: 'AI Descriptions', group: 'writing' },
   { id: 'git-notebooks', label: 'All Notebooks', group: 'notebooks' },
   { id: 'agents', label: 'Agents', group: 'agents' },
   { id: 'agent-activity', label: 'Agent Activity', group: 'agents' },
@@ -188,6 +189,26 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   // Keyboard Shortcuts.
   at('shortcuts')('Keyboard Shortcuts', {
     aliases: ['keys', 'hotkeys', 'key bindings', 'keybindings'],
+  }),
+  // AI Descriptions (PEN-161).
+  at('ai-descriptions')('Describe Notes', {
+    help: 'A short description of each note, for agents',
+    aliases: ['ai', 'description', 'descriptions', 'claude', 'summary', 'summaries'],
+  }),
+  at('ai-descriptions')('Describe a Note', {
+    help: 'After a pause, or at each sync',
+    aliases: ['ai', 'description', 'when'],
+  }),
+  at('ai-descriptions', 'AI Provider')('AI Provider', {
+    help: 'Anthropic with an API key, or Claude Code on this Mac',
+    aliases: ['ai', 'provider', 'claude', 'claude code', 'anthropic', 'api key', 'key'],
+  }),
+  at('ai-descriptions', 'AI Provider')('Model', {
+    aliases: ['ai', 'claude', 'haiku', 'sonnet'],
+  }),
+  at('ai-descriptions', 'Prompt')('Prompt', {
+    help: 'What the AI is asked, with tokens',
+    aliases: ['ai', 'description', 'claude', 'prompt'],
   }),
   // All Notebooks.
   at('git-notebooks')('Add Notebook', { aliases: ['git', 'repository', 'clone', 'github'] }),

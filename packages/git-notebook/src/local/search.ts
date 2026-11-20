@@ -38,6 +38,8 @@ export interface LocalSearchResult {
   /** The heading of the note's best chunk (meaning only); a hit opens the note there. */
   readonly heading: string | null;
   readonly tags: string[];
+  /** The note's description, when it has one (A1656): what it is about, in a sentence or two. */
+  readonly description?: string;
   readonly kind: string;
   readonly updatedAt: number;
   /** How the note was found: by its words, by meaning, or both. */
@@ -67,6 +69,7 @@ export interface LocalSearchInput {
 export interface LocalBacklink {
   id: string;
   title: string;
+  description?: string;
   updatedAt: number;
   heading: string | null;
   embed: boolean;
@@ -77,6 +80,9 @@ export interface LocalBacklink {
 export const WORDS_ONLY_NOTICE = 'A git notebook searches words only: these are keyword results.';
 export const coverageNotice = ({ indexed, total }: MeaningCoverage) =>
   `Meaning covers ${indexed} of ${total} notes so far.`;
+
+/** `{ description }` when there is one, so results without one stay as they were. */
+const described = (description: string | null | undefined) => (description ? { description } : {});
 
 export class LocalSearch {
   private readonly index = new LocalSearchIndex();
@@ -172,6 +178,7 @@ export class LocalSearch {
       snippet: hit.snippet,
       heading: null,
       tags: [...hit.tags],
+      ...described(this.notes.cached(hit.id)?.description),
       kind: this.notes.cached(hit.id)?.kind ?? 'note',
       updatedAt: hit.updatedAt,
       sources: ['full-text'],
@@ -208,6 +215,7 @@ export class LocalSearch {
         snippet: hit.preview,
         heading: hit.heading,
         tags: [...note.tags],
+        ...described(note.description),
         kind: note.kind,
         updatedAt: note.updatedAt,
         sources: ['semantic'],
@@ -257,6 +265,7 @@ export class LocalSearch {
           linked.set(key, {
             id: note.id,
             title: note.title,
+            ...described(note.description),
             updatedAt: note.updatedAt,
             heading: link.heading,
             embed: link.embed,

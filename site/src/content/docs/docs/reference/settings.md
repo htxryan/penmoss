@@ -97,12 +97,27 @@ See [Quick capture](/docs/quick-capture/).
 
 Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs/shortcuts/#change-a-shortcut)).
 
+### AI Descriptions
+
+| Setting           | What it does                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| Describe Notes    | On or Off for every note whose note, folder and notebook say Inherit; Off at first |
+| Describe a Note   | After a Pause (the default) or At Sync                                             |
+| After a Pause Of  | How long after the last change: 2 minutes by default                               |
+| AI Provider       | Not Set Up, Anthropic (API Key) or Claude Code on This Mac (this Mac)              |
+| Anthropic API Key | Save, Test Key and Remove; kept on this Mac, encrypted                             |
+| Model             | The provider's model; the fastest is picked for you                                |
+| Prompt            | What is sent for each note, with its tokens and **Reset to Default**               |
+
+See [AI Descriptions](/docs/ai-descriptions/).
+
 ## Notebooks
 
 **All Notebooks** lists every notebook with **Add Notebook…** (the same steps as [your first notebook](/docs/first-notebook/#more-notebooks-on-this-mac)), then each notebook has an entry of its own in the list, with its [badge](/docs/organise/#notebook-badges) and a dot for how its sync is going. A notebook's page, in its **Overview**, **Sync** and **Git** tabs:
 
 | Setting                              | What it does                                                                                                                                                                                                       |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AI Descriptions                      | On **Overview**: Inherit, On or Off for this notebook's notes, and **Describe Notes Now…** ([AI Descriptions](/docs/ai-descriptions/))                                                                             |
 | Sync Now                             | Syncs at once                                                                                                                                                                                                      |
 | Notebook Name, Rename                | Renames it on every device that syncs it ([Rename a notebook](/docs/organise/#rename-a-notebook))                                                                                                                  |
 | Badge                                | On **Overview**, after its name: its colour (ten presets or **Custom…**), what it shows (a letter, a number from 0 to 99 or an icon) and **Reset to Default** ([Notebook badges](/docs/organise/#notebook-badges)) |
@@ -169,6 +184,7 @@ Open Settings from the **☰** menu. Each screen's title is large at the top and
 | Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                                             |
 | Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                                        |
 | Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                                          |
+| Writing       | AI Descriptions    | Describe Notes, when, the AI provider (Anthropic with a key, or Not Set Up), the model and the prompt ([AI Descriptions](/docs/ai-descriptions/))          |
 | Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks))                         |
 | Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits from This Phone**, the signing key and background sync                         |
 | Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                                                      |

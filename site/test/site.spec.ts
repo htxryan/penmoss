@@ -536,9 +536,9 @@ test.describe('the docs', () => {
     ]);
     await expect(nav.locator('details[open]')).toHaveCount(1);
     await expect(nav.locator('details[open] summary')).toHaveText('Get Started');
-    // 27 pages in all (34 before A1351, 26 before Time Machine), but what shows is five section
-    // rows and Get Started's five pages.
-    await expect(nav.locator('a[href^="/docs/"]')).toHaveCount(27);
+    // 28 pages in all (34 before A1351, 26 before Time Machine, 27 before AI Descriptions), but
+    // what shows is five section rows and Get Started's five pages.
+    await expect(nav.locator('a[href^="/docs/"]')).toHaveCount(28);
     await expect(nav.getByRole('link')).toHaveText([
       'Introduction',
       'The Mac App',

@@ -1,3 +1,4 @@
+import { Icon } from '@penmoss/ui/icons';
 import type { FolderNode } from '@penmoss/core/workspace';
 import { WorkspaceError } from '@penmoss/model/workspace';
 import {
@@ -24,6 +25,7 @@ import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from '../notes/agent-re
 import { useQuickAccess } from '../notes/quick-access';
 import { MAX_QUICK_ACCESS } from '@penmoss/core/quick-access';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
+import { DescribeAllDialog } from '../notes/DescribeAllDialog';
 import { ContextMenu } from '../shell/ContextMenu';
 import { OpenNoteItems } from '../shell/OpenNoteItems';
 import { MenuItem } from '../shell/Menu';
@@ -123,6 +125,8 @@ export function FolderTree({
   const [renamingNote, setRenamingNote] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [transferring, setTransferring] = useState<Transferring | null>(null);
+  /** Describe Notes Now for a folder (PEN-161). */
+  const [describing, setDescribing] = useState<FolderNode | null>(null);
   // The other open notebooks, which a note or folder can move or be copied to (T68, #230).
   const source = useSource();
   const sourcesState = useSourcesState();
@@ -767,6 +771,15 @@ export function FolderTree({
           ) : (
             <FolderMenuItems
               id={menu.target.id}
+              ai={tree.byId.get(menu.target.id)?.aiDescription ?? 'inherit'}
+              onAi={(id, value) => {
+                setMenu(null);
+                workspace.setFolderAiDescription(id, value);
+              }}
+              onDescribeAll={(id) => {
+                setMenu(null);
+                setDescribing(tree.byId.get(id) ?? null);
+              }}
               onNewNote={newNoteIn}
               onNewFolder={newFolderIn}
               onTransfer={
@@ -783,6 +796,13 @@ export function FolderTree({
             />
           )}
         </ContextMenu>
+      ) : null}
+      {describing ? (
+        <DescribeAllDialog
+          name={describing.name}
+          noteIds={notesIn(describing)}
+          onClose={() => setDescribing(null)}
+        />
       ) : null}
       {transferring ? (
         <TransferPicker
@@ -964,6 +984,9 @@ function NoteMenuItems({
  */
 function FolderMenuItems({
   id,
+  ai,
+  onAi,
+  onDescribeAll,
   onNewNote,
   onNewFolder,
   onTransfer,
@@ -971,6 +994,10 @@ function FolderMenuItems({
   onDelete,
 }: {
   id: string;
+  /** Its AI Descriptions value (PEN-161). */
+  ai: 'inherit' | 'on' | 'off';
+  onAi: (id: string, value: 'inherit' | 'on' | 'off') => void;
+  onDescribeAll: (id: string) => void;
   onNewNote: (id: string) => void;
   /** A folder inside it (T53 item 12). */
   onNewFolder: (id: string) => void;
@@ -1004,6 +1031,38 @@ function FolderMenuItems({
         </>
       ) : null}
       <div className="menu-sep" role="separator" />
+      {/* AI Descriptions for the folder and the folders in it (PEN-161), and Describe Notes Now. */}
+      <p className="menu-caption" aria-hidden="true">
+        AI Descriptions
+      </p>
+      {AI_CHOICES.map((choice) => (
+        <button
+          key={choice.value}
+          type="button"
+          role="menuitemradio"
+          aria-checked={ai === choice.value}
+          tabIndex={-1}
+          className="menu-item"
+          data-ui="item"
+          data-event="folder.ai.mode"
+          data-testid={`folder-ai-${choice.value}`}
+          onClick={() => onAi(id, choice.value)}
+        >
+          <span className="menu-check" aria-hidden="true">
+            {ai === choice.value ? <Icon name="check" /> : null}
+          </span>
+          <span className="menu-label">{choice.label}</span>
+        </button>
+      ))}
+      <MenuItem
+        icon="sparkle"
+        data-testid="folder-describe-all"
+        data-event="folder.ai.describe-all"
+        onClick={() => onDescribeAll(id)}
+      >
+        Describe Notes Now…
+      </MenuItem>
+      <div className="menu-sep" role="separator" />
       {/* The menu's own icon size, on its items' column; the row's 14px one sat 2px short (A988). */}
       <MenuItem icon="pencil" data-event="tree.folder-menu.rename" onClick={() => onRename(id)}>
         Rename
@@ -1019,6 +1078,18 @@ function FolderMenuItems({
       </MenuItem>
     </>
   );
+}
+
+const AI_CHOICES: readonly { readonly value: 'inherit' | 'on' | 'off'; readonly label: string }[] =
+  [
+    { value: 'inherit', label: 'Inherit' },
+    { value: 'on', label: 'On' },
+    { value: 'off', label: 'Off' },
+  ];
+
+/** Every note in a folder and its subfolders. */
+function notesIn(folder: FolderNode): string[] {
+  return [...folder.notes.map((note) => note.id), ...folder.folders.flatMap(notesIn)];
 }
 
 function countNotes(folder: FolderNode): number {
