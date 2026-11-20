@@ -4,6 +4,7 @@
  * index, `current`, changed only by `setCurrent`, so a caller (PEN-178's Play) can drive it: call
  * setCurrent with the next index and listen with onChange.
  */
+import { breakableId, node as element } from './dom';
 import {
   eventName,
   gap,
@@ -46,21 +47,10 @@ export interface Timeline {
   onChange(listener: (index: number) => void): void;
 }
 
-function element<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  ...children: (Node | string)[]
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  node.className = className;
-  node.append(...children);
-  return node;
-}
-
 /** An event's display name, its id muted under it. */
 function nameCell(event: TimelineEvent): HTMLElement {
   const { title, id } = eventName(`${event.kind}:${event.name}`);
-  return element('span', 'ev-name', title, element('span', 'cell-id', id));
+  return element('span', 'ev-name', title, element('span', 'cell-id', ...breakableId(id)));
 }
 
 /** An event's props as label and value chips. */
@@ -95,25 +85,28 @@ export function createTimeline(events: readonly TimelineEvent[]): Timeline {
   const cols = element(
     'div',
     'ev ev-cols',
-    ...['Since Start', 'Gap', 'Kind', 'Event', 'Details'].map((label) =>
-      element('span', '', label),
-    ),
+    element('span', 'ev-time', 'Since Start'),
+    element('span', 'ev-time', 'Gap'),
+    ...['Kind', 'Event', 'Details'].map((label) => element('span', '', label)),
   );
   cols.setAttribute('aria-hidden', 'true');
   root.append(cols);
   const times = timesOf(events);
   const rows: HTMLLIElement[] = [];
+  const heads: HTMLElement[] = [];
   stretches(events).forEach((stretch, k) => {
     const section = element('section', 'stretch');
     const title = element('h3', 'stretch-title', stretch.title);
     title.id = `stretch-${k}`;
-    if (stretch.id) title.append(' ', element('span', 'cell-id', stretch.id));
+    if (stretch.id) title.append(' ', element('span', 'cell-id', ...breakableId(stretch.id)));
     section.setAttribute('aria-labelledby', title.id);
+    // The title, its id and the summary on one baseline, wrapping only when they don't fit.
     const head = element(
       'header',
       'stretch-head',
       title,
-      element('p', 'stretch-summary', stretch.summary),
+      ' ',
+      element('span', 'stretch-summary', stretch.summary),
     );
     const list = element('ol', 'ev-list');
     for (let index = stretch.first; index < stretch.end; index++) {
@@ -121,8 +114,8 @@ export function createTimeline(events: readonly TimelineEvent[]): Timeline {
       const row = element(
         'li',
         'ev',
-        element('span', 'ev-since', times[index]!.since),
-        element('span', 'ev-gap', times[index]!.gap),
+        element('span', 'ev-time ev-since', times[index]!.since),
+        element('span', 'ev-time ev-gap', times[index]!.gap),
         element('span', 'ev-kind', kindName(`${event.kind}:${event.name}`)),
         nameCell(event),
         chips(event),
@@ -134,7 +127,19 @@ export function createTimeline(events: readonly TimelineEvent[]): Timeline {
     }
     section.append(head, list);
     root.append(section);
+    heads.push(head);
   });
+
+  // A row's scroll margin is its stretch's pinned heading's measured height (--head-height on
+  // the section), so scrolling a row into view never leaves it under the heading.
+  const measure = (head: HTMLElement) =>
+    head.parentElement?.style.setProperty('--head-height', `${head.offsetHeight}px`);
+  if (typeof ResizeObserver !== 'undefined') {
+    const watch = new ResizeObserver((entries) => {
+      for (const entry of entries) measure(entry.target as HTMLElement);
+    });
+    for (const head of heads) watch.observe(head);
+  }
 
   let current = -1;
   const listeners: ((index: number) => void)[] = [];
@@ -148,6 +153,11 @@ export function createTimeline(events: readonly TimelineEvent[]): Timeline {
     for (const listener of listeners) listener(current);
   };
 
+  // A row picked with the mouse shows no focus ring (styles.css); the keyboard brings it back.
+  root.addEventListener('pointerdown', () => root.setAttribute('data-pointer', ''));
+  root.addEventListener('focusout', (event) => {
+    if (!root.contains(event.relatedTarget as Node | null)) root.removeAttribute('data-pointer');
+  });
   root.addEventListener('click', (event) => {
     const row = (event.target as Element).closest<HTMLElement>('li.ev');
     if (row && root.contains(row)) setCurrent(Number(row.dataset['index']));
@@ -161,16 +171,20 @@ export function createTimeline(events: readonly TimelineEvent[]): Timeline {
       Home: () => 0,
       End: () => last,
     };
+    root.removeAttribute('data-pointer');
     const move = moves[event.key];
     if (!move || event.altKey || event.ctrlKey || event.metaKey) return;
     // The browser's own scrolling (a line, the whole page) never runs for these keys.
     event.preventDefault();
     setCurrent(move());
     const row = rows[current];
-    row?.focus({ preventScroll: true });
-    // The rows' scroll margin is the pinned heading's height, so a row under it counts as out
-    // of view and comes down to just below it.
-    row?.scrollIntoView({ block: 'nearest' });
+    if (!row) return;
+    row.focus({ preventScroll: true });
+    // The rows' scroll margin is the pinned heading's height, measured now as well as on each
+    // resize, so a row under it counts as out of view and comes down to just below it.
+    const head = row.closest('section')?.querySelector<HTMLElement>('.stretch-head');
+    if (head) measure(head);
+    row.scrollIntoView({ block: 'nearest' });
   });
 
   return {

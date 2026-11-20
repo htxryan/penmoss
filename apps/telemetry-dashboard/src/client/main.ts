@@ -42,6 +42,7 @@ import {
   windowName,
   type EventName,
 } from './names';
+import { node } from './dom';
 import { createTimeline, timesOf, type TimelineEvent } from './timeline';
 
 type Row = Record<string, string | number | null>;
@@ -1273,17 +1274,6 @@ function when(ms: number): string {
   });
 }
 
-function node<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  ...children: (Node | string)[]
-): HTMLElementTagNameMap[K] {
-  const made = document.createElement(tag);
-  if (className) made.className = className;
-  made.append(...children);
-  return made;
-}
-
 /** A link styled as a button; with no href it is disabled (aria-disabled), as at a list's end. */
 function linkButton(label: string, href: string | null): HTMLAnchorElement {
   const link = node('a', 'btn', label);
@@ -1323,6 +1313,7 @@ function sessionsList(answer: Answer): Rendered {
   if (total > 0) {
     const from = (page - 1) * size + 1;
     const to = Math.min(page * size, total);
+    // The range, then Newer and Older as separate buttons, as in the plan's ac1 and ac2.
     before = node(
       'div',
       'pager',
@@ -1331,8 +1322,12 @@ function sessionsList(answer: Answer): Rendered {
         'pager-range',
         `${from.toLocaleString('en-GB')}–${to.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')}`,
       ),
-      linkButton('Newer', page > 1 ? listHref(page - 1) : null),
-      linkButton('Older', to < total ? listHref(page + 1) : null),
+      node(
+        'span',
+        'btn-row',
+        linkButton('Newer', page > 1 ? listHref(page - 1) : null),
+        linkButton('Older', to < total ? listHref(page + 1) : null),
+      ),
     );
     before.setAttribute('aria-label', 'Pages');
   }
@@ -1528,12 +1523,16 @@ function sessionPage(answer: Answer): Rendered {
   );
   head.append(node('h1', 'view-title', title), actions);
 
+  // The ids alone in the monospace face, as .cell-id shows them; the words in the body font.
+  const size = windowName(first.size_class);
   const ids = node(
     'p',
     'ids',
-    [`Install ${shortInstall(install)}`, `Session ${session}`, windowName(first.size_class)]
-      .filter(Boolean)
-      .join(' · '),
+    'Install ',
+    node('code', 'ids-id', shortInstall(install)),
+    ' · Session ',
+    node('code', 'ids-id', session),
+    ...(size ? [` · ${size}`] : []),
   );
   const actors = [...new Set(events.map((e) => e.actor))].map((a) => ACTOR_LABELS[a] ?? titled(a));
 
@@ -1574,30 +1573,26 @@ function sessionPage(answer: Answer): Rendered {
   list.setAttribute('aria-label', "This Install's Sessions");
   for (const row of others) {
     const open = row['session'] === session;
+    // Two lines: its start, its client at the right; then its length and events, muted.
+    const meta = [
+      sessionLength({
+        started: Number(row['started']),
+        ended: Number(row['ended']),
+        events: Number(row['events']),
+        took: row['took'] as string | null,
+      }),
+      eventsWord(Number(row['events'])),
+      ...(open ? ['This Session'] : []),
+    ].join(' · ');
     const link = node(
       'a',
       'ss-item',
       node('span', 'ss-when', when(Number(row['started']))),
-      node(
-        'span',
-        'ss-meta',
-        [
-          clientName(row['client']),
-          sessionLength({
-            started: Number(row['started']),
-            ended: Number(row['ended']),
-            events: Number(row['events']),
-            took: row['took'] as string | null,
-          }),
-          eventsWord(Number(row['events'])),
-        ].join(' · '),
-      ),
+      node('span', 'ss-client', clientName(row['client'])),
+      node('span', 'ss-meta', meta),
     );
     link.href = sessionHref(install, String(row['session']));
-    if (open) {
-      link.setAttribute('aria-current', 'page');
-      link.append(node('span', 'ss-this', 'This Session'));
-    }
+    if (open) link.setAttribute('aria-current', 'page');
     list.append(node('li', '', link));
   }
   const cut = cutLine(othersTotal, Math.max(0, index), Math.max(0, others.length - index - 1));

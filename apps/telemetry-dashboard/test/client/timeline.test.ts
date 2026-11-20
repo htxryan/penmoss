@@ -3,6 +3,7 @@
 // setCurrent, so PEN-178's Play can drive it; a click or Arrow Up, Arrow Down, Home and End in the
 // timeline move it, marking one row only.
 import { describe, expect, it, vi } from 'vitest';
+import { breakableId } from '../../src/client/dom';
 import { createTimeline, type TimelineEvent } from '../../src/client/timeline';
 
 const event = (
@@ -142,5 +143,55 @@ describe('createTimeline', () => {
     key(timeline.element, 'End');
     expect(document.activeElement).toBe(rows(timeline.element)[4]);
     timeline.element.remove();
+  });
+
+  it('scrolls a row below its pinned heading, by the heading measured when the key is pressed', () => {
+    const timeline = createTimeline(EVENTS);
+    document.body.append(timeline.element);
+    const head = timeline.element.querySelectorAll<HTMLElement>('.stretch-head')[2]!;
+    Object.defineProperty(head, 'offsetHeight', { configurable: true, value: 53 });
+    key(timeline.element, 'End');
+    const section = head.parentElement!;
+    expect(section.style.getPropertyValue('--head-height')).toBe('53px');
+    timeline.element.remove();
+  });
+
+  it('shows no focus ring on a row picked with the mouse, and the keyboard brings it back', () => {
+    const timeline = createTimeline(EVENTS);
+    const root = timeline.element;
+    rows(root)[2]!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    rows(root)[2]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(root.hasAttribute('data-pointer')).toBe(true);
+    key(root, 'ArrowDown');
+    expect(root.hasAttribute('data-pointer')).toBe(false);
+  });
+
+  it('puts the heading, its id and its summary in one row, the id breakable only at . and :', () => {
+    const timeline = createTimeline([
+      event(0, 'screen', 'settings.privacy'),
+      event(1, 'setting', 'privacy.limits.events.days', { value: 30 }),
+    ]);
+    const head = timeline.element.querySelector('.stretch-head')!;
+    expect([...head.children].map((child) => child.className)).toEqual([
+      'stretch-title',
+      'stretch-summary',
+    ]);
+    const id = timeline.element.querySelectorAll('li.ev .cell-id')[1]!;
+    expect(id.textContent).toBe('setting:privacy.limits.events.days');
+    expect(id.querySelectorAll('wbr')).toHaveLength(4);
+  });
+});
+
+describe('breakableId', () => {
+  it('breaks only after a . or a :', () => {
+    const parts = breakableId('setting:privacy.limits');
+    expect(parts.map((part) => (typeof part === 'string' ? part : part.nodeName))).toEqual([
+      'setting:',
+      'WBR',
+      'privacy.',
+      'WBR',
+      'limits',
+    ]);
+    expect(breakableId('home')).toEqual(['home']);
   });
 });

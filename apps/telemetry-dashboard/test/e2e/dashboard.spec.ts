@@ -656,6 +656,29 @@ test("Sessions: the list, a session's timeline, its install's sessions and a cop
   await expect(pager.locator('.pager-range')).toHaveText(/^1–50 of /);
   await expect(page).toHaveURL(/#sessions\?days=30$/);
 
+  // The last page: its range on the pager's line, Older disabled and still drawn as a button.
+  const last = Math.ceil(total / 50);
+  await page.evaluate((n) => (location.hash = `#sessions?days=30&page=${n}`), last);
+  await expect(pager.locator('.pager-range')).toHaveText(
+    `${((last - 1) * 50 + 1).toLocaleString('en-GB')}–${total.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')}`,
+  );
+  const newer = pager.getByRole('link', { name: 'Newer' });
+  const older = pager.getByRole('link', { name: 'Older' });
+  await expect(older).toHaveAttribute('aria-disabled', 'true');
+  await expect(newer).toHaveAttribute('href', new RegExp(`page=${last - 1}$`));
+  // Newer and Older are separate rounded, bordered buttons with a gap between them.
+  const [newerBox, olderBox] = [(await newer.boundingBox())!, (await older.boundingBox())!];
+  expect(olderBox.x).toBeGreaterThan(newerBox.x + newerBox.width + 4);
+  for (const button of [newer, older]) {
+    await expect(button).toHaveCSS('border-top-left-radius', '6px');
+    await expect(button).toHaveCSS('border-top-style', 'solid');
+  }
+  await pager.scrollIntoViewIfNeeded();
+  await hold(page);
+  await openView(page, 'Sessions');
+  await expect(pager.locator('.pager-range')).toHaveText(/^1–50 of /);
+  await expect(page).toHaveURL(/#sessions\?days=30$/);
+
   // The list's CSV: its own columns, the install cut to 8 characters.
   const download = page.waitForEvent('download');
   await list.getByRole('button', { name: 'Download CSV: Recent Sessions' }).click();
@@ -1017,8 +1040,12 @@ test('Sessions: Back puts back the page, the filters and the session; a filter g
   // Page 2 is drawn before a row of it is opened.
   await expect(pager.locator('.pager-range')).toHaveText(/^51–100 of /);
   await settled(page);
-  const row = sessionRows(page).first().locator('a');
+  // A row down the page, so the list is scrolled when it is opened.
+  const row = sessionRows(page).nth(30).locator('a');
   await expect(row).toHaveAttribute('href', /client=mac&page=2&install=/);
+  await row.scrollIntoViewIfNeeded();
+  const scrolled = await page.evaluate(() => window.scrollY);
+  expect(scrolled).toBeGreaterThan(100);
   await openSession(page, row);
   await expect(page.getByRole('heading', { level: 1, name: /^Session on / })).toBeVisible();
   await expect(page).toHaveURL(/client=mac&page=2&install=/);
@@ -1026,11 +1053,14 @@ test('Sessions: Back puts back the page, the filters and the session; a filter g
   await expect(
     page.getByRole('navigation', { name: 'Views' }).getByRole('link', { name: 'Overview' }),
   ).toHaveAttribute('href', '#overview?days=30&client=mac');
-  // Back: page 2 of the Mac list, its select showing Mac.
+  // Back: page 2 of the Mac list, its select showing Mac, scrolled where it was.
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1, name: 'Sessions' })).toBeVisible();
   await expect(pager.locator('.pager-range')).toHaveText(/^51–100 of /);
   await expect(page.getByLabel('Client', { exact: true })).toHaveValue('mac');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrolled);
+  await expect(row).toBeInViewport();
+  await hold(page);
   // Back again: page 1, the filter as it was then.
   await page.goBack();
   await expect(pager.locator('.pager-range')).toHaveText(/^1–50 of /);
@@ -1042,6 +1072,10 @@ test('Sessions: Back puts back the page, the filters and the session; a filter g
   await page.getByLabel('Client', { exact: true }).selectOption('android');
   await expect(page.getByRole('heading', { level: 1, name: 'Sessions' })).toBeVisible();
   await expect(page).toHaveURL(/#sessions\?days=30&client=android$/);
+  await expect(pager.locator('.pager-range')).toHaveText(/^1–\d+ of /);
+  await expect(pager.getByRole('link', { name: 'Newer' })).toHaveAttribute('aria-disabled', 'true');
+  await expect(sessionRows(page).first().locator('td').nth(2)).toHaveText('Android');
+  await hold(page);
   await page.goBack();
   await expect(pager.locator('.pager-range')).toHaveText(/^51–100 of /);
   await expect(page.getByLabel('Client', { exact: true })).toHaveValue('mac');
@@ -1068,6 +1102,14 @@ test('Sessions on a phone: the list scrolls in its box, a session stacks, a head
   const link = await appSession(page, dashboard);
   await openSession(page, link);
   expect(await overflow()).toBeLessThanOrEqual(0);
+  // AC13, the top of the session: its header buttons wrap under the title.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const heading = (await page
+    .getByRole('heading', { level: 1, name: /^Session on / })
+    .boundingBox())!;
+  const copy = (await page.getByRole('button', { name: 'Copy Link' }).boundingBox())!;
+  expect(copy.y).toBeGreaterThanOrEqual(heading.y + heading.height - 1);
+  await expect(page.getByRole('link', { name: '← All Sessions' })).toBeInViewport();
   // Tiles two to a row.
   const tiles = page.locator('.tile');
   const [a, b, c] = await Promise.all(
@@ -1090,6 +1132,13 @@ test('Sessions on a phone: the list scrolls in its box, a session stacks, a head
     .getByRole('region', { name: /^This Install's Sessions/ })
     .boundingBox())!;
   expect(side.y).toBeGreaterThan(timeline.y + timeline.height - 1);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await hold(page);
+  // Then This Install's Sessions, after the timeline.
+  const sideCard = page.getByRole('region', { name: /^This Install's Sessions/ });
+  await sideCard.evaluate((node) => node.scrollIntoView({ block: 'end' }));
+  await expect(sideCard.locator('a[aria-current="page"]')).toBeInViewport();
+  await hold(page);
   await pinStretch(page, 'Note');
   await hold(page);
 });
