@@ -5,7 +5,8 @@
  * `apps/android/contract/analytics-v1.json`.
  *
  * There is no free-text field anywhere: a name is one of the catalogue's ids, and a prop is an
- * enum, a boolean, a bucket, a duration bucket, a limit's value or a list of flag names. So a
+ * enum, a boolean, a bucket, a duration bucket, a limit's value, a window's length rounded to 10
+ * (`lengthOf`) or a list of flag names. So a
  * note's title, a path, a tag, a notebook or repository name, or anything a person typed cannot
  * be recorded, let alone sent (`validate.ts` checks each event before it is stored and again in
  * the Worker).
@@ -26,6 +27,38 @@ export type Channel = (typeof CHANNELS)[number];
 
 export const OSES = ['macos', 'android', 'linux', 'windows', 'other'] as const;
 export type AnalyticsOs = (typeof OSES)[number];
+
+/**
+ * Which window an `app window` or `app layout` event is about (PEN-174): the main window (on
+ * Android, the launcher and each notebook's), a note window (Mac only), or Quick Capture's
+ * window (the Mac's) or sheet (Android's). Settings is a screen in the main window, not one of its own.
+ */
+export const WINDOWS = ['main', 'note', 'capture'] as const;
+export type WindowName = (typeof WINDOWS)[number];
+
+/** How an `app layout` shows the sidebar: in full, as the Mac's icon rail, or not at all. */
+export const SIDEBAR_STATES = ['shown', 'rail', 'hidden'] as const;
+export type SidebarState = (typeof SIDEBAR_STATES)[number];
+
+/** The shown note's side panel, or `none` with no note on screen. */
+export const PANEL_STATES = ['open', 'closed', 'none'] as const;
+export type PanelState = (typeof PANEL_STATES)[number];
+
+/** The theme's mode as chosen (not what System resolves to). */
+export const THEME_MODES = ['light', 'dark', 'system'] as const;
+export type ThemeModeName = (typeof THEME_MODES)[number];
+
+/**
+ * The longest a window's side is recorded as (PEN-174), in CSS pixels or dp: the second kind of
+ * raw number after a limit's value (A1636 as amended).
+ */
+export const MAX_LENGTH = 10_000;
+
+/** A length as it is recorded: rounded to the nearest 10 and held to 0–MAX_LENGTH. */
+export function lengthOf(px: number): number {
+  if (!Number.isFinite(px) || px <= 0) return 0;
+  return Math.min(MAX_LENGTH, Math.round(px / 10) * 10);
+}
 
 /** The window's width class (Material's), app clients only. */
 export const SIZE_CLASSES = ['compact', 'medium', 'expanded'] as const;

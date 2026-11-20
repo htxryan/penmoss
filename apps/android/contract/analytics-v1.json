@@ -1,5 +1,5 @@
 {
-  "$comment": "The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names, each one of `cliFlags`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`). States are stored as their `code`. The catalogue only grows.",
+  "$comment": "The usage analytics event format (PEN-137), written from packages/core/src/analytics by packages/core/test/analytics-contract.test.ts, which also checks it. Android records events in this format and checks them as validate.ts does: a name must be in `catalogue` under its kind, and each prop one of `props` for its kind (`enum`: one of `values`; `bool`; `count`: one of `countBuckets`; `duration`: one of `durationBuckets`; `keys`: matches `patterns.keys`; `flags`: at most `maxFlags` names, each one of `cliFlags`; `setting`: a boolean, a whole number 0 to `maxSettingNumber`, a count bucket, or one of the words `settingValues` lists for the event name (a setting not listed takes no word); `screen`: a name in `catalogue.screen`; `length`: a whole number, a multiple of 10, 0 to `maxLength`). An event whose `kind.name` is a key of `nameProps` takes the props of that entry instead of those of its kind, and no other name of the kind takes them. States are stored as their `code`. The catalogue only grows.",
   "version": 1,
   "kinds": [
     "app",
@@ -126,6 +126,7 @@
     "with"
   ],
   "maxSettingNumber": 10000000,
+  "maxLength": 10000,
   "settingValues": {
     "theme.id": [
       "penmoss",
@@ -402,8 +403,55 @@
       }
     }
   },
+  "nameProps": {
+    "app.window": {
+      "window": {
+        "type": "enum",
+        "values": ["main", "note", "capture"]
+      },
+      "width": {
+        "type": "length"
+      },
+      "height": {
+        "type": "length"
+      },
+      "fullScreen": {
+        "type": "bool"
+      },
+      "maximised": {
+        "type": "bool"
+      }
+    },
+    "app.layout": {
+      "window": {
+        "type": "enum",
+        "values": ["main", "note"]
+      },
+      "sidebar": {
+        "type": "enum",
+        "values": ["shown", "rail", "hidden"]
+      },
+      "sidebarWidth": {
+        "type": "length"
+      },
+      "panel": {
+        "type": "enum",
+        "values": ["open", "closed", "none"]
+      },
+      "fullWidth": {
+        "type": "bool"
+      },
+      "themeMode": {
+        "type": "enum",
+        "values": ["light", "dark", "system"]
+      },
+      "tabs": {
+        "type": "count"
+      }
+    }
+  },
   "catalogue": {
-    "app": ["launch", "quit", "foreground", "background"],
+    "app": ["launch", "quit", "foreground", "background", "window", "layout"],
     "command": [
       "app.palette",
       "app.quickOpen",

@@ -1097,7 +1097,19 @@ export const CLICK_NAMES: readonly string[] = [
 ];
 
 /** What app lifecycle events are called. */
-export const APP_NAMES: readonly string[] = ['launch', 'quit', 'foreground', 'background'];
+/**
+ * The app's own events. `window` (a window's size, full screen and maximised, PEN-174) and
+ * `layout` (the sidebar, the note panel, Full Width, the theme's mode and the tabs) take props of
+ * their own (`NAME_PROP_SPECS`), and no other app event takes those.
+ */
+export const APP_NAMES: readonly string[] = [
+  'launch',
+  'quit',
+  'foreground',
+  'background',
+  'window',
+  'layout',
+];
 export const FEEDBACK_NAMES: readonly string[] = ['sent'];
 export const SYNC_NAMES: readonly string[] = ['pass'];
 
