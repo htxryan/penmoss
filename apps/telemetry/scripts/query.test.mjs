@@ -19,6 +19,36 @@ test('every named query is listed, and each comes out with every ?N written in',
   assert.match(querySql('next', options), /kind = 'command' AND name = 'app\.palette'/);
 });
 
+test('the Sessions queries take an install, a session and a page (PEN-173)', () => {
+  const install = 'a0'.repeat(16);
+  const session = '0000000100000002';
+  const options = parseArgs([
+    'session',
+    '--today',
+    '2026-11-19',
+    '--install',
+    install,
+    '--session',
+    session,
+  ]);
+  assert.match(
+    querySql('session', options),
+    new RegExp(`install = '${install}' AND session = '${session}'`),
+  );
+  assert.match(querySql('install-sessions', options), new RegExp(`WHERE session = '${session}'`));
+  assert.match(
+    querySql('sessions', parseArgs(['sessions', '--page', '3'])),
+    /OFFSET \(3 - 1\) \* 50/,
+  );
+  assert.match(querySql('sessions', parseArgs(['sessions'])), /OFFSET \(1 - 1\) \* 50/);
+  assert.throws(() => parseArgs(['session', '--install', 'A0'.repeat(16)]), /--install/);
+  assert.throws(() => parseArgs(['session', '--install', "a0' OR 1=1"]), /--install/);
+  assert.throws(() => parseArgs(['session', '--session', '123']), /--session/);
+  assert.throws(() => parseArgs(['sessions', '--page', '0']), /--page/);
+  assert.throws(() => parseArgs(['sessions', '--page', '10000']), /--page/);
+  assert.throws(() => parseArgs(['sessions', '--page', '1.5']), /--page/);
+});
+
 test('a value that could end its literal is refused', () => {
   assert.throws(() => inline('SELECT ?1', ["x' OR 1=1 --"]), /no safe value/);
   assert.throws(() => inline('SELECT ?2', [1]), /no safe value/);

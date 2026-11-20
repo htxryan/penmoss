@@ -86,10 +86,14 @@ export async function startDashboard(): Promise<Dashboard> {
   // The fixture is apps/telemetry's, typed for workerd; loaded by path, it stays out of this
   // Node project's types (Playwright compiles it all the same).
   const fixture = join(app, '..', 'telemetry', 'test', 'fixture.ts');
-  const { seedFixture } = (await import(fixture)) as {
+  const { seedFixture, seedBigInstall } = (await import(fixture)) as {
     seedFixture: (database: typeof db, now: number) => Promise<void>;
+    seedBigInstall: (database: typeof db, now: number) => Promise<void>;
   };
-  await seedFixture(db, Date.now());
+  const now = Date.now();
+  await seedFixture(db, now);
+  // An install with more sessions than Sessions' side list holds, all older than 30 days.
+  await seedBigInstall(db, now);
   return {
     url: ready.toString().replace(/\/$/, ''),
     token: await signer.sign({ exp: Math.floor(Date.now() / 1000) + 4 * 3600 }),
