@@ -62,8 +62,11 @@ class LimitsSettingsTest {
         }
     }
 
+    /** The app's own recorder, put back after each test, so the tests after it in this process record as the app does. */
+    private val appRecorder = Analytics.service
+
     @After
-    fun uninstall() = Analytics.install(null)
+    fun uninstall() = Analytics.install(appRecorder)
 
     @Test
     fun advancedOpensInPlaceWithEveryLimit() {

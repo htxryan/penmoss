@@ -58,6 +58,9 @@ class WindowLayoutEventsTest {
 
     @Before
     fun ready() = runBlocking {
+        // The app's own recorder, whatever an earlier test in this process left installed (CI runs
+        // every class in one process, and a test that installs its own recorder may leave none).
+        Analytics.install(analytics)
         // Answered (Don't Share), so the launcher shows All Notebooks rather than the question.
         val deadline = SystemClock.uptimeMillis() + 10_000
         while (analytics.state.value == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100)
