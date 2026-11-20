@@ -36,11 +36,23 @@ export function selectClass(
 export interface SelectProps extends Omit<ComponentPropsWithRef<'select'>, 'size'> {
   readonly size?: SelectSize;
   readonly variant?: SelectVariant;
+  /**
+   * Its own tracked id (PEN-175), a literal at the caller: a change records `click <id>`, never
+   * the value picked (apps/web/src/analytics/track.ts).
+   */
+  readonly 'data-event': string;
 }
 
-export function Select({ size, variant, className, children, ...props }: SelectProps) {
+export function Select({
+  size,
+  variant,
+  className,
+  children,
+  'data-event': event,
+  ...props
+}: SelectProps) {
   return (
-    <select {...props} className={selectClass(size, variant, className)}>
+    <select {...props} data-event={event} className={selectClass(size, variant, className)}>
       {children}
     </select>
   );

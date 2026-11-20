@@ -249,8 +249,11 @@ class AttachmentView implements NodeView {
     this.size = doc.createElement('span');
     this.size.className = 'pm-attachment-size';
     this.previewButton = this.button(doc, 'Preview', 'preview', () => void this.togglePreview());
+    this.previewButton.dataset['event'] = 'editor.attachment.preview';
     this.openButton = this.button(doc, 'Open', 'open', () => void this.open());
+    this.openButton.dataset['event'] = 'editor.attachment.open';
     this.downloadButton = this.button(doc, 'Download', 'download', () => void this.download());
+    this.downloadButton.dataset['event'] = 'editor.attachment.download';
     this.chip.append(
       this.badge,
       this.name,

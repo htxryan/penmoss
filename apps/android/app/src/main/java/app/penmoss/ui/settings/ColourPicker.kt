@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import app.penmoss.analytics.Analytics
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
@@ -229,7 +231,12 @@ fun ColourPicker(hex: String, onChange: (String) -> Unit, modifier: Modifier = M
                     true
                 }
                 .focusable()
-                .pointerInput(Unit) { detectTapGestures { pick(it, size.width) } }
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        Analytics.click("colour-picker.wheel")
+                        pick(it, size.width)
+                    }
+                }
                 .pointerInput(Unit) {
                     detectDragGestures(onDragStart = { pick(it, size.width) }) { change, _ ->
                         change.consume()
@@ -256,6 +263,7 @@ fun ColourPicker(hex: String, onChange: (String) -> Unit, modifier: Modifier = M
             brush = Brush.horizontalGradient(listOf(Color.Black, HexColours.color(HexColours.of(hsva.copy(value = 1f, alpha = 1f))))),
             value = hsva.value,
             onValueChange = { set(hsva.copy(value = it)) },
+            event = "colour-picker.brightness",
             valueRange = 0f..1f,
             modifier = Modifier.testTag("symbol-colour-value").semantics { contentDescription = "Brightness" },
         )
@@ -265,6 +273,7 @@ fun ColourPicker(hex: String, onChange: (String) -> Unit, modifier: Modifier = M
             checks = true,
             value = hsva.alpha,
             onValueChange = { set(hsva.copy(alpha = it)) },
+            event = "colour-picker.opacity",
             valueRange = 0f..1f,
             modifier = Modifier.testTag("symbol-colour-alpha").semantics { contentDescription = "Opacity" },
         )
@@ -327,6 +336,7 @@ private fun GradientSlider(
     brush: Brush,
     value: Float,
     onValueChange: (Float) -> Unit,
+    event: String,
     valueRange: ClosedFloatingPointRange<Float>,
     modifier: Modifier = Modifier,
     checks: Boolean = false,
@@ -345,6 +355,8 @@ private fun GradientSlider(
         Slider(
             value = value,
             onValueChange = onValueChange,
+            // Counted as [event] when let go (PEN-175), never its value.
+            onValueChangeFinished = trackedClick(event) {},
             valueRange = valueRange,
             colors = gradientSliderColours(),
             modifier = modifier,

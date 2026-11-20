@@ -16,3 +16,5 @@ export * from './copy';
 export * from './log-block';
 export * from './recorder';
 export * from './viewer';
+export * from './scroll';
+export * from './setting';

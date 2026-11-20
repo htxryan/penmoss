@@ -40,7 +40,7 @@ export function AboutVersions() {
           onKeyDown={onPanelKeyDown}
         >
           <p>{GIT_VERSIONS}</p>
-          <a href={HISTORY_DOCS} target="_blank" rel="noreferrer">
+          <a href={HISTORY_DOCS} target="_blank" rel="noreferrer" data-event="link.about-versions">
             Learn More
           </a>
         </div>

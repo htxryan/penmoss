@@ -1,6 +1,8 @@
 package app.penmoss.editor
 
 import androidx.annotation.VisibleForTesting
+import app.penmoss.analytics.Analytics
+import app.penmoss.analytics.ScrollEvents
 import app.penmoss.data.FoldStore
 import app.penmoss.data.NoteStore
 import app.penmoss.data.PictureRefused
@@ -529,9 +531,17 @@ class NoteEditorController(
             }
             is FromEditor.Notice -> if (message.noteId == noteId) _notices.tryEmit(message.message)
             // A key for one of the app's commands (T40 P9): only those the screen said it runs.
+            // How far down the note is (PEN-175): only for the note shown, checked by the bridge
+            // and again by the catalogue; nothing else about the note goes with it.
+            is FromEditor.Scroll -> if (message.noteId == noteId) {
+                Analytics.record("scroll", "note", ScrollEvents.propsOf(message.position))
+            }
             is FromEditor.Command -> if (keys?.app?.contains(message.id) == true && (message.noteId == null || message.noteId == noteId)) {
                 onCommand(message.id)
             }
+            // A tracked control in the note was used (PEN-175): recorded under the Mac's id, only
+            // one the catalogue lists.
+            is FromEditor.Click -> app.penmoss.analytics.recordPageClick(message.id, message.state)
             // Conflict copies are made for the app as a whole (EditorPageServices), and other
             // notes' content for links and embeds by LinkedNotes (T40 P7).
             is FromEditor.ConflictCopy, is FromEditor.CopyFailed -> Unit

@@ -1,4 +1,5 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
+import { useScrollArea } from '../analytics/scroll';
 import { useStoredCollapse } from '../shell/collapsed';
 import { useOnRevealNotebooks } from '../shell/reveal-notebooks';
 import { SectionHead } from '../shell/SectionHead';
@@ -25,6 +26,11 @@ export function NotebooksSection({
     if (collapsed) toggle();
   });
   const id = useId();
+  // How far down the notebooks' trees are (PEN-175), as `scroll sidebar.folders`: the body scrolls
+  // on its own above 54rem; below it the sidebar scrolls as one (A521) and its list records
+  // `sidebar`.
+  const body = useRef<HTMLDivElement>(null);
+  useScrollArea('sidebar.folders', body, null);
   return (
     <section
       className="sb-notebooks"
@@ -34,6 +40,7 @@ export function NotebooksSection({
     >
       <SectionHead
         name="Notebooks"
+        data-event="sidebar.notebooks.toggle"
         nameId={`${id}-name`}
         collapsed={collapsed}
         onToggle={toggle}
@@ -42,7 +49,7 @@ export function NotebooksSection({
       />
       {/* Mounted while collapsed: the tree registers New Folder, New Notebook and the sort
           commands, which work from the palette and their keys whatever the sidebar shows. */}
-      <div id={`${id}-body`} className="sb-notebooks-body" hidden={collapsed}>
+      <div ref={body} id={`${id}-body`} className="sb-notebooks-body" hidden={collapsed}>
         {children}
       </div>
     </section>

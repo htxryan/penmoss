@@ -113,7 +113,7 @@ internal fun CreateRepo(
         step = 2,
         back = back,
         actions = {
-            if (problem != null && owners.size > 1) Plain("Change Owner", "first-run-change-owner", "users") { changing = true }
+            if (problem != null && owners.size > 1) Plain("Change Owner", "first-run-change-owner", "users", event = "firstrun.create.change-owner") { changing = true }
             Primary(
                 when {
                     busy -> "Creating…"
@@ -124,6 +124,7 @@ internal fun CreateRepo(
                 enabled = ready,
                 busy = busy,
                 onClick = ::create,
+                event = "firstrun.create.make-notebook",
             )
         },
     ) {
@@ -149,24 +150,24 @@ internal fun CreateRepo(
         if (taken) {
             Problem("$owner/$name already exists.", "first-run-create-taken")
             Row {
-                Link("Use $name-2", "first-run-create-suggest", "check") {
+                Link("Use $name-2", "first-run-create-suggest", "check", event = "firstrun.create.use-suggestion") {
                     repoName = "$name-2"
                     edited = true
                     taken = false
                 }
-                Link("Use Existing Repo", "first-run-use-existing", "folder-git-2", onUseExisting)
+                Link("Use Existing Repo", "first-run-use-existing", "folder-git-2", event = "firstrun.create.use-existing-repo", onClick = onUseExisting)
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Private")
             Text("Owner ${owner.ifEmpty { "…" }}", style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (owners.size > 1 && !changing) Link("Change", "first-run-create-change", "pencil") { changing = true }
+            if (owners.size > 1 && !changing) Link("Change", "first-run-create-change", "pencil", event = "firstrun.create.change") { changing = true }
         }
         if (changing) {
             Column(Modifier.selectableGroup()) {
                 for (each in owners) {
                     Row(
-                        Modifier.fillMaxWidth().selectable(each.login == owner, role = Role.RadioButton, onClick = trackedClick("firstrun.option") {
+                        Modifier.fillMaxWidth().selectable(each.login == owner, role = Role.RadioButton, onClick = trackedClick("firstrun.owner") {
                             owner = each.login
                             problem = null
                             taken = false
@@ -224,7 +225,7 @@ internal fun RepoTree(
                     style = MaterialTheme.roles.help,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Link("Refresh", "first-run-refresh", "refresh-cw", onRefresh)
+                Link("Refresh", "first-run-refresh", "refresh-cw", event = "firstrun.list.refresh", onClick = onRefresh)
             }
         }
     }
@@ -234,8 +235,8 @@ internal fun RepoTree(
             "Pick Repository",
             step = 2,
             back = back,
-            actions = { if (onCreate != null) Primary("Create New Repo", "first-run-create-instead", "plus", onClick = onCreate) },
-            below = { Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl) },
+            actions = { if (onCreate != null) Primary("Create New Repo", "first-run-create-instead", "plus", onClick = onCreate, event = "firstrun.list.create-new-repo") },
+            below = { Link("Paste a URL Instead", "first-run-url-instead", "link", event = "firstrun.list.paste-a-url-instead", onClick = onUrl) },
         ) {
             Lead("GitHub lists no repository ${hub.login?.let { "for $it" } ?: "for this sign-in"}.", Modifier.testTag("first-run-no-repos"))
             signedIn()
@@ -262,7 +263,7 @@ internal fun RepoTree(
             }
         }
         if (hub.list.more) Lead("Showing the 300 most recently pushed. Paste a URL for others.", small = true)
-        Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl)
+        Link("Paste a URL Instead", "first-run-url-instead", "link", event = "firstrun.list.paste-a-url-instead", onClick = onUrl)
     }
 }
 
@@ -301,7 +302,7 @@ private fun RepoRow(repo: GitHubRepo, loaded: RepoRead?, added: Set<String>, onR
                     Text(folderWords(folder.path), style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (notebook.id in added) Chip("Already Added", "first-run-already-added")
-                else if (repo.canPush) Plain("Open", "first-run-notebook-open", "folder-open") { onOpen(repo, folder) }
+                else if (repo.canPush) Plain("Open", "first-run-notebook-open", "folder-open", event = "firstrun.list.open") { onOpen(repo, folder) }
             }
         }
     }
@@ -342,8 +343,8 @@ internal fun RepoPicked(
                 "Pick Repository",
                 step = 2,
                 back = back,
-                actions = { Primary("Try Again", "first-run-retry", "refresh-cw") { read(repo, true) } },
-                below = { Link("Paste a URL Instead", "first-run-url-instead", "link", onUrl) },
+                actions = { Primary("Try Again", "first-run-retry", "refresh-cw", event = "firstrun.repo.try-again") { read(repo, true) } },
+                below = { Link("Paste a URL Instead", "first-run-url-instead", "link", event = "firstrun.repo.paste-a-url-instead", onClick = onUrl) },
             ) { Problem("Couldn’t read ${repo.fullName}: ${loaded.message}", "first-run-repo-problem") }
             return
         }
@@ -361,7 +362,7 @@ internal fun RepoPicked(
             step = 2,
             back = back,
             actions = {
-                Primary("Continue", "first-run-continue", "arrow-right") {
+                Primary("Continue", "first-run-continue", "arrow-right", event = "firstrun.continue") {
                     onName(placeIn(repo, token, dir.trim().trim('/'), branch.trim().ifEmpty { "main" }))
                 }
             },
@@ -387,9 +388,9 @@ internal fun RepoPicked(
                 if (notebook.id in added) {
                     Lead("Already Added: it is on this phone.", Modifier.testTag("first-run-already-added"), small = true)
                 } else {
-                    Primary("Open ${notebook.name}", "first-run-open", "folder-open") { onOpen(placeIn(repo, token, only.path, picked), notebook.name) }
+                    Primary("Open ${notebook.name}", "first-run-open", "folder-open", event = "firstrun.repo.open") { onOpen(placeIn(repo, token, only.path, picked), notebook.name) }
                 }
-                if (!rootIsNotebook) Link("Start Another Notebook in a Folder", "first-run-start-another", "folder-plus", onFolder)
+                if (!rootIsNotebook) Link("Start Another Notebook in a Folder", "first-run-start-another", "folder-plus", event = "firstrun.repo.start-another", onClick = onFolder)
             }
         }
         // Several notebooks: pick one.
@@ -401,7 +402,7 @@ internal fun RepoPicked(
                 step = 2,
                 back = back,
                 actions = {
-                    Primary("Open ${chosen.notebook!!.name}", "first-run-open", "folder-open", enabled = chosen.notebook.id !in added) {
+                    Primary("Open ${chosen.notebook!!.name}", "first-run-open", "folder-open", enabled = chosen.notebook.id !in added, event = "firstrun.repo.open") {
                         onOpen(placeIn(repo, token, chosen.path, branchNow), chosen.notebook.name)
                     }
                 },
@@ -411,11 +412,10 @@ internal fun RepoPicked(
                     chosen.path,
                     notebooks.map { each ->
                         val id = each.notebook!!.id
-                        Option(each.path, each.notebook.name, folderWords(each.path), "first-run-pick-notebook", chip = if (id in added) "Already Added" else null, enabled = id !in added)
+                        Option(each.path, each.notebook.name, folderWords(each.path), "first-run-pick-notebook", chip = if (id in added) "Already Added" else null, enabled = id !in added, event = "firstrun.notebook")
                     },
-                    event = "firstrun.notebook",
                 ) { pick = it }
-                if (!rootIsNotebook) Link("Start Another Notebook in a Folder", "first-run-start-another", "folder-plus", onFolder)
+                if (!rootIsNotebook) Link("Start Another Notebook in a Folder", "first-run-start-another", "folder-plus", event = "firstrun.repo.start-another", onClick = onFolder)
             }
         }
         // Other files: pick where the notebook goes.
@@ -469,8 +469,8 @@ internal fun BranchPick(
             "Pick Branch",
             step = 2,
             back = back,
-            actions = { Primary("Try Again", "first-run-retry", "refresh-cw") { attempt += 1 } },
-            below = { Link("Use $default", "first-run-branch-default", "git-branch") { onPick(default) } },
+            actions = { Primary("Try Again", "first-run-retry", "refresh-cw", event = "firstrun.branch.try-again") { attempt += 1 } },
+            below = { Link("Use $default", "first-run-branch-default", "git-branch", event = "firstrun.branch.use-default") { onPick(default) } },
         ) { Problem("Couldn’t read ${repo.fullName}’s branches: ${now.message}", "first-run-branch-problem") }
         is BranchRead.Ready -> {
             val query = filter.trim()
@@ -480,7 +480,7 @@ internal fun BranchPick(
                 "Pick Branch",
                 step = 2,
                 back = back,
-                actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = pick in now.names) { onPick(pick) } },
+                actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = pick in now.names, event = "firstrun.continue") { onPick(pick) } },
             ) {
                 Lead("${repo.fullName} has ${now.names.size} branches. Each can hold other folders, and the notebook syncs the one you pick.")
                 if (now.names.size > BRANCH_FILTER_AT) {
@@ -496,7 +496,7 @@ internal fun BranchPick(
                 Options(
                     pick,
                     shown.map { name ->
-                        Option(name, name, if (name == default) "The repository’s default branch" else "", "first-run-pick-branch", chip = if (name == default) "Default" else null)
+                        Option(name, name, if (name == default) "The repository’s default branch" else "", "first-run-pick-branch", chip = if (name == default) "Default" else null, event = "firstrun.branch")
                     },
                 ) { pick = it }
                 if (shown.isEmpty()) Lead("No branch matches “$query”.", small = true)
@@ -582,9 +582,9 @@ internal fun FolderPick(
                     style = MaterialTheme.roles.help.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
                 )
             }
-            Link("New Folder…", "first-run-new-folder-open", "folder-plus") { making = true }
+            Link("New Folder…", "first-run-new-folder-open", "folder-plus", event = "firstrun.folder.new-folder") { making = true }
         },
-        actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = chosen in free) { onName(placeIn(repo, token, chosen, branch)) } },
+        actions = { Primary("Continue", "first-run-continue", "arrow-right", enabled = chosen in free, event = "firstrun.continue") { onName(placeIn(repo, token, chosen, branch)) } },
     ) {
         Lead(lead ?: if (beside) "Pick where the new notebook goes." else "${repo.fullName} holds other files. Pick where the notebook goes.")
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -691,7 +691,7 @@ private fun NewFolderDialog(inside: String, onDismiss: () -> Unit, onMake: (Stri
             }
         },
         confirmButton = {
-            Plain("Add Folder", "first-run-new-folder-add", "folder-plus") {
+            Plain("Add Folder", "first-run-new-folder-add", "folder-plus", event = "firstrun.folder.add-folder") {
                 val words = folderNameProblem(name)
                 if (words != null) {
                     problem = words
@@ -701,7 +701,7 @@ private fun NewFolderDialog(inside: String, onDismiss: () -> Unit, onMake: (Stri
                 }
             }
         },
-        dismissButton = { Plain("Cancel", "first-run-new-folder-cancel", "x", onClick = onDismiss) },
+        dismissButton = { Plain("Cancel", "first-run-new-folder-cancel", "x", onClick = onDismiss, event = "firstrun.folder.cancel") },
         shape = androidx.compose.ui.graphics.RectangleShape,
     )
 }
@@ -815,7 +815,7 @@ private fun FolderRow(
                 )
             }
             if (selected) androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides accent) { LucideGlyph("check", "Chosen", 20.dp) }
-            if (onOpen != null) Plain("Open", "first-run-folder-open", "folder-open", onClick = onOpen)
+            if (onOpen != null) Plain("Open", "first-run-folder-open", "folder-open", onClick = onOpen, event = "firstrun.folder.open")
         }
     }
 }
@@ -897,6 +897,7 @@ internal fun PasteUrl(deps: FirstRunDeps, add: suspend (Place, String?) -> AddRe
                 enabled = remote.isNotBlank(),
                 busy = busy,
                 onClick = ::check,
+                event = "firstrun.continue",
             )
         },
     ) {
@@ -944,7 +945,7 @@ internal fun NameNotebook(place: Place, onMake: (String) -> Unit, back: () -> Un
         "Name Your Notebook",
         step = 3,
         back = back,
-        actions = { Primary("Make Notebook", "first-run-make", "plus", enabled = name.isNotBlank()) { onMake(name.trim()) } },
+        actions = { Primary("Make Notebook", "first-run-make", "plus", enabled = name.isNotBlank(), event = "firstrun.name.make-notebook") { onMake(name.trim()) } },
     ) {
         Lead("It shows in your list of notebooks.")
         NameField(name, "first-run-name-input") { name = it }

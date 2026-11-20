@@ -139,6 +139,8 @@ export interface UpdatesOptions {
   readonly load?: () => Promise<Updater>;
   readonly log: (message: string) => void;
   readonly onChange?: (state: UpdateState) => void;
+  /** The switch or the channel was saved (PEN-175): main records the setting. */
+  readonly recordSetting?: (name: 'updates.auto' | 'updates.channel', value: unknown) => void;
   readonly every?: number;
   readonly now?: () => number;
 }
@@ -214,6 +216,8 @@ export class Updates {
     await this.read();
     this.auto = on;
     await this.write();
+    // Recorded once saved; a write that failed has thrown and records nothing.
+    this.options.recordSetting?.('updates.auto', on);
     this.follow();
     this.changed();
     return this.state();
@@ -230,6 +234,7 @@ export class Updates {
     if (channel === this.channel) return this.state();
     this.channel = channel;
     await this.write();
+    this.options.recordSetting?.('updates.channel', channel);
     if (this.updater) point(this.updater, channel);
     // A check of the other feed still under way finishes first; the new check replaces it.
     await this.checking;

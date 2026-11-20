@@ -923,3 +923,80 @@ describe('periodic notes (T40 P5)', () => {
     expect(none.at(-1)).toEqual({ v: 1, type: 'periodicNav', noteId: NOTE, nav: null });
   });
 });
+
+describe('scroll (PEN-175)', () => {
+  /** Puts the page at `top` of `height`, in a viewport of `client`, and says it scrolled. */
+  function scrollPage(top: number, height = 2000, client = 500): void {
+    const element = document.scrollingElement ?? document.documentElement;
+    Object.defineProperty(element, 'scrollTop', { configurable: true, get: () => top });
+    Object.defineProperty(element, 'scrollHeight', { configurable: true, get: () => height });
+    Object.defineProperty(element, 'clientHeight', { configurable: true, get: () => client });
+    window.dispatchEvent(new Event('scroll'));
+  }
+
+  afterEach(() => {
+    const element = document.scrollingElement ?? document.documentElement;
+    for (const key of ['scrollTop', 'scrollHeight', 'clientHeight']) {
+      Reflect.deleteProperty(element, key);
+    }
+  });
+
+  const scrolls = (sent: FromEditor[]) => sent.filter((message) => message.type === 'scroll');
+
+  it('says how far down the note is once its scrolling settles, by core’s gate', () => {
+    vi.useFakeTimers();
+    try {
+      const { host, sent } = page();
+      host.handle(open([toBase64(serverNote('Long', 'text').encodeStateAsUpdate())]));
+      scrollPage(100);
+      vi.advanceTimersByTime(100);
+      scrollPage(630);
+      vi.advanceTimersByTime(299);
+      expect(scrolls(sent)).toEqual([]);
+      vi.advanceTimersByTime(1);
+      expect(scrolls(sent)).toEqual([{ v: 1, type: 'scroll', noteId: NOTE, position: 0.42 }]);
+      // Within the gap it is held, then the latest goes.
+      scrollPage(1500);
+      vi.advanceTimersByTime(300);
+      expect(scrolls(sent)).toHaveLength(1);
+      vi.advanceTimersByTime(700);
+      expect(scrolls(sent).at(-1)).toEqual({ v: 1, type: 'scroll', noteId: NOTE, position: 1 });
+      // A note that can't scroll says nothing.
+      vi.advanceTimersByTime(5000);
+      scrollPage(0, 400, 500);
+      vi.advanceTimersByTime(5000);
+      expect(scrolls(sent)).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('starts again from the top for another note, and drops what waits when the note closes', () => {
+    vi.useFakeTimers();
+    try {
+      const { host, sent } = page();
+      host.handle(open([toBase64(serverNote('One', 'text').encodeStateAsUpdate())]));
+      scrollPage(1500);
+      vi.advanceTimersByTime(5000);
+      expect(scrolls(sent)).toHaveLength(1);
+      // The next note opens at the top: nothing; at the bottom again: recorded again.
+      host.handle(open([toBase64(serverNote('Two', 'text').encodeStateAsUpdate())]));
+      scrollPage(0);
+      vi.advanceTimersByTime(5000);
+      expect(scrolls(sent)).toHaveLength(1);
+      scrollPage(1500);
+      vi.advanceTimersByTime(5000);
+      expect(scrolls(sent)).toHaveLength(2);
+      scrollPage(600);
+      host.handle({ v: 1, type: 'close', noteId: NOTE });
+      vi.advanceTimersByTime(5000);
+      expect(scrolls(sent)).toHaveLength(2);
+      // With no note open, the page scrolling says nothing.
+      scrollPage(900);
+      vi.advanceTimersByTime(5000);
+      expect(scrolls(sent)).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -143,6 +143,7 @@ export function UpdatesSettings() {
             checked={wanted ?? state?.auto === true}
             disabled={busy || !state?.supported}
             aria-describedby={`${id}-help`}
+            data-event="settings.updates.auto"
             data-testid="updates-auto"
             onChange={(event) => {
               const next = event.target.checked;
@@ -210,6 +211,7 @@ export function UpdateNotice({ notice: shown }: { readonly notice: UpdateNoticeM
         <ActionToast
           tone="info"
           testId="update-notice"
+          data-event="toast.updates.dismiss"
           icon={<Icon name="refresh" />}
           actions={
             shown.dismiss ? (
@@ -233,6 +235,7 @@ export function UpdateNotice({ notice: shown }: { readonly notice: UpdateNoticeM
         <ActionToast
           tone="info"
           testId="updated-notice"
+          data-event="toast.updates.dismiss"
           icon={<Icon name="refresh" />}
           actions={
             <button

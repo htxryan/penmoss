@@ -380,7 +380,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = pulled,
-            onRefresh = pull,
+            onRefresh = trackedClick("home.pull-to-refresh", pull),
             modifier = Modifier.fillMaxSize().padding(padding).testTag("homeRefresh"),
         ) {
             Column(Modifier.fillMaxSize()) {

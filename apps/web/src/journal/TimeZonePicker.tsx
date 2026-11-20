@@ -115,6 +115,7 @@ export function TimeZonePicker({
               key={choice.device ? `device:${choice.zone}` : choice.zone}
               {...picker.optionProps(index)}
               className="opt"
+              data-event="settings.journal.time-zone.pick"
               data-zone={choice.zone}
               aria-current={choice.zone === current && !choice.device ? 'true' : undefined}
               onClick={() => choose(choice)}

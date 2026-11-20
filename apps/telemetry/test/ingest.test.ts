@@ -169,6 +169,39 @@ describe('POST /v1/batch', () => {
     ]);
   });
 
+  it('takes scroll events from the apps with a position in hundredths, and refuses the rest by index (PEN-175)', async () => {
+    const install = newInstall();
+    // Some of these are wrong on purpose: the Worker must refuse them.
+    const scroll = (seq: number, name: string, props: Record<string, unknown>, more = {}) =>
+      event({ seq, kind: 'scroll', name, props: props as AnalyticsEvent['props'], ...more });
+    const response = await post('/v1/batch', {
+      v: 1,
+      install,
+      events: [
+        scroll(0, 'note', { position: 0.42 }),
+        scroll(1, 'sidebar.folders', { position: 1 }, { client: 'android', os: 'android' }),
+        scroll(2, 'settings', { position: 0 }),
+        scroll(3, 'note', { position: 0.421 }),
+        scroll(4, 'note', { position: 1.2 }),
+        scroll(5, 'note', { position: '0.42' }),
+        scroll(6, 'note', { position: 0.4, length: 3000 }),
+        scroll(7, 'Meeting notes', { position: 0.4 }),
+        scroll(8, 'note', { position: 0.4 }, { client: 'cli', sizeClass: undefined }),
+      ],
+    });
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ accepted: 3, dropped: 6, refused: [3, 4, 5, 6, 7, 8] });
+    const written = await rows(
+      'SELECT kind, name, client, props FROM events WHERE install = ?1 ORDER BY seq',
+      install,
+    );
+    expect(written).toEqual([
+      { kind: 'scroll', name: 'note', client: 'mac', props: '{"position":0.42}' },
+      { kind: 'scroll', name: 'sidebar.folders', client: 'android', props: '{"position":1}' },
+      { kind: 'scroll', name: 'settings', client: 'mac', props: '{"position":0}' },
+    ]);
+  });
+
   it('answers 400 when nothing in it is valid, or it is not a batch', async () => {
     const install = newInstall();
     const none = await post('/v1/batch', { v: 1, install, events: [event({ name: 'nope' })] });

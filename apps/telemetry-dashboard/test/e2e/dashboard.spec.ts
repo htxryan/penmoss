@@ -540,7 +540,7 @@ interface SessionEvent {
 
 /**
  * The newest Mac session on the list's first page that goes Launch, Home, Command Palette, New
- * Note (its window and layout events aside), with its events spread out (not today's, whose times may all be now): its row's link.
+ * Note (its window, layout and scroll events aside), with its events spread out (not today's, whose times may all be now): its row's link.
  */
 async function appSession(page: Page, dashboard: Dashboard) {
   const links = sessionRows(page).locator('td:first-child a');
@@ -552,9 +552,11 @@ async function appSession(page: Page, dashboard: Dashboard) {
       { headers: { 'cf-access-jwt-assertion': dashboard.token } },
     );
     const { events } = (await answer.json()) as { events: SessionEvent[] };
-    // A launch is followed by its window's size and layout (PEN-174), before any screen.
+    // A launch is followed by its window's size and layout (PEN-174), before any screen, and
+    // the fixture's scrolls (PEN-175) fall between its actions.
     const names = events
       .filter((e) => e.kind !== 'app' || (e.name !== 'window' && e.name !== 'layout'))
+      .filter((e) => e.kind !== 'scroll')
       .slice(0, 4)
       .map((e) => `${e.kind}:${e.name}`);
     const spread = new Set(events.map((e) => e.at)).size === events.length;

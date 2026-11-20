@@ -72,6 +72,38 @@ describe('the click listener (PEN-137)', () => {
     document.getElementById('off')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(recorded()).toEqual([]);
   });
+
+  it('records a select and a slider once per change, never the value nor the click (PEN-175)', () => {
+    stop = installClickTracking(document);
+    document.body.innerHTML = `
+      <select data-event="search.filter.tag" id="select">
+        <option value="">Any Tag</option><option value="secret-tag">#secret-tag</option>
+      </select>
+      <input type="range" data-event="time-machine.scrub" id="range" min="0" max="9" value="0" />
+      <select data-event="search.filter.date" id="off" disabled><option>Any</option></select>`;
+    const select = document.getElementById('select') as HTMLSelectElement;
+    const range = document.getElementById('range') as HTMLInputElement;
+    // Clicking a select opens it and clicking a slider starts a drag: neither is the change.
+    select.click();
+    range.click();
+    expect(recorded()).toEqual([]);
+    select.value = 'secret-tag';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    // A slider dragged fires input on the way and change once, when it is let go.
+    for (const value of ['3', '5', '7']) {
+      range.value = value;
+      range.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    range.dispatchEvent(new Event('change', { bubbles: true }));
+    document.getElementById('off')!.dispatchEvent(new Event('change', { bubbles: true }));
+    const events = recorded();
+    expect(events).toEqual([
+      { kind: 'click', name: 'search.filter.tag', props: {} },
+      { kind: 'click', name: 'time-machine.scrub', props: {} },
+    ]);
+    expect(JSON.stringify(events)).not.toContain('secret-tag');
+    expect(JSON.stringify(events)).not.toContain('7');
+  });
 });
 
 describe('commands by name', () => {

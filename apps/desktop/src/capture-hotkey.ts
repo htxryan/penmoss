@@ -11,6 +11,7 @@ import {
 } from './hotkey';
 import { savePreferences } from './preferences';
 import { analytics } from './services';
+import { recordSetting } from './setting-events';
 import { refreshTray } from './tray-control';
 import { showCapture } from './windows/capture-window';
 
@@ -73,6 +74,8 @@ export function setHotkey(input: string): HotkeyState & { error?: string } {
   hotkey = { accelerator: parsed.accelerator, registered: true, certain };
   state.preferences = { ...state.preferences, captureHotkey: parsed.accelerator };
   savePreferences(preferencesFile(), state.preferences);
+  // Once saved (PEN-175): only that the keys changed (`changed: true`), never which keys.
+  recordSetting('capture.hotkey', null);
   // Quick Capture in the menu bar icon's menu shows the new keys.
   refreshTray();
   return hotkey;

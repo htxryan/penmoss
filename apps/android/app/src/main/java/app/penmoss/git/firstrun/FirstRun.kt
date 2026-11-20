@@ -254,8 +254,8 @@ fun NotebookSteps(
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     )
                 },
-                start = { Link("Learn More", "first-run-learn", "book-open") { deps.openUrl(FIRST_RUN_DOCS) } },
-                actions = { Primary("Get Started", "first-run-start", "arrow-right") { go(Screen.Goal) } },
+                start = { Link("Learn More", "first-run-learn", "book-open", event = "firstrun.welcome.learn-more") { deps.openUrl(FIRST_RUN_DOCS) } },
+                actions = { Primary("Get Started", "first-run-start", "arrow-right", event = "firstrun.welcome.get-started") { go(Screen.Goal) } },
             ) {
                 Lead("Notes in a git repository you own. Three short steps and you’re writing.", centered = true)
             }
@@ -266,7 +266,7 @@ fun NotebookSteps(
                 back = if (firstRun) ::back else null,
                 cancel = onCancel,
                 actions = {
-                    Primary("Continue", "first-run-continue", "arrow-right") {
+                    Primary("Continue", "first-run-continue", "arrow-right", event = "firstrun.continue") {
                         if (goal == Goal.NEW) go(Screen.Way) else viaGitHub(AfterGitHub.LIST)
                     }
                 },
@@ -274,8 +274,8 @@ fun NotebookSteps(
                 Options(
                     goal,
                     listOf(
-                        Option(Goal.NEW, "Start a New Notebook", if (firstRun) "Your first Penmoss notebook" else "A new, empty notebook", "first-run-new"),
-                        Option(Goal.EXISTING, "Open an Existing Notebook", "From a repository with Penmoss notes", "first-run-existing"),
+                        Option(Goal.NEW, "Start a New Notebook", if (firstRun) "Your first Penmoss notebook" else "A new, empty notebook", "first-run-new", event = "firstrun.goal.start-a-new-notebook"),
+                        Option(Goal.EXISTING, "Open an Existing Notebook", "From a repository with Penmoss notes", "first-run-existing", event = "firstrun.goal.open-an-existing-notebook"),
                     ),
                 ) { goal = it }
             }
@@ -285,7 +285,7 @@ fun NotebookSteps(
                 step = 2,
                 back = ::back,
                 actions = {
-                    Primary("Continue", "first-run-continue", "arrow-right") {
+                    Primary("Continue", "first-run-continue", "arrow-right", event = "firstrun.continue") {
                         when (way) {
                             Way.URL -> go(Screen.Url)
                             Way.CREATE -> viaGitHub(AfterGitHub.CREATE)
@@ -297,9 +297,9 @@ fun NotebookSteps(
                 Options(
                     way,
                     listOf(
-                        Option(Way.CREATE, "Create New Repo", "On GitHub, private", "first-run-way-create", chip = "Recommended"),
-                        Option(Way.EXISTING, "Use Existing Repo", "An empty one you made", "first-run-way-existing"),
-                        Option(Way.URL, "Paste a URL", "Any HTTPS git repository", "first-run-way-url"),
+                        Option(Way.CREATE, "Create New Repo", "On GitHub, private", "first-run-way-create", chip = "Recommended", event = "firstrun.way.create-new-repo"),
+                        Option(Way.EXISTING, "Use Existing Repo", "An empty one you made", "first-run-way-existing", event = "firstrun.way.use-existing-repo"),
+                        Option(Way.URL, "Paste a URL", "Any HTTPS git repository", "first-run-way-url", event = "firstrun.way.paste-a-url"),
                     ),
                 ) { way = it }
             }
@@ -516,15 +516,15 @@ private fun SettingUp(deps: FirstRunDeps, setup: Setup, add: suspend (Place, Str
     val failed = phase is Phase.AddFailed || phase is Phase.SyncFailed
     val footer: @Composable RowScope.() -> Unit = {
         when (val now = phase) {
-            is Phase.AddFailed -> Primary("Retry", "first-run-retry", "refresh-cw") { attempt++ }
+            is Phase.AddFailed -> Primary("Retry", "first-run-retry", "refresh-cw", event = "firstrun.setup.retry") { attempt++ }
             is Phase.SyncFailed -> {
-                Plain("Open Anyway", "first-run-open-anyway", "folder-open") { onDone(now.localId) }
-                Primary("Retry", "first-run-retry", "refresh-cw") {
+                Plain("Open Anyway", "first-run-open-anyway", "folder-open", event = "firstrun.setup.open-anyway") { onDone(now.localId) }
+                Primary("Retry", "first-run-retry", "refresh-cw", event = "firstrun.setup.retry") {
                     phase = Phase.Syncing(now.localId)
                     scope.launch { runCatching { deps.syncNow(now.localId) } }
                 }
             }
-            is Phase.Syncing -> Plain("Open Now", "first-run-open-now", "folder-open") { onDone(now.localId) }
+            is Phase.Syncing -> Plain("Open Now", "first-run-open-now", "folder-open", event = "firstrun.setup.open-now") { onDone(now.localId) }
             Phase.Adding -> Unit
         }
     }

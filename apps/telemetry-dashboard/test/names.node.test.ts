@@ -2,7 +2,7 @@
 // the shortcut contract or the app's own names, never the raw id alone, with the id kept beside it.
 import { describe, expect, it } from 'vitest';
 import shortcutsContract from '../../android/contract/shortcuts-v1.json';
-import { NAME_PROP_SPECS, PROP_SPECS, SCREEN_NAMES } from '@penmoss/core/analytics';
+import { NAME_PROP_SPECS, PROP_SPECS, SCREEN_NAMES, SCROLL_NAMES } from '@penmoss/core/analytics';
 import {
   NAME_PROP_WORDS,
   PROP_WORDS,
@@ -62,6 +62,17 @@ describe('event names', () => {
     expect(displayName('click', 'sidebar.quick-access.pin')).toBe('Sidebar › Quick Access › Pin');
     expect(displayName('cli', 'search')).toBe('penmoss search');
   });
+
+  it('calls a scroll event Scroll, and names each area as the app does (PEN-175)', () => {
+    expect(kindName('scroll:note')).toBe('Scroll');
+    for (const area of SCROLL_NAMES) {
+      expect(displayName('scroll', area), area).not.toMatch(/[._-]/);
+    }
+    expect(eventName('scroll:sidebar.folders')).toEqual({
+      title: 'Sidebar › Folders',
+      id: 'scroll:sidebar.folders',
+    });
+  });
 });
 
 // Sessions (PEN-173): props in words, times, lengths, the cut line and stretches.
@@ -115,6 +126,12 @@ describe('props in words', () => {
         }
       }
     }
+  });
+
+  it("reads a scroll's position as recorded (PEN-175)", () => {
+    expect(propsInWords('scroll', { position: 0.42 }, 'note')).toEqual([
+      { label: 'Position', value: '0.42' },
+    ]);
   });
 
   it("reads a window's size and a layout in words", () => {

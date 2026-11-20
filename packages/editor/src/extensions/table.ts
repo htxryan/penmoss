@@ -43,6 +43,8 @@ interface TableAction {
   readonly label: string;
   /** The icon's path data, on the app's 24-unit line grid (T39 pass 3, A906). */
   readonly icon: string;
+  /** Its click id (usage analytics, PEN-175). */
+  readonly event: string;
   readonly run: (editor: Editor) => boolean;
 }
 
@@ -60,38 +62,45 @@ const TABLE_DELETE =
 const ACTIONS: readonly (TableAction | 'separator')[] = [
   {
     label: 'Add Row Above',
+    event: 'editor.table.add-row-above',
     icon: ROW_ABOVE,
     run: (editor) => editor.chain().focus().addRowBefore().run(),
   },
   {
     label: 'Add Row Below',
+    event: 'editor.table.add-row-below',
     icon: ROW_BELOW,
     run: (editor) => editor.chain().focus().addRowAfter().run(),
   },
   {
     label: 'Delete Row',
+    event: 'editor.table.delete-row',
     icon: ROW_DELETE,
     run: (editor) => editor.chain().focus().deleteRow().run(),
   },
   'separator',
   {
     label: 'Add Column Left',
+    event: 'editor.table.add-column-left',
     icon: COLUMN_LEFT,
     run: (editor) => editor.chain().focus().addColumnBefore().run(),
   },
   {
     label: 'Add Column Right',
+    event: 'editor.table.add-column-right',
     icon: COLUMN_RIGHT,
     run: (editor) => editor.chain().focus().addColumnAfter().run(),
   },
   {
     label: 'Delete Column',
+    event: 'editor.table.delete-column',
     icon: COLUMN_DELETE,
     run: (editor) => editor.chain().focus().deleteColumn().run(),
   },
   'separator',
   {
     label: 'Delete Table',
+    event: 'editor.table.delete-table',
     icon: TABLE_DELETE,
     run: (editor) => editor.chain().focus().deleteTable().run(),
   },
@@ -153,6 +162,7 @@ export class TableView implements NodeView {
       button.append(tableIcon(action.icon));
       button.setAttribute('aria-label', action.label);
       button.dataset.tip = action.label;
+      button.dataset['event'] = action.event;
       // Keep the editor's selection (the current cell) while clicking.
       button.addEventListener('mousedown', (event) => event.preventDefault());
       button.addEventListener('click', () => action.run(editor));

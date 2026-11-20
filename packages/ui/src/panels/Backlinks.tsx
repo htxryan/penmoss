@@ -87,6 +87,7 @@ export function Backlinks(props: BacklinksProps) {
             <li key={entry.id} className="bl-item">
               <a
                 className="bl-title"
+                data-event="note.backlinks.linked"
                 href={hrefOf(entry.id)}
                 onClick={(event) => onOpen(entry.id, event)}
               >
@@ -113,6 +114,7 @@ export function Backlinks(props: BacklinksProps) {
             <li key={entry.id} className="bl-item">
               <a
                 className="bl-title"
+                data-event="note.backlinks.unlinked"
                 href={hrefOf(entry.id)}
                 onClick={(event) => onOpen(entry.id, event)}
               >

@@ -62,7 +62,7 @@ export function PrivacyPolicyLink({
   event,
 }: {
   readonly className?: string;
-  readonly event?: 'consent.policy';
+  readonly event: 'consent.policy' | 'privacy.policy';
 }) {
   return (
     <a

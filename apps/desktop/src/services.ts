@@ -32,6 +32,7 @@ import { DeviceSignIn } from './github-device-sign-in';
 import { chromiumInit, GitHubToken } from './github-token';
 import { cliCommand, keptLoginPath, LocalAgents, loginShellPath } from './local-agents';
 import { ReleaseNotes } from './release-notes';
+import { recordSetting } from './setting-events';
 import { encryptionUsable } from './sealing';
 import { sshHostResolver } from './ssh-host';
 import { Updates, updateMode } from './updater';
@@ -108,6 +109,8 @@ export const updates = new Updates({
     if (state.phase === 'checking') void releaseNotes.refresh(state.channel);
     broadcast('updatesChanged', state);
   },
+  // Settings → Updates (PEN-175), once saved, by main's one recorder for the settings it writes.
+  recordSetting,
 });
 /** The CLI's `~/.penmoss` (A992): agents' clones, and search by meaning's model and vectors. */
 const penmossHome = process.env['PENMOSS_HOME'] || join(homedir(), '.penmoss');

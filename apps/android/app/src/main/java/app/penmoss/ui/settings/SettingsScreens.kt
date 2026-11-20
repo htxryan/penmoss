@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -107,6 +108,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.SettingKeys
@@ -188,7 +190,10 @@ fun SettingsHome(
             )
         },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("settingsSections")) {
+        val list = rememberLazyListState()
+        // How far down Settings' list of pages is (PEN-175); its search's results start again.
+        TrackScroll("settings.nav", list, query.isNotBlank())
+        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("settingsSections"), state = list) {
             item(key = "search") {
                 OutlinedTextField(
                     value = query,
@@ -302,9 +307,17 @@ internal fun SectionScreen(
      * the rest leave, as Daily Notes' editor does (A1612). Otherwise the page scrolls.
      */
     fill: Boolean = false,
+    /**
+     * Where its scrolling is recorded (PEN-175): `settings` for a Settings page, null for a
+     * screen that is not one (the launcher's home). Each page ([title]) starts from the top.
+     */
+    scrollArea: String? = "settings",
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val page = rememberScrollState()
+    // A filling page holds still: its own scroller (a panel under its tabs) records instead.
+    if (scrollArea != null && !fill) TrackScroll(scrollArea, page, title)
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
@@ -334,7 +347,7 @@ internal fun SectionScreen(
         // still; on a short screen, or over the keyboard, it scrolls rather than crush the editor.
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Column(
-                Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                Modifier.fillMaxWidth().verticalScroll(page).testTag("sectionPage")
                     .then(if (fill) Modifier.heightIn(min = maxOf(maxHeight, FILL_MIN)) else Modifier)
                     .padding(vertical = 8.dp),
             ) {
@@ -495,7 +508,10 @@ fun AppearanceScreen(
     // The tabs hold still under the title and each tab's page scrolls under them, as option 3 draws it.
     SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }, fill = true) {
         SettingsPreviewTabs(previewing, "appearance") { previewing = it }
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "appearancePreviewPanel" else "appearanceSettingsPanel")) {
+        val panel = rememberScrollState()
+        // How far down the page is (PEN-175); the preview is no page of settings, so it records nothing.
+        if (!previewing) TrackScroll("settings", panel, "appearance")
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(panel).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "appearancePreviewPanel" else "appearanceSettingsPanel")) {
         if (previewing) {
             val theme = themes.firstOrNull { it.id == chosen }?.name ?: "This theme"
             val dark = mode == "dark" || (mode == "system" && systemDark)

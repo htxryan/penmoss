@@ -29,6 +29,7 @@ export function FeedbackToasts() {
         <ActionToast
           tone="done"
           testId="feedback-sent-toast"
+          data-event="toast.feedback.dismiss"
           icon={<Icon name="check" className="toast-glyph" />}
           actions={
             issueLink(issue.url) ? (
@@ -37,6 +38,7 @@ export function FeedbackToasts() {
                 href={issueLink(issue.url)!}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-event="link.feedback-issue"
                 data-testid="feedback-sent-link"
               >
                 Open

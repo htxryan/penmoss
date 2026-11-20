@@ -251,13 +251,17 @@ class AnalyticsService(
         const val PRUNE_EVERY_MS = 60 * 60_000L
         private const val MAX_BATCHES_PER_RUN = 50
 
-        /** A prop's value as JSON: an enum, a boolean, a bucket, a number or a list of names. */
+        /**
+         * A prop's value as JSON: an enum, a boolean, a bucket, a number or a list of names. A
+         * fraction (a scroll's position, PEN-175) is a finite Double; the catalogue still checks it.
+         */
         fun jsonOf(value: Any?): JsonElement? = when (value) {
             null -> null
             is String -> JsonPrimitive(value)
             is Boolean -> JsonPrimitive(value)
             is Int -> JsonPrimitive(value)
             is Long -> JsonPrimitive(value)
+            is Double -> value.takeIf { it.isFinite() }?.let(::JsonPrimitive)
             is List<*> -> JsonArray(value.mapNotNull { (it as? String)?.let(::JsonPrimitive) })
             else -> null
         }

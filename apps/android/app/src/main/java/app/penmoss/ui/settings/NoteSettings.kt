@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.DeviceGraph
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.ui.common.roles
@@ -101,7 +102,10 @@ fun NoteSettingsScreen(
     // The tabs hold still under the title and each tab's page scrolls under them, as Appearance's.
     SectionScreen("Note", onBack, notice = if (enabled) null else SETTINGS_WAIT, fill = true) {
         SettingsPreviewTabs(previewing, "note") { previewing = it }
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "notePreviewPanel" else "noteSettingsPanel")) {
+        val panel = rememberScrollState()
+        // How far down the page is (PEN-175); the preview is no page of settings, so it records nothing.
+        if (!previewing) TrackScroll("settings", panel, "note")
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(panel).padding(top = 12.dp, bottom = 24.dp).testTag(if (previewing) "notePreviewPanel" else "noteSettingsPanel")) {
             if (previewing) {
                 NotePreview(notePreview, noteFont, noteSize)
                 return@Column

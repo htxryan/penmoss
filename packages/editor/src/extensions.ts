@@ -62,6 +62,21 @@ import { FocusSelection } from './extensions/focus-selection';
 import { fixedSymbols, LineSymbols, type SymbolSource } from './extensions/line-symbols';
 import type { LineSymbol } from '@penmoss/core/line-symbols';
 
+/** TipTap's task item, its checkbox carrying the click id Android's editor page records too. */
+const TrackedTaskItem = TaskItem.extend({
+  addNodeView() {
+    const make = this.parent?.();
+    if (!make) return null;
+    return (props) => {
+      const view = make(props);
+      view.dom
+        .querySelector?.('input[type="checkbox"]')
+        ?.setAttribute('data-event', 'editor.task.toggle');
+      return view;
+    };
+  },
+});
+
 /**
  * Node and mark names the editor supports: every node core has (A157), so
  * any document the codec or the engine builds opens here.
@@ -261,7 +276,15 @@ const codeMetaAttribute = {
  */
 export function noteExtensions(options: NoteExtensionsOptions = {}): AnyExtension[] {
   return [
-    alignMark(Link.configure({ openOnClick: true, autolink: true }), 'link'),
+    alignMark(
+      Link.configure({
+        openOnClick: true,
+        autolink: true,
+        // A link in the note records its click (PEN-175); a copy's HTML leaves the id out (copy.ts).
+        HTMLAttributes: { 'data-event': 'editor.link.open' },
+      }),
+      'link',
+    ),
     alignMark(Italic, 'italic'),
     alignMark(Bold, 'bold'),
     alignMark(Strike, 'strike'),
@@ -314,7 +337,7 @@ export function noteExtensions(options: NoteExtensionsOptions = {}): AnyExtensio
     alignNode(withAttributes(OrderedList, tightAttribute), 'orderedList'),
     alignNode(ListItem, 'listItem'),
     alignNode(withAttributes(TaskList, tightAttribute), 'taskList'),
-    alignNode(TaskItem.configure({ nested: true }), 'taskItem'),
+    alignNode(TrackedTaskItem.configure({ nested: true }), 'taskItem'),
     alignNode(withAttributes(PenmossCodeBlock, codeMetaAttribute), 'codeBlock'),
     CodeHighlight,
     // Ahead of images: a paste or drop with any non-image file is handled here, all of it.

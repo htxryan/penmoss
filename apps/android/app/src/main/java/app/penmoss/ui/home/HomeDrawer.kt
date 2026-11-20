@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.LucideAssets
 import app.penmoss.ui.common.NotebookBadgeView
@@ -55,7 +56,10 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
         action()
     }
     ModalDrawerSheet(Modifier.testTag("homeDrawer"), drawerShape = RectangleShape) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+        val scroll = rememberScrollState()
+        // How far down the drawer is, as the Mac's sidebar (PEN-175); another notebook's starts again.
+        TrackScroll("sidebar", scroll, ui.notebookId)
+        Column(Modifier.verticalScroll(scroll).padding(horizontal = 12.dp).testTag("homeDrawerList")) {
             Spacer(Modifier.height(16.dp))
             // The sidebar's sections as pages (item 11, A1608): Quick Access and Recent Notes here,
             // and each notebook's notes list under Notebooks.

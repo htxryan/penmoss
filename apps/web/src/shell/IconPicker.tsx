@@ -427,6 +427,7 @@ export function IconPicker({
                       id={cellId(index)}
                       role="option"
                       className="icon-picker-cell"
+                      data-event="icon-picker.icon"
                       aria-selected={index === current}
                       aria-current={chosen || undefined}
                       aria-disabled={refused ? true : undefined}

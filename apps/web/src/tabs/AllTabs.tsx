@@ -109,6 +109,7 @@ export function AllTabs({
                 : undefined
             }
             className="all-tabs-item"
+            data-event="tabs.all.tab"
             data-testid="all-tabs-item"
             onClick={() => choose(face)}
           >
@@ -133,7 +134,13 @@ export function AllTabs({
           </div>
         ))}
         {shown.length === 0 ? (
-          <div className="all-tabs-none" role="option" aria-selected={false} aria-disabled="true">
+          <div
+            className="all-tabs-none"
+            role="option"
+            aria-selected={false}
+            aria-disabled="true"
+            data-untracked="the empty list's words, never picked"
+          >
             No Tabs Match
           </div>
         ) : null}

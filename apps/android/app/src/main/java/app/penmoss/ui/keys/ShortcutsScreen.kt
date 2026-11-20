@@ -1,5 +1,7 @@
 package app.penmoss.ui.keys
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.ui.settings.settingRow
 import android.content.res.Configuration
 import android.view.KeyEvent as AndroidKeyEvent
@@ -216,7 +218,10 @@ fun ShortcutsScreen(
             )
         },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("shortcutList")) {
+        val list = rememberLazyListState()
+        // How far down the page is (PEN-175): a Settings page.
+        TrackScroll("settings", list, "keyboard-shortcuts")
+        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("shortcutList"), state = list) {
             item(key = "intro") {
                 Column(Modifier.settingRow("keyboard-shortcuts").padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(

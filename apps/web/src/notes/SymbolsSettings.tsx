@@ -136,11 +136,11 @@ export function SymbolsSettings() {
       <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
         {symbols.map((symbol, index) => {
           const grip = (
-            // eslint-disable-next-line penmoss/tracked-control -- a drag handle (drag, or Alt+arrow), no click: the move is the change the settings record
             <button
               type="button"
               className="icon-btn lf-grip"
               data-ui="item"
+              data-untracked="a drag handle with no click; the move is the change the settings record"
               aria-label={`Move ${symbol.kind ? symbol.name : symbolSpokenName(symbol)}, Symbol ${index + 1} of ${symbols.length}`}
               aria-description="Drag, or press Alt and the up or down arrow"
               data-tip={`Drag to Move ${callOf(symbol)}`}

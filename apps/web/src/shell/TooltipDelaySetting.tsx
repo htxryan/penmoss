@@ -32,6 +32,7 @@ export function TooltipDelaySetting() {
         value={String(choice)}
         disabled={!canChange}
         aria-describedby={`${id}-help`}
+        data-event="settings.tooltip-delay"
         data-testid="tooltip-delay"
         onChange={(event) => {
           const picked = TOOLTIP_DELAY_CHOICES.find(

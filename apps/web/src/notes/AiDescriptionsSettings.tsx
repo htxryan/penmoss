@@ -171,6 +171,7 @@ export function AiDescriptionsSettings() {
               id={`${id}-pause`}
               className="settings-choice"
               value={String(pauseSecondsOf(settings))}
+              data-event="settings.ai.pause"
               data-testid="ai-pause"
               onChange={(event) =>
                 workspace.setSetting(AI_DESCRIPTION_PAUSE_SETTING, Number(event.target.value))
@@ -262,6 +263,7 @@ export function AiDescriptionsSettings() {
               id={`${id}-model`}
               className="settings-choice"
               value={model ?? ''}
+              data-event="settings.ai.model"
               data-testid="ai-model"
               onChange={(event) =>
                 workspace.setSetting(AI_DESCRIPTION_MODEL_SETTING, event.target.value)

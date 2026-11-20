@@ -92,6 +92,8 @@ export class SymbolPicker {
       item.setAttribute('aria-checked', String(active.has(index)));
       item.tabIndex = -1;
       item.dataset['slot'] = String(index);
+      // The id Android's format bar records for the same pick.
+      item.dataset['event'] = 'editor.format.symbol.item';
       // Named by its glyph (T51 item 12, A940): the glyph is the item's text. A list item is
       // named by its name, "Checkbox" (A1632).
       item.dataset['label'] = symbol.kind ? symbol.name : symbol.glyph;
@@ -133,6 +135,7 @@ export class SymbolPicker {
       edit.setAttribute('role', 'menuitem');
       edit.tabIndex = -1;
       edit.dataset['edit'] = '';
+      edit.dataset['event'] = 'editor.format.symbol.edit';
       edit.dataset['label'] = 'Edit Symbols…';
       edit.textContent = 'Edit Symbols…';
       this.items.push(edit);

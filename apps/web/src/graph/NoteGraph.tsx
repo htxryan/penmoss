@@ -77,6 +77,7 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
           id={depthId}
           size="small"
           value={depth}
+          data-event="graph.depth"
           data-testid="note-graph-depth"
           onChange={(event) => {
             const next = Number(event.target.value);

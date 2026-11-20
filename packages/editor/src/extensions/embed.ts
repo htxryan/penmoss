@@ -202,6 +202,7 @@ class EmbedView implements NodeView {
     mark.textContent = '⧉';
     this.title = doc.createElement('a');
     this.title.className = 'pm-embed-title';
+    this.title.dataset['event'] = 'editor.embed.open';
     this.title.addEventListener('click', (event) => {
       event.preventDefault();
       this.openRef(linkRefOf(this.node.attrs), openWhere(event));
@@ -450,6 +451,7 @@ class EmbedView implements NodeView {
   private refLink(doc: Document, ref: LinkRef, title: string | null | undefined): HTMLElement {
     const a = doc.createElement('a');
     a.className = 'pm-wikilink';
+    a.dataset['event'] = 'editor.wikilink.open';
     a.textContent = linkLabel(ref, title ?? null);
     if (ref.noteId) {
       a.href = notePath(ref.noteId);
@@ -540,6 +542,17 @@ export function renderBlocks(
   }
   for (const element of container.querySelectorAll('[contenteditable]')) {
     element.removeAttribute('contenteditable');
+  }
+  // Each link in the embedded text records its click as the note's own would (PEN-175).
+  for (const anchor of container.querySelectorAll('a')) {
+    anchor.dataset['event'] = anchor.hasAttribute('data-attachment')
+      ? 'editor.attachment.open'
+      : anchor.hasAttribute('data-wikilink') || anchor.hasAttribute('data-note-id')
+        ? 'editor.wikilink.open'
+        : 'editor.link.open';
+  }
+  for (const box of container.querySelectorAll('input[type="checkbox"]')) {
+    box.setAttribute('data-untracked', 'an embedded note shows its task, read only');
   }
   const adopted = target.adoptNode(container);
   adopted.className = 'pm-embed-content';

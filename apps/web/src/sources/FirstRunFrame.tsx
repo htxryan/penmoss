@@ -124,9 +124,15 @@ export function Action({
   icon,
   testId,
   form,
+  'data-event': event,
 }: {
   children: ReactNode;
   onClick?: (() => void) | undefined;
+  /**
+   * Its own tracked id (PEN-175): `firstrun.<step>.<thing>`, or `firstrun.continue` for a
+   * step's Continue, as a literal at the caller.
+   */
+  'data-event': string;
   primary?: boolean;
   disabled?: boolean;
   /** Working: a spinner instead of the icon, and no second click. */
@@ -154,13 +160,12 @@ export function Action({
       {children}
     </>
   );
-  // Counted by name as the first run's buttons (PEN-137); which step it was is its `firstrun` event.
   return primary ? (
-    <button className="btn primary" data-ui="submit" data-event="firstrun.continue" {...props}>
+    <button className="btn primary" data-ui="submit" data-event={event} {...props}>
       {content}
     </button>
   ) : (
-    <button className="btn" data-ui="item" data-event="firstrun.action" {...props}>
+    <button className="btn" data-ui="item" data-event={event} {...props}>
       {content}
     </button>
   );
@@ -171,17 +176,20 @@ export function LinkButton({
   children,
   onClick,
   testId,
+  'data-event': event,
 }: {
   children: ReactNode;
   onClick: () => void;
   testId?: string;
+  /** Its own tracked id (PEN-175): `firstrun.<step>.<thing>`, a literal at the caller. */
+  'data-event': string;
 }) {
   return (
     <button
       type="button"
       className="fr-link"
       data-ui="item"
-      data-event="firstrun.link"
+      data-event={event}
       data-testid={testId}
       onClick={onClick}
     >
@@ -298,7 +306,10 @@ export function MoreOptions({
   );
 }
 
-/** Radio choices drawn as wide rows (1.2, 1.3): one picked, Continue goes on with it. */
+/**
+ * Radio choices drawn as wide rows (1.2, 1.3): one picked, Continue goes on with it. Each choice
+ * is its own control with its own tracked id (PEN-175), `firstrun.<step>.<choice>`.
+ */
 export function Options<T extends string>({
   label,
   value,
@@ -314,6 +325,8 @@ export function Options<T extends string>({
     readonly line: string;
     readonly chip?: string;
     readonly testId: string;
+    /** The choice's own tracked id, a literal at the caller. */
+    readonly event: string;
   }>;
 }) {
   return (
@@ -325,7 +338,7 @@ export function Options<T extends string>({
             name={label}
             value={item.value}
             checked={value === item.value}
-            data-event="firstrun.option"
+            data-event={item.event}
             onChange={() => onChange(item.value)}
           />
           <span className="fr-option-text">

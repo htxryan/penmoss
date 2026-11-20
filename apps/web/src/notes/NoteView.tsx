@@ -71,6 +71,7 @@ import { openNoteWindow } from '../window/open';
 import { symbolSource } from './symbols';
 import { useWorkspace } from '../workspace/hooks';
 import { useLayoutPart } from '../analytics/layout';
+import { useScrollArea } from '../analytics/scroll';
 
 /** "Copied as Markdown" after an explicit copy (T15), in the window's toast stack (PEN-63). */
 function showCopied(text: string, ok: boolean): void {
@@ -322,6 +323,8 @@ export function NoteView({
 
   // The tab's place in the note, unless a heading was asked for (PEN-140, A1500).
   useTabScroll(tabPage, scrollRef, ready, heading !== null);
+  // How far down the note is (PEN-175), as `scroll note`; a preview's is not the person's.
+  useScrollArea(preview ? null : 'note', scrollRef, id);
 
   // A link to a heading (`[[Note#Heading]]`) scrolls to it once the note shows.
   useEffect(() => {

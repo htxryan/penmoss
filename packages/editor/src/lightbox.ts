@@ -224,6 +224,11 @@ export function openLightbox(options: LightboxOptions): Lightbox {
     doc.fullscreenEnabled === true && typeof root.requestFullscreen === 'function';
   fullScreen.hidden = !canFullScreen;
   const closeButton = button('Close', ICONS.close, 'pm-lightbox-close', () => close());
+  zoomOut.dataset['event'] = 'editor.lightbox.zoom-out';
+  zoomIn.dataset['event'] = 'editor.lightbox.zoom-in';
+  resetButton.dataset['event'] = 'editor.lightbox.reset';
+  fullScreen.dataset['event'] = 'editor.lightbox.full-screen';
+  closeButton.dataset['event'] = 'editor.lightbox.close';
   bar.append(count, zoomOut, level, zoomIn, resetButton, fullScreen, closeButton);
 
   const stage = make('div', 'pm-lightbox-stage');
@@ -236,6 +241,8 @@ export function openLightbox(options: LightboxOptions): Lightbox {
   prev.hidden = !several;
   next.hidden = !several;
   count.hidden = !several;
+  prev.dataset['event'] = 'editor.lightbox.previous';
+  next.dataset['event'] = 'editor.lightbox.next';
   root.append(bar, stage, prev, next, caption);
 
   const apply = () => {

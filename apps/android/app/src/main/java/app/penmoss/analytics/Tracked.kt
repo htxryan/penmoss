@@ -50,6 +50,17 @@ fun trackedToggle(id: String, onChange: (Boolean) -> Unit): (Boolean) -> Unit = 
 }
 
 /**
+ * A tracked control in the editor page was used (PEN-175): the editor's widgets carry the Mac's
+ * `data-event` ids (`editor.callout.fold`) and the page posts each use. Recorded as `click <id>`,
+ * with [state] (on or off) for a check box, only when [catalogue] lists the id; any other id is
+ * dropped. True when it was recorded.
+ */
+fun recordPageClick(id: String, state: String? = null, catalogue: AnalyticsCatalogue = AnalyticsCatalogue.bundled): Boolean {
+    if (!catalogue.has("click", id)) return false
+    return Analytics.record("click", id, if (state == null) emptyMap() else mapOf("state" to state))
+}
+
+/**
  * A dialog or sheet counted by name (PEN-137), the Compose twin of the web's `useTrackedDialog`:
  * `open` as it shows, then `done` or `cancel` as it leaves, with how long it was open (a bucket).
  * A dialog that does what it was opened for calls [done] before it closes; closing any other way

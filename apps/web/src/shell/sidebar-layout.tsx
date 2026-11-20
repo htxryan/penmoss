@@ -3,11 +3,13 @@ import { Icon } from '@penmoss/ui/icons';
 import {
   createContext,
   useContext,
+  useRef,
   useState,
   type DragEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
+import { useScrollArea } from '../analytics/scroll';
 import { useOnRevealNotebooks } from './reveal-notebooks';
 import type { SidebarLayout } from './sidebar-layout-state';
 
@@ -42,6 +44,11 @@ export function SidebarSections({
   readonly leads?: Partial<Readonly<Record<SidebarSection, ReactNode>>>;
 }) {
   const [dragging, setDragging] = useState<SidebarSection | null>(null);
+  // Recent Notes and Tags scroll on their own (PEN-175): `scroll sidebar.recent`, `sidebar.tags`.
+  const recent = useRef<HTMLDivElement>(null);
+  const tags = useRef<HTMLDivElement>(null);
+  useScrollArea('sidebar.recent', recent, null);
+  useScrollArea('sidebar.tags', tags, null);
   useOnRevealNotebooks(() => {
     if (layout.hidden.has('notebooks') && layout.canChange) layout.setHidden('notebooks', false);
   });
@@ -58,6 +65,7 @@ export function SidebarSections({
           <div
             key={id}
             hidden={!layout.shown.includes(id)}
+            ref={id === 'recent' ? recent : id === 'tags' ? tags : undefined}
             className="sb-part"
             data-section={id}
             data-testid={`sidebar-section-${id}`}

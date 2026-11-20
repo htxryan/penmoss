@@ -105,6 +105,7 @@ class AnalyticsContractTest {
         "setting" -> JsonPrimitive(true) to JsonPrimitive("slothcanary")
         "flags" -> JsonArray(listOf(JsonPrimitive(strings("cliFlags").first()))) to JsonArray(listOf(JsonPrimitive("slothcanary")))
         "length" -> JsonPrimitive(1440) to JsonPrimitive(1441)
+        "fraction" -> JsonPrimitive(0.42) to JsonPrimitive("0.42")
         else -> error("A prop type the phone does not know: $type")
     }
 
@@ -162,6 +163,49 @@ class AnalyticsContractTest {
         assertNotNull(catalogue.problem(event("app", "layout", mapOf("window" to JsonPrimitive("capture")))))
         assertNotNull(catalogue.problem(event("app", "layout", mapOf("tabs" to JsonPrimitive(3)))))
         assertNull(catalogue.problem(event("app", "layout", mapOf("tabs" to JsonPrimitive("2–4"), "sidebar" to JsonPrimitive("rail"), "themeMode" to JsonPrimitive("dark")))))
+    }
+
+    @Test
+    fun aPositionIsAWholeNumberOfHundredthsFrom0To1() {
+        val note = { position: JsonElement -> catalogue.problem(event("scroll", "note", mapOf("position" to position))) }
+        for (good in listOf(0, 1, 0.42, 0.01, 0.99, 0.1, 0.07, 0.57)) assertNull("$good", note(JsonPrimitive(good)))
+        for (bad in listOf<JsonElement>(
+            JsonPrimitive(0.425), JsonPrimitive(-0.01), JsonPrimitive(1.01), JsonPrimitive(2), JsonPrimitive("0.42"),
+            JsonPrimitive(true), JsonPrimitive(false), JsonArray(listOf(JsonPrimitive(0.42))), JsonObject(emptyMap()),
+        )) {
+            assertNotNull("$bad", note(bad))
+        }
+        // The area is the name: only the catalogued ones, and no other prop.
+        for (area in contract.getValue("catalogue").jsonObject.getValue("scroll").jsonArray.map { it.jsonPrimitive.content }) {
+            assertNull(area, catalogue.problem(event("scroll", area, mapOf("position" to JsonPrimitive(0.5)))))
+        }
+        assertNotNull(catalogue.problem(event("scroll", "note-01HZX", mapOf("position" to JsonPrimitive(0.5)))))
+        assertNotNull(catalogue.problem(event("scroll", "note", mapOf("top" to JsonPrimitive(630)))))
+        // When it is recorded: Kotlin's gate keeps core's numbers.
+        val timing = contract.getValue("scroll").jsonObject
+        assertEquals(timing.getValue("settleMs").jsonPrimitive.long, ScrollGate.SETTLE_MS)
+        assertEquals(timing.getValue("minGapMs").jsonPrimitive.long, ScrollGate.MIN_GAP_MS)
+    }
+
+    @Test
+    fun aKindWithItsOwnClientsComesOnlyFromThem() {
+        val kindClients = contract.getValue("kindClients").jsonObject.mapValues { (_, clients) -> clients.jsonArray.map { it.jsonPrimitive.content }.toSet() }
+        assertEquals(kindClients, AnalyticsCatalogue.KIND_CLIENTS)
+        val scroll = event("scroll", "sidebar", mapOf("position" to JsonPrimitive(0.3)))
+        for (client in AnalyticsFormat.CLIENTS) {
+            val problem = catalogue.problem(scroll.copy(client = client))
+            if (client in kindClients.getValue("scroll")) assertNull(client, problem) else assertEquals(client, "client", problem)
+        }
+        // The shipped catalogue reads the same from its own copy.
+        assertEquals("client", AnalyticsCatalogue.bundled.problem(scroll.copy(client = "cli")))
+        assertNull(AnalyticsCatalogue.bundled.problem(scroll))
+    }
+
+    @Test
+    fun theRetiredClickIdsStayCatalogued() {
+        val retired = strings("retiredClickNames")
+        assertTrue(retired.isNotEmpty())
+        for (name in retired) assertTrue(name, catalogue.has("click", name))
     }
 
     @Test

@@ -638,7 +638,7 @@ internal fun NoteMenu(
     onCopyAgentReference: (() -> Unit)? = null,
 ) {
     Box {
-        TipIconButton(Icons.Default.MoreVert, "Note Actions", onClick = trackedClick("note.more") { onOpen(true) }, modifier = Modifier.testTag("noteMore"))
+        TipIconButton(Icons.Default.MoreVert, "Note Actions", onClick = trackedClick("note.actions.open") { onOpen(true) }, modifier = Modifier.testTag("noteMore"))
         DropdownMenu(expanded = open, onDismissRequest = { onOpen(false) }) {
             val close = { onOpen(false) }
             NoteMenuItem("View Metadata", "noteMetadata", true, close, event = "note.menu.metadata") { onPanel(PanelTab.METADATA) }

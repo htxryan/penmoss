@@ -849,6 +849,18 @@ export type FromEditor =
    * `keys.app`, the note open or null.
    */
   | { readonly v: 1; readonly type: 'command'; readonly noteId: string | null; readonly id: string }
+  /**
+   * How far down the open note is (PEN-175), for usage data's `scroll note`: 0 (the top) to 1
+   * (the bottom) in hundredths, once its scrolling settles, by core's ScrollGate. Nothing else
+   * about the note goes with it; the app checks it and records it only for the note it shows.
+   */
+  | { readonly v: 1; readonly type: 'scroll'; readonly noteId: string; readonly position: number }
+  /**
+   * A tracked control in the note was used (PEN-175): its `data-event` id, the same the Mac's
+   * page records (`editor.callout.fold`), and on or off for a check box. The app records
+   * `click <id>` only when its catalogue lists the id.
+   */
+  | { readonly v: 1; readonly type: 'click'; readonly id: string; readonly state?: 'on' | 'off' }
   | {
       readonly v: 1;
       readonly type: 'error';
@@ -1232,6 +1244,16 @@ export function parseToEditor(raw: string): ToEditor | null {
         ? parseCommentMessage(value, noteId)
         : null;
   }
+}
+
+/**
+ * The `click` message for one use of a tracked control in the note (PEN-175): its id, and for a
+ * switch or a check box which way it went, as @penmoss/ui's click listener hands them over.
+ */
+export function clickMessage(id: string, state: 'on' | 'off' | undefined): FromEditor {
+  return state === undefined
+    ? { v: BRIDGE_VERSION, type: 'click', id }
+    : { v: BRIDGE_VERSION, type: 'click', id, state };
 }
 
 export function encodeFromEditor(message: FromEditor): string {

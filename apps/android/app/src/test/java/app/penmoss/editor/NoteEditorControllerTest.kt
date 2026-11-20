@@ -393,6 +393,28 @@ class NoteEditorControllerTest {
         assertEquals(listOf("area/cooking"), tagsOpened)
     }
 
+    /** PEN-175: the page's `scroll` is recorded as `scroll note` with its position, for the note shown only. */
+    @Test
+    fun recordsHowFarDownTheNoteShownIs() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                val controller = controller()
+                page(controller, FromEditor.Scroll("n", 0.42))
+                page(controller, FromEditor.Scroll("other-note", 0.9))
+                page(controller, FromEditor.Scroll("n", 1.0))
+                // One the bridge refuses never reaches it.
+                runBlocking(thread) { controller.onPageMessage("""{"v":1,"type":"scroll","noteId":"n","position":0.425}""") }
+                harness.service.flush()
+                val stored = harness.store.page(null, null, 10).sortedBy { it.seq }
+                assertEquals(listOf("scroll" to "note", "scroll" to "note"), stored.map { it.kind to it.name })
+                assertEquals(listOf("""{"position":0.42}""", """{"position":1}"""), stored.map { it.props })
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
     private fun syncedAt(epoch: String, update: String) = runBlocking {
         val content = store.content("n")
         store.saveExchange(Exchange.decide(content, Exchange.entry(content), BatchNoteReply("n", epoch, update, "SV-$update", null)))

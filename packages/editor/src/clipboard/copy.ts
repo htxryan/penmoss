@@ -113,6 +113,11 @@ export function clipboardPayload(
   const { dom } = view.serializeForClipboard(content);
   // Marks the HTML as this install's own, next to ProseMirror's slice marker (token.ts).
   dom.querySelector('[data-pm-slice]')?.setAttribute(PENMOSS_MARKER, clipboardToken());
+  // A control's click id (usage analytics, PEN-175) is the page's, not the copied text's.
+  for (const element of dom.querySelectorAll('[data-event], [data-untracked]')) {
+    element.removeAttribute('data-event');
+    element.removeAttribute('data-untracked');
+  }
   const html = dom.innerHTML;
   return { html, text: format === 'rich' ? plainText(content) : markdown() };
 }

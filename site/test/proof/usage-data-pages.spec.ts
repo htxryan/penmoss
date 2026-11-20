@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // PEN-174's ac15 on screen: the built site's Usage Data help page and both privacy pages say the
-// window's size and layout are recorded. apps/web's Playwright config runs it as its `site`
+// window's size and layout are recorded; PEN-175's AC11: they list scrolling too. apps/web's Playwright config runs it as its `site`
 // project, so the software factory's web proof (`task proof:web`) can record it; it builds the
 // site and serves site/dist itself, on a port the system picks. site.spec.ts checks the same
 // words under wrangler dev (`task site:test`), whose config leaves this folder out.
@@ -109,4 +109,36 @@ test('the Usage Data help page and both privacy pages say the window’s size an
   await show(page, app);
   await expect(app).toContainText('sidebar, note panel, Full Width, light or dark, how many tabs');
   await expect(app).toBeInViewport();
+});
+
+test('the Usage Data help page lists Scroll with an example and the rounding, and both privacy pages name scrolling (PEN-175)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  // penmoss.app/privacy and the docs' Privacy page: scrolling among what is recorded.
+  await page.goto(`${base}/privacy/`);
+  await show(page, page.locator('article').getByText(/how far you\s+scroll/));
+  await page.goto(`${base}/docs/help/privacy/`);
+  await show(
+    page,
+    page
+      .locator('main')
+      .getByText(/how far you scroll/)
+      .first(),
+  );
+
+  // Usage Data: the rounding and the limits under the table, then the kinds table's Scroll row,
+  // held to the end.
+  await page.goto(`${base}/docs/help/usage-data/`);
+  const main = page.locator('main');
+  await show(page, main.getByText('rounded to hundredths', { exact: false }));
+  await expect(main.getByText('Keep at Most', { exact: false }).first()).toBeVisible();
+  const scroll = main.locator('tr').filter({ hasText: /^\s*Scroll/ });
+  await show(page, scroll);
+  await expect(scroll).toContainText('0.42 of the way down');
+  await expect(scroll).toContainText('folder tree, Recent Notes and Tags');
+  await expect(scroll).toContainText('Settings and its list of pages');
+  await expect(scroll).toBeInViewport();
 });

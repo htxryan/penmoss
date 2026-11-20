@@ -8,8 +8,13 @@ import java.io.File
  * check box, radio button, tab, menu item, chip or FAB, a clickable card or surface, and every
  * `clickable`, `combinedClickable`, `toggleable` or `selectable` modifier) must carry a tracked
  * id (`Modifier.tracked`, `trackedId`, `trackedClick`, `trackedToggle`, `Analytics.click`) or run
- * a command (`…Commands.run(`), which is counted by its run. A control that only swallows taps
- * (a preview's shield) says so with an `// untracked: <why>` comment on its line or the one
+ * a command (`…Commands.run(`), which is counted by its run. Since PEN-175 the marker must be the
+ * control's own (in its onClick or modifier, not in a `text = { … }` or trailing content), and
+ * these count as controls too: a Slider or RangeSlider (a tracked `onValueChangeFinished`, so it
+ * is recorded when let go), an ExposedDropdownMenuBox, a PullToRefreshBox, a `pointerInput` with
+ * `detectTapGestures`, a `LinkAnnotation`, and each call of the first run's Primary, Plain,
+ * Options and Link (an `event =`). A control that only swallows taps (a preview's shield) says
+ * so with an `// untracked: <why>` comment, the why three words or more, on its line or the one
  * above. Every dialog and sheet is tracked by name (`rememberTrackedDialog`) where it is
  * composed. Each id written as a literal is listed with where it is, for the catalogue check.
  */
@@ -37,6 +42,30 @@ object ControlScan {
 
     private val DIALOGS = Regex(QUALIFIED + "(AlertDialog|BasicAlertDialog|Dialog|ModalBottomSheet|DatePickerDialog|TimePickerDialog)\\s*\\(")
 
+    /** Sliders: recorded when let go, by a tracked `onValueChangeFinished` (PEN-175), never their value. */
+    private val SLIDERS = Regex(QUALIFIED + "(Slider|RangeSlider)\\s*\\(")
+    private val VALUE_FINISHED = Regex("\\bonValueChangeFinished\\s*=(?!=)")
+
+    /** A drop-down (tracked by its box, its picks by their items) and a pull to refresh (by its onRefresh). */
+    private val BOXES = Regex(QUALIFIED + "(ExposedDropdownMenuBox|PullToRefreshBox)\\s*\\(")
+
+    /** A link in text: its listener records it. */
+    private val LINKS = Regex("(?<![\\w.])(?:[a-z][a-z0-9_]*\\.)*LinkAnnotation\\.(Url|Clickable)\\s*\\(")
+
+    /** A tap gesture of its own: `pointerInput(…) { detectTapGestures { … } }`. */
+    private val POINTER_INPUT = Regex("\\.pointerInput\\b")
+    private val TAP_GESTURES = Regex("\\bdetectTapGestures\\b")
+
+    /**
+     * The first run's own buttons and choices (FirstRunFrame.kt), which have no id of their own:
+     * each call names its `event =` (PEN-175).
+     */
+    private val WRAPPERS = Regex(QUALIFIED + "(Primary|Plain|Options|Link)\\s*\\(")
+
+    /** A named lambda argument that is a control's content (`text = { … }`), not what it does (`onClick = { … }`). */
+    private val CONTENT_ARG = Regex("^\\s*(\\w+)\\s*=\\s*\\{")
+    private val ACTION_ARG = Regex("^(on[A-Z]\\w*|linkInteractionListener)$")
+
     private val NO_ACTION = Regex("\\b(onClick|onCheckedChange|onSelectedChange)\\s*=\\s*null\\b")
     private val HAS_ON_CLICK = Regex("\\bonClick\\s*=")
 
@@ -45,7 +74,14 @@ object ControlScan {
     private val ID_CALLS = Regex("\\b(tracked|trackedId|trackedClick|trackedToggle|Analytics\\.click)\\s*\\(")
     private val EVENT_ARGS = Regex("\\bevent\\s*=(?!=)")
     private val DIALOG_CALLS = Regex("\\brememberTrackedDialog\\s*\\(")
-    private val UNTRACKED = Regex("//\\s*untracked:\\s*\\S")
+    private val UNTRACKED = Regex("//\\s*untracked:(.*)$")
+
+    /** An `// untracked:` reason says why in three words or more (PEN-175), as the web's `data-untracked`. */
+    private const val REASON_WORDS = 3
+
+    private fun reasonOf(line: String): String? = UNTRACKED.find(line)?.groupValues?.get(1)?.trim()
+
+    private fun wordsIn(reason: String) = reason.split(Regex("\\s+")).count { word -> word.any { it.isLetterOrDigit() } }
 
     /** How far above a dialog its `rememberTrackedDialog` may be. */
     private const val DIALOG_REACH = 40
@@ -81,34 +117,59 @@ object ControlScan {
                 problems += "${where(at)}: $what has no tracked id or command"
             }
 
-            for (match in CONTROLS.findAll(text)) {
-                val at = match.range.first
-                if (!source.code(at) || source.declared(at)) continue
-                val open = match.range.last
-                val close = source.close(open) ?: continue
-                val args = text.substring(open, close + 1)
-                if (NO_ACTION.containsMatchIn(args)) continue
-                check(at, args, match.groupValues[1])
+            // A call's own arguments: its content (`text = { … }`, the trailing `{ … }`) is not its marker.
+            fun calls(pattern: Regex, each: (at: Int, args: String, name: String) -> Unit) {
+                for (match in pattern.findAll(text)) {
+                    val at = match.range.first
+                    if (!source.code(at) || source.declared(at)) continue
+                    val open = match.range.last
+                    val close = source.close(open) ?: continue
+                    each(at, source.ownArgs(open, close), match.groupValues[1])
+                }
             }
-            for (match in CLICKABLE_CONTAINERS.findAll(text)) {
-                val at = match.range.first
-                if (!source.code(at) || source.declared(at)) continue
-                val open = match.range.last
-                val close = source.close(open) ?: continue
-                val args = text.substring(open, close + 1)
-                if (!HAS_ON_CLICK.containsMatchIn(args) || NO_ACTION.containsMatchIn(args)) continue
-                check(at, args, match.groupValues[1])
+            calls(CONTROLS) { at, args, what -> if (!NO_ACTION.containsMatchIn(args)) check(at, args, what) }
+            calls(CLICKABLE_CONTAINERS) { at, args, what ->
+                if (HAS_ON_CLICK.containsMatchIn(args) && !NO_ACTION.containsMatchIn(args)) check(at, args, what)
             }
+            calls(BOXES) { at, args, what -> check(at, args, what) }
+            calls(LINKS) { at, args, what -> check(at, args, "LinkAnnotation.$what") }
+            calls(SLIDERS) { at, args, what ->
+                controls++
+                val finished = VALUE_FINISHED.find(args)
+                val marked = finished != null && MARKERS.containsMatchIn(args.substring(finished.range.last + 1).let(source::firstArgument))
+                if (!marked && !source.exempt(at)) problems += "${where(at)}: $what has no tracked onValueChangeFinished"
+            }
+            calls(WRAPPERS) { at, args, what ->
+                controls++
+                if (!EVENT_ARGS.containsMatchIn(args) && !source.exempt(at)) problems += "${where(at)}: $what has no event ="
+            }
+            for (match in POINTER_INPUT.findAll(text)) {
+                val at = match.range.first
+                if (!source.code(at)) continue
+                val open = source.skipSpace(match.range.last + 1)
+                if (open >= text.length || text[open] != '(') continue
+                val close = source.close(open) ?: continue
+                val body = source.skipSpace(close + 1)
+                if (body >= text.length || text[body] != '{') continue
+                val end = source.close(body) ?: continue
+                val span = text.substring(at, end + 1)
+                if (TAP_GESTURES.containsMatchIn(span)) check(at, span, "pointerInput tap gesture")
+            }
+            for (line in source.shortReasons()) problems += "$name:$line: `// untracked:` needs a reason of three words or more"
             for (match in MODIFIERS.findAll(text)) {
                 val at = match.range.first
                 if (!source.code(at)) continue
                 var end = match.range.last
                 var next = source.skipSpace(end + 1)
+                var named = false
                 if (next < text.length && text[next] == '(') {
-                    end = source.close(next) ?: continue
+                    val close = source.close(next) ?: continue
+                    named = HAS_ON_CLICK.containsMatchIn(text.substring(next, close))
+                    end = close
                     next = source.skipSpace(end + 1)
                 }
-                if (next < text.length && text[next] == '{') end = source.close(next) ?: continue
+                // The trailing `{ … }` is its onClick, unless it was named already.
+                if (!named && next < text.length && text[next] == '{') end = source.close(next) ?: continue
                 check(at, text.substring(at, end + 1), match.groupValues[1])
             }
             val tracked = DIALOG_CALLS.findAll(text).filter { source.code(it.range.first) }.map { it.range.first }.toList()
@@ -187,10 +248,35 @@ object ControlScan {
             return text.substring(start, end)
         }
 
-        /** An `// untracked: <why>` comment on the line or the one above. */
+        /** An `// untracked: <why>` comment, its why three words or more, on the line or the one above. */
         fun exempt(at: Int): Boolean {
             val line = line(at)
-            return UNTRACKED.containsMatchIn(lineText(line)) || UNTRACKED.containsMatchIn(lineText(line - 1))
+            return listOf(line, line - 1).any { n -> reasonOf(lineText(n))?.let { wordsIn(it) >= REASON_WORDS } == true }
+        }
+
+        /** The lines (1-based) whose `// untracked:` comment gives fewer than three words of why. */
+        fun shortReasons(): List<Int> = (1..lineStarts.size).filter { n ->
+            val text = lineText(n)
+            val reason = reasonOf(text) ?: return@filter false
+            val at = lineStarts[n - 1] + text.indexOf("untracked:")
+            kinds[at] == COMMENT && wordsIn(reason) < REASON_WORDS
+        }
+
+        /**
+         * The call's own arguments, `(` at [open] to `)` at [close], with each named lambda that is
+         * its content (`text = { … }`, `icon = { … }`) blanked: a marker there is not the control's.
+         */
+        fun ownArgs(open: Int, close: Int): String {
+            val own = StringBuilder()
+            var from = open + 1
+            while (from < close) {
+                val argument = argument(from)
+                val name = CONTENT_ARG.find(argument)?.groupValues?.get(1)
+                if (name == null || ACTION_ARG.matches(name)) own.append(argument)
+                own.append(',')
+                from += argument.length + 1
+            }
+            return "(" + own + ")"
         }
 
         /** Whether the name at [at] is being declared (`fun TextButton(`), not called. */
@@ -201,6 +287,12 @@ object ControlScan {
                 while (i >= 0 && (text[i].isLetterOrDigit() || text[i] == '.' || text[i] == '_')) i--
             }
             while (i >= 0 && text[i] == ' ') i--
+            // `fun <T> Options(`: walk back over the type parameters.
+            if (i >= 0 && text[i] == '>') {
+                while (i >= 0 && text[i] != '<') i--
+                i--
+                while (i >= 0 && text[i] == ' ') i--
+            }
             return i >= 2 && text.substring(maxOf(0, i - 2), i + 1) == "fun"
         }
 
@@ -239,6 +331,19 @@ object ControlScan {
                 }
             }
             return text.substring(from)
+        }
+
+        /** [args] (a call's arguments from just after a `name =`) up to that argument's end. */
+        fun firstArgument(args: String): String {
+            var depth = 0
+            for ((i, c) in args.withIndex()) {
+                when (c) {
+                    '(', '{', '[' -> depth++
+                    ')', '}', ']' -> if (depth == 0) return args.substring(0, i) else depth--
+                    ',' -> if (depth == 0) return args.substring(0, i)
+                }
+            }
+            return args
         }
 
         /** The plain string literals that start in [from]..<[to], with where each starts. */

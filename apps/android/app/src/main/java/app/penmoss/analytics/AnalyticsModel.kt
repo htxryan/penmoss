@@ -58,7 +58,7 @@ object AnalyticsFormat {
     val CHANNELS = listOf("stable", "alpha", "dev")
     val OSES = listOf("macos", "android", "linux", "windows", "other")
     val SIZE_CLASSES = listOf("compact", "medium", "expanded")
-    val KINDS = listOf("app", "command", "screen", "dialog", "click", "menu", "setting", "firstrun", "feedback", "sync", "cli", "tool")
+    val KINDS = listOf("app", "command", "screen", "dialog", "click", "menu", "setting", "firstrun", "feedback", "sync", "cli", "tool", "scroll")
 
     val COUNT_BUCKETS = listOf("0", "1", "2–4", "5–9", "10–49", "50–99", "100–499", "500–999", "1000–4999", "5000+")
     private val COUNT_EDGES = listOf(5000 to "5000+", 1000 to "1000–4999", 500 to "500–999", 100 to "100–499", 50 to "50–99", 10 to "10–49", 5 to "5–9", 2 to "2–4", 1 to "1")

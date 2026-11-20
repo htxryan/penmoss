@@ -1,6 +1,7 @@
 package app.penmoss.ui.settings
 
 import androidx.compose.foundation.BorderStroke
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.ui.common.SQUARE
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Canvas
@@ -82,8 +83,10 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.Analytics
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.trackedId
 import app.penmoss.engine.settings.Colour
 import app.penmoss.engine.settings.Contrast
 import app.penmoss.engine.settings.ContrastCheck
@@ -211,7 +214,10 @@ fun ThemeEditorScreen(
             // Always in view while the controls scroll: the real note, in the colours being edited.
             preview(theme, variant, Modifier.fillMaxWidth().height(PREVIEW_HEIGHT).testTag("themePreview"))
             HorizontalDivider()
-            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
+            val controls = rememberScrollState()
+            // How far down the editor's controls are (PEN-175): a Settings page of its own.
+            TrackScroll("settings", controls, "theme-editor")
+            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(controls).padding(bottom = 16.dp).testTag("themeEditorControls")) {
                 if (!enabled) Help(SETTINGS_WAIT, Modifier.testTag("settingsNotice"))
                 NameField(theme, otherNames, enabled) { edit(ThemeEdits.withName(theme, it)) }
                 GroupTitle("Variant")
@@ -378,7 +384,8 @@ private fun FontField(key: String, label: String, stack: String, fonts: List<The
     var open by remember { mutableStateOf(false) }
     val choices = if (fonts.any { it.stack == stack } || stack.isEmpty()) fonts else listOf(ThemeCatalogue.Font(stack, stack)) + fonts
     val shown = choices.firstOrNull { it.stack == stack }?.label ?: stack
-    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { if (enabled) open = it }, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+    // Counted when a font is picked (its items), as the Mac's select is when it changes (PEN-175).
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { if (enabled) open = it }, modifier = Modifier.trackedId("theme-editor.font").padding(horizontal = 16.dp, vertical = 4.dp)) {
         OutlinedTextField(
             value = shown,
             onValueChange = {},
@@ -411,7 +418,7 @@ private fun WidthField(rem: Int, range: IntRange, enabled: Boolean, onWidth: (In
         Slider(
             value = value,
             onValueChange = { value = it },
-            onValueChangeFinished = { onWidth(value.toInt()) },
+            onValueChangeFinished = trackedClick("theme-editor.width") { onWidth(value.toInt()) },
             valueRange = range.first.toFloat()..range.last.toFloat(),
             steps = range.last - range.first - 1,
             enabled = enabled,
@@ -458,15 +465,15 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
                 value = v
                 hexText = Colour.fromHsv(hue, s, v)
             }
-            SheetSlider("Hue", hue, 0f..360f, "${hue.toInt()}°") {
+            SheetSlider("Hue", hue, 0f..360f, "${hue.toInt()}°", "theme-editor.colour.hue") {
                 hue = it
                 hexText = Colour.fromHsv(it, saturation, value)
             }
-            SheetSlider("Saturation", saturation, 0f..1f, "${(saturation * 100).toInt()}%") {
+            SheetSlider("Saturation", saturation, 0f..1f, "${(saturation * 100).toInt()}%", "theme-editor.colour.saturation") {
                 saturation = it
                 hexText = Colour.fromHsv(hue, it, value)
             }
-            SheetSlider("Brightness", value, 0f..1f, "${(value * 100).toInt()}%") {
+            SheetSlider("Brightness", value, 0f..1f, "${(value * 100).toInt()}%", "theme-editor.colour.brightness") {
                 value = it
                 hexText = Colour.fromHsv(hue, saturation, it)
             }
@@ -509,13 +516,15 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
 }
 
 @Composable
-private fun SheetSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, state: String, onChange: (Float) -> Unit) {
+private fun SheetSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, state: String, event: String, onChange: (Float) -> Unit) {
     Column {
         // Seen, not read: the slider says its name and value itself.
         Text("$label: $state", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyMedium)
         Slider(
             value = value,
             onValueChange = onChange,
+            // Counted when let go (PEN-175), never its value.
+            onValueChangeFinished = trackedClick(event) {},
             valueRange = range,
             modifier = Modifier.semantics { contentDescription = label; stateDescription = state }.testTag("slider-$label"),
         )
@@ -536,7 +545,12 @@ private fun SaturationValueSquare(hue: Float, saturation: Float, value: Float, o
             .fillMaxWidth()
             .height(160.dp)
             .padding(vertical = 8.dp)
-            .pointerInput(hue) { detectTapGestures { pick(it, size.width.toFloat(), size.height.toFloat()) } }
+            .pointerInput(hue) {
+                detectTapGestures {
+                    Analytics.click("theme-editor.colour.square")
+                    pick(it, size.width.toFloat(), size.height.toFloat())
+                }
+            }
             .pointerInput(hue) { detectDragGestures { change, _ -> pick(change.position, size.width.toFloat(), size.height.toFloat()) } }
             .semantics {
                 contentDescription = "Saturation and Brightness"

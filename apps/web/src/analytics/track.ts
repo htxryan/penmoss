@@ -7,12 +7,12 @@ import {
   KEYS_PATTERN,
   SCREEN_NAMES,
   SETTING_NAMES,
-  countBucket,
-  isSettingWord,
+  settingValueProps,
   themeForEvent,
   type PropValue,
 } from '@penmoss/core/analytics';
 import { CUSTOM_FONT_PREFIX } from '@penmoss/core/fonts';
+import { installClickListener } from '@penmoss/ui/analytics/clicks';
 import type { Route } from '../router';
 import { record } from './record';
 
@@ -111,43 +111,15 @@ export function resetScreens(): void {
 }
 
 /**
- * The tracked clicks (PEN-137): one capture-phase listener records the nearest `[data-event]`
- * control's id. A `[data-command]` control is counted once, by its command's run, so a click
- * whose nearest tracked control has a `data-command` records nothing here. A switch or a
- * checkbox also says which way it went (`state: on|off`).
+ * The tracked clicks (PEN-137): each use of a `[data-event]` control records `click <id>`, a
+ * switch's or a checkbox's with which way it went (`state: on|off`), a select's or a slider's
+ * once per change, never its value (PEN-175). The listener is @penmoss/ui's, which Android's
+ * editor page installs too, so both record the same controls the same way.
  */
 export function installClickTracking(doc: Document): () => void {
-  const onClick = (event: MouseEvent) => {
-    try {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const control = target.closest('[data-event], [data-command]');
-      if (!control || control.hasAttribute('data-command')) return;
-      if (control instanceof HTMLButtonElement && control.disabled) return;
-      if (control.getAttribute('aria-disabled') === 'true') return;
-      const id = control.getAttribute('data-event');
-      if (!id) return;
-      const state = clickState(control);
-      record('click', id, state === null ? {} : { state });
-    } catch {
-      // Recording never breaks a click.
-    }
-  };
-  doc.addEventListener('click', onClick, true);
-  return () => doc.removeEventListener('click', onClick, true);
-}
-
-/** Which way a switch or a checkbox goes with this click, or null for any other control. */
-function clickState(control: Element): 'on' | 'off' | null {
-  if (control instanceof HTMLInputElement) {
-    if (control.type !== 'checkbox' && control.type !== 'radio') return null;
-    // A click toggles a checkbox before its listeners run, so this is the new state.
-    return control.checked ? 'on' : 'off';
-  }
-  const checked = control.getAttribute('aria-checked') ?? control.getAttribute('aria-pressed');
-  if (checked === null) return null;
-  // The page re-renders after the click: this is still the old state.
-  return checked === 'true' ? 'off' : 'on';
+  return installClickListener(doc, (id, state) =>
+    record('click', id, state === undefined ? {} : { state }),
+  );
 }
 
 const SETTINGS: ReadonlySet<string> = new Set(SETTING_NAMES);
@@ -178,20 +150,12 @@ function settingWord(key: string, value: string): string {
 /**
  * What a setting's change records: its value when that is safe to send, else `changed`. Text is
  * sent only when it is one of the words core lists for that setting (SETTING_VALUES); any
- * other text (a time zone, a template, a font's family) records `changed: true`.
+ * other text (a time zone, a template, a font's family) records `changed: true`. Core's
+ * `settingValueProps`, which the Mac's main process uses too, after a custom theme or font
+ * becomes `custom`.
  */
 export function settingProps(key: string, value: unknown): Record<string, PropValue> {
-  if (typeof value === 'boolean') return { value };
-  if (typeof value === 'number') {
-    if (Number.isInteger(value) && value >= 0 && value <= 10_000_000) return { value };
-    if (Number.isFinite(value) && value >= 0) return { value: countBucket(value) };
-    return { changed: true };
-  }
-  if (typeof value === 'string') {
-    const word = settingWord(key, value);
-    if (isSettingWord(key, word)) return { value: word };
-  }
-  return { changed: true };
+  return settingValueProps(key, typeof value === 'string' ? settingWord(key, value) : value);
 }
 
 /** Records a change to a setting the catalogue lists; any other setting records nothing. */

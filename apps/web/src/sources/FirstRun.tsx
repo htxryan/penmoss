@@ -349,12 +349,23 @@ function NotebookSteps({
           }
           title="Welcome to Penmoss"
           start={
-            <a className="fr-learn" href={FIRST_RUN_DOCS} target="_blank" rel="noreferrer">
+            <a
+              data-event="firstrun.welcome.learn-more"
+              className="fr-learn"
+              href={FIRST_RUN_DOCS}
+              target="_blank"
+              rel="noreferrer"
+            >
               Learn More
             </a>
           }
           actions={
-            <Action primary testId="first-run-start" onClick={() => go({ at: 'goal' })}>
+            <Action
+              data-event="firstrun.welcome.get-started"
+              primary
+              testId="first-run-start"
+              onClick={() => go({ at: 'goal' })}
+            >
               Get Started
             </Action>
           }
@@ -375,6 +386,7 @@ function NotebookSteps({
           cancel={onCancel}
           actions={
             <Action
+              data-event="firstrun.continue"
               primary
               testId="first-run-continue"
               onClick={() => (goal === 'new' ? go({ at: 'way' }) : viaGitHub('list'))}
@@ -393,12 +405,14 @@ function NotebookSteps({
                 title: 'Start a New Notebook',
                 line: firstRun ? 'Your first Penmoss notebook' : 'A new, empty notebook',
                 testId: 'first-run-new',
+                event: 'firstrun.goal.start-a-new-notebook',
               },
               {
                 value: 'existing',
                 title: 'Open an Existing Notebook',
                 line: 'From a repository with Penmoss notes',
                 testId: 'first-run-existing',
+                event: 'firstrun.goal.open-an-existing-notebook',
               },
             ]}
           />
@@ -414,6 +428,7 @@ function NotebookSteps({
           back={back}
           actions={
             <Action
+              data-event="firstrun.continue"
               primary
               testId="first-run-continue"
               onClick={() =>
@@ -435,18 +450,21 @@ function NotebookSteps({
                 line: 'On GitHub, private',
                 chip: 'Recommended',
                 testId: 'first-run-way-create',
+                event: 'firstrun.way.create-new-repo',
               },
               {
                 value: 'existing',
                 title: 'Use Existing Repo',
                 line: 'An empty one you made',
                 testId: 'first-run-way-existing',
+                event: 'firstrun.way.use-existing-repo',
               },
               {
                 value: 'url',
                 title: 'Paste a URL',
                 line: 'Anywhere this Mac’s git can push to',
                 testId: 'first-run-way-url',
+                event: 'firstrun.way.paste-a-url',
               },
             ]}
           />

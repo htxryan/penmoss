@@ -109,6 +109,7 @@ export function FolderPicker({
               key={choice.id ?? 'top'}
               {...picker.optionProps(index)}
               className="opt folder-opt"
+              data-event="folder-picker.choose"
               aria-current={choice.id === currentId ? 'location' : undefined}
               // Indented by depth as in the tree, capped in CSS (six levels on a phone, A363).
               style={filtered ? undefined : ({ '--depth': choice.depth } as CSSProperties)}

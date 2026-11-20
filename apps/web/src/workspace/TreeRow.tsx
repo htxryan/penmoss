@@ -62,6 +62,7 @@ export function FolderTreeRow({
     <div
       {...rowAttributes(row, place)}
       className="tree-row folder-row"
+      data-event="tree.toggle"
       data-picked={picked ? '' : undefined}
       aria-label={row.name}
       aria-expanded={row.expanded}
@@ -131,6 +132,7 @@ export function NoteTreeRow({
     <div
       {...rowAttributes(row, place)}
       className="tree-row note-row"
+      data-event="tree.open"
       aria-label={row.title}
       aria-selected={selected}
       // No tooltip (A1119): the tree shows where the note is, and the time it was last edited
@@ -155,6 +157,7 @@ export function NoteTreeRow({
           tabIndex={-1}
           draggable={false}
           aria-current={open ? 'page' : undefined}
+          data-untracked="its row is the control, this link only names it"
           data-untitled={row.untitled ? '' : undefined}
         >
           <NoteIcon />
@@ -181,6 +184,7 @@ export function NewFolderRow({
       aria-level={level}
       aria-selected={false}
       className="tree-row draft-row"
+      data-untracked="a draft row, its name field is what you use"
       style={depth(level)}
     >
       <span className="twisty" data-empty="" aria-hidden="true" />

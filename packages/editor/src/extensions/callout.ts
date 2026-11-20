@@ -120,6 +120,7 @@ export class CalloutView implements NodeView {
     this.fold = document.createElement('button');
     this.fold.type = 'button';
     this.fold.className = 'pm-callout-fold';
+    this.fold.dataset['event'] = 'editor.callout.fold';
     this.fold.addEventListener('mousedown', (event) => event.preventDefault());
     this.fold.addEventListener('click', () => this.toggle());
 
@@ -131,6 +132,7 @@ export class CalloutView implements NodeView {
     // The shared select's small, quiet look (T51 item 13, A941; styles.css `.pm-select`).
     this.select.className = 'pm-callout-type pm-select pm-select-sm pm-select-quiet';
     this.select.setAttribute('aria-label', 'Callout type');
+    this.select.dataset['event'] = 'editor.callout.type';
     for (const type of CALLOUT_TYPES) {
       const option = document.createElement('option');
       option.value = type;

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -30,6 +31,7 @@ import app.penmoss.analytics.AnalyticsCopy
 import app.penmoss.analytics.AnalyticsFormat
 import app.penmoss.analytics.EventEntity
 import app.penmoss.analytics.EventState
+import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.TrackedScreen
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -98,7 +100,10 @@ fun AnalyticsDataScreen(
             )
         },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("viewerList")) {
+        val list = rememberLazyListState()
+        // How far down the page is (PEN-175): a Settings page, this one too.
+        TrackScroll("settings", list, "analytics-data")
+        LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("viewerList"), state = list) {
             item(key = "summary") { Help(summary, Modifier.testTag("viewerSummary")) }
             // The counts by state under the summary, name first, as the Mac's (AC6, ac36).
             item(key = "counts") {

@@ -113,6 +113,8 @@ export class MathView implements NodeView {
     this.dom.className = display ? 'pm-math pm-math-block' : 'pm-math pm-math-inline';
     this.output = document.createElement(display ? 'div' : 'span');
     this.output.className = 'pm-math-output';
+    // A click on the formula opens its field.
+    this.output.dataset['event'] = 'editor.math.edit';
     this.dom.append(this.output);
     this.preview = display ? document.createElement('div') : null;
     this.dom.addEventListener('click', (event) => {
@@ -262,6 +264,8 @@ export class MathView implements NodeView {
       element.type = 'button';
       element.textContent = label;
       element.dataset['choice'] = choice;
+      element.dataset['event'] =
+        choice === 'mine' ? 'editor.math.use-mine' : 'editor.math.keep-theirs';
       element.addEventListener('click', (event) => {
         event.preventDefault();
         this.dismissConflict();

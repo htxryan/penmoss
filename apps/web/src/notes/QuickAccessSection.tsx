@@ -124,6 +124,7 @@ export function QuickAccessSection({
     >
       <SectionHead
         name="Quick Access"
+        data-event="sidebar.quick-access.toggle"
         nameId={`${id}-name`}
         collapsed={collapsed}
         onToggle={toggle}

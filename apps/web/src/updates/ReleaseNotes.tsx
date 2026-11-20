@@ -132,7 +132,7 @@ function ReleaseNotesView({ view }: { readonly view: NotesView }) {
         {view.status === 'newer'
           ? 'This version of Penmoss cannot read the newest release notes: '
           : 'Release notes show once Penmoss can reach GitHub. Until then, see '}
-        <a href={RELEASES_URL} target="_blank" rel="noreferrer">
+        <a href={RELEASES_URL} target="_blank" rel="noreferrer" data-event="link.release-notes">
           {view.status === 'newer' ? 'read them on GitHub' : 'the releases on GitHub'}
         </a>
         .

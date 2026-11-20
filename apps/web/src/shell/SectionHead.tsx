@@ -29,8 +29,8 @@ export function SectionHead({
   /** Quiet words at the row's end, under the tools: an empty section's (A989). */
   readonly hint?: ReactNode;
   readonly testId?: string;
-  /** The toggle's tracked id (PEN-137): the section's own, as a literal at the caller. */
-  readonly 'data-event'?: string;
+  /** The toggle's tracked id (PEN-137, PEN-175): the section's own, as a literal at the caller. */
+  readonly 'data-event': string;
 }) {
   return (
     <header className="sb-section-head sb-part-head">
@@ -40,7 +40,7 @@ export function SectionHead({
           type="button"
           className="sb-section-toggle"
           data-ui="item"
-          data-event={event ?? 'sidebar.section.toggle'}
+          data-event={event}
           aria-expanded={!collapsed}
           aria-controls={controls}
           data-testid={testId}

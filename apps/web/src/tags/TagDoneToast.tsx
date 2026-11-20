@@ -65,6 +65,7 @@ export function TagDoneToast({
         <ActionToast
           tone="done"
           testId="tag-done-toast"
+          data-event="toast.tag-done.dismiss"
           icon={<Icon name="check" className="toast-glyph" />}
           actions={
             <button

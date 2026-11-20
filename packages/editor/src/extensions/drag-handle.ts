@@ -125,6 +125,7 @@ export class DragHandleView implements PluginView {
     this.handle.setAttribute('aria-keyshortcuts', 'Alt+Shift+ArrowUp Alt+Shift+ArrowDown');
     this.handle.title = 'Drag to move. Click to select the block (Alt+Shift+↑/↓ moves it).';
     this.handle.dataset['testid'] = 'drag-handle';
+    this.handle.dataset['event'] = 'editor.block.handle';
     this.handle.hidden = true;
     this.indicator = doc.createElement('div');
     this.indicator.className = 'pm-drop-indicator';

@@ -91,6 +91,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
             <label className="tm-notebook">
               <span>Notebook</span>
               <select
+                data-event="time-machine.notebook"
                 value={source?.id ?? ''}
                 onChange={(event) => go({ source: event.currentTarget.value })}
               >
@@ -349,6 +350,7 @@ function NotebookThen({ source }: { source: GitSource }) {
           <input
             type="range"
             className="tm-scrubber"
+            data-event="time-machine.scrub"
             min={0}
             max={commits.length - 1}
             value={Math.max(0, index)}

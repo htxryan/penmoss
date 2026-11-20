@@ -217,7 +217,7 @@ private fun VersionList(ui: HistoryUi, onOpen: (Long) -> Unit, onSaveNow: () -> 
     var about by rememberSaveable { mutableStateOf(false) }
     val history = ui.history
     val days = remember(history) { versionDays(history?.versions.orEmpty()) }
-    PullToRefreshBox(isRefreshing = ui.loading, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
+    PullToRefreshBox(isRefreshing = ui.loading, onRefresh = trackedClick("history.pull-to-refresh", onRefresh), modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().testTag("historyList"), contentPadding = WindowInsets.navigationBars.asPaddingValues()) {
             item(key = "now") {
                 HorizontalDivider()

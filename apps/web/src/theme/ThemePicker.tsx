@@ -85,6 +85,7 @@ export function ThemePicker({ themes, currentId, onChoose, onClose }: ThemePicke
               key={item.theme.id}
               {...picker.optionProps(index)}
               className="opt"
+              data-event="theme-picker.pick"
               data-theme-id={item.theme.id}
               onClick={() => choose(item.theme)}
             >

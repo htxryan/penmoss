@@ -1095,6 +1095,171 @@ export const CLICK_NAMES: readonly string[] = [
   'settings.ai.pause',
   'settings.ai.model',
   'settings.ai.save-prompt',
+  // PEN-175: every control its own id. Controls the web and Android both have share one id.
+  // The web's (the page, packages/ui and the editor's widgets):
+  // The editor's own widgets (packages/editor; Android's editor page records the same ids).
+  'editor.callout.fold',
+  'editor.callout.type',
+  'editor.code.language',
+  'editor.code.copy',
+  'editor.task.toggle',
+  'editor.image.load',
+  'editor.image.lightbox',
+  'editor.image.copy',
+  'editor.lightbox.zoom-out',
+  'editor.lightbox.zoom-in',
+  'editor.lightbox.reset',
+  'editor.lightbox.full-screen',
+  'editor.lightbox.close',
+  'editor.lightbox.previous',
+  'editor.lightbox.next',
+  'editor.math.edit',
+  'editor.math.use-mine',
+  'editor.math.keep-theirs',
+  'editor.mermaid.edit',
+  'editor.mermaid.toggle',
+  'editor.drawing.edit',
+  'editor.drawing.delete',
+  'editor.table.add-row-above',
+  'editor.table.add-row-below',
+  'editor.table.delete-row',
+  'editor.table.add-column-left',
+  'editor.table.add-column-right',
+  'editor.table.delete-column',
+  'editor.table.delete-table',
+  'editor.toolbar.copy-as',
+  'editor.toolbar.turn-into',
+  'editor.toolbar.turn-into.pick',
+  'editor.slash.pick',
+  'editor.link-menu.pick',
+  'editor.link.open',
+  'editor.wikilink.open',
+  'editor.embed.open',
+  'editor.attachment.preview',
+  'editor.attachment.open',
+  'editor.attachment.download',
+  'editor.block.handle',
+  'editor.comment.open',
+  // The page's controls that recorded a generic id, or none (PEN-175).
+  'note.actions.open',
+  'sidebar.quick-access.toggle',
+  'sidebar.recent.toggle',
+  'sidebar.notebooks.toggle',
+  'sidebar.tags.toggle',
+  'toast.recovered.dismiss',
+  'toast.trashed.dismiss',
+  'toast.updates.dismiss',
+  'toast.feedback.dismiss',
+  'toast.tag-done.dismiss',
+  'settings.dad-jokes',
+  'settings.compact-title-bar',
+  'settings.menu-bar-icon',
+  'settings.updates.auto',
+  'settings.meaning.enabled',
+  'settings.tooltip-delay',
+  'settings.note.bar.full-width',
+  'settings.note.bar.source',
+  'settings.note.bar.copy-markdown',
+  'settings.note.bar.copy-rich',
+  'settings.note.bar.copy-agent-reference',
+  'settings.note.bar.quick-access',
+  'settings.note.bar.new-window',
+  'settings.note.bar.move',
+  'settings.note.bar.trash',
+  'settings.git-notebooks.repository-link',
+  'settings.git-notebooks.push-after',
+  'settings.git-notebooks.pull-every',
+  'settings.github.sign-in.open-page',
+  'search.filter.notebook',
+  'graph.folder',
+  'graph.tag',
+  'graph.tag-nodes',
+  'graph.orphans',
+  'time-machine.notebook',
+  'time-machine.scrub',
+  'tree.toggle',
+  'tree.open',
+  'link.release-notes',
+  'link.feedback-issue',
+  'link.meaning-model',
+  'link.about-versions',
+  // A picker's rows (role option, its props from picker-list.ts).
+  'tabs.all.tab',
+  'theme-picker.pick',
+  'palette.note',
+  // The first run's (`firstrun.<step>.<thing>`; Android's same controls record the same ids).
+  'firstrun.welcome.learn-more',
+  'firstrun.welcome.get-started',
+  'firstrun.goal.start-a-new-notebook',
+  'firstrun.goal.open-an-existing-notebook',
+  'firstrun.way.create-new-repo',
+  'firstrun.way.use-existing-repo',
+  'firstrun.way.paste-a-url',
+  'firstrun.github.paste-a-url-instead',
+  'firstrun.github.sign-in',
+  'firstrun.github.try-again',
+  'firstrun.github.cancel',
+  'firstrun.github.copy-code',
+  'firstrun.github.open-github',
+  'firstrun.github.learn-more',
+  'firstrun.create.change-owner',
+  'firstrun.create.make-notebook',
+  'firstrun.create.use-suggestion',
+  'firstrun.create.use-existing-repo',
+  'firstrun.create.change',
+  'firstrun.owner',
+  'firstrun.name.use-suggestion',
+  'firstrun.list.refresh',
+  'firstrun.list.paste-a-url-instead',
+  'firstrun.list.create-new-repo',
+  'firstrun.list.start-one-here',
+  'firstrun.list.open',
+  'firstrun.repo.paste-a-url-instead',
+  'firstrun.repo.try-again',
+  'firstrun.repo.open',
+  'firstrun.repo.make-notebook',
+  'firstrun.repo.start-another',
+  'firstrun.folder.add-folder',
+  'firstrun.git-missing.try-again',
+  'firstrun.name.make-notebook',
+  'firstrun.setup.retry',
+  'firstrun.setup.open-anyway',
+  'firstrun.setup.open-now',
+  'firstrun.ai.turn-on-for-all-notes',
+  'firstrun.ai.not-now',
+  'firstrun.ai-provider.anthropic',
+  'firstrun.ai-provider.claude-code',
+  // (end of the web's PEN-175 ids)
+  // Android's own:
+  // Sliders, counted when let go, never their value (Settings → Fonts' Note Font Size, the theme
+  // editor's Note Width, the colour picker's), the Mac's range inputs on change under the same ids.
+  'settings.font.size',
+  'theme-editor.width',
+  'colour-picker.wheel',
+  'colour-picker.brightness',
+  'colour-picker.opacity',
+  // The theme editor's colour sheet (Android's own picker).
+  'theme-editor.colour.square',
+  'theme-editor.colour.hue',
+  'theme-editor.colour.saturation',
+  'theme-editor.colour.brightness',
+  // Pull to refresh, a tap outside Quick Capture's sheet, a link in a Markdown preview.
+  'home.pull-to-refresh',
+  'trash.pull-to-refresh',
+  'history.pull-to-refresh',
+  'capture.outside',
+  'markdown-preview.link',
+  // The graph page's chip, which opens the note tapped.
+  'graph.chip.open',
+  // The first run's controls only Android has.
+  'firstrun.github.use-token',
+  'firstrun.branch',
+  'firstrun.branch.try-again',
+  'firstrun.branch.use-default',
+  'firstrun.folder.new-folder',
+  'firstrun.folder.cancel',
+  'firstrun.folder.open',
+  // (end of Android's PEN-175 ids)
 ];
 
 /** What app lifecycle events are called. */
@@ -1112,6 +1277,39 @@ export const APP_NAMES: readonly string[] = [
   'layout',
 ];
 export const FEEDBACK_NAMES: readonly string[] = ['sent'];
+
+/**
+ * The areas a `scroll` event names (PEN-175): the note, the sidebar and its own scrollers (the
+ * folder tree, Recent Notes and Tags), a Settings page, and Settings' list of pages. Android's
+ * drawer has no inner scrollers, so it records only `sidebar`.
+ */
+export const SCROLL_NAMES: readonly string[] = [
+  'note',
+  'sidebar',
+  'sidebar.folders',
+  'sidebar.recent',
+  'sidebar.tags',
+  'settings',
+  'settings.nav',
+];
+
+/**
+ * Click ids that said nothing about which control was used (PEN-175): a shared fallback that
+ * many controls recorded under. No control writes one any more, and the catalogue tests fail if
+ * a source does; they stay in CLICK_NAMES because the catalogue only grows (events already
+ * recorded under them stay valid). `firstrun.continue`, `firstrun.back` and `firstrun.cancel`
+ * are not here: each first-run step's own event already says which step it was.
+ */
+export const RETIRED_CLICK_NAMES: readonly string[] = [
+  'menu.item',
+  'menu.open',
+  'settings.switch',
+  'sidebar.section.toggle',
+  'toast.dismiss',
+  'firstrun.action',
+  'firstrun.link',
+  'firstrun.option',
+];
 export const SYNC_NAMES: readonly string[] = ['pass'];
 
 /** The CLI's commands (COMMANDS in packages/cli/src/main.ts), and help and version. */
@@ -1259,6 +1457,7 @@ export const CATALOGUE: Readonly<Record<EventKind, readonly string[]>> = {
   sync: SYNC_NAMES,
   cli: CLI_NAMES,
   tool: TOOL_NAMES,
+  scroll: SCROLL_NAMES,
 };
 
 const SETS = new Map(

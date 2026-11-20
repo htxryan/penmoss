@@ -94,6 +94,7 @@ export function TrashedToast() {
           toastRef={toast}
           tone="info"
           testId="trashed-toast"
+          data-event="toast.trashed.dismiss"
           icon={<Icon name="trash" />}
           actions={
             <button

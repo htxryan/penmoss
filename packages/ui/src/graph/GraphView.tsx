@@ -84,6 +84,7 @@ export function GraphView({
             type="button"
             aria-pressed={!isLocal}
             onClick={() => onLocalChange(false)}
+            data-event="graph.scope.all"
             data-testid="graph-global"
           >
             All Notes
@@ -93,6 +94,7 @@ export function GraphView({
             aria-pressed={isLocal}
             disabled={note === null}
             onClick={() => onLocalChange(true)}
+            data-event="graph.scope.local"
             data-testid="graph-local"
             title={note === null ? 'Open a note to see its local graph' : undefined}
           >
@@ -106,6 +108,7 @@ export function GraphView({
               size="small"
               value={depth}
               onChange={(event) => setDepth(Number(event.target.value))}
+              data-event="graph.depth"
               data-testid="graph-depth"
             >
               {DEPTHS.map((value) => (
@@ -121,6 +124,7 @@ export function GraphView({
           <Select
             size="small"
             value={groupValue}
+            data-event="graph.folder"
             data-testid="graph-folder"
             onChange={(event) => {
               const value = event.target.value;
@@ -145,6 +149,7 @@ export function GraphView({
               <Select
                 size="small"
                 value={filters.tag ?? ALL}
+                data-event="graph.tag"
                 data-testid="graph-tag"
                 onChange={(event) =>
                   setFilters({
@@ -165,6 +170,7 @@ export function GraphView({
               <input
                 type="checkbox"
                 checked={filters.tagNodes}
+                data-event="graph.tag-nodes"
                 onChange={(event) => setFilters({ ...filters, tagNodes: event.target.checked })}
               />
               Tags as Nodes
@@ -175,6 +181,7 @@ export function GraphView({
           <input
             type="checkbox"
             checked={filters.orphans}
+            data-event="graph.orphans"
             data-testid="graph-orphans"
             onChange={(event) => setFilters({ ...filters, orphans: event.target.checked })}
           />
