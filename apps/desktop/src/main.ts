@@ -54,6 +54,7 @@ import { writeLaunchLog } from './launch-log';
 import { loadPreferences } from './preferences';
 import { IpcHandlers } from './ipc';
 import { registerAgentsIpc } from './ipc/agents';
+import { registerAiIpc } from './ipc/ai';
 import { registerAnalyticsIpc } from './ipc/analytics';
 import { registerFeedbackIpc } from './ipc/feedback';
 import { registerGitIpc } from './ipc/git';
@@ -120,6 +121,7 @@ function registerIpc(): void {
   registerUpdatesIpc(ipc);
   registerFeedbackIpc(ipc);
   registerAnalyticsIpc(ipc);
+  registerAiIpc(ipc);
 }
 
 // --- the log file and usage analytics (PEN-137) ---

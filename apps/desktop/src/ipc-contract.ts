@@ -20,6 +20,8 @@ import type {
   CaptureHotkey,
   CliInfo,
   ClipboardWrite,
+  DesktopAiAnswer,
+  DesktopAiStatus,
   DesktopAnalyticsStatus,
   DesktopFeedbackAnswer,
   DesktopGitHubTokenStatus,
@@ -234,6 +236,16 @@ export interface Invokes {
     [accelerator: string],
     (CaptureHotkey & { readonly error?: string }) | null
   >;
+  aiStatus: Call<[], DesktopAiStatus | null>;
+  aiSaveKey: Call<
+    [key: string],
+    | { readonly ok: true; readonly status: DesktopAiStatus }
+    | { readonly ok: false; readonly message: string }
+    | null
+  >;
+  aiRemoveKey: Call<[], { readonly ok: true; readonly status: DesktopAiStatus } | null>;
+  aiTest: Call<[provider: string], { readonly ok: boolean; readonly message: string } | null>;
+  aiDescribe: Call<[provider: string, model: string, prompt: string], DesktopAiAnswer | null>;
   analyticsStatus: Call<[], DesktopAnalyticsStatus | null>;
   analyticsAnswer: Call<[consent: ConsentAnswer], DesktopAnalyticsStatus | null>;
   analyticsSetSharing: Call<[on: boolean], DesktopAnalyticsStatus | null>;
@@ -405,6 +417,18 @@ export const INVOKE = {
   // in a main or note window, after a key press or click (HotkeyChangeGate decides).
   captureHotkey: { channel: 'penmoss:capture:hotkey', from: 'app' },
   captureSetHotkey: { channel: 'penmoss:capture:set-hotkey', from: 'window', gesture: 'handler' },
+  // AI Descriptions (PEN-161): any main or note window reads the providers' status and asks for a
+  // description; the key is typed in Settings, in the main window, after a key press or click,
+  // and never sent back.
+  aiStatus: { channel: 'penmoss:ai:status', from: 'window' },
+  aiSaveKey: {
+    channel: 'penmoss:ai:save-key',
+    from: 'main',
+    gesture: { refused: TOKEN_NEEDS_A_PERSON },
+  },
+  aiRemoveKey: { channel: 'penmoss:ai:remove-key', from: 'main', gesture: { refused: null } },
+  aiTest: { channel: 'penmoss:ai:test', from: 'main' },
+  aiDescribe: { channel: 'penmoss:ai:describe', from: 'window' },
   // Usage analytics and the log file (PEN-137): any main or note window reads them and asks for
   // a bug report's logs; the answer, the switch, the ID and the limits are Settings → Privacy's
   // and the consent question's, in the main window. Sharing turns on only after a key press or
@@ -478,6 +502,8 @@ export interface Events {
   gitChanged: undefined;
   /** Usage analytics' answer, ID, limits or counts changed (here, or from the CLI). */
   analyticsChanged: DesktopAnalyticsStatus;
+  /** An AI provider's key or sign-in changed (PEN-161): read the status again. */
+  aiChanged: undefined;
 }
 
 export type EventName = keyof Events;
@@ -496,6 +522,7 @@ export const EVENT = {
   meaningChanged: 'penmoss:meaning:changed',
   gitChanged: 'penmoss:git:changed',
   analyticsChanged: 'penmoss:analytics:changed',
+  aiChanged: 'penmoss:ai:changed',
 } as const satisfies { readonly [K in EventName]: string };
 
 /** The argument that tells the preload which window it is in. */

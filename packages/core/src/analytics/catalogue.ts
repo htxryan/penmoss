@@ -211,6 +211,7 @@ export const SETTINGS_SCREENS: readonly string[] = [
   'journal',
   'quick-capture',
   'shortcuts',
+  'ai-descriptions',
   'git-notebooks',
   'git-notebook',
   'agents',
@@ -242,6 +243,8 @@ export const FIRSTRUN_STEPS: readonly string[] = [
   'git-missing',
   'name',
   'setup',
+  'ai',
+  'ai-provider',
   'consent',
 ];
 
@@ -384,6 +387,15 @@ export const SETTING_NAMES: readonly string[] = [
   'template.weekly',
   'capture.destination',
   'note.fullWidth',
+  // AI Descriptions (PEN-161): the switch, when, the pause, the provider, the model; the prompt
+  // and the notebook's value only as changed.
+  'ai.description',
+  'ai.description.global',
+  'ai.description.when',
+  'ai.description.pause',
+  'ai.description.model',
+  'ai.description.prompt',
+  'ai.provider',
   'home.dadJokes',
   'copyToNotebook.tags',
   'symbols.list',
@@ -419,6 +431,10 @@ export const SETTING_VALUES: Readonly<Record<string, readonly string[]>> = {
   [NOTE_FONT_SETTING]: [...FONT_PRESETS, 'custom'],
   [TOOLTIP_DELAY_SETTING]: [TOOLTIP_NEVER],
   'capture.destination': ['daily', 'inbox'],
+  'ai.description': ['on', 'off'],
+  'ai.description.when': ['pause', 'sync'],
+  'ai.description.model': ['claude-haiku-5-5', 'claude-sonnet-5-5', 'haiku', 'sonnet'],
+  'ai.provider': ['none', 'anthropic', 'claude-code'],
   'updates.channel': ['stable', 'alpha'],
   // Android's Load Pictures from the Web (Settings → Storage).
   'pictures.fromWeb': ['on', 'wifi', 'off'],
@@ -1052,6 +1068,28 @@ export const CLICK_NAMES: readonly string[] = [
   'tree.more.new-folder',
   'tree.more.reorder',
   'tree.reorder.done',
+  // AI Descriptions (PEN-161): the Metadata tab's control, Settings, the folder menu, the first run.
+  'note.ai.clear',
+  'note.ai.describe-now',
+  'note.ai.keep-mine',
+  'note.ai.let-claude',
+  'note.ai.mode',
+  'settings.ai.global',
+  'settings.ai.provider',
+  'settings.ai.when',
+  'folder.ai.mode',
+  'folder.ai.describe-all',
+  'describe-all.start',
+  'describe-all.stop',
+  'settings.ai.test',
+  'settings.ai.remove-key',
+  'settings.ai.save-key',
+  'settings.ai.show-key',
+  'settings.ai.token',
+  'settings.ai.reset-prompt',
+  'note.ai.source',
+  'note.ai.open-settings',
+  'firstrun.ai.check-key',
 ];
 
 /** What app lifecycle events are called. */

@@ -297,3 +297,44 @@ export function MoreOptions({
     </details>
   );
 }
+
+/** Radio choices drawn as wide rows (1.2, 1.3): one picked, Continue goes on with it. */
+export function Options<T extends string>({
+  label,
+  value,
+  onChange,
+  items,
+}: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  items: ReadonlyArray<{
+    readonly value: T;
+    readonly title: string;
+    readonly line: string;
+    readonly chip?: string;
+    readonly testId: string;
+  }>;
+}) {
+  return (
+    <div className="fr-options" role="radiogroup" aria-label={label}>
+      {items.map((item) => (
+        <label key={item.value} className="fr-option" data-testid={item.testId}>
+          <input
+            type="radio"
+            name={label}
+            value={item.value}
+            checked={value === item.value}
+            data-event="firstrun.option"
+            onChange={() => onChange(item.value)}
+          />
+          <span className="fr-option-text">
+            <strong>{item.title}</strong>
+            <span>{item.line}</span>
+          </span>
+          {item.chip ? <span className="chip">{item.chip}</span> : null}
+        </label>
+      ))}
+    </div>
+  );
+}

@@ -68,6 +68,8 @@ export interface DesktopConfig {
    * the main process talks to api.github.com and uploads.github.com.
    */
   readonly githubApi: string | null;
+  /** A local fake Anthropic for the Playwright suite (PEN-161): unpackaged builds only. */
+  readonly anthropicApi: string | null;
   /**
    * github.com's sign-in pages for Sign in with GitHub (T82, A1172): the suite's fake
    * (`PENMOSS_TEST_GITHUB_WEB`, an http origin on loopback, unpackaged builds only); otherwise
@@ -146,6 +148,7 @@ export function desktopConfig(options: {
     ),
     testHome: dev('PENMOSS_TEST_HOME') ?? null,
     githubApi: loopbackOrigin(dev('PENMOSS_TEST_GITHUB_API'), 'PENMOSS_TEST_GITHUB_API'),
+    anthropicApi: loopbackOrigin(dev('PENMOSS_TEST_ANTHROPIC_API'), 'PENMOSS_TEST_ANTHROPIC_API'),
     githubWeb: loopbackOrigin(dev('PENMOSS_TEST_GITHUB_WEB'), 'PENMOSS_TEST_GITHUB_WEB'),
     // A suite with a stand-in GitHub API signs in only at its own stand-in, never github.com.
     githubClientId:

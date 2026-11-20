@@ -34,7 +34,7 @@ export const search: Command = {
   description: [
     'Searches the notes on this machine. hybrid (the default) finds notes by their words and by their meaning: notes about what you mean, in other words. full-text matches words only ("a phrase", prefix*, -excluded and title:word), and semantic by meaning alone.',
     'Semantic search needs its model on this Mac (penmoss models fetch, or the app’s Settings → Semantic Search). Without it hybrid is words only and says so, and semantic is refused (exit 7). While notes are still being indexed, results say how many notes meaning covers so far.',
-    'Each result shows the note id, title, when it was last updated, its tags and a snippet with the matches.',
+    'Each result shows the note id, title, when it was last updated, its tags, its description when it has one, and a snippet with the matches.',
   ],
   flags: [
     {
@@ -112,6 +112,7 @@ export const search: Command = {
           snippet: markdownMarks(hit.snippet),
           ...(hit.heading ? { heading: hit.heading } : {}),
           tags: hit.tags,
+          ...(hit.description ? { description: hit.description } : {}),
           updatedAt: iso(hit.updatedAt),
           foundBy: hit.sources,
         })),
@@ -126,6 +127,7 @@ export const search: Command = {
             `${hit.id}  ${highlight(hit.titleHighlighted || hit.title, color)}  ${dim(when(hit.updatedAt), color)}${tags}`,
           ];
           const snippet = highlight(hit.snippet, color).replace(/\s+/g, ' ').trim();
+          if (hit.description) lines.push(`    ${dim(hit.description, color)}`);
           if (hit.heading) lines.push(`    ${dim(`§ ${hit.heading}`, color)}`);
           if (snippet) lines.push(`    ${snippet}`);
           return lines;
@@ -142,6 +144,7 @@ export const noteJson = (note: LocalNoteContent, extra: Record<string, unknown> 
   id: note.id,
   title: note.title,
   tags: note.tags,
+  ...(note.description ? { description: note.description } : {}),
   headings: note.headings,
   baseVersion: note.baseVersion,
   ...(note.deleted ? { deleted: true } : {}),
@@ -186,8 +189,15 @@ export const cat: Command = {
 
 // --- ls ---
 
-const NOTE_ROW = (id: string, title: string | null, updatedAt: number | null, color: boolean) =>
-  `${id.padEnd(26)}  ${title ?? '(untitled)'}  ${dim(when(updatedAt), color)}`;
+const NOTE_ROW = (
+  id: string,
+  title: string | null,
+  updatedAt: number | null,
+  color: boolean,
+  description?: string | null,
+) =>
+  `${id.padEnd(26)}  ${title ?? '(untitled)'}  ${dim(when(updatedAt), color)}` +
+  (description ? `\n${' '.repeat(28)}${dim(description, color)}` : '');
 
 export const ls: Command = {
   name: 'ls',
@@ -195,7 +205,7 @@ export const ls: Command = {
   usage: ['ls [<folder>]', 'ls --recent [--limit <n>]', 'ls --tags', 'ls --tag <tag>'],
   description: [
     'Lists a folder’s subfolders and notes in app order: the top level, or a folder by its path from the top (Projects/Garden, ignoring case) or its id.',
-    '--recent lists the most recently edited notes; --tags every tag with its note count; --tag the notes with a tag (nested tags included).',
+    '--recent lists the most recently edited notes; --tags every tag with its note count; --tag the notes with a tag (nested tags included). A note with a description shows it under its title.',
   ],
   flags: [
     { name: 'recent', type: 'boolean', description: 'The most recently edited notes' },
@@ -235,11 +245,15 @@ export const ls: Command = {
             title: note.title,
             kind: note.kind,
             tags: note.tags,
+            ...(note.description ? { description: note.description } : {}),
             excerpt: note.excerpt,
             updatedAt: iso(note.updatedAt),
           })),
         },
-        () => notes.map((note) => NOTE_ROW(note.id, note.title, note.updatedAt, color)),
+        () =>
+          notes.map((note) =>
+            NOTE_ROW(note.id, note.title, note.updatedAt, color, note.description),
+          ),
       );
       return;
     }
@@ -285,7 +299,9 @@ export const ls: Command = {
       () => {
         const lines = [
           ...listing.folders.map((folder) => `${folder.id.padEnd(26)}  ${folder.name}/`),
-          ...listing.notes.map((note) => NOTE_ROW(note.id, note.title, note.updatedAt, color)),
+          ...listing.notes.map((note) =>
+            NOTE_ROW(note.id, note.title, note.updatedAt, color, note.description),
+          ),
         ];
         if (listing.truncated) lines.push('… (more notes not shown)');
         return lines.length > 0

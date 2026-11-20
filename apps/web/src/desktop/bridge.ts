@@ -455,6 +455,8 @@ export interface PenmossDesktop {
   readonly meaning?: DesktopMeaning;
   /** Usage analytics and the log file (PEN-137): main and note windows. */
   readonly analytics?: DesktopAnalytics;
+  /** AI Descriptions' providers on this Mac (PEN-161): main and note windows. */
+  readonly ai?: DesktopAi;
   readonly clipboard: {
     /** Only just after a key press or click, or a menu command (false otherwise). */
     write(data: ClipboardWrite): Promise<boolean>;
@@ -492,6 +494,61 @@ declare global {
   interface Window {
     penmossDesktop?: PenmossDesktop;
   }
+}
+
+/** One AI provider this Mac offers (PEN-161), as Settings' AI Provider menu lists it. */
+export interface DesktopAiProvider {
+  /** `anthropic`, `claude-code`: what `ai.provider` holds. */
+  readonly id: string;
+  /** `Anthropic (API Key)`, `Claude Code on This Mac`. */
+  readonly label: string;
+  /** How it signs in: a key typed in Settings, or a program's own sign-in on this Mac. */
+  readonly signIn: 'key' | 'cli';
+  readonly models: readonly { readonly id: string; readonly label: string }[];
+}
+
+/** What each provider's sign-in looks like now. The key itself is never sent to a page. */
+export interface DesktopAiStatus {
+  readonly providers: readonly DesktopAiProvider[];
+  /** The Anthropic key: kept or not, and what Anthropic last said of it. */
+  readonly anthropic: {
+    readonly saved: boolean;
+    readonly problem: string | null;
+    readonly keychain: boolean;
+  };
+  /** Claude Code on this Mac: `ready` (found and signed in), `signed-out`, `missing`. */
+  readonly claudeCode: {
+    readonly state: 'ready' | 'signed-out' | 'missing' | 'unknown';
+    readonly version: string | null;
+  };
+}
+
+/** A describe call's answer: the model's text, or why there is none, in plain words. */
+export type DesktopAiAnswer =
+  | { readonly ok: true; readonly text: string }
+  | {
+      readonly ok: false;
+      /** `no-provider`, `no-key`, `refused`, `offline`, `rate-limited`, `timeout`, `failed`. */
+      readonly code: string;
+      readonly message: string;
+    };
+
+export interface DesktopAi {
+  status(): Promise<DesktopAiStatus | null>;
+  /** Checks the key with Anthropic and keeps it sealed (after a key press or click only). */
+  saveKey(
+    key: string,
+  ): Promise<
+    | { readonly ok: true; readonly status: DesktopAiStatus }
+    | { readonly ok: false; readonly message: string }
+    | null
+  >;
+  removeKey(): Promise<{ readonly ok: true; readonly status: DesktopAiStatus } | null>;
+  /** Asks the provider whether it works: the kept key, or Claude Code's sign-in. */
+  test(provider: string): Promise<{ readonly ok: boolean; readonly message: string } | null>;
+  /** Sends `prompt` to `provider`'s `model` and answers its text. */
+  describe(provider: string, model: string, prompt: string): Promise<DesktopAiAnswer | null>;
+  onChange(listener: () => void): () => void;
 }
 
 /** What filing feedback answered (core's `FeedbackAnswer`). */

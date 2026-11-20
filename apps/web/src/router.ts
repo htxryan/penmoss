@@ -47,6 +47,8 @@ export const SETTINGS_SECTIONS = [
   'journal',
   'quick-capture',
   'shortcuts',
+  // AI Descriptions (PEN-161): a short description of each note, for agents.
+  'ai-descriptions',
   // Notebooks: the Mac app's git notebooks (T50, A856), each with a page of its own (A1098).
   'git-notebooks',
   // Agents: the agents that reach them (A1098), and what they changed.

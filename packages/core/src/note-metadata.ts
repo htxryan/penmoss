@@ -19,6 +19,7 @@ export const METADATA_FIELDS = [
   'created',
   'edited',
   'tags',
+  'description',
   'words',
   'characters',
   'reading',
@@ -33,15 +34,19 @@ export const METADATA_FIELD_NAMES: Readonly<Record<MetadataField, string>> = {
   created: 'Created',
   edited: 'Edited',
   tags: 'Tags',
+  description: 'Description',
   words: 'Words',
   characters: 'Characters',
   reading: 'Reading Time',
   tokens: 'Token Count',
 };
 
-/** The fields the status bar may show: every field but Tags, which is edited. */
+/**
+ * The fields the status bar may show: every field but Tags, which is edited, and the Description
+ * (PEN-161), a sentence or two, which shows under the title only.
+ */
 export const STATUS_BAR_FIELDS: readonly MetadataField[] = METADATA_FIELDS.filter(
-  (field) => field !== 'tags',
+  (field) => field !== 'tags' && field !== 'description',
 );
 
 export const UNDER_TITLE_SETTING = 'metadata.underTitle';
@@ -61,6 +66,8 @@ export function noteMetadataProblem(key: string, value: unknown): string | null 
     if (typeof id !== 'string' || !/^[A-Za-z]{1,40}$/.test(id)) return `${key} must hold field ids`;
     if (seen.has(id)) return `${key} repeats ${id}`;
     if (key === STATUS_BAR_SETTING && id === 'tags') return `${key} cannot hold tags`;
+    if (key === STATUS_BAR_SETTING && id === 'description')
+      return `${key} cannot hold the description`;
     seen.add(id);
   }
   return null;

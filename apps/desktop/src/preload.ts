@@ -174,6 +174,16 @@ const analytics = {
 /** Main and note windows' own members: the capture window has none of them. */
 const appWindow = {
   analytics,
+  // AI Descriptions (PEN-161): the key is saved after a gesture and never read back.
+  ai: {
+    status: () => invoke('aiStatus'),
+    saveKey: (key) => invoke('aiSaveKey', String(key)),
+    removeKey: () => invoke('aiRemoveKey'),
+    test: (provider) => invoke('aiTest', String(provider)),
+    describe: (provider, model, prompt) =>
+      invoke('aiDescribe', String(provider), String(model), String(prompt)),
+    onChange: (listener) => on('aiChanged', () => listener()),
+  },
   // Send feedback (T49, A798): the window as it is now, as PNG bytes (or null), taken by the main
   // process with capturePage before the form is drawn.
   feedback: {
@@ -218,7 +228,10 @@ const appWindow = {
     notes: () => invoke('updatesNotes'),
     onNotes: (listener) => on('updatesNotesChanged', (file) => listener(file)),
   },
-} satisfies Pick<PenmossDesktop, 'analytics' | 'feedback' | 'githubToken' | 'meaning' | 'updates'>;
+} satisfies Pick<
+  PenmossDesktop,
+  'ai' | 'analytics' | 'feedback' | 'githubToken' | 'meaning' | 'updates'
+>;
 
 /** Keep on top and the compact title bar (T46, T47; A720–A725), for `titleBar`'s windows. */
 const macWindow = (style: 'compact' | 'native') =>

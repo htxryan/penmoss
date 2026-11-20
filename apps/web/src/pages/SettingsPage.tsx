@@ -25,6 +25,7 @@ import {
 import { SidebarSettings } from '../shell/SidebarSettings';
 import { HistoryNav } from '../shell/HistoryNav';
 import { NoteSettings } from '../notes/NoteSettings';
+import { AiDescriptionsSettings } from '../notes/AiDescriptionsSettings';
 import { SymbolsSettings } from '../notes/SymbolsSettings';
 import { GitHubSettings } from '../feedback/GitHubSettings';
 import { MeaningSettings } from '../search/MeaningSettings';
@@ -51,6 +52,8 @@ const NAV: Readonly<
   journal: { icon: 'journal', command: 'journal.settings' },
   'quick-capture': { icon: 'inbox' },
   shortcuts: { icon: 'keyboard', command: 'app.shortcuts' },
+  // PEN-161: a short description of each note, for agents.
+  'ai-descriptions': { icon: 'sparkle' },
   // T50 (A856): git notebooks on this Mac.
   'git-notebooks': { icon: 'terminal', command: 'app.gitNotebooks' },
   // The agents that reach them, and the penmoss command (Ryan's feedback, 5 Nov 2026; A1098).
@@ -263,6 +266,8 @@ function SectionContent({
       return <QuickCaptureSettings />;
     case 'shortcuts':
       return <ShortcutsSettings />;
+    case 'ai-descriptions':
+      return <AiDescriptionsSettings />;
     case 'git-notebooks':
       return <GitNotebooksSettings item={item} />;
     case 'agents':

@@ -39,7 +39,7 @@ import {
   type RepoRead,
   type Screen,
 } from './first-run-flow';
-import { Action, Frame } from './FirstRunFrame';
+import { Action, Frame, Options } from './FirstRunFrame';
 import { GitHubAccess } from './FirstRunGitHub';
 import {
   AccountSwitcher,
@@ -51,6 +51,7 @@ import {
   RepoPicked,
   RepoTree,
 } from './FirstRunRepos';
+import { AiProviderStep, AiQuestion } from './FirstRunAi';
 import { SettingUp } from './FirstRunSetup';
 import { useAllSources } from './hooks';
 import { isOpen } from './registry';
@@ -101,47 +102,6 @@ function BareWindow({ children }: { children: ReactNode }) {
       <div className="window-drag" aria-hidden="true" data-testid="window-drag" />
       <div className="window-bare">{children}</div>
     </>
-  );
-}
-
-/** Radio choices drawn as wide rows (1.2, 1.3): one picked, Continue goes on with it. */
-function Options<T extends string>({
-  label,
-  value,
-  onChange,
-  items,
-}: {
-  label: string;
-  value: T;
-  onChange: (value: T) => void;
-  items: ReadonlyArray<{
-    readonly value: T;
-    readonly title: string;
-    readonly line: string;
-    readonly chip?: string;
-    readonly testId: string;
-  }>;
-}) {
-  return (
-    <div className="fr-options" role="radiogroup" aria-label={label}>
-      {items.map((item) => (
-        <label key={item.value} className="fr-option" data-testid={item.testId}>
-          <input
-            type="radio"
-            name={label}
-            value={item.value}
-            checked={value === item.value}
-            data-event="firstrun.option"
-            onChange={() => onChange(item.value)}
-          />
-          <span className="fr-option-text">
-            <strong>{item.title}</strong>
-            <span>{item.line}</span>
-          </span>
-          {item.chip ? <span className="chip">{item.chip}</span> : null}
-        </label>
-      ))}
-    </div>
   );
 }
 
@@ -274,9 +234,18 @@ function NotebookSteps({
    * (PEN-137, O3), the app held back until it is answered; else the flow ends. Once only, though
    * the first sync may say it is done more than once.
    */
-  const finish = async (notebookId: string | null) => {
+  const finish = (notebookId: string | null) => {
     if (setUp.current) return;
     setUp.current = { notebookId };
+    // Describe notes for agents? once, on the first run of a Mac that can reach an AI (A1656).
+    if (firstRun && desktop()?.ai) {
+      go({ at: 'ai' });
+      return;
+    }
+    void lastStep();
+  };
+  /** After AI Descriptions' question: the consent question when unanswered, else the app. */
+  const lastStep = async () => {
     const analytics = firstRun ? analyticsBridge() : null;
     const status = analytics ? await analytics.status().catch(() => null) : null;
     if (status && status.consent === null) {
@@ -284,7 +253,7 @@ function NotebookSteps({
       return;
     }
     left('done');
-    end(notebookId);
+    end(setUp.current?.notebookId ?? null);
   };
   /** GitHub as the account the switcher shows (A1618), else as main finds it. */
   const account = hub?.account;
@@ -600,11 +569,22 @@ function NotebookSteps({
           setup={screen.setup}
           add={add}
           welcomeNote={firstRun}
-          onDone={(notebookId) => void finish(notebookId)}
+          onDone={(notebookId) => finish(notebookId)}
           onNeedsName={(place) => replace({ at: 'name', place })}
           back={back}
         />
       );
+      break;
+    case 'ai':
+      body = (
+        <AiQuestion
+          back={back}
+          onNext={(on) => (on ? go({ at: 'ai-provider' }) : void lastStep())}
+        />
+      );
+      break;
+    case 'ai-provider':
+      body = <AiProviderStep back={back} onDone={() => void lastStep()} />;
       break;
     case 'consent':
       body = (

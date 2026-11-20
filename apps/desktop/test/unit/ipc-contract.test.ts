@@ -80,6 +80,12 @@ const POLICY: Record<keyof typeof INVOKE, [Caller, 'none' | 'handler' | { refuse
   analyticsSetLimits: ['main', 'none'],
   analyticsShowLogFile: ['window', 'none'],
   analyticsReportLogs: ['window', 'none'],
+  // AI Descriptions (PEN-161): the key is saved and removed from Settings after a gesture.
+  aiStatus: ['window', 'none'],
+  aiSaveKey: ['main', { refused: NOT_CONFIRMED }],
+  aiRemoveKey: ['main', { refused: null }],
+  aiTest: ['main', 'none'],
+  aiDescribe: ['window', 'none'],
 };
 
 describe('the IPC contract', () => {

@@ -98,6 +98,8 @@ export async function connectContext(
     readonly macWindow?: boolean;
     /** Usage analytics (PEN-137): main's, in the page, as the spec starts it. */
     readonly analytics?: FakeAnalyticsConfig | null;
+    /** AI Descriptions' providers (PEN-161), stubbed. */
+    readonly ai?: boolean;
   } = {},
 ): Promise<void> {
   await context.exposeBinding(GIT_BINDING, async (_source, method: unknown, args: unknown) => {
@@ -113,6 +115,7 @@ export async function connectContext(
     meaning: meaning !== null,
     macWindow: options.macWindow === true,
     analytics: options.analytics ?? null,
+    ai: options.ai === true,
   });
   const tell = (hook: string) => {
     for (const page of context.pages()) {
@@ -188,6 +191,8 @@ export const test = base.extend<{
   macWindow: boolean;
   /** The stand-in Mac's usage analytics (PEN-137), or null for none (a Mac app before it). */
   analytics: FakeAnalyticsConfig | null;
+  /** The stand-in Mac offers AI Descriptions' providers (PEN-161), stubbed; none unless asked. */
+  ai: boolean;
   /** The notebook the test starts in, or null with `seed: null`. */
   notebook: SeededNotebook | null;
 }>({
@@ -195,11 +200,12 @@ export const test = base.extend<{
   meaning: [false, { option: true }],
   macWindow: [false, { option: true }],
   analytics: [null, { option: true }],
+  ai: [false, { option: true }],
   // The test's context is a window set of one stand-in Mac: its main process comes with it.
-  context: async ({ context, meaning, macWindow, analytics }, use) => {
+  context: async ({ context, meaning, macWindow, analytics, ai }, use) => {
     const host = new GitHost();
     hosts.set(context, host);
-    await connectContext(context, host, { meaning, macWindow, analytics });
+    await connectContext(context, host, { meaning, macWindow, analytics, ai });
     await use(context);
     await context.close();
     await host.meaning?.stop();

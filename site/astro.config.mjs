@@ -86,6 +86,7 @@ export default defineConfig({
             { label: 'Connect an Agent', slug: 'docs/agents/connect' },
             { label: 'Comments to Agents', slug: 'docs/agents/comments' },
             { label: 'Agent Activity', slug: 'docs/agents/activity' },
+            { label: 'AI Descriptions', slug: 'docs/ai-descriptions' },
           ],
         },
         {

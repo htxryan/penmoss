@@ -220,7 +220,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
         'Search the notes. mode "hybrid" (default) combines keyword and meaning search and suits questions in plain language; ' +
         '"full-text" matches words exactly ("a phrase", prefix*, -excluded, title:word); "semantic" finds notes by meaning only. ' +
         'Filter by folderId (with its subfolders), tag (with nested tags) and updated time. ' +
-        'Results give each note id, title, a snippet with matches in **bold**, tags and when it was last updated; call read_note for the full text.',
+        'Results give each note id, title, a snippet with matches in **bold**, tags, its description when it has one, and when it was last updated; call read_note for the full text.',
       inputSchema: object(
         {
           query: { type: 'string', maxLength: 500, description: 'What to look for.' },
@@ -500,13 +500,18 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       name: 'set_properties',
       title: 'Set title or tags',
       description:
-        'Set a note’s title, or replace its tag list (the tags in its properties; #tags written in the text stay). ' +
-        'Use tag_note to add or remove single tags. baseVersion is optional: with it, the change is refused if the title or tags changed since you read them.',
+        'Set a note’s title, replace its tag list (the tags in its properties; #tags written in the text stay), or set its description: a sentence or two on what the note is about, which other agents read to choose notes (empty clears it). ' +
+        'Use tag_note to add or remove single tags. baseVersion is optional: with it, the change is refused if what you set changed since you read it.',
       inputSchema: object(
         {
           id: ID,
           title: { type: 'string', maxLength: 500, description: 'The new title.' },
           tags: { ...TAGS, description: `The complete new tag list. ${TAGS.description}` },
+          description: {
+            type: 'string',
+            maxLength: 600,
+            description: 'The note’s new description, in a sentence or two; empty clears it.',
+          },
           baseVersion: BASE_VERSION,
         },
         ['id'],

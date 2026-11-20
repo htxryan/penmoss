@@ -562,6 +562,7 @@ export function notebooksInstructions(served: readonly ServedNotebook[], meaning
 - With more than one notebook, pass notebook (its name) to create_note without a folderId, get_daily_note, create_folder without a parentId, set_settings, rename_tag, and set_folder_sort for the top level.
 - Notes and folders never move between notebooks: to move one, make it in the other notebook and trash it here.
 - Find notes with search_notes (${meaning ? 'by their words and their meaning: describe what you are looking for in your own words' : 'words only here'}), list_recent, list_folder or list_tags; read one with read_note.
+- Many notes have a description: a sentence or two on what the note is about, written by Ryan or by AI Descriptions. search_notes, list_recent, list_folder and get_backlinks give it, and read_note gives the description of each note it links to (links). Read descriptions to choose which notes to open before reading their whole text.
 - Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.

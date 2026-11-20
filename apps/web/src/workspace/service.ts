@@ -26,6 +26,7 @@ import {
   renameFolder,
   restoreFolder,
   setSortMode,
+  setFolderAiDescription,
   setTagDescription,
   setTogether,
   unregisterNote,
@@ -249,6 +250,11 @@ export class Workspace {
   /** Brings a folder back from Trash with its subfolders and the notes still where it left them. */
   restoreFolder(id: string): FolderRestore {
     return restoreFolder(this.doc, id);
+  }
+
+  /** A folder's AI Descriptions value (PEN-161): Inherit, On or Off. Synced. */
+  setFolderAiDescription(folderId: string, value: 'inherit' | 'on' | 'off'): void {
+    setFolderAiDescription(this.doc, folderId, value);
   }
 
   setSortMode(folderId: string | null, mode: SortMode): void {

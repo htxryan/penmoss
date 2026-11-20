@@ -71,6 +71,10 @@ export type Screen =
   | { readonly at: 'name'; readonly place: Place }
   | { readonly at: 'setup'; readonly setup: Setup }
   /** The first run's last step (PEN-137): Share How You Use Penmoss?, when not answered yet. */
+  /** Describe notes for agents? (PEN-161, A1656): asked once on the first run, Not Now first. */
+  | { readonly at: 'ai' }
+  /** Which AI should write descriptions?, after Turn On (PEN-161). */
+  | { readonly at: 'ai-provider' }
   | { readonly at: 'consent' };
 
 /** GitHub as the flow knows it once a sign-in answered (2.2, 2.5). */

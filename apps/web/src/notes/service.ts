@@ -458,6 +458,7 @@ export class Notes {
   private readonly inMemory = new Map<string, ReplicaSnapshot>();
   private readonly listeners = new Set<() => void>();
   private readonly syncListeners = new Set<() => void>();
+  private readonly pulledListeners = new Set<(ids: readonly string[]) => void>();
   /** Notes shown in embeds (T13), opened live while any embed shows them. */
   private readonly embedded = new Map<string, EmbeddedNote>();
   /** Watches waiting for a turn (`MAX_LIVE_EMBEDS`), by note id, oldest first. */
@@ -647,6 +648,7 @@ export class Notes {
    */
   async pullStored(ids: readonly string[] | null = null): Promise<void> {
     const wanted = ids ? new Set(ids) : null;
+    if (ids) for (const listener of this.pulledListeners) listener(ids);
     // Open notes only: the page pulls the workspace itself.
     await Promise.all(
       [...this.open]
@@ -684,6 +686,15 @@ export class Notes {
       this.listTimer = null;
       this.changed();
     }, LIST_REFRESH_MS);
+  }
+
+  /**
+   * Tells `listener` which records another writer stored (another window, or this notebook's
+   * engine after a pull), as they are read in. AI Descriptions (PEN-161) describes them too.
+   */
+  onPulled(listener: (ids: readonly string[]) => void): () => void {
+    this.pulledListeners.add(listener);
+    return () => this.pulledListeners.delete(listener);
   }
 
   /** Tells `listener` which records this window stored, as it stores them (T45, A711). */

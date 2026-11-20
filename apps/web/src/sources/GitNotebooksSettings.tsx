@@ -64,6 +64,7 @@ import { useCopyTagsDefault } from '../workspace/copy-tags-state';
 import { NameClash } from './NameClash';
 import { useNotebookRename } from './notebook-names';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
+import { NotebookAiRow } from './NotebookAiRow';
 import {
   PHASE_WORDS,
   agoWords,
@@ -1055,6 +1056,7 @@ function OverviewTab({
           testId="git-note-count"
           help={notes === 1 ? '1 note' : `${notes.toLocaleString()} notes`}
         />
+        <NotebookAiRow source={source} />
         {state.all.length > 1 ? (
           <SettingRow
             setting="notebook-copy-settings"
