@@ -3,7 +3,8 @@
  * (apps/telemetry-dashboard) and by `task telemetry:query -- <name>` (scripts/query.mjs).
  *
  * Every query takes the same parameters, ?1 to ?6 (QueryParams); next.sql also takes ?7 and ?8,
- * the start event's kind and name. The dashboard binds them; the script, which runs a query
+ * the start event's kind and name, and the Sessions tab's queries (PEN-173) ?9 to ?11, an
+ * install, a session and a page. The dashboard binds them; the script, which runs a query
  * through `wrangler d1 execute`, writes them in as checked literals.
  */
 import activeTotals from '../queries/active-totals.sql';
@@ -17,8 +18,11 @@ import firstrun from '../queries/firstrun.sql';
 import freshness from '../queries/freshness.sql';
 import gaveUp from '../queries/gave-up.sql';
 import health from '../queries/health.sql';
+import installSessions from '../queries/install-sessions.sql';
 import next from '../queries/next.sql';
 import platforms from '../queries/platforms.sql';
+import session from '../queries/session.sql';
+import sessions from '../queries/sessions.sql';
 import settings from '../queries/settings.sql';
 import shortcuts from '../queries/shortcuts.sql';
 import sizes from '../queries/sizes.sql';
@@ -41,8 +45,11 @@ export const NAMED_QUERIES = {
   freshness,
   'gave-up': gaveUp,
   health,
+  'install-sessions': installSessions,
   next,
   platforms,
+  session,
+  sessions,
   settings,
   shortcuts,
   sizes,
@@ -61,7 +68,7 @@ export function isQueryName(name: string): name is QueryName {
   return Object.hasOwn(NAMED_QUERIES, name);
 }
 
-/** The parameters every query takes, in order (?1 to ?6). */
+/** The parameters every query takes, in order (?1 to ?6), and the ones some take (?7 to ?11). */
 export interface QueryParams {
   /** How many days the period is, ending today. */
   readonly days: number;
@@ -75,6 +82,11 @@ export interface QueryParams {
   /** next.sql's start event (?7, ?8). */
   readonly startKind?: string;
   readonly startName?: string;
+  /** The Sessions tab's (PEN-173): an install's 32 hex characters (?9), a session's 16 (?10). */
+  readonly install?: string;
+  readonly session?: string;
+  /** sessions.sql's page, from 1 (?11). */
+  readonly page?: number;
 }
 
 /** The highest ?N in `sql`, comments aside: how many values it binds. */
@@ -96,6 +108,9 @@ export function bindingsFor(sql: string, params: QueryParams): (string | number)
     params.today,
     params.startKind ?? '',
     params.startName ?? '',
+    params.install ?? '',
+    params.session ?? '',
+    params.page ?? 1,
   ];
   return all.slice(0, parameterCount(sql));
 }

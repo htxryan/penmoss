@@ -26,6 +26,9 @@ const ALL: QueryParams = {
   today: dayOf(NOW),
   startKind: 'command',
   startName: 'app.palette',
+  // The Sessions tab's (PEN-173): the fixture's first install and its session today.
+  install: 'a0'.repeat(16),
+  session: '0000000000000000',
 };
 
 beforeAll(async () => {
@@ -66,6 +69,20 @@ describe('every named query', () => {
   it('binds exactly the values a query uses', () => {
     expect(parameterCount(NAMED_QUERIES.next)).toBe(8);
     expect(parameterCount(NAMED_QUERIES.health)).toBe(6);
+    expect(parameterCount(NAMED_QUERIES.sessions)).toBe(11);
+    expect(bindingsFor(NAMED_QUERIES.sessions, ALL)).toEqual([
+      30,
+      '',
+      '',
+      '',
+      '',
+      '2026-11-19',
+      'command',
+      'app.palette',
+      'a0'.repeat(16),
+      '0000000000000000',
+      1,
+    ]);
     expect(bindingsFor(NAMED_QUERIES.health, ALL)).toEqual([30, '', '', '', '', '2026-11-19']);
   });
 });

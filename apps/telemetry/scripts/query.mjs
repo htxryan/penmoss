@@ -5,6 +5,8 @@
 //
 //   node scripts/query.mjs active --days 90 --client mac
 //   node scripts/query.mjs next --start command:app.palette
+//   node scripts/query.mjs sessions --page 2
+//   node scripts/query.mjs session --install <32 hex> --session <16 hex>
 //   node scripts/query.mjs --sql "SELECT COUNT(*) AS events FROM events"
 //   add --local for `wrangler dev`'s local database, --json for the rows as JSON
 //
@@ -37,7 +39,7 @@ const DAYS = [7, 30, 90, 365, 395];
  * @param {readonly string[]} argv
  */
 export function parseArgs(argv) {
-  /** @type {{ name?: string; sql?: string; local: boolean; json: boolean; days: number; client: string; actor: string; channel: string; version: string; today: string; start: string }} */
+  /** @type {{ name?: string; sql?: string; local: boolean; json: boolean; days: number; client: string; actor: string; channel: string; version: string; today: string; start: string; install: string; session: string; page: number }} */
   const options = {
     local: false,
     json: false,
@@ -48,6 +50,9 @@ export function parseArgs(argv) {
     version: '',
     today: new Date().toISOString().slice(0, 10),
     start: 'command:app.palette',
+    install: '',
+    session: '',
+    page: 1,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = /** @type {string} */ (argv[i]);
@@ -66,12 +71,25 @@ export function parseArgs(argv) {
     else if (arg === '--version') options.version = value();
     else if (arg === '--today') options.today = value();
     else if (arg === '--start') options.start = value();
+    else if (arg === '--install') options.install = value();
+    else if (arg === '--session') options.session = value();
+    else if (arg === '--page') options.page = Number(value());
     else if (!arg.startsWith('--') && options.name === undefined) options.name = arg;
     else throw new Error(`unknown argument ${arg}`);
   }
   if (!DAYS.includes(options.days)) throw new Error(`--days is one of ${DAYS.join(', ')}`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(options.today)) throw new Error('--today is YYYY-MM-DD');
   if (!/^[a-z]+:[A-Za-z0-9_.-]+$/.test(options.start)) throw new Error('--start is kind:name');
+  // The Sessions tab's (PEN-173): an install's 32 hex characters, a session's 16, a page 1–9999.
+  if (options.install !== '' && !/^[0-9a-f]{32}$/.test(options.install)) {
+    throw new Error('--install is 32 hex characters');
+  }
+  if (options.session !== '' && !/^[0-9a-f]{16}$/.test(options.session)) {
+    throw new Error('--session is 16 hex characters');
+  }
+  if (!Number.isInteger(options.page) || options.page < 1 || options.page > 9999) {
+    throw new Error('--page is a whole number from 1 to 9999');
+  }
   for (const key of /** @type {const} */ (['client', 'actor', 'channel', 'version'])) {
     if (!SAFE.test(options[key])) throw new Error(`--${key} has a character it can't have`);
   }
@@ -112,6 +130,9 @@ export function querySql(name, options) {
     options.today,
     startKind ?? '',
     startName ?? '',
+    options.install,
+    options.session,
+    options.page,
   ]);
 }
 
