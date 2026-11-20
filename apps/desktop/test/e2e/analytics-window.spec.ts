@@ -29,7 +29,7 @@ import {
 
 const mac = process.platform === 'darwin';
 const RUN = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-const NEW_NOTE = process.platform === 'darwin' ? 'Meta+Alt+KeyN' : 'Control+Alt+KeyN';
+const NEW_NOTE = mac ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
 
 const opened: Launched[] = [];
 const endpoints: FakeAnalytics[] = [];
@@ -216,7 +216,16 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
         .map((event) => event.props.window),
     )
     .toEqual(expect.arrayContaining(['main', 'note']));
-  await noteWindow.close();
+  // Closed as its close button would, from main, so the main window is the one left.
+  await app.evaluate(() => {
+    for (const window of (globalThis as unknown as Hooks).penmossDesktop.noteWindows())
+      window.close();
+  });
+  await expect
+    .poll(() =>
+      app.evaluate(() => (globalThis as unknown as Hooks).penmossDesktop.noteWindows().length),
+    )
+    .toBe(0);
 
   // The main window back to 1280 × 720: one more main row, between the note's and Quick Capture's.
   await page.bringToFront();
