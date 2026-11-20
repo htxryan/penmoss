@@ -101,14 +101,33 @@ internal fun AiDescriptionsRoute(host: SettingsHost, onBack: () -> Unit) {
         onSaveKey = { typed, done -> scope.launch { done(ai.saveKey(typed)) } },
         onTestKey = { done -> scope.launch { done(ai.testKey()) } },
         onRemoveKey = ai::removeKey,
+        onDescribeAll = { describeAllNotes(graph.gitIfAny) },
         onBack = onBack,
     )
 }
 
 /**
+ * Describe All Notes (Settings → AI Descriptions): each notebook's Describe Notes Now, one after
+ * another. How many notes go in all, or null when no notebook could start.
+ */
+internal suspend fun describeAllNotes(hub: app.penmoss.git.GitNotebookHub?): Int? {
+    hub ?: return null
+    val counts = hub.list.value.map { view -> runCatching { hub.graph(view.localId).api.describeAll(null) }.getOrNull() }
+    return if (counts.isNotEmpty() && counts.all { it == null }) null else counts.sumOf { it ?: 0 }
+}
+
+/** What Describe All Notes says once it has started: how many go, or why none. */
+fun describeAllWords(count: Int?): String = when (count) {
+    null -> "Couldn’t start describing. Try again once a notebook is open."
+    0 -> "Nothing to describe: every note that’s On has a description."
+    1 -> "Describing 1 note in the background."
+    else -> "Describing $count notes in the background."
+}
+
+/**
  * Settings → AI Descriptions (PEN-161): Describe Notes (On or Off), Describe a Note (After a Pause
- * or At Sync), After a Pause Of, then this phone's AI Provider with its key, the model, and the
- * prompt with its tokens and Reset to Default.
+ * or At Sync), After a Pause Of, Describe All Notes, then this phone's AI Provider with its key,
+ * the model, and the prompt with its tokens and Reset to Default.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -130,8 +149,12 @@ fun AiDescriptionsScreen(
     onSaveKey: (String, (AiResult) -> Unit) -> Unit,
     onTestKey: ((AiResult) -> Unit) -> Unit,
     onRemoveKey: () -> Unit,
+    onDescribeAll: suspend () -> Int?,
     onBack: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    var describeSaid by remember { mutableStateOf<String?>(null) }
+    var describing by remember { mutableStateOf(false) }
     SectionScreen("AI Descriptions", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
         Help("Writes a short description into each note’s frontmatter, so agents can tell what a note holds before reading it. The closest notebook, folder or note setting wins.")
         Text("Describe Notes", Modifier.settingRow("describe-notes").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
@@ -153,6 +176,36 @@ fun AiDescriptionsScreen(
                     ChoiceRow(PAUSE_LABELS.getValue(seconds), null, pauseS == seconds, enabled, "aiPause-$seconds", event = "settings.ai.pause") { onPause(seconds) }
                 }
             }
+        }
+        Text("Describe All Notes", Modifier.settingRow("describe-all-notes").padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.bodyLarge)
+        Help(
+            if (provider == AiKeys.NONE) {
+                "Pick an AI provider below first."
+            } else {
+                "Every notebook’s notes with no description, or changed since theirs, now. Notes set to Off are left out."
+            },
+        )
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            OutlinedButton(
+                onClick = trackedClick("settings.ai.describe-all") {
+                    describing = true
+                    describeSaid = null
+                    scope.launch {
+                        describeSaid = describeAllWords(onDescribeAll())
+                        describing = false
+                    }
+                },
+                enabled = enabled && !describing && provider != AiKeys.NONE,
+                modifier = Modifier.testTag("aiDescribeAll"),
+            ) { Text("Describe Notes Now") }
+        }
+        describeSaid?.let {
+            Text(
+                it,
+                Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("aiDescribeAllSaid"),
+                style = MaterialTheme.roles.help,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         GroupTitle("AI Provider", Modifier.settingRow("ai-provider"), deviceOnly = true)

@@ -37,7 +37,9 @@ A note is described after you stop changing it, and only if its title, tags or t
 
 **Describe Now**, in the Metadata tab, describes the note straight away. **Describe Notes Now…**, in a folder's menu or on a notebook's page, describes every note there that wants one. It tells you how many first, and **Stop** ends it.
 
-On Android, Describe Notes Now goes on in the background and says how many notes it is describing.
+To describe every note in every notebook, choose **Describe Notes Now…** under **Describe All Notes** in **Settings → AI Descriptions**. It counts the notes that have no description, or changed since theirs, asks before sending any, and leaves out notes set to Off. Pick an AI provider first.
+
+On Android, Describe Notes Now and Describe All Notes go on in the background and say how many notes they are describing.
 
 Only one Penmoss window on a device describes notes at a time.
 
