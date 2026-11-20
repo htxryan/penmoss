@@ -42,7 +42,8 @@
     "./mirror": "./src/mirror/index.ts",
     "./analytics": "./src/analytics/index.ts",
     "./analytics/node": "./src/analytics/node/index.ts",
-    "./title-case": "./src/title-case.ts"
+    "./title-case": "./src/title-case.ts",
+    "./ai-description": "./src/ai-description.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

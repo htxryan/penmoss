@@ -6,7 +6,7 @@
  * `@penmoss/core/workspace`, which resolves concurrent-move cycles without
  * writing anything (A17).
  *
- * - `folders`: folderId → { name, parent, position, sortMode, together? } (`together: true` once
+ * - `folders`: folderId → { name, parent, position, sortMode, together?, aiDescription? } (`together: true` once
  *   its subfolders and notes share one Manual order, T62 item 6). A `notebook` flag left from
  *   T43's notebooks inside a workspace is ignored (A1449).
  * - `notes`: noteId → { folder, position, path }
@@ -82,6 +82,10 @@ const str = (value: unknown): string | null => (typeof value === 'string' ? valu
 const sortMode = (value: unknown): SortMode =>
   SORT_MODES.includes(value as SortMode) ? (value as SortMode) : 'manual';
 
+/** A folder's AI Descriptions value (PEN-161), as a record spreads it: absent for Inherit. */
+const aiOf = (value: unknown): { aiDescription?: 'on' | 'off' } =>
+  value === 'on' || value === 'off' ? { aiDescription: value } : {};
+
 function child(doc: Y.Doc, root: string, id: string): Y.Node | null {
   const value: unknown = doc.get(root).getAttr(id);
   return value instanceof Y.Node ? value : null;
@@ -99,6 +103,7 @@ export function readWorkspace(doc: Y.Doc): WorkspaceSnapshot {
       sortMode: sortMode(value.getAttr('sortMode')),
       // Only once a note is placed among its folders (T62 item 6): until then, folders first.
       ...(value.getAttr('together') === true ? { together: true as const } : {}),
+      ...aiOf(value.getAttr('aiDescription')),
     });
   }
   const notes: RegistryEntry[] = [];
@@ -240,6 +245,7 @@ interface TrashedFolderRecord {
   readonly parentId: string | null;
   readonly position: string;
   readonly sortMode: SortMode;
+  readonly aiDescription?: 'on' | 'off';
 }
 
 interface TrashedNoteRecord {
@@ -267,6 +273,7 @@ function trashedFolders(value: unknown): TrashedFolderRecord[] {
         parentId: str(item['parentId']),
         position: str(item['position']) ?? 'a0',
         sortMode: sortMode(item['sortMode']),
+        ...aiOf(item['aiDescription']),
       },
     ];
   });
@@ -433,6 +440,7 @@ export function deleteFolder(
     record.setAttr('parent', target.parentId);
     record.setAttr('position', target.position);
     record.setAttr('sortMode', target.sortMode);
+    if (target.aiDescription) record.setAttr('aiDescription', target.aiDescription);
     record.setAttr('deletedAt', now);
     record.setAttr('deletedBy', options.by?.label ?? null);
     record.setAttr('deletedByKind', options.by?.kind ?? null);
@@ -446,6 +454,7 @@ export function deleteFolder(
           parentId: folder.parentId,
           position: folder.position,
           sortMode: folder.sortMode,
+          ...(folder.aiDescription ? { aiDescription: folder.aiDescription } : {}),
         })),
     );
     record.setAttr('notes', notes);
@@ -547,6 +556,7 @@ export function restoreFolder(
     parentId,
     position: str(record.getAttr('position')) ?? 'a0',
     sortMode: sortMode(record.getAttr('sortMode')),
+    ...aiOf(record.getAttr('aiDescription')),
   };
   const subfolders = trashedFoldersOf(record).filter((folder) => !exists.has(folder.id));
   // Folders the server's repair moved up out of this one: back in it, unless moved since.
@@ -572,6 +582,7 @@ export function restoreFolder(
       node.setAttr('parent', parent);
       node.setAttr('position', folder.position);
       node.setAttr('sortMode', folder.sortMode);
+      if (folder.aiDescription) node.setAttr('aiDescription', folder.aiDescription);
     }
     for (const note of notes) {
       if (options.keepOut?.(note.id)) {
@@ -617,6 +628,22 @@ export function setSortMode(
 ): void {
   const node = folderId === null ? doc.get(WORKSPACE_ROOT) : requireFolder(doc, folderId);
   doc.transact(() => node.setAttr('sortMode', mode), origin);
+}
+
+/** A folder's AI Descriptions value (PEN-161); Inherit removes it. Synced, merged on its own. */
+export function setFolderAiDescription(
+  doc: Y.Doc,
+  folderId: string,
+  value: 'inherit' | 'on' | 'off',
+  origin: unknown = null,
+): void {
+  const node = requireFolder(doc, folderId);
+  const now: unknown = node.getAttr('aiDescription');
+  if ((now ?? 'inherit') === value) return;
+  doc.transact(() => {
+    if (value === 'inherit') node.deleteAttr('aiDescription');
+    else node.setAttr('aiDescription', value);
+  }, origin);
 }
 
 /**

@@ -38,7 +38,7 @@ A personal notes app Ryan fully owns: Notion-level polish on plain markdown docu
 
 ### Not in scope
 
-Fully native editors; importers (Obsidian, Apple Notes, Notion); public sharing, publishing and live co-editing; end-to-end encryption; in-app AI features; Notion-style databases; tasks and reminders (Todoist owns those); plugins and custom CSS; iOS, Windows and Linux apps; a Penmoss server.
+Fully native editors; importers (Obsidian, Apple Notes, Notion); public sharing, publishing and live co-editing; end-to-end encryption; in-app AI features beyond AI Descriptions (a short description per note, for agents, A1656); Notion-style databases; tasks and reminders (Todoist owns those); plugins and custom CSS; iOS, Windows and Linux apps; a Penmoss server.
 
 ## Shape
 

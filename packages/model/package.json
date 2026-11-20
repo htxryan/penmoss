@@ -27,7 +27,8 @@
     "./title": "./src/title.ts",
     "./stats": "./src/stats.ts",
     "./note-fields": "./src/note-fields.ts",
-    "./unsupported": "./src/unsupported.ts"
+    "./unsupported": "./src/unsupported.ts",
+    "./description": "./src/description.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

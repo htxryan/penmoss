@@ -19,11 +19,13 @@ export interface Frontmatter {
 export const KNOWN_FRONTMATTER_KEYS = [
   'id',
   'title',
+  'description',
   'created',
   'updated',
   'tags',
   'aliases',
   'type',
+  'ai-description',
 ] as const;
 
 export interface NoteMeta {
@@ -34,6 +36,10 @@ export interface NoteMeta {
   tags?: string[];
   aliases?: string[];
   type?: string;
+  /** What the note holds, for agents (PEN-161): written by AI Descriptions or by hand. */
+  description?: string;
+  /** The note's own AI Descriptions value (PEN-161); absent is Inherit. */
+  'ai-description'?: 'on' | 'off';
 }
 
 const TO_STRING: ToStringOptions = { lineWidth: 0, flowCollectionPadding: false };
@@ -112,10 +118,12 @@ export function readNoteMeta(frontmatter: Frontmatter): NoteMeta {
   const contents = frontmatter.document.contents;
   if (frontmatter.errors.length > 0 || !isMap(contents)) return meta;
 
-  for (const key of ['id', 'title', 'created', 'updated', 'type'] as const) {
+  for (const key of ['id', 'title', 'created', 'updated', 'type', 'description'] as const) {
     const value = scalarString(contents.get(key, true));
     if (value !== undefined) meta[key] = value;
   }
+  const ai = scalarString(contents.get('ai-description', true));
+  if (ai === 'on' || ai === 'off') meta['ai-description'] = ai;
   for (const key of ['tags', 'aliases'] as const) {
     const value = stringList(contents.get(key, true));
     if (value !== undefined) meta[key] = value;
