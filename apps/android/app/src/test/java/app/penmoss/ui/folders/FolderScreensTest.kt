@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performTextInput
@@ -68,6 +69,35 @@ class FolderScreensTest {
             compose.onNodeWithTag(tag).performClick()
         }
         assertEquals(listOf("rename", "subfolder", "move", "delete"), events)
+    }
+
+    @Test
+    fun theFolderSheetSetsAIDescriptionsAndDescribesItsNotes() {
+        // PEN-161: the Mac's flat group, Inherit, On and Off, then Describe Notes Now.
+        var value by mutableStateOf<String?>(null)
+        val events = mutableListOf<String>()
+        compose.setContent {
+            PenmossTheme {
+                FolderSheet(
+                    "Work",
+                    onRename = {},
+                    onNewSubfolder = {},
+                    onMove = {},
+                    onDelete = {},
+                    onDismiss = {},
+                    ai = FolderAi(value, onChoose = { events += it; value = it }, onDescribeAll = { events += "all" }),
+                )
+            }
+        }
+        // Not read yet: nothing to choose.
+        compose.onNodeWithTag("folderAi-on").performScrollTo().performClick()
+        assertEquals(emptyList<String>(), events)
+        value = "inherit"
+        compose.waitForIdle()
+        compose.onNodeWithTag("folderAi-on").performScrollTo().performClick()
+        compose.onNodeWithTag("folderAction-describeAll").performScrollTo().performClick()
+        assertEquals(listOf("on", "all"), events)
+        compose.onNodeWithText("AI Descriptions").performScrollTo().assertIsDisplayed()
     }
 
     @Test

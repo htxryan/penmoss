@@ -258,6 +258,7 @@ export class AndroidGitHost {
         this.now,
       );
       this.describer = describer;
+      this.server.useDescriber(describer);
       // Every change, typed here or brought by a sync (its description's own write too, which
       // the text hash then skips).
       this.offs.push(engine.replica.onChange((ids) => describer.changed(ids)));

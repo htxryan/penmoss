@@ -38,6 +38,32 @@ class HttpPenmossApiTest {
         server.enqueue(MockResponse.Builder().code(code).addHeader("Content-Type", "application/json").body(body).build())
 
     @Test
+    fun readsAndSetsAIDescriptionsAndDescribesNow() = runTest {
+        // PEN-161: a folder's setting, the notebook's, a note's, Describe Now and Describe Notes Now.
+        respond("""{"value":"on"}""")
+        assertEquals("on", api.setAiSetting("f1", "on"))
+        server.takeRequest().let {
+            assertEquals("PATCH", it.method)
+            assertEquals("/api/ai/folders/f1", it.url.encodedPath)
+            assertEquals("""{"value":"on"}""", it.body!!.utf8())
+        }
+        respond("""{"value":"inherit"}""")
+        assertEquals("inherit", api.aiSetting(null))
+        assertEquals("/api/ai/notebook", server.takeRequest().url.encodedPath)
+        respond("""{"ready":true,"effective":{"on":true,"source":{"level":"folder","id":"f1","name":"Work"}}}""")
+        val status = api.aiNote("n1")
+        assertTrue(status.ready && status.effective.on)
+        assertEquals("Work", status.effective.source.name)
+        server.takeRequest()
+        respond("""{"ok":false,"code":"offline","message":"No connection to Anthropic."}""")
+        assertEquals(AiNowAnswer(ok = false, code = "offline", message = "No connection to Anthropic."), api.describeNow("n1"))
+        assertEquals("/api/ai/notes/n1/describe", server.takeRequest().url.encodedPath)
+        respond("""{"count":3}""")
+        assertEquals(3, api.describeAll(null))
+        assertEquals("""{"folderId":null}""", server.takeRequest().body!!.utf8())
+    }
+
+    @Test
     fun readsTheErrorCodeOfARefusal() = runTest {
         respond("""{"error":{"code":"in_trash","message":"The note is in Trash"}}""", 409)
         val error = runCatching { api.moveNote("n1", null) }.exceptionOrNull() as ApiException

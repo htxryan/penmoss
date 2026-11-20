@@ -198,6 +198,11 @@ class GitNotebooksActions(
     val onUndoKeep: (String, String) -> Unit = { _, _ -> },
     /** What Remove would lose: the engine's changes and Room's unsent edits; null while unknown. */
     val unpushed: suspend (String) -> Int? = { null },
+    /** The notebook's AI Descriptions (PEN-161): read, set (the value now, or null when it failed). */
+    val aiSetting: suspend (String) -> String? = { null },
+    val onAiSetting: suspend (String, String) -> String? = { _, _ -> null },
+    /** Describe Notes Now for the whole notebook: how many go, or null when it could not start. */
+    val onDescribeAll: suspend (String) -> Int? = { null },
     val onIdentity: (String, String) -> Unit = { _, _ -> },
     val onJournal: (String) -> Unit = {},
     val onDismissMessage: () -> Unit = {},
@@ -930,6 +935,9 @@ internal fun rememberGitNotebooks(
             }
         },
         unpushed = { id -> hub.unpushed(id) },
+        aiSetting = { id -> runCatching { hub.graph(id).api.aiSetting(null) }.getOrNull() },
+        onAiSetting = { id, value -> runCatching { hub.graph(id).api.setAiSetting(null, value) }.getOrNull() },
+        onDescribeAll = { id -> runCatching { hub.graph(id).api.describeAll(null) }.getOrNull() },
         onConfirmPurge = { id, note ->
             run(id) {
                 hub.confirmPurge(id, note)

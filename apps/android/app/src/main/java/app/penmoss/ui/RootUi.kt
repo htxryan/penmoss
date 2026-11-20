@@ -55,6 +55,7 @@ import app.penmoss.ui.folders.FolderDeleteDialog
 import app.penmoss.ui.folders.FolderNameDialog
 import app.penmoss.ui.folders.FolderPickerFor
 import app.penmoss.ui.folders.FolderPickerForMove
+import app.penmoss.ui.folders.FolderAi
 import app.penmoss.ui.folders.FolderSheet
 import app.penmoss.ui.folders.NewFolderDialog
 import app.penmoss.ui.folders.createFolderAndSay
@@ -206,6 +207,30 @@ internal class RootUi(
         val text = captures.joinToString("\n\n---\n\n") { it.text }
         context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Penmoss captures", text))
         say(Said(if (captures.size == 1) "Copied the capture." else "Copied ${captures.size} captures.", SnackbarTone.Done))
+    }
+
+    /** A folder's AI Descriptions (PEN-161), set in the notebook's engine. */
+    fun setFolderAi(id: String, value: String) {
+        keep {
+            runCatching { graph.api.setAiSetting(id, value) }
+                .onFailure { say(Said("Couldn’t change AI Descriptions for this folder.", SnackbarTone.Error)) }
+        }
+    }
+
+    /** Describe Notes Now in a folder (PEN-161): how many go, or why none. */
+    fun describeAll(folderId: String?) {
+        keep {
+            val count = runCatching { graph.api.describeAll(folderId) }.getOrNull()
+            say(
+                when {
+                    count == null -> Said("Couldn’t start describing. Try again once the notebook is open.", SnackbarTone.Error)
+                    count == 0 && !graph.device.aiDescriptions.ready -> Said("No AI provider on this phone. Set one up in Settings → AI Descriptions.", SnackbarTone.Info)
+                    count == 0 -> Said("Nothing to describe: every note that’s On has a description.", SnackbarTone.Info)
+                    count == 1 -> Said("Describing 1 note.", SnackbarTone.Done)
+                    else -> Said("Describing $count notes.", SnackbarTone.Done)
+                },
+            )
+        }
     }
 
     fun createFolder(name: String, parent: String?) {
@@ -483,6 +508,21 @@ internal fun RootDialogs(root: RootUi) {
             onNewNoteHere = {
                 root.folderActing = null
                 root.newNote(folder.id)
+            },
+            ai = run {
+                var value by remember(folder.id) { mutableStateOf<String?>(null) }
+                LaunchedEffect(folder.id) { value = runCatching { root.graph.api.aiSetting(folder.id) }.getOrNull() ?: "inherit" }
+                FolderAi(
+                    value = value,
+                    onChoose = { next ->
+                        value = next
+                        root.setFolderAi(folder.id, next)
+                    },
+                    onDescribeAll = {
+                        root.folderActing = null
+                        root.describeAll(folder.id)
+                    },
+                )
             },
         )
     }

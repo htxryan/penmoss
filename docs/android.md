@@ -534,12 +534,14 @@ Install the APK. Have the web app open on the Mac. There is no emulator walk-thr
 
 ## Test AI Descriptions on the Pixel (PEN-161 T6, A1656)
 
-Each notebook's engine page runs the Mac's describer on its own notes (`editor/src/git/describer.ts`): it asks the app what is set (`ai.config`) and has the app make the call (`ai.describe`, `AiDescriptions.kt`), so the page never sees the key. The Anthropic key is sealed by the Keystore in its own preferences (`penmoss.ai`), never backed up. With no key the page sends nothing, and the Mac describes the phone's notes after they sync. Folder and notebook levels are set on the Mac; the phone follows them.
+Each notebook's engine page runs the Mac's describer on its own notes (`editor/src/git/describer.ts`): it asks the app what is set (`ai.config`) and has the app make the call (`ai.describe`, `AiDescriptions.kt`), so the page never sees the key. The Anthropic key is sealed by the Keystore in its own preferences (`penmoss.ai`), never backed up. With no key the page sends nothing, and the Mac describes the phone's notes after they sync. A folder's long-press menu and a notebook's Overview set those levels here too (`/api/ai/…` on the engine page), and the Metadata tab shows where a note's setting comes from, with Describe Now.
 
 1. Settings → AI Descriptions: paste a key and Save. A wrong key says Anthropic refused it and is not kept; a good one shows Test Key and Remove.
 2. Turn Describe Notes on and pick After a Pause Of 30 Seconds. Edit a note and wait: its Metadata tab shows the description, Written by AI Descriptions, and the frontmatter has it after the push.
 3. Type a description of your own: Keep Your Description? asks. Keep Mine sets the note's AI Description to Off.
 4. Airplane mode, then edit: nothing is written. Back online, the next sync describes it.
+5. Long-press a folder: AI Descriptions Off, then a note in it says ○ Off with the folder's chip. Describe Notes Now on the notebook's Overview says how many go.
+6. Settings → Note → Under the Title → Description: the note shows its description under the title.
 
 ## Test in-app feedback on the Pixel (T49)
 

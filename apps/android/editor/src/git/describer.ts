@@ -111,6 +111,9 @@ export function parseAiAnswer(value: unknown): AiAnswer {
   return { ok: false, code: 'failed', message: 'The description failed.' };
 }
 
+/** How many notes Describe Notes Now sends at once (the Mac's `BATCH_AT_ONCE`). */
+const BATCH_AT_ONCE = 2;
+
 export class NotebookDescriber {
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Notes waiting for the next sync (At Sync, or a failure to try again). */
@@ -188,16 +191,68 @@ export class NotebookDescriber {
 
   /** Describes one note when it wants it; true when a description was written. */
   async describe(id: string): Promise<boolean> {
-    if (this.stopped || this.running.has(id)) return false;
+    return (await this.run(id, false))?.ok === true;
+  }
+
+  /**
+   * Describe Now: one note, no pause, whatever its text's stamp, over a hand-written one too.
+   * The answer says what came of it, or null when it is not sent (off, empty, no provider).
+   */
+  describeNow(id: string): Promise<AiAnswer | null> {
+    const timer = this.timers.get(id);
+    if (timer) clearTimeout(timer);
+    this.timers.delete(id);
+    return this.run(id, true);
+  }
+
+  /** Describe Notes Now: these notes a few at a time, only text not yet described. */
+  async batch(ids: readonly string[]): Promise<number> {
+    let next = 0;
+    let done = 0;
+    const work = async () => {
+      while (next < ids.length && !this.stopped) {
+        const id = ids[next++]!;
+        if ((await this.run(id, false))?.ok === true) done += 1;
+      }
+    };
+    await Promise.all(Array.from({ length: BATCH_AT_ONCE }, work));
+    return done;
+  }
+
+  /** Whether this phone can describe, and what the note's setting comes to and from where. */
+  async status(id: string): Promise<{ ready: boolean; effective: AiEffective } | null> {
+    const doc = this.notes.note(id);
+    if (!doc) return null;
+    const config = await this.ai.config().catch(() => null);
+    return {
+      ready: config?.ready === true,
+      effective: this.effective(id, doc, config?.global ?? false),
+    };
+  }
+
+  /** Whether a note would be described now: On, a provider, text, and changed since. */
+  async wants(id: string): Promise<boolean> {
+    const config = await this.ai.config().catch(() => null);
+    const doc = this.notes.note(id);
+    return !!config?.ready && !!doc && this.eligible(id, doc, config, false);
+  }
+
+  private eligible(id: string, doc: Y.Doc, config: AiConfig, force: boolean): boolean {
+    if (isDeleted(doc)) return false;
+    if (!this.effective(id, doc, config.global).on) return false;
+    if (bodyMarkdown(doc).trim() === '') return false;
+    if (!force && (readDescriptionOf(doc) === HAND_WRITTEN || !needsDescription(doc))) return false;
+    return true;
+  }
+
+  private async run(id: string, force: boolean): Promise<AiAnswer | null> {
+    if (this.stopped || this.running.has(id)) return null;
     this.running.add(id);
     try {
       const config = await this.ai.config().catch(() => null);
-      if (!config?.ready) return false;
+      if (!config?.ready) return null;
       const doc = this.notes.note(id);
-      if (!doc || isDeleted(doc)) return false;
-      if (!this.effective(id, doc, config.global).on) return false;
-      if (bodyMarkdown(doc).trim() === '') return false;
-      if (readDescriptionOf(doc) === HAND_WRITTEN || !needsDescription(doc)) return false;
+      if (!doc || !this.eligible(id, doc, config, force)) return null;
       const hash = noteTextHash(doc);
       const answer = await this.ai
         .describe(this.prompt(id, doc, config.prompt))
@@ -209,20 +264,26 @@ export class NotebookDescriber {
       if (!answer.ok) {
         // Offline or refused: tried again at the next sync, or when the note next changes.
         this.atSync.add(id);
-        return false;
+        return answer;
       }
       const text = cleanDescription(answer.text);
-      if (!text) return false;
+      if (!text) {
+        return {
+          ok: false,
+          code: 'failed',
+          message: 'The AI provider answered with no description.',
+        };
+      }
       let written = false;
       await this.notes.write(() => {
         const live = this.notes.note(id);
         // Only for the text it read: a change meanwhile is described after its own pause.
         if (!live || noteTextHash(live) !== hash) return;
-        if (readDescriptionOf(live) === HAND_WRITTEN) return;
+        if (!force && readDescriptionOf(live) === HAND_WRITTEN) return;
         setAiDescription(live, text, hash);
         written = true;
       });
-      return written;
+      return written ? { ok: true, text } : null;
     } finally {
       this.running.delete(id);
     }

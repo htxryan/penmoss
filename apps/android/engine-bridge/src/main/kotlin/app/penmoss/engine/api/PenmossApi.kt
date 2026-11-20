@@ -102,6 +102,24 @@ interface PenmossApi {
     suspend fun setRootSortMode(sortMode: String)
 
     /**
+     * AI Descriptions (PEN-161): a folder's setting, or the notebook's when [folderId] is null
+     * (`GET /api/ai/folders/:id`, `GET /api/ai/notebook`): `inherit`, `on` or `off`.
+     */
+    suspend fun aiSetting(folderId: String?): String = throw UnsupportedOperationException("aiSetting")
+
+    /** Sets a folder's AI Descriptions, or the notebook's when [folderId] is null; the value now. */
+    suspend fun setAiSetting(folderId: String?, value: String): String = throw UnsupportedOperationException("setAiSetting")
+
+    /** Whether this phone can describe, and what the note's setting comes to and from where. */
+    suspend fun aiNote(noteId: String): AiNoteStatus = throw UnsupportedOperationException("aiNote")
+
+    /** Describe Now (`POST /api/ai/notes/:id/describe`): what came of it, in plain words. */
+    suspend fun describeNow(noteId: String): AiNowAnswer = throw UnsupportedOperationException("describeNow")
+
+    /** Describe Notes Now, in a folder (null: the whole notebook): how many notes go. */
+    suspend fun describeAll(folderId: String?): Int = throw UnsupportedOperationException("describeAll")
+
+    /**
      * Deletes a folder and its subfolders (`DELETE /api/folders/:id`, T40 P4, NT4): their notes
      * move up. Idempotent: a missing folder answers false.
      */
@@ -378,6 +396,33 @@ class HttpPenmossApi(
         val body = buildJsonObject { put("sortMode", sortMode) }
         sendEmpty(request(url("api/folders/root")).method("PATCH", body.toString().toRequestBody(JSON_TYPE)).build())
     }
+
+    override suspend fun aiSetting(folderId: String?): String =
+        get(url(if (folderId == null) "api/ai/notebook" else "api/ai/folders/$folderId"), AiValue.serializer()).value
+
+    override suspend fun setAiSetting(folderId: String?, value: String): String =
+        send(
+            "PATCH",
+            url(if (folderId == null) "api/ai/notebook" else "api/ai/folders/$folderId"),
+            json(AiValue.serializer(), AiValue(value)),
+            AiValue.serializer(),
+        ).value
+
+    override suspend fun aiNote(noteId: String): AiNoteStatus = get(url("api/ai/notes/$noteId"), AiNoteStatus.serializer())
+
+    override suspend fun describeNow(noteId: String): AiNowAnswer =
+        send("POST", url("api/ai/notes/$noteId/describe"), "{}".toRequestBody(JSON_TYPE), AiNowAnswer.serializer())
+
+    override suspend fun describeAll(folderId: String?): Int {
+        val body = buildJsonObject { put("folderId", folderId?.let(::JsonPrimitive) ?: JsonNull) }
+        return send("POST", url("api/ai/describe-all"), body.toString().toRequestBody(JSON_TYPE), AiCount.serializer()).count
+    }
+
+    @Serializable
+    private data class AiValue(val value: String)
+
+    @Serializable
+    private data class AiCount(val count: Int = 0)
 
     override suspend fun deleteFolder(id: String): Boolean {
         val reply = send("DELETE", url("api/folders/$id"), "{}".toRequestBody(JSON_TYPE), FolderDeleted.serializer())

@@ -9,7 +9,7 @@ A description is one or two sentences in the note's frontmatter, as `description
 
 ## Turn it on
 
-The first run asks once, **Describe Notes for Agents?**, with **Not Now** picked. To turn it on later:
+The first run asks once on each device, **Describe Notes for Agents?**, with **Not Now** picked. On Android, **Turn On for All Notes** then asks for your Anthropic API key; **Skip** leaves the phone's notes for your Mac. To turn it on later:
 
 1. Open **Settings → AI Descriptions**.
 2. Under **AI Provider**, pick who writes the descriptions (see [AI providers](#ai-providers)).
@@ -22,11 +22,11 @@ Until you pick a provider, nothing is sent and notes wait.
 Each note, folder and notebook has its own setting, **Inherit**, **On** or **Off**. The closest one that isn't Inherit wins:
 
 1. The note's own, in its **Metadata** tab under **AI Description**.
-2. Its folder's, then each folder above it: right-click a folder in the sidebar on the Mac and pick under **AI Descriptions**.
-3. The notebook's, on its page in **Settings → All Notebooks** on the Mac.
+2. Its folder's, then each folder above it: right-click a folder in the sidebar (long-press it on Android) and pick under **AI Descriptions**.
+3. The notebook's, on its page in **Settings → All Notebooks**.
 4. **Describe Notes**, in **Settings → AI Descriptions**, for everything else. It is Off until you turn it on.
 
-The Metadata tab shows what a note comes to, such as **● On**, and where that comes from: a folder, the notebook, or **Everywhere** (Settings). Android follows the folder and notebook settings made on the Mac, and its Metadata tab sets the note's own.
+The Metadata tab shows what a note comes to, such as **● On**, and where that comes from: a folder, the notebook, or **Everywhere** (Settings).
 
 ## When a note is described
 
@@ -37,6 +37,8 @@ A note is described after you stop changing it, and only if its title, tags or t
 
 **Describe Now**, in the Metadata tab, describes the note straight away. **Describe Notes Now…**, in a folder's menu or on a notebook's page, describes every note there that wants one. It tells you how many first, and **Stop** ends it.
 
+On Android, Describe Notes Now goes on in the background and says how many notes it is describing.
+
 Only one Penmoss window on a device describes notes at a time.
 
 ## Your own description
@@ -45,6 +47,8 @@ Type in the **Description** field of the Metadata tab to write one yourself. It 
 
 - **Keep Mine** turns AI Descriptions Off for the note, so yours stays.
 - **Let Claude Update It** lets the next change rewrite it.
+
+To show a note's description under its title, turn on **Description** under **Under the Title** in **Settings → Note** (on the Mac, it's one of the fields there).
 
 An agent that sets a description with `set_properties` counts as you, and Penmoss asks the same question. **Clear** removes a description.
 

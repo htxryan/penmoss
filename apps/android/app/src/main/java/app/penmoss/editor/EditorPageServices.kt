@@ -48,6 +48,7 @@ class EditorPageServices(
     private var ready = false
     private var theme: ToEditor.Theme? = null
     private var width: ToEditor.Width? = null
+    private var underTitle: ToEditor.UnderTitle? = null
     private var fonts: ToEditor.Fonts? = null
     private var ime: ToEditor.Ime? = null
     private var symbols: ToEditor.Symbols? = null
@@ -67,6 +68,13 @@ class EditorPageServices(
     fun setWidth(message: ToEditor.Width) {
         if (message == width) return
         width = message
+        if (ready) send(BridgeProtocol.encode(message))
+    }
+
+    /** What shows under the title (PEN-161); sent now if the page is ready, else once it is. */
+    fun setUnderTitle(message: ToEditor.UnderTitle) {
+        if (message == underTitle) return
+        underTitle = message
         if (ready) send(BridgeProtocol.encode(message))
     }
 
@@ -118,6 +126,7 @@ class EditorPageServices(
         ready = true
         theme?.let { send(BridgeProtocol.encode(it)) }
         width?.let { send(BridgeProtocol.encode(it)) }
+        underTitle?.let { send(BridgeProtocol.encode(it)) }
         fonts?.let { send(BridgeProtocol.encode(it)) }
         symbols?.let { send(BridgeProtocol.encode(it)) }
         ime?.let { send(BridgeProtocol.encode(it)) }

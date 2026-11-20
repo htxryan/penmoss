@@ -408,6 +408,11 @@ internal fun rememberNoteScreenState(
     // Full-width notes (A501), which a tablet or an unfolded phone shows (A413).
     val fullWidth by remember { graph.device.settings.map { it.settings.fullWidth }.distinctUntilChanged() }.collectAsStateWithLifecycle(false)
     LaunchedEffect(services, fullWidth) { services.setWidth(ToEditor.Width(fullWidth)) }
+    // The description under the title (PEN-161), when Settings → Note says so.
+    val underTitle by remember {
+        graph.device.settings.map { app.penmoss.ui.settings.descriptionUnderTitle(it.settings.values) }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(false)
+    LaunchedEffect(services, underTitle) { services.setUnderTitle(ToEditor.UnderTitle(underTitle)) }
     // The person's fonts (T51, A944): the note's font and size over the theme's, and the page's own interface font.
     val fonts by remember {
         graph.device.settings.map { ToEditor.Fonts(it.settings.interfaceFont, it.settings.noteFont, it.settings.noteFontSize) }.distinctUntilChanged()

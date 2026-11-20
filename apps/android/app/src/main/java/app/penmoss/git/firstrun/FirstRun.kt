@@ -82,6 +82,8 @@ class FirstRunDeps(
     val consentPending: () -> Boolean = { false },
     /** Keeps the answer: Share Usage Data or Don't Share. */
     val answerConsent: suspend (app.penmoss.analytics.ConsentAnswer) -> Unit = {},
+    /** AI Descriptions' first-run question (PEN-161); none asked when null (tests). */
+    val ai: FirstRunAi? = null,
 ) {
     companion object {
         fun of(graph: app.penmoss.DeviceGraph, context: android.content.Context): FirstRunDeps {
@@ -97,6 +99,15 @@ class FirstRunDeps(
                 feedbackRepo = graph.githubFeedback.repo,
                 consentPending = { graph.analytics?.state?.value?.answered == false },
                 answerConsent = { answer -> graph.analytics?.answer(answer, app.penmoss.BuildConfig.VERSION_NAME) },
+                ai = FirstRunAi(
+                    pending = { graph.aiDescriptions.askPending },
+                    asked = graph.aiDescriptions::markAsked,
+                    saveKey = graph.aiDescriptions::saveKey,
+                    turnOn = {
+                        graph.changeSetting(app.penmoss.ai.AiKeys.PROVIDER, kotlinx.serialization.json.JsonPrimitive(app.penmoss.ai.AiKeys.ANTHROPIC))
+                        graph.changeSetting(app.penmoss.ai.AiKeys.GLOBAL, kotlinx.serialization.json.JsonPrimitive(true))
+                    },
+                ),
                 signIn = graph.githubSignIn.takeIf { it.available },
                 add = { place, name -> hub.add(place.remote, place.branch, place.dir, name, place.token) },
                 added = { hub.list.value.map { it.notebookId }.toSet() },
@@ -160,7 +171,18 @@ fun NotebookSteps(
     fun back() {
         if (stack.size > 1) stack = stack.dropLast(1)
     }
-    BackHandler(enabled = stack.size > 1 && screen !is Screen.SetUp && screen !is Screen.Consent) { back() }
+    /** After Setting Up and the AI question: the usage question when unanswered, else the notebook. */
+    fun lastStep(localId: String?) {
+        // Still held on screen; Add Notebook never asks (PEN-137).
+        if (firstRun && deps.consentPending()) {
+            replace(Screen.Consent(localId))
+        } else {
+            onHold(false)
+            onDone(localId)
+        }
+    }
+    // The notebook is made by then: Back never goes behind Setting Up or the questions after it.
+    BackHandler(enabled = stack.size > 1 && screen !is Screen.SetUp && screen !is Screen.Consent && screen !is Screen.AiQuestion) { back() }
 
     /** The account the repositories are listed for, among the phone's (A1616). */
     fun listed(): app.penmoss.feedback.GitHubAccount? = deps.accounts().firstOrNull { it.login == hub?.login }
@@ -377,18 +399,26 @@ fun NotebookSteps(
                 screen.setup,
                 add,
                 onDone = { localId ->
-                    // The first run's last step asks about usage data (PEN-137), still held on
-                    // screen; Add Notebook never asks.
-                    if (firstRun && deps.consentPending()) {
-                        replace(Screen.Consent(localId))
-                    } else {
-                        onHold(false)
-                        onDone(localId)
-                    }
+                    // AI Descriptions first, once per phone (PEN-161); then the usage question.
+                    if (firstRun && deps.ai?.pending() == true) replace(Screen.AiQuestion(localId)) else lastStep(localId)
                 },
                 onNeedsName = { replace(Screen.Name(it)) },
                 back = ::back,
             )
+            is Screen.AiQuestion -> AiQuestionStep { on ->
+                if (on) {
+                    go(Screen.AiKey(screen.localId))
+                } else {
+                    deps.ai?.asked?.invoke()
+                    lastStep(screen.localId)
+                }
+            }
+            is Screen.AiKey -> deps.ai?.let { ai ->
+                AiKeyStep(ai, back = ::back) {
+                    ai.asked()
+                    lastStep(screen.localId)
+                }
+            }
             is Screen.Consent -> {
                 var answering by remember { mutableStateOf(false) }
                 ConsentStep(

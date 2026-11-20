@@ -179,7 +179,7 @@ Open Settings from the **☰** menu. Each screen's title is large at the top and
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts) and **Preview** (the app, fonts at real size)                                       |
 | Look and Feel | Home               | Two tabs: **Settings** (shortcuts, sections, Recent Notes, Quick Access) and **Preview** (Home's shortcuts and the menu's sidebar)                         |
-| Look and Feel | Note               | Two tabs: **Settings** (Note Width) and **Preview** (the note at that width, at its real size)                                                             |
+| Look and Feel | Note               | Two tabs: **Settings** (Note Width, the description under the title) and **Preview** (the note at that width, at its real size)                            |
 | Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                                    |
 | Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                                             |
 | Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                                        |

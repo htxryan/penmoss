@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -565,6 +566,12 @@ data class DescriptionUi(
     val onText: (String) -> Unit,
     val onAi: (String) -> Unit,
     val onAnswer: (Boolean) -> Unit,
+    /** What the note's setting comes to and from where (the engine's answer), null while read. */
+    val effective: app.penmoss.engine.api.AiNoteStatus? = null,
+    val describing: Boolean = false,
+    /** What Describe Now came to, in plain words. */
+    val said: String? = null,
+    val onDescribeNow: () -> Unit = {},
 )
 
 /** What the sheet says the note's setting does, here (the folders and notebook are the Mac's to show). */
@@ -574,6 +581,36 @@ internal fun aiStatusLine(ui: DescriptionUi): String = when {
     ui.by == "hand" -> "Written by you: kept until you let Claude update it"
     ui.ai == "on" -> if (ui.text.isNullOrEmpty()) "Waiting for the next change" else "Described"
     else -> "Inherits from its folder, its notebook, then Describe Notes (${if (ui.global) "On" else "Off"})"
+}
+
+/** "● On" and where it comes from (the Mac's option A): a folder, notebook or globe chip. */
+@Composable
+private fun AiEffectiveRow(status: app.penmoss.engine.api.AiNoteStatus) {
+    val source = status.effective.source
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp).testTag("infoAiEffective"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(if (status.effective.on) "● On" else "○ Off", style = MaterialTheme.typography.bodyMedium)
+        if (source.level != "note") {
+            val (icon, name) = when (source.level) {
+                "folder" -> app.penmoss.ui.settings.SettingsIcons.Folder to source.name.orEmpty()
+                "notebook" -> app.penmoss.ui.settings.SettingsIcons.Notebook to source.name.orEmpty()
+                else -> app.penmoss.ui.settings.SettingsIcons.Globe to "Everywhere"
+            }
+            androidx.compose.material3.Surface(
+                shape = app.penmoss.ui.common.SQUARE,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.testTag("infoAiSource"),
+            ) {
+                Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon, contentDescription = null, Modifier.size(14.dp))
+                    Text(name, Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.descriptionItems(ui: DescriptionUi) {
@@ -630,9 +667,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.descriptionItems(ui: 
             onChoose = ui.onAi,
         )
     }
+    ui.effective?.let { known ->
+        item { AiEffectiveRow(known) }
+    }
     item {
         Text(
-            aiStatusLine(ui),
+            ui.said ?: if (ui.describing) "Describing…" else aiStatusLine(ui),
             Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp).testTag("infoAiStatus"),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -640,6 +680,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.descriptionItems(ui: 
     }
     item {
         Row(Modifier.padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            app.penmoss.ui.common.TextButton(
+                onClick = trackedClick("note.ai.describe-now", ui.onDescribeNow),
+                enabled = ui.editable && ui.ready && ui.effective?.effective?.on == true && !ui.describing,
+                modifier = Modifier.testTag("infoDescribeNow"),
+            ) {
+                Icon(app.penmoss.ui.settings.SettingsIcons.Sparkle, contentDescription = null, Modifier.size(18.dp))
+                Text("Describe Now", Modifier.padding(start = 6.dp))
+            }
             app.penmoss.ui.common.TextButton(
                 onClick = trackedClick("note.ai.clear") { ui.onText("") },
                 enabled = ui.editable && !ui.text.isNullOrEmpty(),

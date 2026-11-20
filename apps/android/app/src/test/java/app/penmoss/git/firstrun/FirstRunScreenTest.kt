@@ -31,6 +31,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import org.junit.Rule
+import app.penmoss.ai.AiResult
+import androidx.compose.ui.test.assertIsSelected
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -93,6 +95,7 @@ class FirstRunScreenTest {
         tokens: Map<String?, String> = emptyMap(),
         addToken: (suspend (String) -> app.penmoss.feedback.GitHubTokenModel.Saved)? = null,
         browse: GitHubBrowse = github,
+        ai: FirstRunAi? = null,
         answer: (Place, String?) -> AddResult,
     ) = FirstRunDeps(
         browse = browse,
@@ -119,6 +122,7 @@ class FirstRunScreenTest {
         },
         addToken = addToken,
         feedbackRepo = "htxryan/penmoss",
+        ai = ai,
     )
     private var pages = 0
 
@@ -182,6 +186,69 @@ class FirstRunScreenTest {
         compose.waitUntil(5_000) { done != "none" }
         assertEquals(localId, done)
         assertEquals(listOf(true, false), holds)
+    }
+
+    /** Welcome to the first sync, as the test above walks it. */
+    private fun throughSetUp() {
+        tap("first-run-start")
+        tap("first-run-continue")
+        tap("first-run-way-existing")
+        tap("first-run-continue")
+        waitFor("first-run-repo-ryan/notes")
+        tap("first-run-repo-ryan/notes")
+        waitFor("first-run-repo-empty")
+        tap("first-run-continue")
+        compose.onNodeWithTag("first-run-name-input").performTextClearance()
+        compose.onNodeWithTag("first-run-name-input").performTextInput("Field Notes")
+        tap("first-run-make")
+        waitFor("first-run-setup")
+        compose.waitUntil(5_000) { adds.isNotEmpty() }
+        statuses.value = mapOf(localId to GitEngineStatus(phase = "synced", lastSyncAt = 1L))
+    }
+
+    @Test
+    fun theFirstRunAsksOnceToDescribeNotesAndNotNowLeavesItOff() {
+        // PEN-161: after Setting Up, "Describe Notes for Agents?" with Not Now picked.
+        val events = mutableListOf<String>()
+        val ai = FirstRunAi(pending = { true }, asked = { events += "asked" }, saveKey = { AiResult.Text("") }, turnOn = { events += "on" })
+        show(deps("tok", ai = ai) { _, name -> if (name == null) AddResult.NeedsName else AddResult.Added(view(name), created = true) })
+        throughSetUp()
+        waitForText("Describe Notes for Agents?")
+        assertEquals("none", done)
+        compose.onNodeWithTag("first-run-ai-off").assertIsSelected()
+        tap("first-run-continue") // Start Writing
+        compose.waitUntil(5_000) { done != "none" }
+        assertEquals(localId, done)
+        assertEquals(listOf("asked"), events)
+    }
+
+    @Test
+    fun turnOnAsksForAKeyAndGoesOnOnlyOnceAnthropicTakesIt() {
+        val events = mutableListOf<String>()
+        val ai = FirstRunAi(
+            pending = { true },
+            asked = { events += "asked" },
+            saveKey = { key -> if (key == "sk-ant-good") AiResult.Text("") else AiResult.Failed("refused", "Anthropic refused the API key.") },
+            turnOn = { events += "on" },
+        )
+        show(deps("tok", ai = ai) { _, name -> if (name == null) AddResult.NeedsName else AddResult.Added(view(name), created = true) })
+        throughSetUp()
+        waitForText("Describe Notes for Agents?")
+        tap("first-run-ai-on")
+        tap("first-run-continue")
+        waitForText("Which AI Should Write Descriptions?")
+        compose.onNodeWithTag("first-run-continue").assertIsNotEnabled()
+        compose.onNodeWithTag("first-run-ai-key").performTextInput("sk-ant-bad")
+        tap("first-run-ai-check-key")
+        waitForText("Anthropic refused the API key.")
+        compose.onNodeWithTag("first-run-continue").assertIsNotEnabled()
+        compose.onNodeWithTag("first-run-ai-key").performTextClearance()
+        compose.onNodeWithTag("first-run-ai-key").performTextInput("sk-ant-good")
+        tap("first-run-ai-check-key")
+        waitForText("Anthropic accepted the key. It’s kept on this phone, sealed.")
+        tap("first-run-continue")
+        compose.waitUntil(5_000) { done != "none" }
+        assertEquals(listOf("on", "asked"), events)
     }
 
     @Test

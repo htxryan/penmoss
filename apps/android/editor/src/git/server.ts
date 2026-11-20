@@ -52,8 +52,16 @@ import {
   deviceSettings,
   readWorkspace,
   registerNote,
+  mergedSettings,
+  setFolderAiDescription,
   writeSetting,
 } from '@penmoss/model/workspace';
+import {
+  AI_DESCRIPTION_NOTEBOOK_SETTING,
+  parseAiSetting,
+  type AiSetting,
+} from '@penmoss/core/ai-description';
+import type { NotebookDescriber } from './describer';
 import { parseMarkdown } from '@penmoss/core';
 import { appendCapture, captureTime, splitCapture } from '@penmoss/model/capture';
 import { mirrorMarkdown, readNoteState } from '@penmoss/model/markdown';
@@ -229,6 +237,8 @@ export class LocalServer {
    */
   private holding = false;
   private readonly released = new Set<string>();
+  /** AI Descriptions' describer (PEN-161): Describe Now and Describe Notes Now go through it. */
+  private describer: NotebookDescriber | null = null;
 
   constructor(
     private readonly engine: GitNotebookEngine,
@@ -255,6 +265,10 @@ export class LocalServer {
   /** The app is done with Room's old copy of `noteId`: Room's exchange of it goes ahead. */
   releaseOldCopy(noteId: string): void {
     this.released.add(noteId);
+  }
+
+  useDescriber(describer: NotebookDescriber | null): void {
+    this.describer = describer;
   }
 
   /** No old copy waits any more. */
@@ -379,6 +393,7 @@ export class LocalServer {
         await this.write(() => this.notebook.patchRoot(sortModeOf(body['sortMode']))),
       );
     }
+    if (path.startsWith('/api/ai/')) return this.ai(method, path, body);
     const folderRestore = /^\/api\/folders\/([0-9A-Z]{26})\/restore$/.exec(path);
     if (folderRestore && method === 'POST')
       return json(200, await this.restoreFolder(folderRestore[1]!));
@@ -973,6 +988,96 @@ export class LocalServer {
       this.notebook.createFolder({ id: textOf(body['id']), name: textOf(body['name']), parentId }),
     );
     return json(made.status, made.folder);
+  }
+
+  /**
+   * AI Descriptions on the phone (PEN-161, A1656): a folder's and the notebook's setting, a
+   * note's setting as it comes to and from where, Describe Now and Describe Notes Now.
+   */
+  private async ai(method: string, path: string, body: Body): Promise<LocalReply> {
+    const value = (raw: unknown): AiSetting | null =>
+      raw === 'inherit' || raw === 'on' || raw === 'off' ? raw : null;
+    const workspace = this.ops.workspace;
+    if (path === '/api/ai/notebook') {
+      if (method === 'PATCH') {
+        const next = value(body['value']);
+        if (!next) return refusal(400, 'invalid_request', 'value must be inherit, on or off');
+        await this.write(() =>
+          writeSetting(
+            workspace,
+            AI_DESCRIPTION_NOTEBOOK_SETTING,
+            next === 'inherit' ? undefined : next,
+          ),
+        );
+      }
+      return json(200, {
+        value: parseAiSetting(mergedSettings(workspace)[AI_DESCRIPTION_NOTEBOOK_SETTING]),
+      });
+    }
+    const folder = /^\/api\/ai\/folders\/([0-9A-Z]{26})$/.exec(path);
+    if (folder) {
+      const id = folder[1]!;
+      const read = () => readWorkspace(workspace).folders.find((each) => each.id === id);
+      if (!read()) return refusal(404, 'folder_not_found', 'No such folder');
+      if (method === 'PATCH') {
+        const next = value(body['value']);
+        if (!next) return refusal(400, 'invalid_request', 'value must be inherit, on or off');
+        await this.write(() => setFolderAiDescription(workspace, id, next));
+      }
+      return json(200, { value: parseAiSetting(read()?.aiDescription) });
+    }
+    const describer = this.describer;
+    if (!describer) return refusal(503, 'unavailable', 'AI Descriptions is not running here');
+    const note = /^\/api\/ai\/notes\/([0-9A-Z]{26})(\/describe)?$/.exec(path);
+    if (note && method === 'GET' && !note[2]) {
+      const status = await describer.status(note[1]!);
+      if (!status) return refusal(404, 'note_not_found', 'No such note');
+      return json(200, status);
+    }
+    if (note && method === 'POST' && note[2]) {
+      const answer = await describer.describeNow(note[1]!);
+      return json(
+        200,
+        answer ?? {
+          ok: false,
+          code: 'not-sent',
+          message: 'Nothing was sent: AI Descriptions is off for this note, or it has no text.',
+        },
+      );
+    }
+    if (path === '/api/ai/describe-all' && method === 'POST') {
+      const folderId = typeof body['folderId'] === 'string' ? body['folderId'] : null;
+      const snapshot = readWorkspace(workspace);
+      const inside = folderId ? this.subtree(snapshot.folders, folderId) : null;
+      const ids: string[] = [];
+      for (const each of snapshot.notes) {
+        if (inside && !inside.has(each.folderId ?? '')) continue;
+        if (await describer.wants(each.id)) ids.push(each.id);
+      }
+      // In the background: the answer says how many go, and each is written as it comes.
+      void describer.batch(ids);
+      return json(200, { count: ids.length });
+    }
+    return refusal(404, 'not_found', 'No such route');
+  }
+
+  /** A folder and every folder under it. */
+  private subtree(
+    folders: readonly { readonly id: string; readonly parentId: string | null }[],
+    root: string,
+  ): Set<string> {
+    const out = new Set([root]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const folder of folders) {
+        if (folder.parentId && out.has(folder.parentId) && !out.has(folder.id)) {
+          out.add(folder.id);
+          grew = true;
+        }
+      }
+    }
+    return out;
   }
 
   private async patchFolder(id: string, body: Body) {

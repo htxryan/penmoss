@@ -75,6 +75,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
@@ -101,6 +103,8 @@ fun FolderSheet(
     onDismiss: () -> Unit,
     /** Makes a note in this folder and opens it (T52 item 1); none offered when null. */
     onNewNoteHere: (() -> Unit)? = null,
+    /** AI Descriptions for this folder (PEN-161): its setting, and Describe Notes Now. */
+    ai: FolderAi? = null,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("folderMenu")
@@ -113,7 +117,8 @@ fun FolderSheet(
             overflow = TextOverflow.Ellipsis,
         )
         Box(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            Column(Modifier.fillMaxWidth()) {
+            // Scrolls: with AI Descriptions (PEN-161) it can be taller than a small phone's sheet.
+            Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                 onNewNoteHere?.let { FolderSheetAction("New Note Here", "folderAction-newNote", event = "tree.folder-menu.new-note", tracked.done(it)) }
                 // The web's name for it, beside New Note Here (T53 item 12).
                 FolderSheetAction("New Folder Here", "folderAction-subfolder", event = "tree.folder-menu.new-folder", tracked.done(onNewSubfolder))
@@ -121,9 +126,44 @@ fun FolderSheet(
                 FolderSheetAction("Move To…", "folderAction-move", event = "tree.folder-menu.move", tracked.done(onMove))
                 // The web's names, with "…" for what asks first (T39 pass 3, A891).
                 FolderSheetAction("Delete Folder…", "folderAction-delete", event = "tree.folder-menu.delete", tracked.done(onDelete))
+                ai?.let { FolderAiSection(it, tracked.done(it.onDescribeAll)) }
             }
         }
     }
+}
+
+/** A folder's AI Descriptions in its menu: [value] null while it is read. */
+data class FolderAi(val value: String?, val onChoose: (String) -> Unit, val onDescribeAll: () -> Unit)
+
+/** The Mac's flat group (A1656): AI Descriptions, Inherit, On and Off, then Describe Notes Now. */
+@Composable
+private fun FolderAiSection(ai: FolderAi, onDescribeAll: () -> Unit) {
+    androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp))
+    Text(
+        "AI Descriptions",
+        Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    for ((value, label) in listOf("inherit" to "Inherit", "on" to "On", "off" to "Off")) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = ai.value == value,
+                    enabled = ai.value != null,
+                    role = Role.RadioButton,
+                    onClick = trackedClick("folder.ai.mode") { ai.onChoose(value) },
+                )
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .testTag("folderAi-$value"),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = ai.value == value, onClick = null, enabled = ai.value != null)
+            Text(label, Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+    FolderSheetAction("Describe Notes Now", "folderAction-describeAll", event = "folder.ai.describe-all", onDescribeAll)
 }
 
 @Composable

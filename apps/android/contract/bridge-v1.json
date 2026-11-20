@@ -219,6 +219,16 @@
     },
     {
       "v": 1,
+      "type": "underTitle",
+      "description": true
+    },
+    {
+      "v": 1,
+      "type": "underTitle",
+      "description": false
+    },
+    {
+      "v": 1,
       "type": "fonts",
       "interface": "serif",
       "note": "custom:Charter",
@@ -1659,7 +1669,8 @@
     "{\"v\":1,\"type\":\"setDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"text\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
     "{\"v\":1,\"type\":\"setDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
     "{\"v\":1,\"type\":\"setAiDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"value\":\"maybe\"}",
-    "{\"v\":1,\"type\":\"answerDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"answer\":\"later\"}"
+    "{\"v\":1,\"type\":\"answerDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"answer\":\"later\"}",
+    "{\"v\":1,\"type\":\"underTitle\",\"description\":\"yes\"}"
   ],
   "invalidFromEditor": [
     "{\"v\":1,\"type\":\"lightbox\",\"open\":\"true\"}",

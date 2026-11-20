@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -162,6 +163,49 @@ private fun StatusRow(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActi
     )
 }
 
+/**
+ * The notebook's AI Descriptions on its Overview (PEN-161), as the Mac's: Inherit, On or Off for
+ * its notes, and Describe Notes Now. Read from its engine; nothing shows until it answers.
+ */
+@Composable
+private fun NotebookAiRow(id: String, name: String, actions: GitNotebooksActions) {
+    var value by remember(id) { mutableStateOf<String?>(null) }
+    var said by remember(id) { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(id) { value = actions.aiSetting(id) ?: "inherit" }
+    ListItem(
+        headlineContent = { Text("AI Descriptions") },
+        supportingContent = { Text(said ?: "For $name’s notes, unless a folder or note says otherwise", Modifier.testTag("gitAiSaid-$id")) },
+        modifier = Modifier.testTag("gitAi-$id"),
+    )
+    app.penmoss.ui.settings.Segments(
+        listOf("inherit" to "Inherit", "on" to "On", "off" to "Off"),
+        value ?: "",
+        value != null,
+        "gitAiMode-$id",
+        event = "folder.ai.mode",
+    ) { next ->
+        value = next
+        scope.launch { if (actions.onAiSetting(id, next) == null) said = "Couldn’t change it. Open the notebook and try again." }
+    }
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        TextButton(
+            onClick = trackedClick("folder.ai.describe-all") {
+                scope.launch {
+                    val count = actions.onDescribeAll(id)
+                    said = when (count) {
+                        null -> "Couldn’t start describing."
+                        0 -> "Nothing to describe: every note that’s On has a description, or no AI provider is set up."
+                        1 -> "Describing 1 note."
+                        else -> "Describing $count notes."
+                    }
+                }
+            },
+            modifier = Modifier.testTag("gitAiDescribeAll-$id"),
+        ) { Text("Describe Notes Now") }
+    }
+}
+
 @Composable
 private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions, notes: Int?, onRemove: () -> Unit) {
     val view = row.view
@@ -183,6 +227,7 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
         headlineContent = { Text("Notes") },
         supportingContent = { Text(noteCountWords(notes), Modifier.testTag("gitNoteCount-$id")) },
     )
+    NotebookAiRow(id, view.name, actions)
     if (ui.rows.size > 1) {
         ListItem(
             headlineContent = { Text("Settings") },

@@ -1090,6 +1090,7 @@ export const CLICK_NAMES: readonly string[] = [
   'note.ai.source',
   'note.ai.open-settings',
   'firstrun.ai.check-key',
+  'firstrun.ai.skip',
   'settings.ai.pause',
   'settings.ai.model',
   'settings.ai.save-prompt',

@@ -43,6 +43,10 @@ object SettingsIcons {
     val Monitor = icon("Monitor", rect(3f, 4.5f, 18f, 12f, 1.8f) + "M8.5 20h7M12 16.5V20")
     /** An agent author, as the history panel draws one (T40 P3b, NT16): a four-pointed star. */
     val Spark = icon("Agent", "M12 3.5 13.9 10 20.5 12 13.9 14 12 20.5 10.1 14 3.5 12 10.1 10z")
+    /** Where a note's AI Descriptions comes from (PEN-161): the web's folder, notebook and globe. */
+    val Folder = icon("Folder", "M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z")
+    val Notebook = icon("Notebook", "M7 3.5h10.5A1.5 1.5 0 0 1 19 5v14a1.5 1.5 0 0 1-1.5 1.5H7zM7 3.5v17M4.5 7.5h5M4.5 12h5M4.5 16.5h5M11.5 8h4.5v3h-4.5z")
+    val Globe = icon("Globe", circle(12f, 12f, 8.5f) + "M3.5 12h17M12 3.5c2.4 2.6 3.4 5.4 3.4 8.5s-1 5.9-3.4 8.5c-2.4-2.6-3.4-5.4-3.4-8.5s1-5.9 3.4-8.5z")
     /** AI Descriptions (PEN-161): the web's sparkle, a star and a small one. */
     val Sparkle = icon("Sparkle", "M12 3.5l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9zM18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z")
     /** The note's sync state (PL10, A429): a cloud with what it means. */

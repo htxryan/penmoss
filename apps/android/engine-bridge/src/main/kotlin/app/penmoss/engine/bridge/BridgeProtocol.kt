@@ -140,6 +140,9 @@ sealed interface ToEditor {
      */
     data class Width(val full: Boolean) : ToEditor
 
+    /** What shows under the title (PEN-161): the note's description, when Settings → Note says so. */
+    data class UnderTitle(val description: Boolean) : ToEditor
+
     /**
      * The person's fonts (T51, A944): the synced `font.interface`, `font.note` and `font.noteSize`,
      * each checked by core `fonts.ts`'s rules ([FontSettings]); the page lays them over the theme.
@@ -568,6 +571,10 @@ object BridgeProtocol {
             is ToEditor.Width -> {
                 put("type", "width")
                 put("full", message.full)
+            }
+            is ToEditor.UnderTitle -> {
+                put("type", "underTitle")
+                put("description", message.description)
             }
             is ToEditor.Fonts -> {
                 put("type", "fonts")
@@ -1009,6 +1016,10 @@ object BridgeProtocol {
                 val theme = value["theme"] as? JsonObject ?: return null
                 val variant = value.string("variant")?.takeIf { it == "light" || it == "dark" } ?: return null
                 return ToEditor.Theme(theme, variant)
+            }
+            "underTitle" -> {
+                val description = (value["description"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull ?: return null
+                return ToEditor.UnderTitle(description)
             }
             "width" -> {
                 val full = (value["full"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull ?: return null

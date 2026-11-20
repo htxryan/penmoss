@@ -85,6 +85,8 @@ function fakeApp(options: {
    * deleted for good at head is refused (`purge_raced`) unless the person confirmed it (`keeps`).
    */
   guard?: boolean;
+  /** AI Descriptions as the app answers (PEN-161): none set up unless a test gives one. */
+  ai?: { config: Record<string, unknown>; prompts: string[]; text: string };
 }) {
   const [appPort, pagePort] = pipe();
   const base = new MemoryTransport({
@@ -171,6 +173,11 @@ function fakeApp(options: {
     'copy.withhold': (args) => {
       for (const copy of (args as { copies: typeof withheld }).copies) withheld.push(copy);
       return null;
+    },
+    'ai.config': () => options.ai?.config ?? { ready: false },
+    'ai.describe': (args) => {
+      options.ai?.prompts.push(String((args as { prompt: string }).prompt));
+      return { ok: true, text: options.ai?.text ?? '' };
     },
     'owner.restore': (args) => {
       const input = args as { noteId: string; version: number };
@@ -620,6 +627,80 @@ describe('the notes server (A874)', () => {
     expect(phone.cancels.count).toBe(1);
     // Never "syncing" after it: every status it told the app ends the sync.
     expect(phone.statuses.at(-1)?.phase).toBe('offline');
+  });
+});
+
+describe('AI Descriptions on the phone (PEN-161)', () => {
+  it('sets a folder and the notebook, says where a note’s setting comes from, and describes it now', async () => {
+    const remote = new MemoryRemote();
+    const ai = {
+      config: { ready: true, global: false, when: 'sync', pauseS: 120, prompt: 'About {{title}}' },
+      prompts: [] as string[],
+      text: 'The plan for the week.',
+    };
+    const phone = fakeApp({ remote, ai });
+    await phone.app.call('open', {
+      notebookId: NOTEBOOK,
+      name: 'Work',
+      create: true,
+      host: 'github.com',
+      label: 'Penmoss for Android (Pixel)',
+      front: true,
+    });
+    await settle(phone.app);
+    await phone.http('POST', '/api/folders', { id: FOLDER, name: 'Plans', parentId: null });
+    const planNote = editorNote('Plan');
+    setBody(planNote, docToDelta(parseMarkdown('Groceries and the garden.').doc));
+    await phone.http('POST', '/sync/batch', {
+      notes: [
+        {
+          id: NOTE,
+          update: [toBase64(Y.encodeStateAsUpdate(planNote))],
+          folderId: FOLDER,
+          text: true,
+        },
+      ],
+    });
+    expect((await phone.http('GET', `/api/ai/folders/${FOLDER}`)).json).toEqual({
+      value: 'inherit',
+    });
+    expect((await phone.http('GET', `/api/ai/notes/${NOTE}`)).json).toMatchObject({
+      ready: true,
+      effective: { on: false, source: { level: 'global' } },
+    });
+    // The notebook says On; then the folder says Off, which is closer.
+    expect((await phone.http('PATCH', '/api/ai/notebook', { value: 'on' })).json).toEqual({
+      value: 'on',
+    });
+    expect((await phone.http('GET', `/api/ai/notes/${NOTE}`)).json).toMatchObject({
+      effective: { on: true, source: { level: 'notebook', name: 'Work' } },
+    });
+    await phone.http('PATCH', `/api/ai/folders/${FOLDER}`, { value: 'off' });
+    expect((await phone.http('GET', `/api/ai/notes/${NOTE}`)).json).toMatchObject({
+      effective: { on: false, source: { level: 'folder', id: FOLDER, name: 'Plans' } },
+    });
+    expect((await phone.http('PATCH', '/api/ai/folders/nope', { value: 'on' })).status).toBe(404);
+    expect((await phone.http('PATCH', `/api/ai/folders/${FOLDER}`, { value: 'yes' })).status).toBe(
+      400,
+    );
+    // Off: Describe Now sends nothing.
+    expect((await phone.http('POST', `/api/ai/notes/${NOTE}/describe`)).json).toMatchObject({
+      ok: false,
+      code: 'not-sent',
+    });
+    expect(ai.prompts).toEqual([]);
+    await phone.http('PATCH', `/api/ai/folders/${FOLDER}`, { value: 'on' });
+    expect((await phone.http('POST', `/api/ai/notes/${NOTE}/describe`)).json).toEqual({
+      ok: true,
+      text: 'The plan for the week.',
+    });
+    expect(ai.prompts).toEqual(['About Plan']);
+    // Described: Describe Notes Now has nothing left to send.
+    expect((await phone.http('POST', '/api/ai/describe-all', {})).json).toEqual({ count: 0 });
+    // Back to Inherit takes the notebook's value away.
+    expect((await phone.http('PATCH', '/api/ai/notebook', { value: 'inherit' })).json).toEqual({
+      value: 'inherit',
+    });
   });
 });
 

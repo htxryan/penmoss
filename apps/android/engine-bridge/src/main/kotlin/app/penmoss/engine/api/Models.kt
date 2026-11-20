@@ -411,3 +411,18 @@ data class BacklinksReply(
         val snippet: String = "",
     )
 }
+
+/** AI Descriptions for a note on this phone (PEN-161): whether it can describe, and the setting. */
+@Serializable
+data class AiNoteStatus(val ready: Boolean = false, val effective: AiEffective = AiEffective()) {
+    @Serializable
+    data class AiEffective(val on: Boolean = false, val source: AiSource = AiSource())
+
+    /** Where the setting comes from: `note`, `folder` (with its name), `notebook` or `global`. */
+    @Serializable
+    data class AiSource(val level: String = "global", val id: String? = null, val name: String? = null)
+}
+
+/** What Describe Now came to: the description, or why not (`not-sent`, `offline`, `refused`…). */
+@Serializable
+data class AiNowAnswer(val ok: Boolean = false, val text: String? = null, val code: String? = null, val message: String? = null)
