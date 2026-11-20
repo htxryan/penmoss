@@ -55,6 +55,10 @@ internal class LastRecorded {
     fun kept(session: String?, window: String, props: Map<String, Any?>) {
         last[window] = session to props
     }
+
+    /** Forgets every window's last record: an instrumented test's fresh start in the same session. */
+    @Synchronized
+    fun forget() = last.clear()
 }
 
 /** A window's size in dp and whether it fills the screen (not split screen, free-form or a pop-up view). */

@@ -345,7 +345,7 @@ tasks:
   proof:web:
     desc: "The software factory's web proof (F5): the given specs recorded on video with a final screenshot, `task proof:web -- comments.spec.ts`"
     cmds:
-      - PENMOSS_PROOF=1 pnpm --filter @penmoss/web exec playwright test --project=chromium --project=timed --project=dashboard {{.CLI_ARGS}}
+      - PENMOSS_PROOF=1 pnpm --filter @penmoss/web exec playwright test --project=chromium --project=timed --project=dashboard --project=site {{.CLI_ARGS}}
 
   e2e:install:
     desc: Install the Chromium build Playwright needs (add `-- --with-deps` on a fresh Linux machine)

@@ -23,7 +23,8 @@ import {
 // and a move records nothing (ac2); full screen on and off record at once (ac3); maximising
 // records once it settles; a note window records its own. Main's check takes them, so they reach
 // the endpoint with their props and nothing about the window's place (ac9). The page's `app
-// layout` goes with them (ac6), and Settings → Privacy → View Analytics Data lists both.
+// layout` goes with them (ac6), and Settings → Privacy → View Analytics Data lists both, ending
+// on the full-screen pair.
 
 const RUN = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const NEW_NOTE = process.platform === 'darwin' ? 'Meta+Alt+KeyN' : 'Control+Alt+KeyN';
@@ -151,6 +152,8 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
     .toContain(true);
   const on = (await windowEvents(page)).slice(before).find((event) => event.props.fullScreen)!;
   expect(on.at - entered).toBeLessThan(400);
+  // On screen: the app filling the screen.
+  await holdForProof(page);
   const left = await fullScreen(app, false);
   await expect
     .poll(async () => (await windowEvents(page)).slice(before).at(-1)?.props.fullScreen)
@@ -223,7 +226,8 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
   }
   await noteWindow.close();
 
-  // Settings → Privacy → View Analytics Data: the window and layout rows, as sent.
+  // Settings → Privacy → View Analytics Data: the window and layout rows, as sent, then the
+  // full-screen pair (ac3): on, and the off row recorded at once after it.
   await page.bringToFront();
   await go(page, '/settings/privacy');
   await page.getByRole('link', { name: /View Analytics Data/ }).click();
@@ -237,8 +241,21 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
   await expect(windowRow).toContainText('width');
   await expect(layoutRow).toBeVisible();
   await expect(layoutRow).toContainText('sidebar');
-  await windowRow.scrollIntoViewIfNeeded();
   await page.mouse.move(0, 0);
   await holdForProof(page);
-  await expect(windowRow).toBeInViewport();
+
+  const onRow = rows.filter({ hasText: 'fullScreen: true' }).first();
+  await expect(onRow).toContainText('window: main');
+  const onIndex = await rows.evaluateAll((all) =>
+    all.findIndex((row) => row.textContent?.includes('fullScreen: true')),
+  );
+  expect(onIndex).toBeGreaterThan(0);
+  // Newest first: the row above it is full screen off.
+  const offRow = rows.nth(onIndex - 1);
+  await expect(offRow).toContainText('window: main');
+  await expect(offRow).toContainText('fullScreen: false');
+  await onRow.evaluate((row) => row.scrollIntoView({ block: 'center' }));
+  await holdForProof(page);
+  await expect(onRow).toBeInViewport();
+  await expect(offRow).toBeInViewport();
 });

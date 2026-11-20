@@ -311,4 +311,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.metrics.performance)
     androidTestImplementation(libs.okhttp.mockwebserver)
+    // A bare repository on the emulator, for a notebook the real launcher opens (PEN-174's proof).
+    androidTestImplementation(libs.jgit)
 }

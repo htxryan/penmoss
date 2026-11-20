@@ -1,49 +1,30 @@
 package app.penmoss.analytics
 
-import android.content.pm.ActivityInfo
-import android.content.res.Configuration
+import android.app.Activity
+import android.app.UiAutomation
+import android.content.Intent
 import android.os.SystemClock
-import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.cachedIn
-import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.BuildConfig
+import app.penmoss.DeviceGraph
+import app.penmoss.capture.CaptureActivity
+import app.penmoss.engine.git.AddResult
+import app.penmoss.git.GitNotebookActivity
+import app.penmoss.graph
 import app.penmoss.proof.ProofShot
-import app.penmoss.ui.common.PenmossTheme
-import app.penmoss.ui.settings.AnalyticsDataScreen
-import kotlinx.coroutines.launch
+import app.penmoss.ui.MainActivity
+import app.penmoss.ui.keys.LauncherAction
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
+import org.eclipse.jgit.api.Git
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -51,209 +32,267 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /**
- * The window's size and layout in usage analytics on the phone (PEN-174, ac4, ac5, ac8): `app
- * window` as a window first lays out, again only when its size changes (a rotation records once,
- * and a window made again at the same size records nothing), and `app layout` as the drawer and the
- * note's panel open and close; then Settings → Privacy → Analytics Data lists them. Built from the
- * app's own pieces ([WindowEvents.attach], [LocalLayoutEvents], [TrackDrawer], [TrackNotePanel],
- * [AnalyticsDataScreen]), as the other analytics proofs are. Run with
+ * The window's size and layout in usage analytics on the phone (PEN-174, ac4, ac5, ac8), in the
+ * real app: the launcher ([MainActivity]) records `app window` for `main` as it lays out, a
+ * rotation records the swapped size once, and the notebook it opens at the same size records
+ * nothing more; Quick Capture's sheet ([CaptureActivity]) records `capture`, and once more when a
+ * rotation makes it again; a notebook's own screens record `app layout` after the drawer's
+ * `click sidebar.drawer.open` and the note panel's `click note.info`. Each test ends on Settings →
+ * Privacy → View Analytics Data with those rows on screen. The phone's own record, answered Don't
+ * Share, so nothing leaves it. Run with
  * `task proof:android -- app.penmoss.analytics.WindowLayoutEventsTest`.
  */
 @RunWith(AndroidJUnit4::class)
 class WindowLayoutEventsTest {
-    private lateinit var phone: TestAnalytics
-    private var before: AnalyticsService? = null
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context = instrumentation.targetContext
+    private val graph: DeviceGraph get() = context.graph
+    private val analytics: AnalyticsService get() = checkNotNull(graph.analytics) { "no usage analytics on this build" }
+
+    /** The newest event's id before the test: only what the test makes counts. */
+    private var since = 0L
 
     @Before
-    fun install() {
-        phone = TestAnalytics()
-        before = Analytics.service
-        Analytics.install(phone.service)
+    fun ready() = runBlocking {
+        // Answered (Don't Share), so the launcher shows All Notebooks rather than the question.
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        while (analytics.state.value == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100)
+        if (analytics.state.value?.answered != true) analytics.answer(ConsentAnswer.NO, BuildConfig.VERSION_NAME)
+        notebook()
+        // Each test starts afresh, as a new session would: nothing dropped as a repeat of another test's.
+        WindowEvents.LAST.forget()
+        LayoutEvents.LAST.forget()
+        analytics.flush()
+        since = analytics.store.page(null, null, 1).firstOrNull()?.id ?: 0L
     }
 
     @After
-    fun uninstall() {
-        Analytics.install(before)
-        phone.close()
+    fun upright() {
+        instrumentation.uiAutomation.setRotation(UiAutomation.ROTATION_FREEZE_0)
+        instrumentation.uiAutomation.setRotation(UiAutomation.ROTATION_UNFREEZE)
     }
 
-    /** The stored events called `app` [name], oldest first, as their props. */
-    private fun stored(name: String): List<JsonObject> = runBlocking {
-        phone.service.flush()
-        phone.store.page(null, null, 200).filter { it.kind == "app" && it.name == name }.reversed().map { Json.parseToJsonElement(it.props) as JsonObject }
+    /** A notebook on this phone, from a bare repository beside the app's files; its local id. */
+    private fun notebook(): String = runBlocking {
+        graph.git.notebooks.entries().firstOrNull()?.let { return@runBlocking it.localId }
+        val dir = File(context.cacheDir, "window-proof-${System.nanoTime()}.git")
+        Git.init().setBare(true).setDirectory(dir).setInitialBranch("main").call().close()
+        val added = graph.git.add("file://${dir.absolutePath}", null, null, NOTEBOOK, null)
+        check(added is AddResult.Added) { "the notebook was not added: $added" }
+        added.notebook.localId
     }
 
-    private fun waitForCount(screen: OnScreen, name: String, count: Int): List<JsonObject> =
-        screen.waitFor("$count app $name events") { stored(name).takeIf { it.size >= count } }
+    private data class Stored(val id: Long, val kind: String, val name: String, val text: String, val props: JsonObject)
+
+    /** The events since the test began, oldest first. */
+    private fun stored(): List<Stored> = runBlocking {
+        analytics.flush()
+        analytics.store.page(null, null, 500).filter { it.id > since }.reversed()
+            .map { Stored(it.id, it.kind, it.name, it.props, Json.parseToJsonElement(it.props) as JsonObject) }
+    }
+
+    private fun windows(which: String) = stored().filter { it.kind == "app" && it.name == "window" && it.props.str("window") == which }
+
+    private fun layouts() = stored().filter { it.kind == "app" && it.name == "layout" }
+
+    private fun JsonObject.str(key: String) = getValue(key).jsonPrimitive.content
+
+    private fun JsonObject.num(key: String) = getValue(key).jsonPrimitive.int
+
+    private fun <T : Any> until(what: String, timeoutMs: Long = 30_000, read: () -> T?): T {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
+        do {
+            read()?.let { return it }
+            SystemClock.sleep(200)
+        } while (SystemClock.uptimeMillis() < deadline)
+        throw AssertionError("no $what; recorded since: ${stored().map { "${it.kind} ${it.name} ${it.text}" }}")
+    }
 
     /** The Activity's window in dp, rounded as the event rounds it. */
-    private fun sizeOf(activity: ComponentActivity): Pair<Int, Int> {
-        val shape = WindowEvents.shapeOf(activity)
+    private fun sizeOf(activity: Activity): Pair<Int, Int> {
+        val shape = WindowEvents.shapeOf(activity as ComponentActivity)
         return AnalyticsFormat.lengthOf(shape.widthDp) to AnalyticsFormat.lengthOf(shape.heightDp)
     }
 
-    @Test
-    fun aWindowRecordsItsSizeOnceAndARotationOnce() {
-        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
-            var size = 0 to 0
-            scenario.onActivity { activity ->
-                activity.setContent { PenmossTheme { Text("Quick Capture", Modifier.padding(24.dp)) } }
-                WindowEvents.attach(activity, "capture")
-                size = sizeOf(activity)
-            }
-            val screen = OnScreen(scenario)
-            val first = waitForCount(screen, "window", 1).single()
-            assertEquals("capture", first.getValue("window").jsonPrimitive.content)
-            assertEquals(size.first, first.getValue("width").jsonPrimitive.int)
-            assertEquals(size.second, first.getValue("height").jsonPrimitive.int)
-            assertTrue(first.getValue("fullScreen").jsonPrimitive.boolean)
-            assertFalse("no maximised on Android", "maximised" in first)
-            assertEquals(0, first.getValue("width").jsonPrimitive.int % 10)
+    private fun Stored.size() = props.num("width") to props.num("height")
 
-            // Quick Capture's sheet declares no configChanges: a rotation makes it again, and the
-            // new sheet's first layout records the new size, once.
-            scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
-            val rotated = runCatching {
-                screen.waitFor("the window turned", timeoutMs = 10_000) {
-                    var turned: Boolean? = null
-                    scenario.onActivity { activity -> if (activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) turned = true }
-                    turned
-                }
-            }.isSuccess
-            scenario.onActivity { activity ->
-                activity.setContent { PenmossTheme { Text("Quick Capture", Modifier.padding(24.dp)) } }
-                WindowEvents.attach(activity, "capture")
-                size = sizeOf(activity)
-            }
-            if (rotated && size != first.getValue("width").jsonPrimitive.int to first.getValue("height").jsonPrimitive.int) {
-                val turned = waitForCount(screen, "window", 2).last()
-                assertEquals(size.first, turned.getValue("width").jsonPrimitive.int)
-                assertEquals(size.second, turned.getValue("height").jsonPrimitive.int)
-            } else {
-                // An emulator that keeps its orientation: the same size, so nothing more (the
-                // size swap is WindowEventsTest's).
-                Log.i("WindowLayoutEventsTest", "the window did not turn; checked the repeat rule only")
-            }
-            val count = stored("window").size
-            // Made again at the same size: nothing more.
-            scenario.onActivity { activity -> WindowEvents.attach(activity, "capture").shown() }
-            SystemClock.sleep(1_500)
-            assertEquals(count, stored("window").size)
-            scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
-        }
+    /** Turns the phone, as a person turning it would; the app follows. */
+    private fun turn(landscape: Boolean) {
+        instrumentation.uiAutomation.setRotation(if (landscape) UiAutomation.ROTATION_FREEZE_90 else UiAutomation.ROTATION_FREEZE_0)
+        instrumentation.waitForIdleSync()
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    private fun hold() = SystemClock.sleep(2_500)
+
+    /** The app's activity in front now, if one is (on the main thread). */
+    private fun inFrontNow(): Activity? =
+        androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+            .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull()
+
+    /** The [kind] of activity in front, once it is. */
+    private fun inFront(kind: Class<out Activity>): Activity = until("${kind.simpleName} in front") {
+        var found: Activity? = null
+        instrumentation.runOnMainSync { found = inFrontNow()?.takeIf { kind.isInstance(it) } }
+        found
+    }
+
+    private fun allNotebooks(): Intent = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_ALL_NOTEBOOKS, true)
+
+    /** From All Notebooks: the gear, Privacy, View Analytics Data. */
+    private fun analyticsData(screen: OnScreen) {
+        screen.tap("homeSettingsGear")
+        screen.tap("section-privacy")
+        screen.tap("privacyViewData")
+        screen.text(AnalyticsCopy.text("viewer.title"))
+    }
+
+    /** Scrolls Analytics Data so [row]'s props sit halfway down, the newer rows above them in sight. */
+    private fun showRow(screen: OnScreen, row: Stored) {
+        val node = screen.text(row.text)
+        screen.reveal(node, margin = screen.tagged("viewerList").boundsInWindow.height * 0.5f)
+        assertTrue("the row ${row.text} is on screen", screen.has(row.text))
+    }
+
     @Test
-    fun theLayoutFollowsTheDrawerAndThePanelAndAnalyticsDataListsIt() {
-        var viewing by mutableStateOf(false)
-        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setContent {
-                    PenmossTheme {
-                        if (viewing) {
-                            AnalyticsData()
-                        } else {
-                            val layout = remember { LayoutEvents() }
-                            // A notebook's settings: Full Width off, the theme Dark.
-                            LaunchedEffect(layout) { layout.settings(fullWidth = false, themeMode = "dark") }
-                            CompositionLocalProvider(LocalLayoutEvents provides layout) { Notebook() }
-                        }
-                    }
-                }
-                WindowEvents.attach(activity, "main")
-            }
-            val screen = OnScreen(scenario)
-            val window = waitForCount(screen, "window", 1).single()
-            assertEquals("main", window.getValue("window").jsonPrimitive.content)
+    fun theLauncherRecordsItsSizeAndARotationOnce() {
+        ActivityScenario.launch<MainActivity>(allNotebooks()).use { scenario ->
+            val screen = OnScreen.of(scenario)
+            screen.tagged("homeSettingsGear")
+            var portrait = 0 to 0
+            scenario.onActivity { portrait = sizeOf(it) }
+            // As the launcher lays out: main, its size in dp to 10, full screen, no maximised (ac4).
+            val first = until("the launcher's app window") { windows("main").firstOrNull() }
+            assertEquals(portrait, first.size())
+            assertEquals(0, first.props.num("width") % 10)
+            assertTrue(first.props.getValue("fullScreen").jsonPrimitive.boolean)
+            assertFalse("no maximised on Android", "maximised" in first.props)
+            hold()
 
-            val start = waitForCount(screen, "layout", 1).last()
-            assertEquals("hidden", start.getValue("sidebar").jsonPrimitive.content)
-            assertEquals("closed", start.getValue("panel").jsonPrimitive.content)
-            assertEquals("dark", start.getValue("themeMode").jsonPrimitive.content)
-            assertFalse(start.getValue("fullWidth").jsonPrimitive.boolean)
-            assertFalse("no tabs on a phone", "tabs" in start)
-            assertFalse("the drawer has no width of its own", "sidebarWidth" in start)
-
-            screen.tap("homeMenu")
-            screen.text("All Notebooks")
-            assertEquals("shown", waitForCount(screen, "layout", 2).last().getValue("sidebar").jsonPrimitive.content)
-            screen.tap("drawerClose")
-            assertEquals("hidden", waitForCount(screen, "layout", 3).last().getValue("sidebar").jsonPrimitive.content)
-            screen.tap("notePanel")
-            screen.text("Metadata")
-            assertEquals("open", waitForCount(screen, "layout", 4).last().getValue("panel").jsonPrimitive.content)
-            screen.tap("notePanel")
-            assertEquals("closed", waitForCount(screen, "layout", 5).last().getValue("panel").jsonPrimitive.content)
-            // Nothing else changed: no more records.
+            // Turned: one record, once it settles, with the sides swapped (ac5).
+            turn(landscape = true)
+            val turned = until("the launcher's landscape app window") { windows("main").drop(1).firstOrNull() }
+            assertEquals(portrait.second to portrait.first, turned.size())
             SystemClock.sleep(1_500)
-            assertEquals(5, stored("layout").size)
-            assertEquals(1, stored("window").size)
+            assertEquals("one record for the turn", 2, windows("main").size)
+            screen.tagged("homeSettingsGear")
+            hold()
 
-            // Settings → Privacy → Analytics Data lists them, newest first, with their props.
-            viewing = true
-            screen.text(AnalyticsCopy.text("viewer.title"))
-            screen.text("app · layout")
-            screen.text("app · window")
-            assertTrue(screen.texts().any { it.contains("\"sidebar\":\"hidden\"") && it.contains("\"panel\":\"closed\"") })
-            assertTrue(screen.texts().any { it.contains("\"window\":\"main\"") && it.contains("\"width\":") })
-            SystemClock.sleep(2_000)
-            screen.text("app · window")
+            // Back upright: one more.
+            turn(landscape = false)
+            val upright = until("the launcher's upright app window") { windows("main").drop(2).firstOrNull() }
+            assertEquals(portrait, upright.size())
+
+            // Analytics Data: the launcher's three window rows, the turned one in the middle.
+            analyticsData(screen)
+            showRow(screen, turned)
+            assertTrue(screen.has(upright.text))
+            hold()
+            assertTrue(screen.has(turned.text))
             ProofShot.take()
         }
     }
 
-    /** A notebook's screen in brief: the drawer behind the menu button, and a note with its panel. */
-    @OptIn(ExperimentalMaterial3Api::class)
-    @androidx.compose.runtime.Composable
-    private fun Notebook() {
-        val drawer = rememberDrawerState(DrawerValue.Closed)
-        val scope = rememberCoroutineScope()
-        var panel by remember { mutableStateOf(false) }
-        TrackDrawer(drawer.isOpen)
-        TrackNotePanel(panel)
-        ModalNavigationDrawer(
-            drawerState = drawer,
-            drawerContent = {
-                ModalDrawerSheet {
-                    Text("All Notebooks", Modifier.padding(24.dp))
-                    OutlinedButton(onClick = { scope.launch { drawer.close() } }, Modifier.padding(16.dp).testTag("drawerClose")) { Text("Close Navigation") }
-                }
-            },
-        ) {
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("Meeting Notes") },
-                        navigationIcon = { OutlinedButton(onClick = { scope.launch { drawer.open() } }, Modifier.testTag("homeMenu")) { Text("Open Menu") } },
-                    )
-                },
-            ) { padding ->
-                Column(Modifier.padding(padding).padding(16.dp)) {
-                    Text("Agenda for Thursday, and who brings what")
-                    OutlinedButton(onClick = { panel = !panel }, Modifier.testTag("notePanel")) { Text(if (panel) "Close Panel" else "Open Panel") }
-                    if (panel) Text("Metadata", Modifier.padding(top = 16.dp))
-                }
-            }
+    @Test
+    fun quickCaptureRecordsItsSizeAndAgainWhenARotationMakesItAgain() {
+        ActivityScenario.launch<MainActivity>(allNotebooks()).use { scenario ->
+            val screen = OnScreen.of(scenario)
+            screen.tagged("homeSettingsGear")
+            // Quick Capture's sheet over the launcher, as the app's own Quick Capture opens it.
+            scenario.onActivity { it.startActivity(Intent(it, CaptureActivity::class.java)) }
+            val first = until("Quick Capture's app window") { windows("capture").firstOrNull() }
+            val upright = sizeOf(inFront(CaptureActivity::class.java))
+            // The sheet: capture, its size in dp to 10 (ac4).
+            assertEquals(upright, first.size())
+            assertTrue(first.props.getValue("fullScreen").jsonPrimitive.boolean)
+            assertFalse("no maximised on Android", "maximised" in first.props)
+            hold()
+
+            // Turned: the sheet is made again, and its new first layout records the new size, once (ac5).
+            turn(landscape = true)
+            val turned = until("Quick Capture's landscape app window") { windows("capture").drop(1).firstOrNull() }
+            assertEquals(upright.second to upright.first, turned.size())
+            assertTrue("made again", inFront(CaptureActivity::class.java).let { sizeOf(it) } == turned.size())
+            SystemClock.sleep(1_500)
+            assertEquals("one record for the turn", 2, windows("capture").size)
+            hold()
+
+            // The sheet closed, and the phone upright: Analytics Data, from the launcher, with the
+            // sheet's two rows, the turned one first.
+            instrumentation.runOnMainSync { inFrontNow()?.takeIf { it is CaptureActivity }?.finish() }
+            turn(landscape = false)
+            screen.tagged("homeSettingsGear")
+            analyticsData(screen)
+            showRow(screen, turned)
+            assertTrue(screen.has(first.text))
+            hold()
+            assertTrue(screen.has(turned.text))
+            ProofShot.take()
         }
     }
 
-    /** Settings → Privacy → Analytics Data over this phone's record. */
-    @androidx.compose.runtime.Composable
-    private fun AnalyticsData() {
-        val scope = rememberCoroutineScope()
-        val pages = remember { Pager(PagingConfig(pageSize = 100, initialLoadSize = 100, enablePlaceholders = false)) { phone.store.pagingSource(null) }.flow.cachedIn(scope) }
-        val counts by remember { phone.store.observeCounts() }.collectAsState(emptyMap())
-        AnalyticsDataScreen(
-            summary = "On this phone, kept 7 days.",
-            counts = counts,
-            filter = null,
-            onFilter = {},
-            events = pages.collectAsLazyPagingItems(),
-            onCopyJson = null,
-            onBack = {},
-        )
+    @Test
+    fun aNotebookRecordsItsLayoutAfterTheDrawersAndThePanelsClicks() {
+        val name = runBlocking { graph.git.notebooks.entries().first().name }
+        ActivityScenario.launch<MainActivity>(allNotebooks()).use { scenario ->
+            val launcher = OnScreen.of(scenario)
+            val window = until("the launcher's app window") { windows("main").firstOrNull() }
+
+            // The notebook opens at the same size: no second window record (ac4), and its layout (ac8).
+            launcher.tap(launcher.text(name))
+            val notebook = OnScreen.inFront()
+            notebook.tagged("homeMenu")
+            val start = until("the notebook's app layout") { layouts().firstOrNull() }
+            assertEquals("main", start.props.str("window"))
+            assertEquals("hidden", start.props.str("sidebar"))
+            assertEquals("none", start.props.str("panel"))
+            assertTrue(start.props.str("themeMode") in AnalyticsCatalogue.THEME_MODES)
+            assertFalse("no tabs on a phone", "tabs" in start.props)
+            assertFalse("the drawer has no width of its own", "sidebarWidth" in start.props)
+            SystemClock.sleep(1_500)
+            assertEquals("the notebook at the launcher's size records nothing", listOf(window), windows("main"))
+
+            // The drawer: its click, then the layout, sidebar shown.
+            notebook.tap("homeMenu")
+            notebook.tagged("drawerSettings")
+            val shown = until("the layout with the drawer shown") { layouts().firstOrNull { it.props.str("sidebar") == "shown" } }
+            val drawerClick = stored().single { it.kind == "click" && it.name == "sidebar.drawer.open" }
+            assertTrue("the click comes first", drawerClick.id < shown.id)
+            hold()
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            until("the layout with the drawer hidden again") { layouts().lastOrNull()?.takeIf { it.id > shown.id && it.props.str("sidebar") == "hidden" } }
+
+            // A note (the launcher shortcut's New Note), and its panel: Info's click, then the layout.
+            val localId = runBlocking { graph.git.notebooks.entries().first().localId }
+            val notebookActivity = inFront(GitNotebookActivity::class.java)
+            instrumentation.runOnMainSync { GitNotebookActivity.open(notebookActivity, localId, LauncherAction.NewNote) }
+            notebook.tap("noteInfo")
+            notebook.tagged("panelClose")
+            val open = until("the layout with the panel open") { layouts().firstOrNull { it.props.str("panel") == "open" } }
+            val infoClick = stored().last { it.kind == "click" && it.name == "note.info" }
+            assertTrue("the click comes first", infoClick.id < open.id)
+            hold()
+            notebook.tap("panelClose")
+            until("the layout with the panel closed") { layouts().lastOrNull()?.takeIf { it.id > open.id && it.props.str("panel") == "closed" } }
+
+            // Analytics Data, from All Notebooks: the panel's click and layout, then the drawer's.
+            context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            val home = OnScreen.inFront()
+            analyticsData(home)
+            showRow(home, open)
+            assertTrue(home.has("click · note.info"))
+            hold()
+            showRow(home, shown)
+            assertTrue(home.has("click · sidebar.drawer.open"))
+            hold()
+            assertTrue(home.has(shown.text))
+            ProofShot.take()
+        }
+    }
+
+    private companion object {
+        const val NOTEBOOK = "Window Proof"
     }
 }
