@@ -2,6 +2,8 @@
 
 These are the rules every screen follows, on the Mac/web app and on Android. They come from Ryan's reviews, and they've been missed more than once, so check new UI against them before calling it done. Decisions in `docs/decisions.md` hold the details; this page is the short list.
 
+A design for Penmoss (a plan's mockups, a prototype, a deck, a page of the site) starts from the [Penmoss Design System](https://claude.ai/artifact/XPQB6vQP5Q8zYv7mJNmcCW): its tokens, components, logo files and Writing section are these conventions as the app and penmoss.app draw them today (A1658).
+
 ## Bars and their controls
 
 - **A control in a bar fills the bar.** Tab strips, title rows, toolbars and the status bar all follow this. The control runs from the bar's top edge to its bottom edge, with no top, bottom, left or right margin. It also has no rounded corners of its own, and its hover fills its whole cell.
