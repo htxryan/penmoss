@@ -66,7 +66,7 @@ function nameCell(event: TimelineEvent): HTMLElement {
 /** An event's props as label and value chips. */
 function chips(event: TimelineEvent): HTMLElement {
   const list = element('ul', 'prop-chips');
-  for (const { label, value } of propsInWords(event.kind, event.props)) {
+  for (const { label, value } of propsInWords(event.kind, event.props, event.name)) {
     list.append(
       element(
         'li',

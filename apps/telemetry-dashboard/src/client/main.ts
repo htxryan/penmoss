@@ -1561,7 +1561,7 @@ function sessionPage(answer: Answer): Rendered {
         kindName(`${event.kind}:${event.name}`),
         eventName(`${event.kind}:${event.name}`),
         screenOf(i),
-        propsInWords(event.kind, event.props)
+        propsInWords(event.kind, event.props, event.name)
           .map((prop) => `${prop.label} ${prop.value}`)
           .join(' · '),
       ]),

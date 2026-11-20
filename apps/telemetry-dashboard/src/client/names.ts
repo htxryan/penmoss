@@ -295,6 +295,13 @@ interface PropWords {
 const YES_NO = { true: 'Yes', false: 'No' };
 const each = (value: PropValue) => (Array.isArray(value) ? value : [value]).map(String);
 
+/** Which window an `app window` or `app layout` event is about. */
+const WINDOW_LABELS: Readonly<Record<string, string>> = {
+  main: 'Main',
+  note: 'Note',
+  capture: 'Quick Capture',
+};
+
 /**
  * Each kind's props (core's PROP_SPECS, in its order), labelled, with a word for each value. A
  * test walks PROP_SPECS, so a prop added there fails until it has its words here.
@@ -395,6 +402,29 @@ export const PROP_WORDS: Readonly<Record<string, Readonly<Record<string, PropWor
   },
 };
 
+/**
+ * The words for props tied to one name (core's NAME_PROP_SPECS, PEN-174), keyed `kind.name`: an
+ * event of that name takes these and no others. The same test walks NAME_PROP_SPECS.
+ */
+export const NAME_PROP_WORDS: Readonly<Record<string, Readonly<Record<string, PropWords>>>> = {
+  'app.window': {
+    window: { label: 'Window', values: WINDOW_LABELS },
+    width: { label: 'Width' },
+    height: { label: 'Height' },
+    fullScreen: { label: 'Full Screen', values: YES_NO },
+    maximised: { label: 'Maximised', values: YES_NO },
+  },
+  'app.layout': {
+    window: { label: 'Window', values: WINDOW_LABELS },
+    sidebar: { label: 'Sidebar', values: { shown: 'Shown', rail: 'Rail', hidden: 'Hidden' } },
+    sidebarWidth: { label: 'Sidebar Width' },
+    panel: { label: 'Note Panel', values: { open: 'Open', closed: 'Closed', none: 'None' } },
+    fullWidth: { label: 'Full Width', values: YES_NO },
+    themeMode: { label: 'Theme Mode', values: { light: 'Light', dark: 'Dark', system: 'System' } },
+    tabs: { label: 'Tabs' },
+  },
+};
+
 export interface PropInWords {
   readonly label: string;
   readonly value: string;
@@ -420,8 +450,10 @@ function propWord(words: PropWords | undefined, value: PropValue): string {
 export function propsInWords(
   kind: string,
   props: Readonly<Record<string, PropValue>> | null | undefined,
+  name?: string,
 ): PropInWords[] {
-  const known = PROP_WORDS[kind] ?? {};
+  const known =
+    (name === undefined ? undefined : NAME_PROP_WORDS[`${kind}.${name}`]) ?? PROP_WORDS[kind] ?? {};
   const recorded = Object.entries(props ?? {});
   const order = Object.keys(known);
   return recorded

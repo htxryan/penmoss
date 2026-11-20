@@ -2,8 +2,9 @@
 // the shortcut contract or the app's own names, never the raw id alone, with the id kept beside it.
 import { describe, expect, it } from 'vitest';
 import shortcutsContract from '../../android/contract/shortcuts-v1.json';
-import { PROP_SPECS, SCREEN_NAMES } from '@penmoss/core/analytics';
+import { NAME_PROP_SPECS, PROP_SPECS, SCREEN_NAMES } from '@penmoss/core/analytics';
 import {
+  NAME_PROP_WORDS,
   PROP_WORDS,
   commandName,
   cutLine,
@@ -95,6 +96,54 @@ describe('props in words', () => {
         }
       }
     }
+  });
+
+  it('labels every prop tied to a name in NAME_PROP_SPECS, with a word for each value', () => {
+    expect(Object.keys(NAME_PROP_WORDS)).toEqual(Object.keys(NAME_PROP_SPECS));
+    for (const [key, props] of Object.entries(NAME_PROP_SPECS)) {
+      const [kind, name] = key.split('.') as [string, string];
+      expect(Object.keys(NAME_PROP_WORDS[key]!), key).toEqual(Object.keys(props));
+      for (const [prop, spec] of Object.entries(props)) {
+        expect(NAME_PROP_WORDS[key]![prop]!.label, `${key}.${prop}`).toMatch(TITLE_CASE);
+        if (spec.type !== 'enum') continue;
+        for (const value of spec.values) {
+          expect(Object.hasOwn(NAME_PROP_WORDS[key]![prop]!.values ?? {}, String(value))).toBe(
+            true,
+          );
+          const [pair] = propsInWords(kind, { [prop]: value }, name);
+          expect(pair!.value, `${key}.${prop} = ${String(value)}`).toMatch(/^[A-Z0-9]/);
+        }
+      }
+    }
+  });
+
+  it("reads a window's size and a layout in words", () => {
+    expect(
+      propsInWords(
+        'app',
+        { window: 'main', width: 1440, height: 900, fullScreen: false, maximised: true },
+        'window',
+      ),
+    ).toEqual([
+      { label: 'Window', value: 'Main' },
+      { label: 'Width', value: '1440' },
+      { label: 'Height', value: '900' },
+      { label: 'Full Screen', value: 'No' },
+      { label: 'Maximised', value: 'Yes' },
+    ]);
+    expect(
+      propsInWords(
+        'app',
+        { window: 'note', sidebar: 'rail', panel: 'none', themeMode: 'system', tabs: '2–4' },
+        'layout',
+      ),
+    ).toEqual([
+      { label: 'Window', value: 'Note' },
+      { label: 'Sidebar', value: 'Rail' },
+      { label: 'Note Panel', value: 'None' },
+      { label: 'Theme Mode', value: 'System' },
+      { label: 'Tabs', value: '2–4' },
+    ]);
   });
 
   it('reads a command as its chips, No included', () => {
