@@ -164,6 +164,8 @@ fun NoteRoute(
     onLocalGraph: () -> Unit = {},
 ) {
     val note = rememberNoteScreenState(graph, noteId, onOpenNote, onOpenTag, create, onMade, focusTitle, periodic, onPeriodicMade, heading, onOpenNoteAt)
+    // Its panel open or closed, in the layout usage analytics records (PEN-174).
+    app.penmoss.analytics.TrackNotePanel(note.panel != null)
     val controller = note.controller
     val tools = note.tools
     val state = note.editor

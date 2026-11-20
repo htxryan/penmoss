@@ -77,6 +77,8 @@ class GitNotebookActivity : ComponentActivity() {
                 }
             }
         }
+        // The main window's size (PEN-174); the same size as the launcher's before it records nothing.
+        app.penmoss.analytics.WindowEvents.attach(this, "main")
     }
 
     override fun onNewIntent(intent: Intent) {

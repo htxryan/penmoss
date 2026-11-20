@@ -208,4 +208,33 @@ describe('what they say', () => {
     expect(names).toContain('command:app.graph');
     expect(names).not.toContain('command:app.palette');
   });
+
+  it('window-sizes counts installs by main window size, the 10 most per client, then Other', async () => {
+    type SizeRow = {
+      client: string;
+      width: number | null;
+      height: number | null;
+      installs: number;
+    };
+    const rows = await runQuery<SizeRow>(env.DB, 'window-sizes', ALL);
+    const label = (row: SizeRow) =>
+      `${row.client} ${row.width === null ? 'Other' : `${row.width}×${row.height}`} ${row.installs}`;
+    // Six Macs open at 1440 × 900 and five are resized to 1280 × 800; the two at 1730 × 1080
+    // and the phones (two installs a size) are under the floor of 5: Other. The note window and
+    // Quick Capture are not main windows.
+    expect(rows.map(label)).toEqual([
+      'android Other 2',
+      'mac 1440×900 6',
+      'mac 1280×800 5',
+      'mac Other 2',
+    ]);
+    expect(
+      rows.filter((row) => row.client === 'mac' && row.width !== null).length,
+    ).toBeLessThanOrEqual(10);
+    const phones = await runQuery<SizeRow>(env.DB, 'window-sizes', { ...ALL, client: 'android' });
+    expect(new Set(phones.map((row) => row.client))).toEqual(new Set(['android']));
+    // A week: only today's sessions and the six days before.
+    const week = await runQuery<SizeRow>(env.DB, 'window-sizes', { ...ALL, days: 7 });
+    expect(week.find((row) => row.client === 'mac' && row.width === 1440)?.installs).toBe(6);
+  });
 });

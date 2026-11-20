@@ -15,7 +15,7 @@ object AnalyticsCopy {
         "consent.recorded.title" to "What Is Recorded",
         "consent.recorded.1" to "The commands, shortcuts, buttons and menus you use, by name",
         "consent.recorded.2" to "The screens and dialogs you open, and the settings you change",
-        "consent.recorded.3" to "The app’s version, the system’s version and the window’s size",
+        "consent.recorded.3" to "The app’s and the system’s versions, and the window’s size and layout",
         "consent.recorded.4" to "",
         "consent.never.title" to "Never Recorded",
         "consent.never.1" to "What you write: notes, titles, tags, links and searches",

@@ -9,19 +9,19 @@ This page explains the record Penmoss keeps of how you use it: what it holds, wh
 
 The Mac app, the `penmoss` CLI, the MCP server agents use, and the Android app record each thing you do, by name:
 
-| Kind     | Example                                                                  |
-| -------- | ------------------------------------------------------------------------ |
-| Command  | `note.new`, from a shortcut (`Mod+Alt+N`), the palette, a button or menu |
-| Screen   | `settings.privacy`, `note`, `firstrun.github`                            |
-| Dialog   | `palette` opened, then closed after 2–5 s                                |
-| Click    | `sidebar.quick-access.pin`                                               |
-| Menu     | `copy` from the menu bar                                                 |
-| Setting  | `theme.mode` set to `dark`; a text setting only says it changed          |
-| CLI      | `search`, with the names of the options used (never their values)        |
-| MCP tool | `read_note`, by which agent (`claude-code`), and whether it worked       |
-| App      | started, quit, came to the front, went to the back                       |
+| Kind     | Example                                                                                                                                                                                              |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command  | `note.new`, from a shortcut (`Mod+Alt+N`), the palette, a button or menu                                                                                                                             |
+| Screen   | `settings.privacy`, `note`, `firstrun.github`                                                                                                                                                        |
+| Dialog   | `palette` opened, then closed after 2–5 s                                                                                                                                                            |
+| Click    | `sidebar.quick-access.pin`                                                                                                                                                                           |
+| Menu     | `copy` from the menu bar                                                                                                                                                                             |
+| Setting  | `theme.mode` set to `dark`; a text setting only says it changed                                                                                                                                      |
+| CLI      | `search`, with the names of the options used (never their values)                                                                                                                                    |
+| MCP tool | `read_note`, by which agent (`claude-code`), and whether it worked                                                                                                                                   |
+| App      | started, quit, came to the front, went to the back; the window's size each time it opens, resizes or goes full screen, and its layout: sidebar, note panel, Full Width, light or dark, how many tabs |
 
-Each event also says whether a person, an agent or a script did it, the app's version and channel, your system and its version (such as macOS 15.1), the window's size class, and a random analytics ID. Counts are rounded into ranges ("10–49 notes"), and times into durations ("2–5 s").
+Each event also says whether a person, an agent or a script did it, the app's version and channel, your system and its version (such as macOS 15.1), the window's size class (its size and layout are their own events), and a random analytics ID. Counts are rounded into ranges ("10–49 notes") and window sizes to the nearest 10 pixels, and times into durations ("2–5 s"). Nothing about where a window is or which screen it is on is recorded.
 
 ### Never recorded
 
@@ -76,6 +76,27 @@ This is what one batch looks like:
       "kind": "command",
       "name": "note.new",
       "props": { "source": "key", "keys": "Mod+Alt+N", "custom": false, "ran": true }
+    },
+    {
+      "session": "a91f03c7d2e54b68",
+      "seq": 42,
+      "at": 1795100004000,
+      "client": "mac",
+      "actor": "person",
+      "version": "0.15.0",
+      "channel": "stable",
+      "os": "macos",
+      "osVersion": "15.1",
+      "sizeClass": "expanded",
+      "kind": "app",
+      "name": "window",
+      "props": {
+        "window": "main",
+        "width": 1440,
+        "height": 900,
+        "fullScreen": false,
+        "maximised": false
+      }
     }
   ]
 }

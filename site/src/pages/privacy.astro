@@ -107,8 +107,10 @@ import { REPOSITORY } from '../site';
       <code>penmoss</code> command-line tool, its local MCP server and the Android app record what you
       do in Penmoss, by name: which commands, shortcuts, buttons, menus, screens, dialogs and settings
       you use, which CLI commands run and which MCP tools agents call, whether a person, an agent or a
-      script did it, the app&rsquo;s version, the system&rsquo;s version, the window&rsquo;s size class, and
-      a random analytics ID. Counts are rounded into ranges and times into durations. The record stays
+      script did it, the app&rsquo;s version, the system&rsquo;s version, the window&rsquo;s size class, the
+      window&rsquo;s size and layout (its size to the nearest 10 pixels, and its sidebar, note panel, Full
+      Width, light or dark and how many tabs, never where it is or which screen it is on), and a random
+      analytics ID. Counts are rounded into ranges and times into durations. The record stays
       on the device for 7 days (at most 5,000 events) unless you change that, between 1 and 360 days,
       in Settings &rarr; Privacy &rarr; Advanced or with <code>penmoss analytics limits</code>. You can
       read all of it in Settings &rarr; Privacy &rarr; View Analytics Data, or with

@@ -851,6 +851,12 @@ function platforms(answer: Answer): HTMLElement[] {
     color: slot(i),
   }));
   const sizeClients = distinct(sizes, 'client');
+  // Main windows' sizes as recorded, to 10 px or dp (PEN-174); Other has no width or height.
+  const windowSizes = rowsOf(answer, 'windowSizes');
+  const sizeOf = (row: Row) =>
+    row['width'] === null || row['height'] === null
+      ? 'Other'
+      : `${String(row['width'])} × ${String(row['height'])}`;
   const osName = (os: string) =>
     ({ macos: 'macOS', android: 'Android', linux: 'Linux', windows: 'Windows' })[os] ?? 'Other';
   return [
@@ -925,6 +931,33 @@ function platforms(answer: Answer): HTMLElement[] {
         ]),
       },
       empty: sizes.length === 0,
+    }),
+    card({
+      id: 'window-sizes',
+      title: 'Common Window Sizes',
+      note: 'Installs by main window size: the 10 most common per client, then Other.',
+      chart: (width) =>
+        bars(
+          {
+            label: 'Installs by main window size',
+            unit: 'installs',
+            series: [{ key: 'installs', label: 'Installs', color: 'var(--s1)' }],
+            rows: windowSizes.map((row) => ({
+              label: `${CLIENT_LABELS[String(row['client'])] ?? ''} · ${sizeOf(row)}`,
+              parts: [Number(row['installs'])],
+            })),
+          },
+          width,
+        ),
+      table: {
+        columns: ['Client', 'Window Size', 'Installs'],
+        rows: windowSizes.map((row) => [
+          CLIENT_LABELS[String(row['client'])] ?? '',
+          sizeOf(row),
+          Number(row['installs']),
+        ]),
+      },
+      empty: windowSizes.length === 0,
     }),
   ];
 }

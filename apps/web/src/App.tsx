@@ -70,6 +70,10 @@ import { TabsWatcher } from './tabs/TabsWatcher';
 import { TabsSheetHost } from './tabs/TabsSheet';
 import { useOnRevealNote } from './shell/reveal-notebooks';
 import { useScreenTracking } from './analytics/screen';
+import { useLayoutPart } from './analytics/layout';
+import { useFullWidth } from './notes/width';
+import { useThemeState } from './theme/hooks';
+import { shownTabCount } from './tabs/state';
 
 // The graph (T17) loads with d3-force on first use, never with the shell.
 const GraphPage = lazy(() => import('./graph/GraphPage').then((m) => ({ default: m.GraphPage })));
@@ -122,6 +126,7 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
       <TabsCommands />
       {route.name === 'window' ? null : <TabsWatcher />}
       <FullWidthCommand />
+      <LayoutTracking noteWindow={route.name === 'window'} />
       {page}
       {/* The palette, the switcher and Move work in the open note's source (A826). */}
       <OverlaysScope noteId={overlaysNote}>
@@ -134,6 +139,21 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
   );
 }
 
+/**
+ * The window's own parts of its `app layout` (PEN-174): which window, Full Width, the theme's
+ * mode and how many tabs are open. The sidebar is the notes shell's, the panel the note view's.
+ */
+function LayoutTracking({ noteWindow }: { noteWindow: boolean }) {
+  const [fullWidth] = useFullWidth();
+  const { mode } = useThemeState();
+  const tabsState = useTabsState();
+  useLayoutPart('window', noteWindow ? 'note' : 'main');
+  useLayoutPart('fullWidth', fullWidth);
+  useLayoutPart('themeMode', mode);
+  useLayoutPart('tabs', tabsState && !noteWindow ? shownTabCount(tabsState) : undefined);
+  return null;
+}
+
 /** Children in `source`'s scope, or in the app's own when there is none. */
 function InSource({ source, children }: { source: Source | null; children: ReactNode }) {
   return <SourceScopeOr source={source}>{children}</SourceScopeOr>;
@@ -144,6 +164,31 @@ function OverlaysScope({ noteId, children }: { noteId: string | null; children: 
   const source = useNoteSource(noteId ?? '');
   // The same tree with a note or without: the toasts under it keep their state (A862).
   return <SourceScopeOr source={noteId === null ? null : source}>{children}</SourceScopeOr>;
+}
+
+/**
+ * The element's rendered width in CSS px while `on`, followed as it changes (a drag of its edge,
+ * the window's size); undefined while off.
+ */
+function useRenderedWidth(ref: { readonly current: HTMLElement | null }, on: boolean) {
+  const [width, setWidth] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const element = ref.current;
+    if (!on || !element) {
+      setWidth(undefined);
+      return;
+    }
+    const measure = () => setWidth(Math.round(element.getBoundingClientRect().width));
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(element);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [ref, on]);
+  return width;
 }
 
 /** Which screen is showing: the drawer closes whenever it changes. */
@@ -268,6 +313,10 @@ function NotesShell({
       document.querySelector<HTMLElement>('.app-bar [aria-controls="app-sidebar"]')?.focus();
     }
   }, [drawerOpen]);
+  // The sidebar in the window's layout (PEN-174): shown with its width, the rail, or a closed drawer.
+  const sidebarShown = phone ? drawerOpen : !rail;
+  useLayoutPart('sidebar', sidebarShown ? 'shown' : rail ? 'rail' : 'hidden');
+  useLayoutPart('sidebarWidth', useRenderedWidth(sidebar, sidebarShown));
   const onSidebarKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'Escape' || !drawerOpen || event.defaultPrevented) return;
     event.preventDefault();

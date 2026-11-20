@@ -113,6 +113,15 @@ object AnalyticsFormat {
         return if (minor.isEmpty()) match.groupValues[1] else "${match.groupValues[1]}.$minor"
     }
 
+    /** The longest a window's side is recorded as (PEN-174), in dp. */
+    const val MAX_LENGTH = 10_000
+
+    /** A length as it is recorded: rounded to the nearest 10 and held to 0–[MAX_LENGTH]. */
+    fun lengthOf(dp: Float): Int {
+        if (dp.isNaN() || dp.isInfinite() || dp <= 0f) return 0
+        return minOf(MAX_LENGTH, Math.round(dp / 10f) * 10)
+    }
+
     /** The width class of a window [widthDp] wide. */
     fun sizeClassOf(widthDp: Int): String = when {
         widthDp < 600 -> "compact"

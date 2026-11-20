@@ -193,12 +193,14 @@ export async function viewData(
       return { ...raw, options, start: filters.start, tree: pathTree(filters.start, rows) };
     }
     case 'platforms': {
-      const [platforms, adoption, sizes] = await Promise.all([
+      const [platforms, adoption, sizes, windowSizes] = await Promise.all([
         run('platforms'),
         run('adoption'),
         run('sizes'),
+        // Main windows' sizes (PEN-174): the 10 most per client, then Other.
+        run('window-sizes'),
       ]);
-      return { platforms, adoption, sizes };
+      return { platforms, adoption, sizes, windowSizes };
     }
     case 'agents': {
       const [actors, agents] = await Promise.all([run('actors'), run('agents')]);

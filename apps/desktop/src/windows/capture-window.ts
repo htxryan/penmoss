@@ -8,7 +8,13 @@ import { PAGE_ORIGIN } from '../config';
 import { afterCapture } from '../hotkey';
 import { sendEvent } from '../ipc';
 import { captureWindowOptions, showOnEverySpace } from '../mac-window';
-import { background, SAVE_BEFORE_CLOSE_MS, storeNow, webPreferences } from './window-common';
+import {
+  background,
+  recordWindowEvents,
+  SAVE_BEFORE_CLOSE_MS,
+  storeNow,
+  webPreferences,
+} from './window-common';
 
 const capture = {
   window: null as BrowserWindow | null,
@@ -51,6 +57,7 @@ function createCaptureWindow(): BrowserWindow {
     webPreferences: webPreferences('capture'),
   });
   if (mac) showOnEverySpace(window);
+  recordWindowEvents(window, 'capture');
   window.on('blur', () => {
     if (window.isVisible()) hideCapture();
   });

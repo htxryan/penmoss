@@ -122,10 +122,19 @@ describe('each view', () => {
     expect(data.tree.children[0]!.children.length).toBeGreaterThan(0);
   });
 
-  it('platforms: clients × OS versions, version adoption (top 6 and Other) and size classes', async () => {
-    const data = await view<{ platforms: Rows; adoption: Rows; sizes: Rows }>(
+  it('platforms: clients × OS versions, version adoption (top 6 and Other), size classes and window sizes', async () => {
+    const data = await view<{ platforms: Rows; adoption: Rows; sizes: Rows; windowSizes: Rows }>(
       '/api/platforms?days=90',
     );
+    // Main windows only, sizes under 5 installs in Other (PEN-174).
+    expect(
+      data.windowSizes.map((row) => [row['client'], row['width'], row['height'], row['installs']]),
+    ).toEqual([
+      ['android', null, null, 2],
+      ['mac', 1440, 900, 6],
+      ['mac', 1280, 800, 5],
+      ['mac', null, null, 2],
+    ]);
     expect(data.platforms.map((row) => `${row['client']} ${row['os_version']}`)).toContain(
       'android 16',
     );

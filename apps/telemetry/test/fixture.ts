@@ -1,7 +1,7 @@
 /**
  * A fixture D1 (PEN-137): five weeks of made-up usage from twelve installs, eight Macs (with the
  * CLI and agents' MCP calls) and four phones, through the first run and everyday use, rolled up as
- * the nightly cron would. The named-query tests, the dashboard's tests and its Playwright spec
+ * the nightly cron would. Each session's window sizes (PEN-174) come right after its launch. The named-query tests, the dashboard's tests and its Playwright spec
  * all read it. Every event passes core's checks, so nothing here could not have been sent.
  */
 import { isValidEvent, type AnalyticsEvent } from '@penmoss/core/analytics';
@@ -29,6 +29,51 @@ type Draft = Pick<AnalyticsEvent, 'kind' | 'name' | 'props'> &
   Partial<Pick<AnalyticsEvent, 'client' | 'actor'>>;
 
 const FIRST_RUN_DONE = ['welcome', 'goal', 'way', 'github', 'accounts', 'repo', 'name', 'setup'];
+
+/**
+ * A session's window events (PEN-174): six Macs open at 1440 × 900 and five of them are resized
+ * to 1280 × 800 every third day; two open at 1730 × 1080 (fewer than 5 installs: Other). The two
+ * everyday phones open at 410 × 890, one turning to landscape now and then (Other: only two
+ * phones), and one Mac opens a note window and Quick Capture, which the main window's sizes
+ * leave out.
+ */
+function windowDrafts(index: number, day: number, phone: boolean): Draft[] {
+  const window = (props: Draft['props']): Draft => ({ kind: 'app', name: 'window', props });
+  if (phone) {
+    const drafts = [window({ window: 'main', width: 410, height: 890, fullScreen: true })];
+    if (index === 8 && day % 5 === 0) {
+      drafts.push(window({ window: 'main', width: 890, height: 410, fullScreen: true }));
+    }
+    return drafts;
+  }
+  const opened = index < 6 ? { width: 1440, height: 900 } : { width: 1730, height: 1080 };
+  const drafts = [window({ window: 'main', ...opened, fullScreen: false, maximised: false })];
+  if (index < 5 && day % 3 === 0) {
+    drafts.push(
+      window({ window: 'main', width: 1280, height: 800, fullScreen: false, maximised: false }),
+    );
+  }
+  if (index === 0) {
+    drafts.push(
+      window({ window: 'note', width: 720, height: 800, fullScreen: false, maximised: false }),
+      window({ window: 'capture', width: 560, height: 300, fullScreen: false, maximised: false }),
+    );
+  }
+  drafts.push({
+    kind: 'app',
+    name: 'layout',
+    props: {
+      window: 'main',
+      sidebar: 'shown',
+      sidebarWidth: 280,
+      panel: 'none',
+      fullWidth: false,
+      themeMode: 'system',
+      tabs: '1',
+    },
+  });
+  return drafts;
+}
 
 function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
   const drafts: Draft[] = [
@@ -107,6 +152,8 @@ function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
     });
   }
   drafts.push({ kind: 'app', name: 'quit', props: {} });
+  // Right after the launch, before the palette Paths starts from.
+  drafts.splice(1, 0, ...windowDrafts(index, day, phone));
   return drafts;
 }
 

@@ -104,6 +104,7 @@ class AnalyticsContractTest {
         "screen" -> JsonPrimitive("settings.privacy") to JsonPrimitive("note/01HZX")
         "setting" -> JsonPrimitive(true) to JsonPrimitive("slothcanary")
         "flags" -> JsonArray(listOf(JsonPrimitive(strings("cliFlags").first()))) to JsonArray(listOf(JsonPrimitive("slothcanary")))
+        "length" -> JsonPrimitive(1440) to JsonPrimitive(1441)
         else -> error("A prop type the phone does not know: $type")
     }
 
@@ -121,6 +122,46 @@ class AnalyticsContractTest {
             }
             assertNotNull("$kind takes no other prop", catalogue.problem(event(kind, name, mapOf("title" to JsonPrimitive("x")))))
         }
+    }
+
+    @Test
+    fun aNameWithPropsOfItsOwnTakesExactlyThose() {
+        val nameProps = contract.getValue("nameProps").jsonObject
+        assertEquals(setOf("app.window", "app.layout"), nameProps.keys)
+        val kindProps = contract.getValue("props").jsonObject
+        for ((key, keys) in nameProps) {
+            val kind = key.substringBefore('.')
+            val name = key.substringAfter('.')
+            assertTrue(key, catalogue.has(kind, name))
+            assertNull(key, catalogue.problem(event(kind, name)))
+            for ((prop, type) in keys.jsonObject) {
+                val (good, bad) = samples(type.jsonObject)
+                assertNull("$key.$prop = $good", catalogue.problem(event(kind, name, mapOf(prop to good))))
+                assertNotNull("$key.$prop = $bad", catalogue.problem(event(kind, name, mapOf(prop to bad))))
+                // No other name of the kind takes it: app launch with a width is refused.
+                assertNotNull("$kind.launch.$prop", catalogue.problem(event(kind, "launch", mapOf(prop to good))))
+            }
+            // Nor do these names take the kind's own props, or any other.
+            for ((prop, type) in kindProps.getValue(kind).jsonObject) {
+                assertNotNull("$key.$prop", catalogue.problem(event(kind, name, mapOf(prop to samples(type.jsonObject).first))))
+            }
+            assertNotNull("$key takes no other prop", catalogue.problem(event(kind, name, mapOf("x" to JsonPrimitive(20)))))
+        }
+    }
+
+    @Test
+    fun aLengthIsAWholeMultipleOf10UpToTheMost() {
+        assertEquals(contract.getValue("maxLength").jsonPrimitive.int, AnalyticsFormat.MAX_LENGTH)
+        val window = { width: JsonElement -> catalogue.problem(event("app", "window", mapOf("width" to width))) }
+        for (good in listOf(0, 10, 1440, 10_000)) assertNull("$good", window(JsonPrimitive(good)))
+        for (bad in listOf<JsonElement>(JsonPrimitive(1441), JsonPrimitive(-10), JsonPrimitive(10_010), JsonPrimitive("1440"), JsonPrimitive(1440.0), JsonPrimitive(true), JsonPrimitive(1.44e3))) {
+            assertNotNull("$bad", window(bad))
+        }
+        // The values each enum takes.
+        assertNotNull(catalogue.problem(event("app", "window", mapOf("window" to JsonPrimitive("settings")))))
+        assertNotNull(catalogue.problem(event("app", "layout", mapOf("window" to JsonPrimitive("capture")))))
+        assertNotNull(catalogue.problem(event("app", "layout", mapOf("tabs" to JsonPrimitive(3)))))
+        assertNull(catalogue.problem(event("app", "layout", mapOf("tabs" to JsonPrimitive("2–4"), "sidebar" to JsonPrimitive("rail"), "themeMode" to JsonPrimitive("dark")))))
     }
 
     @Test

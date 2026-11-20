@@ -20,10 +20,24 @@ import { sendEvent } from '../ipc';
 import { SEND, TITLE_BAR_ARG, VERSION_ARG, WINDOW_ARG } from '../ipc-contract';
 import { watchWindowState } from '../mac-window-control';
 import { titleBarStyle, type StoreResult, type TitleBarStyle } from '../mac-window';
-import { gitNotebooks } from '../services';
+import { analytics, gitNotebooks } from '../services';
 import { StoreRequests, storeReply } from '../store-requests';
 import { windowBackground } from '../theme';
 import type { WindowKind } from '../windows';
+import { watchWindowEvents } from '../window-events';
+
+/**
+ * Records `window`'s size and state as `app window` (PEN-174): as it shows, once a resize
+ * settles, and as it enters or leaves full screen. Never its place.
+ */
+export function recordWindowEvents(window: BrowserWindow, kind: WindowKind | 'capture'): void {
+  watchWindowEvents(
+    window,
+    kind,
+    (props, sizeClass) => analytics.record('app', 'window', props, sizeClass),
+    { active: () => kind === 'capture' || windows.isOpen(window) },
+  );
+}
 
 /** How long a window may take to store its notes before it closes anyway. */
 export const SAVE_BEFORE_CLOSE_MS = 3000;
@@ -127,6 +141,7 @@ export function track(
   titleBars.set(window, titleBar);
   log(`${kind} window opened (${windows.all().length} open)`);
   if (macWindows) watchWindowState(window);
+  recordWindowEvents(window, kind);
   window.on('focus', () => {
     windows.focused(window);
     const menus = windows.menusOf(window);
