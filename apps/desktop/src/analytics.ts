@@ -371,9 +371,17 @@ export class Analytics {
     }
   }
 
-  /** Main's own event (the native menus, the menu bar icon, the hotkey, launch and quit). */
-  record(kind: EventKind, name: string, props: Props = {}): boolean {
-    return this.keep({ kind, name, props });
+  /**
+   * Main's own event (the native menus, the menu bar icon, the hotkey, launch and quit, and a
+   * window's size, PEN-174, with the size class of that window).
+   */
+  record(
+    kind: EventKind,
+    name: string,
+    props: Props = {},
+    sizeClass?: AnalyticsEvent['sizeClass'],
+  ): boolean {
+    return this.keep({ kind, name, props, sizeClass });
   }
 
   /** The page's events: stamped, checked and stored in the order they came; how many kept. */

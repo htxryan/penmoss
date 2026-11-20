@@ -22,7 +22,7 @@ export const ANALYTICS_COPY = {
   'consent.recorded.title': 'What Is Recorded',
   'consent.recorded.1': 'The commands, shortcuts, buttons and menus you use, by name',
   'consent.recorded.2': 'The screens and dialogs you open, and the settings you change',
-  'consent.recorded.3': 'The app’s version, the system’s version and the window’s size',
+  'consent.recorded.3': 'The app’s and the system’s versions, and the window’s size and layout',
   'consent.recorded.4': {
     mac: 'CLI commands and agents’ MCP calls, by name',
     android: '',

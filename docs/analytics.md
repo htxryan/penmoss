@@ -12,22 +12,32 @@ How Penmoss records usage, sends it with consent, and keeps scrubbed logs (PEN-1
 
 `packages/core/src/analytics/` (`@penmoss/core/analytics`, runs anywhere):
 
-| File           | Holds                                                                                    |
-| -------------- | ---------------------------------------------------------------------------------------- |
-| `events.ts`    | The event and batch format, kinds, buckets, states and their labels                      |
-| `catalogue.ts` | Every name an event may carry, by kind                                                   |
-| `validate.ts`  | `eventProblem` and `validateBatch`: each prop typed for its kind, so no free text passes |
-| `limits.ts`    | The adjustable limits, their ranges and `readLimits()`                                   |
-| `consent.ts`   | The consent file's shape, `stateFor`, `envOptsOut`                                       |
-| `actors.ts`    | `agentClientOf` (an MCP client's name to a fixed list) and `cliActor`                    |
-| `scrub.ts`     | The log scrubber (`createScrubber`, `scrubLogLine`)                                      |
-| `log-block.ts` | What a bug report attaches and its collapsed block in the issue                          |
-| `recorder.ts`  | `Recorder`: stamps session, `seq` and time, checks, hands to a sink                      |
-| `copy.ts`      | Every string the analytics screens show, with `{device}`; exported to Android            |
+| File           | Holds                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `events.ts`    | The event and batch format, kinds, buckets, states and their labels                                                                         |
+| `catalogue.ts` | Every name an event may carry, by kind                                                                                                      |
+| `validate.ts`  | `eventProblem` and `validateBatch`: each prop typed for its kind, or for its name where `NAME_PROP_SPECS` lists one, so no free text passes |
+| `limits.ts`    | The adjustable limits, their ranges and `readLimits()`                                                                                      |
+| `consent.ts`   | The consent file's shape, `stateFor`, `envOptsOut`                                                                                          |
+| `actors.ts`    | `agentClientOf` (an MCP client's name to a fixed list) and `cliActor`                                                                       |
+| `scrub.ts`     | The log scrubber (`createScrubber`, `scrubLogLine`)                                                                                         |
+| `log-block.ts` | What a bug report attaches and its collapsed block in the issue                                                                             |
+| `recorder.ts`  | `Recorder`: stamps session, `seq` and time, checks, hands to a sink                                                                         |
+| `copy.ts`      | Every string the analytics screens show, with `{device}`; exported to Android                                                               |
 
 `packages/core/src/analytics/node/` (Node only): the SQLite store (`store.ts`, through `node:sqlite`), the consent file in `~/.penmoss/analytics.json` (`consent-file.ts`) and the sender (`sender.ts`). `PENMOSS_HOME` moves `~/.penmoss` and `PENMOSS_ANALYTICS_URL` the endpoint, for tests.
 
 Android follows the same contracts in `apps/android/contract/`: `analytics-v1.json` (format, catalogue, limits), `analytics-copy-v1.json` (strings) and `scrub-v1.json` (scrubber cases). Core's tests write them with `PENMOSS_WRITE_CONTRACTS=1` and check them otherwise.
+
+## Prop types
+
+A prop is one of: an enum, a boolean, a count bucket, a duration bucket, a normalised key combination, the CLI's flag names, a setting's value, a catalogued screen, or a length (a whole number of CSS px or dp, a multiple of 10, 0 to `MAX_LENGTH`; `lengthOf` rounds one). Props are typed per kind in `PROP_SPECS`, except for the names `NAME_PROP_SPECS` lists, which take only their own: `app window` (window, width, height, fullScreen, maximised) and `app layout` (window, sidebar, sidebarWidth, panel, fullWidth, themeMode, tabs). No other `app` name takes those, so `app launch` with a width is refused (PEN-174).
+
+## Window and layout events
+
+- `app window`: the Mac's main process records it (`apps/desktop/src/window-events.ts`, through `track()` and the capture window) as a window shows, 500 ms after a resize, maximise or zoom settles, and at once on full screen; never on a move. Android records it from each Activity (`WindowEvents.kt`). A record that matches the window's last one is dropped.
+- `app layout`: the page records it (`apps/web/src/analytics/layout.ts`): each part comes from the component that owns it through `useLayoutPart`, and one event follows 500 ms after the last change, if the layout differs from the last one recorded. Android's notebook screen does the same (`LayoutEvents.kt`), without tabs or a sidebar width.
+- The CLI and MCP server never record either.
 
 ## Adding a tracked control
 

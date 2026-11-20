@@ -23,8 +23,10 @@ import {
   EVENT_ID_PATTERN,
   INSTALL_PATTERN,
   KINDS,
+  lengthOf,
   majorMinor,
   MAX_BATCH_EVENTS,
+  MAX_LENGTH,
   newInstallId,
   newSessionId,
   SESSION_PATTERN,
@@ -38,7 +40,14 @@ import {
 } from '../src/analytics/events';
 import { Recorder } from '../src/analytics/recorder';
 import { themeForEvent } from '../src/analytics/themes';
-import { eventProblem, isValidEvent, KEYS_PATTERN, validateBatch } from '../src/analytics/validate';
+import {
+  eventProblem,
+  isValidEvent,
+  KEYS_PATTERN,
+  NAME_PROP_SPECS,
+  PROP_SPECS,
+  validateBatch,
+} from '../src/analytics/validate';
 
 const CANARIES = (
   JSON.parse(
@@ -467,6 +476,138 @@ describe('eventProblem', () => {
     expect(
       eventProblem({ ...VALID.setting, name: 'theme.mode', props: { value: 'toString' } }),
     ).toBe('prop value value');
+  });
+});
+
+describe('app window and app layout (PEN-174)', () => {
+  const window = event({
+    kind: 'app',
+    name: 'window',
+    props: { window: 'main', width: 1440, height: 900, fullScreen: false, maximised: true },
+  });
+  const layout = event({
+    kind: 'app',
+    name: 'layout',
+    props: {
+      window: 'main',
+      sidebar: 'shown',
+      sidebarWidth: 280,
+      panel: 'open',
+      fullWidth: false,
+      themeMode: 'dark',
+      tabs: '2–4',
+    },
+  });
+  const withProps = (base: AnalyticsEvent, props: Record<string, unknown>) =>
+    ({ ...base, props: { ...base.props, ...props } }) as AnalyticsEvent;
+
+  it('rounds a length to the nearest 10 and holds it to 0–MAX_LENGTH', () => {
+    expect(lengthOf(1441)).toBe(1440);
+    expect(lengthOf(1445)).toBe(1450);
+    expect(lengthOf(899.6)).toBe(900);
+    expect(lengthOf(4)).toBe(0);
+    expect(lengthOf(-10)).toBe(0);
+    expect(lengthOf(Number.NaN)).toBe(0);
+    expect(lengthOf(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(lengthOf(25_000)).toBe(MAX_LENGTH);
+  });
+
+  it('are catalogued under app and pass with their own props', () => {
+    expect(isCatalogued('app', 'window')).toBe(true);
+    expect(isCatalogued('app', 'layout')).toBe(true);
+    expect(eventProblem(window)).toBeNull();
+    expect(eventProblem(layout)).toBeNull();
+    // Android sends no maximised, no tabs and no sidebarWidth; a hidden sidebar has no width.
+    expect(
+      eventProblem({
+        ...window,
+        props: { window: 'capture', width: 410, height: 890, fullScreen: true },
+      }),
+    ).toBeNull();
+    expect(
+      eventProblem({
+        ...layout,
+        props: {
+          window: 'note',
+          sidebar: 'hidden',
+          panel: 'none',
+          fullWidth: true,
+          themeMode: 'system',
+        },
+      }),
+    ).toBeNull();
+    expect(eventProblem(withProps(window, { width: 0, height: MAX_LENGTH }))).toBeNull();
+  });
+
+  it('refuse a length that is not a whole multiple of 10 from 0 to MAX_LENGTH', () => {
+    for (const bad of [1441, -10, 10_010, 1440.5, '1440', true, null, Number.NaN]) {
+      expect(eventProblem(withProps(window, { width: bad })), String(bad)).toBe('prop width value');
+      expect(eventProblem(withProps(layout, { sidebarWidth: bad })), String(bad)).toBe(
+        'prop sidebarWidth value',
+      );
+    }
+  });
+
+  it('refuse values outside their lists, and free text in any prop', () => {
+    expect(eventProblem(withProps(window, { window: 'settings' }))).toBe('prop window value');
+    // A layout is the main or a note window's: the capture window has none.
+    expect(eventProblem(withProps(layout, { window: 'capture' }))).toBe('prop window value');
+    expect(eventProblem(withProps(layout, { tabs: 3 }))).toBe('prop tabs value');
+    expect(eventProblem(withProps(layout, { sidebar: 'collapsed' }))).toBe('prop sidebar value');
+    expect(eventProblem(withProps(layout, { panel: 'expanded' }))).toBe('prop panel value');
+    expect(eventProblem(withProps(layout, { themeMode: 'nord' }))).toBe('prop themeMode value');
+    expect(eventProblem(withProps(window, { fullScreen: 'true' }))).toBe('prop fullScreen value');
+    for (const [base, keys] of [
+      [window, Object.keys(NAME_PROP_SPECS['app.window']!)],
+      [layout, Object.keys(NAME_PROP_SPECS['app.layout']!)],
+    ] as const) {
+      for (const key of keys) {
+        for (const text of FREE_TEXT) {
+          expect(eventProblem(withProps(base, { [key]: text })), `${key}: ${text}`).not.toBeNull();
+        }
+      }
+    }
+  });
+
+  it('take no other prop, and the app kind’s own props are not theirs', () => {
+    expect(eventProblem(withProps(window, { x: 20 }))).toBe('prop x');
+    expect(eventProblem(withProps(window, { display: 'main' }))).toBe('prop display');
+    expect(eventProblem(withProps(window, { notebooks: '1' }))).toBe('prop notebooks');
+    expect(eventProblem(withProps(layout, { theme: 'nord' }))).toBe('prop theme');
+    expect(eventProblem(withProps(layout, { width: 1440 }))).toBe('prop width');
+    expect(eventProblem(withProps(window, { tabs: '1' }))).toBe('prop tabs');
+  });
+
+  it('are the only names that take these props: app launch with a width is refused', () => {
+    for (const name of ['launch', 'quit', 'foreground', 'background']) {
+      const other = event({ kind: 'app', name, props: {} });
+      expect(eventProblem({ ...other, props: { width: 1440 } }), name).toBe('prop width');
+      expect(eventProblem({ ...other, props: { window: 'main' } }), name).toBe('prop window');
+      expect(eventProblem({ ...other, props: { sidebar: 'shown' } }), name).toBe('prop sidebar');
+    }
+    for (const key of Object.keys(NAME_PROP_SPECS)) {
+      const [kind] = key.split('.');
+      for (const prop of Object.keys(NAME_PROP_SPECS[key]!)) {
+        expect(Object.keys(PROP_SPECS[kind as EventKind]), prop).not.toContain(prop);
+      }
+    }
+  });
+
+  it('come only from the apps: the CLI and the MCP server never send them', () => {
+    for (const base of [window, layout]) {
+      expect(eventProblem({ ...base, client: 'android' })).toBeNull();
+      for (const client of ['cli', 'mcp']) {
+        expect(eventProblem({ ...base, client, sizeClass: undefined }), client).toBe('client');
+      }
+    }
+    // The apps' own other events are as before from every client.
+    expect(
+      eventProblem(event({ client: 'cli', kind: 'app', name: 'launch', props: {} })),
+    ).toBeNull();
+  });
+
+  it('look up a name prop by own key only', () => {
+    expect(eventProblem(event({ kind: 'app', name: 'toString', props: {} }))).toBe('name');
   });
 });
 

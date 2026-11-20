@@ -9,6 +9,8 @@ const isCI = Boolean(process.env['CI']);
 
 export default defineConfig({
   testDir: './test',
+  // Recorded through apps/web's config (`task proof:web`), which builds and serves the site itself.
+  testIgnore: 'proof/**',
   outputDir: `test-results/site-${port}`,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,

@@ -70,6 +70,7 @@ import { closeTabsOfTrashed } from '../tabs/trash';
 import { openNoteWindow } from '../window/open';
 import { symbolSource } from './symbols';
 import { useWorkspace } from '../workspace/hooks';
+import { useLayoutPart } from '../analytics/layout';
 
 /** "Copied as Markdown" after an explicit copy (T15), in the window's toast stack (PEN-63). */
 function showCopied(text: string, ok: boolean): void {
@@ -142,6 +143,8 @@ export function NoteView({
   const panelMode = preview ? defaultPanel : inTab.panelMode;
   const setPanelMode = preview ? ignorePanelMode : inTab.setPanelMode;
   const showPanel = panelMode === 'open';
+  // The window's layout (PEN-174): the shown note's panel; a preview's is not the window's.
+  useLayoutPart('panel', preview ? undefined : panelMode);
   /** The open panel lies over the note's text: a narrow pane has no room beside it. */
   const panelOver = showPanel && !wide;
   // The panel coming or going moves the text column, in a wide window without changing its

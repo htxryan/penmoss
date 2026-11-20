@@ -66,6 +66,9 @@ class AnalyticsCatalogue(
             value is JsonArray && value.size <= MAX_FLAGS && value.all { flag -> flag.string()?.let { FLAG.matches(it) && it in cliFlags } == true }
         }
         val screen: (JsonElement) -> Boolean = { value -> value.string()?.let { has("screen", it) } == true }
+        // Props tied to one name (core's NAME_PROP_SPECS, PEN-174): that name takes these and no
+        // other, and no other name of the kind takes them.
+        NAME_PROPS["$kind.$name"]?.let { return it }
         return when (kind) {
             "app" -> mapOf("notebooks" to COUNT, "notes" to COUNT, "agents" to BOOL, "theme" to oneOf(BUILTIN_THEMES + "custom"), "active" to TOOK)
             "command" -> mapOf(
@@ -118,6 +121,39 @@ class AnalyticsCatalogue(
         private val BOOL: (JsonElement) -> Boolean = { value -> value is JsonPrimitive && !value.isString && value.booleanOrNull != null }
         private val COUNT = oneOf(AnalyticsFormat.COUNT_BUCKETS)
         private val TOOK = oneOf(AnalyticsFormat.DURATION_BUCKETS)
+
+        /** A window's length (PEN-174): a whole number of dp, a multiple of 10, 0 to MAX_LENGTH. */
+        private val LENGTH: (JsonElement) -> Boolean = { value ->
+            val primitive = value as? JsonPrimitive
+            primitive != null && !primitive.isString && primitive.booleanOrNull == null && !primitive.content.contains('.') &&
+                !primitive.content.contains('e', ignoreCase = true) &&
+                primitive.longOrNull?.let { it in 0..AnalyticsFormat.MAX_LENGTH.toLong() && it % 10 == 0L } == true
+        }
+
+        val WINDOWS = listOf("main", "note", "capture")
+        val SIDEBAR_STATES = listOf("shown", "rail", "hidden")
+        val PANEL_STATES = listOf("open", "closed", "none")
+        val THEME_MODES = listOf("light", "dark", "system")
+
+        /** Core's NAME_PROP_SPECS: `app window` and `app layout` take only their own props. */
+        private val NAME_PROPS: Map<String, Map<String, (JsonElement) -> Boolean>> = mapOf(
+            "app.window" to mapOf(
+                "window" to oneOf(WINDOWS),
+                "width" to LENGTH,
+                "height" to LENGTH,
+                "fullScreen" to BOOL,
+                "maximised" to BOOL,
+            ),
+            "app.layout" to mapOf(
+                "window" to oneOf(listOf("main", "note")),
+                "sidebar" to oneOf(SIDEBAR_STATES),
+                "sidebarWidth" to LENGTH,
+                "panel" to oneOf(PANEL_STATES),
+                "fullWidth" to BOOL,
+                "themeMode" to oneOf(THEME_MODES),
+                "tabs" to COUNT,
+            ),
+        )
         const val MAX_FLAGS = 16
         const val MAX_SETTING_NUMBER = 10_000_000L
 

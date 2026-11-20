@@ -1,8 +1,9 @@
 /**
  * Checks an event against the format and the catalogue (PEN-137): every client before it stores
  * one, and the ingest Worker again before it writes one to D1. A name must be catalogued and
- * every prop typed for its kind, so no free text can pass: strings are enums, buckets, flag
- * names, a normalised key combination or one of the words a setting may be (SETTING_VALUES).
+ * every prop typed for its kind, or for its name where NAME_PROP_SPECS lists one, so no free text
+ * can pass: strings are enums, buckets, flag names, a normalised key combination or one of the
+ * words a setting may be (SETTING_VALUES), and numbers a limit's value or a rounded length.
  */
 import { AGENT_CLIENTS } from './actors';
 import { CLI_FLAGS, isCatalogued, isSettingWord } from './catalogue';
@@ -16,9 +17,14 @@ import {
   INSTALL_PATTERN,
   KINDS,
   MAX_BATCH_EVENTS,
+  MAX_LENGTH,
   OSES,
+  PANEL_STATES,
   SESSION_PATTERN,
+  SIDEBAR_STATES,
   SIZE_CLASSES,
+  THEME_MODES,
+  WINDOWS,
   type AnalyticsEvent,
   type EventKind,
 } from './events';
@@ -65,6 +71,14 @@ const settingValue: Check = (value, name) =>
     value <= MAX_SETTING_NUMBER) ||
   (typeof value === 'string' && (count(value, name) || isSettingWord(name, value)));
 
+/** A window's length (PEN-174): a whole number of CSS px or dp, a multiple of 10, 0 to MAX_LENGTH. */
+const length: Check = (value) =>
+  typeof value === 'number' &&
+  Number.isInteger(value) &&
+  value % 10 === 0 &&
+  value >= 0 &&
+  value <= MAX_LENGTH;
+
 const screenKind: Check = (value) => typeof value === 'string' && isCatalogued('screen', value);
 
 export const CLI_EXITS = [
@@ -92,11 +106,15 @@ export const FIRSTRUN_ERRORS = [
  * What a prop may hold, as data (the Kotlin twin reads it from `analytics-v1.json`): one of a
  * list; a boolean; a count or a duration bucket; a key combination (KEYS_PATTERN); a list of
  * the CLI's flag names (CLI_FLAGS, at most MAX_FLAGS); a setting's value (`settingValue`, by the
- * event's name); or a catalogued screen.
+ * event's name); a catalogued screen; or a window's length (`length`: a whole multiple of 10,
+ * 0 to MAX_LENGTH).
  */
 export type PropSpec =
   | { readonly type: 'enum'; readonly values: readonly (string | number | boolean)[] }
-  | { readonly type: 'bool' | 'count' | 'duration' | 'keys' | 'flags' | 'setting' | 'screen' };
+  | {
+      readonly type:
+        'bool' | 'count' | 'duration' | 'keys' | 'flags' | 'setting' | 'screen' | 'length';
+    };
 
 const enumOf = (values: readonly (string | number | boolean)[]): PropSpec => ({
   type: 'enum',
@@ -105,6 +123,7 @@ const enumOf = (values: readonly (string | number | boolean)[]): PropSpec => ({
 const BOOL: PropSpec = { type: 'bool' };
 const COUNT: PropSpec = { type: 'count' };
 const TOOK: PropSpec = { type: 'duration' };
+const LENGTH: PropSpec = { type: 'length' };
 
 /** Each kind's props: the only keys allowed, and what each may hold. */
 export const PROP_SPECS: Readonly<Record<EventKind, Readonly<Record<string, PropSpec>>>> = {
@@ -147,6 +166,40 @@ export const PROP_SPECS: Readonly<Record<EventKind, Readonly<Record<string, Prop
   },
 };
 
+/**
+ * Props tied to one name, keyed `kind.name` (PEN-174): an event of that name takes these and
+ * nothing else, and no other name of its kind takes them (PROP_SPECS.app stays as it is, so
+ * `app launch` with a width is refused). `sidebarWidth` is sent only when `sidebar` is shown;
+ * `maximised` only from the Mac; `tabs` only where there are tabs (the Mac).
+ */
+export const NAME_PROP_SPECS: Readonly<Record<string, Readonly<Record<string, PropSpec>>>> = {
+  'app.window': {
+    window: enumOf(WINDOWS),
+    width: LENGTH,
+    height: LENGTH,
+    fullScreen: BOOL,
+    maximised: BOOL,
+  },
+  'app.layout': {
+    window: enumOf(['main', 'note']),
+    sidebar: enumOf(SIDEBAR_STATES),
+    sidebarWidth: LENGTH,
+    panel: enumOf(PANEL_STATES),
+    fullWidth: BOOL,
+    themeMode: enumOf(THEME_MODES),
+    tabs: COUNT,
+  },
+};
+
+/**
+ * The clients that may send a name NAME_PROP_SPECS lists: the apps, which have windows. The CLI
+ * and the MCP server never record a window or a layout (PEN-174), so the check refuses one from them.
+ */
+export const NAME_CLIENTS: Readonly<Record<string, readonly string[]>> = {
+  'app.window': ['mac', 'android'],
+  'app.layout': ['mac', 'android'],
+};
+
 function checkOf(spec: PropSpec): Check {
   switch (spec.type) {
     case 'enum':
@@ -165,15 +218,23 @@ function checkOf(spec: PropSpec): Check {
       return settingValue;
     case 'screen':
       return screenKind;
+    case 'length':
+      return length;
   }
 }
 
-const PROPS: Readonly<Record<string, Readonly<Record<string, Check>>>> = Object.fromEntries(
-  Object.entries(PROP_SPECS).map(([kind, props]) => [
-    kind,
-    Object.fromEntries(Object.entries(props).map(([key, spec]) => [key, checkOf(spec)])),
-  ]),
-);
+const checksOf = (
+  specs: Readonly<Record<string, Readonly<Record<string, PropSpec>>>>,
+): Readonly<Record<string, Readonly<Record<string, Check>>>> =>
+  Object.fromEntries(
+    Object.entries(specs).map(([key, props]) => [
+      key,
+      Object.fromEntries(Object.entries(props).map(([prop, spec]) => [prop, checkOf(spec)])),
+    ]),
+  );
+
+const PROPS = checksOf(PROP_SPECS);
+const NAME_PROPS = checksOf(NAME_PROP_SPECS);
 
 /** An app's version (`1.4.0`, `1.4.0-alpha.3`) and an OS version cut to major.minor. */
 export const VERSION_PATTERN = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9.]{1,20})?$/;
@@ -218,7 +279,14 @@ export function eventProblem(event: unknown): string | null {
   if (typeof value.name !== 'string' || !isCatalogued(kind, value.name)) return 'name';
   const props = value.props;
   if (!props || typeof props !== 'object' || Array.isArray(props)) return 'props';
-  const checks = PROPS[kind]!;
+  const named = `${kind}.${value.name}`;
+  if (
+    Object.hasOwn(NAME_CLIENTS, named) &&
+    !NAME_CLIENTS[named]!.includes(value.client as string)
+  ) {
+    return 'client';
+  }
+  const checks = Object.hasOwn(NAME_PROPS, named) ? NAME_PROPS[named]! : PROPS[kind]!;
   for (const [key, item] of Object.entries(props)) {
     // Own keys only: `constructor` or `toString` must not find Object's own.
     const check = Object.hasOwn(checks, key) ? checks[key] : undefined;

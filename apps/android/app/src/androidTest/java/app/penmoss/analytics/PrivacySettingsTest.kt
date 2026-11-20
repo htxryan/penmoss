@@ -146,7 +146,8 @@ class PrivacySettingsTest {
                 screen.tagged("viewerState-local")
                 screen.text("Not Shared")
                 screen.tap("viewerFilter-sent")
-                screen.waitFor("only Sent rows") { if (!screen.has("click · privacy.share-log-file")) true else null }
+                // The list reloads for the filter: wait for its Sent rows, not just for the Not Shared ones to go.
+                screen.waitFor("only Sent rows") { if (!screen.has("click · privacy.share-log-file") && screen.has("click · privacy.view-data")) true else null }
                 assertTrue(screen.has("click · privacy.view-data"))
                 screen.tagged("viewerState-sent")
                 SystemClock.sleep(1_500)

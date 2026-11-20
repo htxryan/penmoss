@@ -24,11 +24,23 @@ import org.junit.runner.RunWith
 /**
  * The usage question on the phone (PEN-137): the first run's last step (AC4), and once before Home
  * on a phone that had notebooks before it existed (AC9). The Mac's words less its CLI and MCP
- * line; Share Usage Data and Don't Share equal. Run with
+ * line; Share Usage Data and Don't Share equal. What Is Recorded names the window's size and layout
+ * (PEN-174). Run with
  * `task proof:android -- app.penmoss.analytics.ConsentScreenTest`.
  */
 @RunWith(AndroidJUnit4::class)
 class ConsentScreenTest {
+    /** The What Is Recorded line that names the window's size and layout (PEN-174), scrolled to and held. */
+    private fun holdOnTheWindowLine(screen: OnScreen) {
+        assertEquals("The app’s and the system’s versions, and the window’s size and layout", AnalyticsCopy.text("consent.recorded.3"))
+        screen.reveal(screen.tagged("consent-recorded"), margin = 120f)
+        val line = screen.text(AnalyticsCopy.text("consent.recorded.3"))
+        assertTrue("the line is on screen", line.boundsInWindow.height > 0f)
+        assertFalse("the old line is gone", screen.has("The app’s version, the system’s version and the window’s size"))
+        SystemClock.sleep(2_000)
+        screen.text(AnalyticsCopy.text("consent.recorded.3"))
+    }
+
     @Test
     fun theFirstRunsLastStepAsksWithEqualAnswers() {
         TestAnalytics().use { phone ->
@@ -72,7 +84,8 @@ class ConsentScreenTest {
                 assertEquals(6L, counts[EventState.WAITING])
                 assertEquals(0L, counts[EventState.PENDING])
                 assertTrue(screen.has(AnalyticsCopy.text("consent.title")))
-                SystemClock.sleep(2_000)
+                // What Is Recorded names the window's size and layout (PEN-174), held in the shot.
+                holdOnTheWindowLine(screen)
                 ProofShot.take()
             }
         }
@@ -98,7 +111,8 @@ class ConsentScreenTest {
                 val dontShare = screen.tagged("consent-dont-share").boundsInWindow
                 assertEquals(share.width, dontShare.width, 1f)
                 assertEquals(share.top, dontShare.top, 1f)
-                SystemClock.sleep(2_000)
+                // The same What Is Recorded line as the first run's (PEN-174), held in the shot.
+                holdOnTheWindowLine(screen)
                 ProofShot.take()
             }
         }

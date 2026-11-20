@@ -156,6 +156,12 @@ export async function launch(
     aiQuestion?: 'ask' | 'answered';
     /** More of the app's environment (another git config, T50; the fake GitHub, T57). */
     env?: Readonly<Record<string, string>>;
+    /**
+     * Proof mode records the window unless this is false: a launch that only sets the stage for
+     * the one a proof is about (a notebook made before the build under test), so the recording
+     * is that launch's.
+     */
+    record?: boolean;
   } = {},
 ): Promise<Launched> {
   refuseOnMacHost('Launching the Mac app for a test');
@@ -168,7 +174,7 @@ export async function launch(
   answerAnalytics(home, options.analytics ?? 'no');
   if (options.aiQuestion !== 'ask') answerAiQuestion(userData);
   // Proof mode (the software factory's F7, `task proof:mac`): the main window is recorded.
-  const proof = process.env['PENMOSS_PROOF'] === '1';
+  const proof = process.env['PENMOSS_PROOF'] === '1' && options.record !== false;
   const app = await _electron.launch({
     args: [DESKTOP, ...(options.offline ? OFFLINE_ARGS : []), ...(options.args ?? [])],
     env: {

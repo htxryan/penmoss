@@ -730,4 +730,24 @@ test.describe('Usage data in the policy (PEN-137)', () => {
     await expect(page.locator('main')).toContainText('Never recorded');
     await expect(page.locator('main')).toContainText('"kind": "command"');
   });
+
+  // PEN-174: the window's size and layout are recorded, and the pages say so.
+  test('the usage data page and both privacy pages name the window’s size and layout', async ({
+    page,
+  }) => {
+    await page.goto('/docs/help/usage-data/');
+    const help = page.locator('main');
+    await expect(help).toContainText(
+      /the window[’']s size each time it opens, resizes or goes full screen/,
+    );
+    await expect(help).toContainText(
+      'sidebar, note panel, Full Width, light or dark, how many tabs',
+    );
+    await expect(help).toContainText('window sizes to the nearest 10 pixels');
+    await expect(help).toContainText('"name": "window"');
+    await page.goto('/docs/help/privacy/');
+    await expect(page.locator('main')).toContainText(/the window[’']s size and layout/);
+    await page.goto('/privacy/');
+    await expect(page.locator('article')).toContainText('window’s size and layout');
+  });
 });

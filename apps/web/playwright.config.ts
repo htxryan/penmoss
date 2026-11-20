@@ -101,6 +101,14 @@ export default defineConfig({
       testDir: '../telemetry-dashboard/test/e2e',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // The built penmoss.app pages a change's proof shows (PEN-174's ac15): the spec builds the
+      // site and serves site/dist itself, so `task proof:web` can record it. Only when named;
+      // `task site:test` checks the site under wrangler dev.
+      name: 'site',
+      testDir: '../../site/test/proof',
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
   webServer: [
     {

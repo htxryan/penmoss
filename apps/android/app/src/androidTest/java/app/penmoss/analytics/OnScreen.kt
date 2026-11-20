@@ -1,5 +1,6 @@
 package app.penmoss.analytics
 
+import android.app.Activity
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
@@ -16,29 +17,45 @@ import app.penmoss.ScreenTree
  * [ScreenTree] and its actions invoked directly, never the Compose test rule, whose Espresso link
  * doesn't start on the API 37 emulator.
  */
-class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
+class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
+    constructor(scenario: ActivityScenario<ComponentActivity>) : this({ block -> scenario.onActivity { block(it) } })
+
+    companion object {
+        /** How long a finder waits for its node to appear before it scrolls to look for it. */
+        private const val SEEK_AFTER_MS = 1_000L
+
+        /** The screen of [scenario]'s activity, whichever kind it is (the app's own activities). */
+        fun <A : Activity> of(scenario: ActivityScenario<A>) = OnScreen { block -> scenario.onActivity { block(it) } }
+
+        /**
+         * The screen of whichever of the app's activities is in front: the app moving from one
+         * activity to the next (the launcher opening a notebook) reads nothing until it settles.
+         */
+        fun inFront() = OnScreen { block ->
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                    .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull()?.let(block)
+            }
+        }
+    }
+
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     /** Every laid-out node now. */
     fun nodes(): List<SemanticsNode> {
         instrumentation.waitForIdleSync()
         var found = emptyList<SemanticsNode>()
-        scenario.onActivity { activity -> found = ScreenTree.nodes(activity.window.decorView).filter { it.boundsInWindow.width > 0f } }
+        onActivity { activity -> found = ScreenTree.nodes(activity.window.decorView).filter { it.boundsInWindow.width > 0f } }
         return found
     }
 
     fun texts(): List<String> = nodes().flatMap { it.texts() }
 
-    private companion object {
-        /** How long a finder waits for its node to appear before it scrolls to look for it. */
-        const val SEEK_AFTER_MS = 1_000L
-    }
-
     /** Every node in the tree, laid out or not, on screen or scrolled off it. */
     private fun allNodes(): List<SemanticsNode> {
         instrumentation.waitForIdleSync()
         var found = emptyList<SemanticsNode>()
-        scenario.onActivity { activity -> found = ScreenTree.nodes(activity.window.decorView) }
+        onActivity { activity -> found = ScreenTree.nodes(activity.window.decorView) }
         return found
     }
 
@@ -67,7 +84,7 @@ class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
                 it.config.getOrNull(SemanticsActions.ScrollBy) != null && it.boundsInWindow.height > 0f
         }
         val list = lists.maxByOrNull { it.boundsInWindow.height } ?: return
-        scenario.onActivity {
+        onActivity {
             val range = list.config[SemanticsProperties.VerticalScrollAxisRange]
             val by = if (range.value() < range.maxValue()) list.boundsInWindow.height * 0.6f else -1_000_000f
             list.config[SemanticsActions.ScrollBy].action?.invoke(0f, by)
@@ -103,7 +120,7 @@ class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
     /** Runs [node]'s click, or its nearest clickable ancestor's. */
     fun tap(node: SemanticsNode) {
         var ok = false
-        scenario.onActivity {
+        onActivity {
             var at: SemanticsNode? = node
             while (at != null && at.config.getOrNull(SemanticsActions.OnClick) == null) at = at.parent
             ok = at?.config?.getOrNull(SemanticsActions.OnClick)?.action?.invoke() == true
@@ -117,13 +134,13 @@ class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
     /** Types [value] into the field [tag] and presses its Done. */
     fun type(tag: String, value: String) {
         val field = tagged(tag)
-        scenario.onActivity {
+        onActivity {
             field.config.getOrNull(SemanticsActions.RequestFocus)?.action?.invoke()
             field.config[SemanticsActions.SetText].action?.invoke(AnnotatedString(value))
         }
         instrumentation.waitForIdleSync()
         val again = tagged(tag)
-        scenario.onActivity { again.config.getOrNull(SemanticsActions.OnImeAction)?.action?.invoke() }
+        onActivity { again.config.getOrNull(SemanticsActions.OnImeAction)?.action?.invoke() }
         instrumentation.waitForIdleSync()
     }
 
@@ -132,7 +149,7 @@ class OnScreen(private val scenario: ActivityScenario<ComponentActivity>) {
      * the parent's top), and in sight along a row that scrolls sideways.
      */
     fun reveal(node: SemanticsNode, margin: Float = 160f) {
-        scenario.onActivity {
+        onActivity {
             var at: SemanticsNode? = node.parent
             while (at != null) {
                 val scroll = at.config.getOrNull(SemanticsActions.ScrollBy)

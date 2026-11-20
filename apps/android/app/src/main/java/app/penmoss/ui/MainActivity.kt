@@ -74,6 +74,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        // The window's size (PEN-174): the launcher is the main window, through the first run too.
+        app.penmoss.analytics.WindowEvents.attach(this, "main")
         if (savedInstanceState == null) handle(intent)
     }
 

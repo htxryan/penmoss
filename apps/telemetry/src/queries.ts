@@ -26,6 +26,7 @@ import starts from '../queries/starts.sql';
 import sync from '../queries/sync.sql';
 import unused from '../queries/unused.sql';
 import versions from '../queries/versions.sql';
+import windowSizes from '../queries/window-sizes.sql';
 
 /** Every named query's SQL, by name. */
 export const NAMED_QUERIES = {
@@ -49,6 +50,7 @@ export const NAMED_QUERIES = {
   sync,
   unused,
   versions,
+  'window-sizes': windowSizes,
 } as const satisfies Record<string, string>;
 
 export type QueryName = keyof typeof NAMED_QUERIES;

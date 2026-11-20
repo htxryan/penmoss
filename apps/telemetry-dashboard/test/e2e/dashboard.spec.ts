@@ -2,7 +2,7 @@
  * The usage dashboard (PEN-137, AC30–AC33, AC14's dashboard part): behind Access, over the fixture
  * D1, every view draws its charts; each chart answers hover with a tooltip, opens its table and
  * downloads its CSV; the filters narrow it; Paths hides the rare path; it fits a phone. The proof
- * walk ends on the Overview.
+ * walk ends on the Overview; the last test holds on Platforms' Common Window Sizes (PEN-174).
  */
 import { expect, test as base, type Page } from '@playwright/test';
 import { startDashboard, type Dashboard } from './server';
@@ -348,7 +348,12 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
 
   // Platforms and Agents (AC33).
   await openView(page, 'Platforms');
-  for (const title of ['Clients and OS Versions', 'Version Adoption', 'Window Size Classes']) {
+  for (const title of [
+    'Clients and OS Versions',
+    'Version Adoption',
+    'Window Size Classes',
+    'Common Window Sizes',
+  ]) {
     await checkCard(page, title);
   }
   // A bar's tooltip sits above its row, clear of the bar and of the labels.
@@ -420,4 +425,55 @@ test('every view, every chart: hover, Table and CSV; ends on the Overview', asyn
   await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.5);
   await expect(page.getByRole('tooltip')).toBeVisible();
   await page.waitForTimeout(2000);
+});
+
+test('Platforms: Common Window Sizes, the most common main window sizes per client, then Other', async ({
+  signedIn: page,
+  dashboard,
+}) => {
+  await page.goto(`${dashboard.url}/#platforms?days=30`);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Platforms', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('main')).not.toHaveAttribute('aria-busy', 'true');
+  // Right after Window Size Classes.
+  const titles = await page
+    .locator('section.card h2')
+    .evaluateAll((nodes) => nodes.map((node) => node.firstChild?.textContent?.trim() ?? ''));
+  expect(titles.indexOf('Common Window Sizes')).toBe(titles.indexOf('Window Size Classes') + 1);
+  const card = page.getByRole('region', { name: 'Common Window Sizes', exact: true });
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.locator('.note')).toHaveText(
+    'Installs by main window size: the 10 most common per client, then Other.',
+  );
+  const chart = card.locator('svg.chart');
+  await expect(chart).toBeVisible();
+  await expect(chart).toContainText('Mac · 1440 × 900');
+  // Each bar's label as drawn (its full name is also its title).
+  const labels = await chart
+    .locator('text.label')
+    .evaluateAll((nodes) => nodes.map((node) => node.firstChild?.textContent ?? ''));
+  expect(labels).toEqual([
+    'Android · Other',
+    'Mac · 1440 × 900',
+    'Mac · 1280 × 800',
+    'Mac · Other',
+  ]);
+  await expect(card.getByRole('button', { name: 'Table: Common Window Sizes' })).toBeVisible();
+  await expect(
+    card.getByRole('button', { name: 'Download CSV: Common Window Sizes' }),
+  ).toBeVisible();
+  await hold(page);
+  // Its table: the client, the size and the installs.
+  await card.getByRole('button', { name: 'Table: Common Window Sizes' }).click();
+  const table = card.getByRole('table');
+  await expect(table.locator('thead th')).toHaveText(['Client', 'Window Size', 'Installs']);
+  await expect(table.locator('tbody tr').nth(1).locator('td')).toHaveText([
+    'Mac',
+    '1440 × 900',
+    '6',
+  ]);
+  await card.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(2000);
+  await expect(card).toBeInViewport();
 });

@@ -123,6 +123,52 @@ describe('POST /v1/batch', () => {
     expect(dropped - Number(droppedBefore)).toBe(3);
   });
 
+  it('takes app window and app layout with their own props, and refuses anything else (PEN-174)', async () => {
+    const install = newInstall();
+    const window = {
+      kind: 'app' as const,
+      name: 'window',
+      props: { window: 'main', width: 1440, height: 900, fullScreen: false, maximised: true },
+    };
+    const layout = {
+      kind: 'app' as const,
+      name: 'layout',
+      props: {
+        window: 'main',
+        sidebar: 'shown',
+        sidebarWidth: 280,
+        panel: 'open',
+        fullWidth: false,
+        themeMode: 'dark',
+        tabs: '2–4',
+      },
+    };
+    const response = await post('/v1/batch', {
+      v: 1,
+      install,
+      events: [
+        event({ seq: 0, ...window }),
+        event({ seq: 1, ...layout }),
+        event({ seq: 2, ...window, props: { ...window.props, width: 1441 } }),
+        event({ seq: 3, ...window, props: { ...window.props, window: 'settings' } }),
+        event({ seq: 4, ...layout, props: { ...layout.props, tabs: 3 } }),
+        event({ seq: 5, kind: 'app', name: 'launch', props: { notebooks: '1', width: 1440 } }),
+        event({ seq: 6, ...window, props: { ...window.props, display: 'Studio Display' } }),
+        event({ seq: 7, ...window, props: { ...window.props, height: 10_010 } }),
+      ],
+    });
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ accepted: 2, dropped: 6, refused: [2, 3, 4, 5, 6, 7] });
+    const written = await rows(
+      'SELECT kind, name, props FROM events WHERE install = ?1 ORDER BY seq',
+      install,
+    );
+    expect(written).toEqual([
+      { kind: 'app', name: 'window', props: JSON.stringify(window.props) },
+      { kind: 'app', name: 'layout', props: JSON.stringify(layout.props) },
+    ]);
+  });
+
   it('answers 400 when nothing in it is valid, or it is not a batch', async () => {
     const install = newInstall();
     const none = await post('/v1/batch', { v: 1, install, events: [event({ name: 'nope' })] });

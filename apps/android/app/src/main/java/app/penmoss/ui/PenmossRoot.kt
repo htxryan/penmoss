@@ -68,7 +68,10 @@ fun PenmossRoot(graph: NotebookGraph, deepLinks: DeepLinkInbox = DeepLinkInbox()
     LaunchedEffect(graph) { graph.sync.requestSync() }
     // The lists' selection mode (T42 on Android, NT26, A652), which their rows join.
     val selection = remember { NoteSelection() }
-    CompositionLocalProvider(LocalNoteSelection provides selection) { Screens(graph, deepLinks) }
+    // The screens' layout, for usage analytics (PEN-174): the drawer, the note's panel and the settings they show.
+    app.penmoss.analytics.TrackLayout(graph) {
+        CompositionLocalProvider(LocalNoteSelection provides selection) { Screens(graph, deepLinks) }
+    }
 }
 
 /**

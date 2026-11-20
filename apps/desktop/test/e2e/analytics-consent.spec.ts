@@ -90,6 +90,14 @@ async function expectQuestion(scope: Locator) {
   await expect(scope.getByTestId('consent-recorded')).toContainText(
     'CLI commands and agents’ MCP calls, by name',
   );
+  // The window's size and its layout (PEN-174's ac12, ac13): in view, where the proof holds.
+  const versions = scope
+    .getByTestId('consent-recorded')
+    .getByText('The app’s and the system’s versions, and the window’s size and layout', {
+      exact: true,
+    });
+  await versions.scrollIntoViewIfNeeded();
+  await expect(versions).toBeInViewport();
   await expect(scope.getByTestId('consent-never')).toContainText(
     'What you write: notes, titles, tags, links and searches',
   );
@@ -270,4 +278,44 @@ test('an install with a notebook and no answer is asked once; Don’t Share send
   await expect(section.getByTestId('privacy-counts')).toHaveText(/^Not Shared [\d,]+$/);
   await section.getByTestId('privacy-counts').scrollIntoViewIfNeeded();
   await holdForProof(again.page);
+});
+
+test('the dialog over the app lists the window’s size and layout under What Is Recorded (PEN-174 ac13)', async () => {
+  test.setTimeout(180_000);
+  const fake = await endpoint();
+  // Before this build: a notebook, and no answer. Not recorded: the proof is the launch after it.
+  const before = await launch({ env: analyticsEnv(fake), record: false });
+  await gitNotebook(before);
+  await before.app.close();
+  rmSync(join(before.home, 'analytics.json'), { force: true });
+
+  const launched = await launch({
+    userData: before.userData,
+    analytics: 'ask',
+    env: analyticsEnv(fake),
+  });
+  opened.push(launched);
+  const { app, page } = launched;
+  await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
+  const dialog = page.getByTestId('consent-dialog');
+  await expect(dialog).toBeVisible({ timeout: 30_000 });
+  // Over the app: the notebook's sidebar is behind it.
+  await expect(notebookSection(page, 'Notes')).toBeVisible({ timeout: 30_000 });
+  await expectQuestion(dialog);
+  const line = dialog
+    .getByTestId('consent-recorded')
+    .getByText('The app’s and the system’s versions, and the window’s size and layout', {
+      exact: true,
+    });
+  await page.mouse.move(0, 0);
+  await holdForProof(page);
+  // The same dialog held a while longer: the policy link hovered and left draws it again.
+  await dialog.getByRole('link', { name: 'Privacy Policy' }).hover();
+  await holdForProof(page);
+  await page.mouse.move(0, 0);
+  await holdForProof(page);
+  // Still unanswered, and the line in view as the recording ends.
+  expect((await analyticsStatus(page)).consent).toBeNull();
+  await expect(dialog).toBeVisible();
+  await expect(line).toBeInViewport();
 });

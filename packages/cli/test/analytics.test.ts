@@ -16,6 +16,7 @@ import {
   CLI_NAMES,
   eventProblem,
   isCatalogued,
+  Recorder,
   STATES,
   type AnalyticsEvent,
   type ConsentFile,
@@ -685,6 +686,42 @@ describe('the built CLI (build.js)', () => {
       ['version', 'agent', 'pending'],
     ]);
   }, 30_000);
+});
+
+describe('no window or layout from the CLI or the MCP server (PEN-174)', () => {
+  it('records only cli and tool events, and its recorders refuse app window and app layout', async () => {
+    const cli = cliWith();
+    expect((await cli(['--version'])).code).toBe(0);
+    const tools = new ToolRecorder(analyticsIo(), {}, 20);
+    tools.record({ tool: 'read_note', agentClient: 'codex', result: 'ok', tookMs: 5 });
+    tools.close();
+    expect([...new Set(events().map((event) => `${event.client} ${event.kind}`))].sort()).toEqual([
+      'cli cli',
+      'mcp tool',
+    ]);
+    // Were either ever asked to, core's check drops it before it is stored: they have no window.
+    const fields = analyticsIo().fields;
+    for (const client of ['cli', 'mcp'] as const) {
+      const kept: unknown[] = [];
+      const recorder = new Recorder({
+        fields: () => ({ client, actor: 'agent', ...fields }),
+        sink: (event) => kept.push(event),
+      });
+      const window = { window: 'main', width: 1440, height: 900, fullScreen: false };
+      expect(recorder.record('app', 'window', window), client).toBe(false);
+      expect(
+        recorder.record('app', 'layout', {
+          window: 'main',
+          sidebar: 'hidden',
+          panel: 'none',
+          fullWidth: false,
+          themeMode: 'system',
+        }),
+        client,
+      ).toBe(false);
+      expect(kept).toEqual([]);
+    }
+  });
 });
 
 describe('the MCP server’s recorder', () => {

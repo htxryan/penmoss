@@ -134,6 +134,8 @@ class CaptureActivity : ComponentActivity() {
                 )
             }
         }
+        // Its size, once laid out (PEN-174); a rotation makes the sheet again, and its new size records once.
+        app.penmoss.analytics.WindowEvents.attach(this, "capture")
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
