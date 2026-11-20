@@ -247,8 +247,8 @@ export function planningAction(v: PlanningView): PlanningAction {
 /**
  * How Ryan chats with a card's planning session from a terminal on this Mac, in his own Claude
  * Code (F15, A1281); the Claude app's chat link is the other way (A1286). `claude attach` takes
- * the short id: a session's id's first 8 characters, as `claude --bg` prints it. A resume starts
- * a new session, with a new id.
+ * the short id: a session's id's first 8 characters, as `claude --bg` prints it. A resume keeps
+ * the session and its id (A1665).
  */
 export function attachCommand(sessionId: string): string {
   return `claude attach ${sessionId.slice(0, 8)}`;

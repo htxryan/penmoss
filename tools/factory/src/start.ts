@@ -263,7 +263,7 @@ export async function executePlanning(
       }),
     log,
     launch: async (message, resume) => {
-      const { id, chatUrl } = await launchSession(
+      const { id, chatUrl, resumed, note } = await launchSession(
         config,
         nodeExec,
         files,
@@ -277,7 +277,20 @@ export async function executePlanning(
         throw new Error(
           `the planning session started${id ? ` (${id})` : ''} but \`claude agents\` does not list it`,
         );
-      log(`planning session ${found.sessionId}${resume ? ' resumed' : ' started'}`);
+      if (!resume) log(`planning session ${found.sessionId} started`);
+      else if (resumed !== false && found.sessionId === resume)
+        log(`planning session ${found.sessionId} resumed`);
+      else {
+        // The one case a resume starts a new session (A1665): said in the log, with Claude
+        // Code's reason, and the old session stopped so it doesn't sit idle beside the copy.
+        log(
+          `planning session ${resume} could not be resumed${note ? ` (${note})` : ''}; started ${found.sessionId} instead`,
+        );
+        // By its own short id: stopSession's lookup by the card's name could find the copy.
+        await nodeExec(config.agents.claude.bin, ['stop', resume.slice(0, 8)], { env }).catch(
+          () => undefined,
+        );
+      }
       return { sessionId: found.sessionId, ...(chatUrl ? { chatUrl } : {}) };
     },
     stop: (sessionId) => stopSession(config, nodeExec, item.number, sessionId, env),
