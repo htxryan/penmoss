@@ -31,6 +31,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.em
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.DeviceGraph
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.roles
 
 /** The primary notebook's name, which Settings' (i) names (A1560); null with no notebook yet. */
@@ -73,7 +75,7 @@ internal fun SettingsInfoButton() {
         tooltip = { PlainTooltip { Text("About Settings") } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = { open = true }, modifier = Modifier.testTag("settingsInfo")) {
+        IconButton(onClick = trackedClick("settings.info") { open = true }, modifier = Modifier.testTag("settingsInfo")) {
             Icon(SettingsIcons.Info, contentDescription = "About Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -95,6 +97,7 @@ internal fun SettingsInfoButton() {
                 Icon(SettingsIcons.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             },
         )
+        val tracked = rememberTrackedDialog("settingsInfo")
         AlertDialog(
             onDismissRequest = { open = false },
             title = { Text("About Settings") },
@@ -109,7 +112,7 @@ internal fun SettingsInfoButton() {
                     },
                 )
             },
-            confirmButton = { TextButton(onClick = { open = false }, Modifier.testTag("settingsInfoOk")) { Text("OK") } },
+            confirmButton = { TextButton(onClick = trackedClick("settings.info.ok", tracked.done { open = false }), Modifier.testTag("settingsInfoOk")) { Text("OK") } },
         )
     }
 }

@@ -38,7 +38,7 @@ A personal notes app Ryan fully owns: Notion-level polish on plain markdown docu
 
 ### Not in scope
 
-Fully native editors; importers (Obsidian, Apple Notes, Notion); public sharing, publishing and live co-editing; end-to-end encryption; in-app AI features; Notion-style databases; tasks and reminders (Todoist owns those); plugins and custom CSS; iOS, Windows and Linux apps; a Penmoss server.
+Fully native editors; importers (Obsidian, Apple Notes, Notion); public sharing, publishing and live co-editing; end-to-end encryption; in-app AI features beyond AI Descriptions (a short description per note, for agents, A1656); Notion-style databases; tasks and reminders (Todoist owns those); plugins and custom CSS; iOS, Windows and Linux apps; a Penmoss server.
 
 ## Shape
 
@@ -53,6 +53,8 @@ flowchart LR
   end
   Android["Android app<br/>Kotlin, Compose, JGit"]
   Relay["Relay<br/>Cloudflare Worker, apps/relay"]
+  Telemetry["Usage data<br/>apps/telemetry, D1<br/>(only with consent)"]
+  Stats["Dashboard<br/>apps/telemetry-dashboard<br/>behind Access"]
   Claude["claude.ai<br/>web, desktop, mobile"]
   Repo[("Notebook repository<br/>on GitHub")]
   GitHubAPI["GitHub REST API<br/>repositories, sign-in"]
@@ -64,6 +66,9 @@ flowchart LR
   Android <-->|git over HTTPS| Repo
   Claude -->|remote MCP| Relay
   Relay <-->|GitHub Git Data API| Repo
+  App -.->|usage batches| Telemetry
+  Android -.->|usage batches| Telemetry
+  Telemetry --- Stats
 ```
 
 | Client            | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Docs                                   |
@@ -74,6 +79,8 @@ flowchart LR
 | Relay             | One stateless Cloudflare Worker that serves the local MCP tool table to claude.ai over Streamable HTTP, through GitHub's Git Data API. OAuth 2.1 with GitHub as the login. It stores no notes.                                                                                                                                                                                                                                                                   | [`relay.md`](relay.md)                 |
 
 The Mac app's main window shows notes in tabs (PEN-140, A1496 to A1505). `apps/web/src/tabs/` holds them: a pure state (`state.ts`) of tabs, each with its own entries (path, scroll position, note panel), and a controller that is the router's history driver for the main window. `navigate` goes to the active tab and Back and Forward step its entries; the address follows the active tab's page through the History API, and the browser's own Back steps that tab. The tabs are saved in this Mac's storage and restored at launch. Only the active tab's note is mounted; the kept-editors shelf holds up to eight editors, favouring the tabs' notes. Note windows keep the browser's history, one note and no tabs (A710).
+
+Usage analytics (PEN-137, A1635 onwards): every client records each interaction by name into a store on its device, always; the Mac app's main process and Android's WorkManager send it to `apps/telemetry` (t.penmoss.app, D1) only when the person chose Share Usage Data, and `apps/telemetry-dashboard` (stats.penmoss.app, behind Cloudflare Access) reads it. The apps also keep a scrubbed local log that a bug report can attach. See [`analytics.md`](analytics.md).
 
 penmoss.app, with the user docs at [penmoss.app/docs](https://penmoss.app/docs/), is the Astro project in `site/` (A1200, A1215). How to use each client is documented there; this page and the rest of `docs/` are for contributors.
 
@@ -135,19 +142,21 @@ Each writer keeps its own log. See [[Penmoss — MCP tools]].
 
 Dependencies point one way: `core` at the bottom, the apps on top.
 
-| Package                 | Holds                                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `packages/core`         | The markdown codec at its root; schema, ids, links, tags, periodic notes and the rest by subpath (pure)      |
-| `packages/editor`       | TipTap extensions, clipboard, slash menu, the editor's collaboration binding                                 |
-| `packages/model`        | Yjs documents, records, comments, tags, history, search index, a note as markdown and its edits (subpaths)   |
-| `packages/git-notebook` | The git-notebook engine, History and the Time Machine, the local notes API and MCP tools, the transports     |
-| `packages/ui`           | Shared React components and themes                                                                           |
-| `packages/embed`        | Search by meaning on the Mac: the model store, the ONNX embedder, the vector cache and the embedding service |
-| `packages/cli`          | The penmoss CLI                                                                                              |
-| `apps/web`              | The React app, loaded by the Mac app and the test harness; its IndexedDB store (`src/store`)                 |
-| `apps/desktop`          | The Mac app's main process, preload, capture window and packaging                                            |
-| `apps/android`          | The Android app                                                                                              |
-| `apps/relay`            | The relay                                                                                                    |
+| Package                    | Holds                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `packages/core`            | The markdown codec at its root; schema, ids, links, tags, periodic notes and the rest by subpath (pure)      |
+| `packages/editor`          | TipTap extensions, clipboard, slash menu, the editor's collaboration binding                                 |
+| `packages/model`           | Yjs documents, records, comments, tags, history, search index, a note as markdown and its edits (subpaths)   |
+| `packages/git-notebook`    | The git-notebook engine, History and the Time Machine, the local notes API and MCP tools, the transports     |
+| `packages/ui`              | Shared React components and themes                                                                           |
+| `packages/embed`           | Search by meaning on the Mac: the model store, the ONNX embedder, the vector cache and the embedding service |
+| `packages/cli`             | The penmoss CLI                                                                                              |
+| `apps/web`                 | The React app, loaded by the Mac app and the test harness; its IndexedDB store (`src/store`)                 |
+| `apps/desktop`             | The Mac app's main process, preload, capture window and packaging                                            |
+| `apps/android`             | The Android app                                                                                              |
+| `apps/relay`               | The relay                                                                                                    |
+| `apps/telemetry`           | The usage-data ingest Worker and its D1 schema, rollups and named queries                                    |
+| `apps/telemetry-dashboard` | The read-only usage dashboard Worker, behind Cloudflare Access                                               |
 
 ## Stack
 

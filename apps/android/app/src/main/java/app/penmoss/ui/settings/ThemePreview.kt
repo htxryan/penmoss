@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.EditorWebView
 import app.penmoss.engine.bridge.BridgeProtocol
 import app.penmoss.engine.bridge.FromEditor
@@ -87,9 +88,9 @@ fun ThemePreview(
     when {
         gone -> {
             Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Preview unavailable", Modifier.testTag("previewGone"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Preview Unavailable", Modifier.testTag("previewGone"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(
-                    onClick = {
+                    onClick = trackedClick("settings.preview.reload") {
                         gone = false
                         made++
                     },

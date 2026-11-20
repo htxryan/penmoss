@@ -28,7 +28,7 @@ Penmoss asks one thing per screen, in three steps. **Back** at the bottom left g
    - **Paste a URL:** for another host, or a repository GitHub doesn't list. Make an empty private repository with no README on your host, copy its address (SSH, such as `git@github.com:you/notes.git`, or HTTPS), paste it in **Repository URL** and choose **Continue**.
 4. **Name Your Notebook:** Penmoss offers the repository's name. Change it if you like (you can rename it any time) and choose **Make Notebook**.
 
-Penmoss then sets the notebook up and runs its first sync, showing each step. When it is done, Penmoss opens the new notebook on a note called **Welcome to Penmoss**, a short guide you can delete.
+Penmoss then sets the notebook up and runs its first sync, showing each step. On the Mac it then asks once, **Describe Notes for Agents?**, with **Not Now** picked: **Turn On for All Notes** asks which AI writes the descriptions, Anthropic with an API key or Claude Code on this Mac (see [AI Descriptions](/docs/ai-descriptions/)). When it is done, Penmoss opens the new notebook on a note called **Welcome to Penmoss**, a short guide you can delete.
 
 If the first sync fails, Penmoss says why. The notebook is on your Mac already, and nothing is lost: **Retry** tries again, and **Open Anyway** opens it, and the note's bottom bar shows how the sync stands until one works.
 

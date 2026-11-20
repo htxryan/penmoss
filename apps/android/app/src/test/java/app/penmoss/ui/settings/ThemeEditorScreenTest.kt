@@ -155,7 +155,7 @@ class ThemeEditorScreenTest {
         editor()
         compose.onNodeWithTag("themeMenu").performClick()
         compose.onNodeWithTag("deleteTheme").performClick()
-        compose.onNodeWithText("Delete “Nord copy” on every device?").assertIsDisplayed()
+        compose.onNodeWithText("Delete “Nord copy” on Every Device?").assertIsDisplayed()
         assertEquals(null, deleted)
         compose.onNodeWithTag("confirmDelete").performClick()
         assertEquals("custom-abc", deleted!!.string("id"))
@@ -271,7 +271,7 @@ class ThemeEditorScreenTest {
         editor()
         compose.onNodeWithTag("colour-bg").performScrollTo().performClick()
         val bg = ThemeEdits.colours(copy, "light").getValue("bg")
-        compose.onNodeWithTag("pick-$bg").assertContentDescriptionContains("Page background", substring = true).assertIsSelected()
+        compose.onNodeWithTag("pick-$bg").assertContentDescriptionContains("Page Background", substring = true).assertIsSelected()
         val fg = ThemeEdits.colours(copy, "light").getValue("fg")
         compose.onNodeWithTag("pick-$fg").assertContentDescriptionContains("Text", substring = true).assertIsNotSelected()
         // The square says where it is; each slider is read once, by the slider itself.

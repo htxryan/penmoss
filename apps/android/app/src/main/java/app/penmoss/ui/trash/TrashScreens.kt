@@ -18,6 +18,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -126,7 +128,7 @@ fun TrashScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Trash") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                navigationIcon = { IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
@@ -169,17 +171,18 @@ fun TrashScreen(
         }
     }
     confirming?.let { entry ->
+        val tracked = rememberTrackedDialog("confirm")
         AlertDialog(
             onDismissRequest = { confirming = null },
-            title = { Text("Delete “${entry.title}” for good?") },
+            title = { Text("Delete “${entry.title}” for Good?") },
             text = { Text("It can’t be restored on this phone or any other device. You’ll be asked for your fingerprint, face or screen lock.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = trackedClick("trash.delete-for-good.confirm", tracked.done {
                     confirming = null
                     onDeleteForGood(entry)
-                }, modifier = Modifier.testTag("confirmDeleteForGood")) { Text("Delete for Good") }
+                }), modifier = Modifier.testTag("confirmDeleteForGood")) { Text("Delete for Good") }
             },
-            dismissButton = { TextButton(onClick = { confirming = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = trackedClick("trash.delete-for-good.cancel") { confirming = null }) { Text("Cancel") } },
         )
     }
 }
@@ -204,7 +207,7 @@ private fun TrashFolderRow(folder: TrashFolderUi, enabled: Boolean, onRestore: (
         Text(folder.detail, spokenAs(folder.detail, folder.spoken), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(
-                onClick = onRestore,
+                onClick = trackedClick("trash.folder.restore", onRestore),
                 enabled = enabled,
                 // Said with the folder's name, as the web's button (several rows say Restore).
                 modifier = Modifier.testTag("restoreFolder-${folder.id}").semantics { contentDescription = "Restore the folder ${folder.name}" },
@@ -219,9 +222,9 @@ private fun TrashRowView(entry: TrashEntryUi, enabled: Boolean, onRestore: () ->
         Text(entry.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(entry.detail, spokenAs(entry.detail, entry.spoken), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onRestore, enabled = enabled, modifier = Modifier.testTag("restore-${entry.id}")) { Text("Restore") }
+            TextButton(onClick = trackedClick("trash.restore", onRestore), enabled = enabled, modifier = Modifier.testTag("restore-${entry.id}")) { Text("Restore") }
             TextButton(
-                onClick = onDelete,
+                onClick = trackedClick("trash.delete-for-good", onDelete),
                 enabled = enabled && !entry.waiting,
                 modifier = Modifier.testTag("deleteForGood-${entry.id}"),
             ) { Text("Delete for Good") }
@@ -248,6 +251,7 @@ fun NoteActionsSheet(
     onNewFolderHere: (() -> Unit)? = null,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tracked = rememberTrackedDialog("noteMenu")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Text(
             titleOf(title),
@@ -258,24 +262,24 @@ fun NoteActionsSheet(
         )
         Box(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Column(Modifier.fillMaxWidth()) {
-                onNewNoteHere?.let { SheetAction("New Note Here", "noteAction-newNote", it) }
-                onNewFolderHere?.let { SheetAction("New Folder Here", "noteAction-newFolder", it) }
-                SheetAction("Move to Folder…", "noteAction-move", onMove)
-                SheetAction("Rename", "noteAction-rename", onRename)
-                onCopyAgentReference?.let { SheetAction("Copy Agent Reference", "noteAction-copyAgentReference", it) }
-                SheetAction("Move to Trash", "noteAction-trash", onTrash)
+                onNewNoteHere?.let { SheetAction("New Note Here", "noteAction-newNote", event = "tree.note-menu.new-note", tracked.done(it)) }
+                onNewFolderHere?.let { SheetAction("New Folder Here", "noteAction-newFolder", event = "tree.note-menu.new-folder", tracked.done(it)) }
+                SheetAction("Move to Folder…", "noteAction-move", event = "tree.note-menu.move", tracked.done(onMove))
+                SheetAction("Rename", "noteAction-rename", event = "tree.note-menu.rename", tracked.done(onRename))
+                onCopyAgentReference?.let { SheetAction("Copy Agent Reference", "noteAction-copyAgentReference", event = "tree.note-menu.copy-agent-reference", tracked.done(it)) }
+                SheetAction("Move to Trash", "noteAction-trash", event = "tree.note-menu.trash", tracked.done(onTrash))
             }
         }
     }
 }
 
 @Composable
-private fun SheetAction(text: String, tag: String, onClick: () -> Unit) {
+private fun SheetAction(text: String, tag: String, event: String, onClick: () -> Unit) {
     Text(
         text,
         Modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(role = Role.Button, onClick = trackedClick(event, onClick))
             .padding(horizontal = 24.dp, vertical = 16.dp)
             .testTag(tag),
         style = MaterialTheme.typography.bodyLarge,

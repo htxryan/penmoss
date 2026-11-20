@@ -482,7 +482,7 @@ class GitNotebookHub(
             inStep,
             settings,
             others,
-            onFailure = { error -> runCatching { android.util.Log.w("PenmossGit", "Keep Settings in Step could not copy", error) } },
+            onFailure = { error -> app.penmoss.log.PenmossLog.warn("PenmossGit", "Keep Settings in Step could not copy", error) },
         ) { from, id -> withContext(Dispatchers.IO) { copyInto(from, graph(id)) } }
     }
 
@@ -569,6 +569,10 @@ class GitNotebookHub(
 
     /** Settings → cadence and Wi-Fi only; the open page follows at once. */
     suspend fun update(localId: String, pushDelayS: Int? = null, pullEveryMin: Int? = null, wifiOnly: Boolean? = null) {
+        // Recorded by name (PEN-137), with the value chosen, never the notebook.
+        pushDelayS?.let { app.penmoss.analytics.SettingEvents.recordValue("git.pushAfter", it) }
+        pullEveryMin?.let { app.penmoss.analytics.SettingEvents.recordValue("git.pullEvery", it) }
+        wifiOnly?.let { app.penmoss.analytics.SettingEvents.recordValue("git.wifiOnly", it) }
         val view = notebooks.update(localId, pushDelayS, pullEveryMin, wifiOnly)
         sources[localId]?.opened()?.setCadence(view.pushDelayS, view.pullEveryMin)
         scheduleWork()
@@ -576,6 +580,7 @@ class GitNotebookHub(
 
     /** Sign commits, per notebook (#172, A921): on makes this phone's key first if it has none. */
     suspend fun setSignCommits(localId: String, on: Boolean) {
+        app.penmoss.analytics.SettingEvents.recordValue("git.signCommits", on)
         notebooks.setSignCommits(localId, on)
         refresh()
     }
@@ -707,7 +712,7 @@ class GitNotebookHub(
             pass = {
                 opened()?.let { engine ->
                     try {
-                        GitRecovery(engine, RoomOldCopies(graph.database), log = { runCatching { android.util.Log.w("PenmossGit", it) } })
+                        GitRecovery(engine, RoomOldCopies(graph.database), log = { app.penmoss.log.PenmossLog.warn("PenmossGit", it) })
                             .run { note -> recovered(localId, note.title) }
                             .also { pass -> if (pass == null || !pass.later) recoveryDue = false }
                     } finally {
@@ -717,7 +722,7 @@ class GitNotebookHub(
                 }
             },
             onPass = { pass -> if (!pass.later) unrecovered(localId, pass.unrecovered.map { it.title }) },
-            log = { runCatching { android.util.Log.w("PenmossGit", it) } },
+            log = { app.penmoss.log.PenmossLog.warn("PenmossGit", it) },
         )
 
         /** The page's sync status, through page restarts. */
@@ -755,7 +760,7 @@ class GitNotebookHub(
                 engine.closed("The notebook's page stopped")
                 current = null
             }
-            engine = GitEngine(localId, port, notebooks, io, asks, withheld = RoomOldCopies(graph.database))
+            engine = GitEngine(localId, port, notebooks, io, asks, withheld = RoomOldCopies(graph.database), ai = main().aiDescriptions)
             engine.onChanged = { made?.sync?.requestSync() }
             io.launch {
                 var phase: String? = null
@@ -896,7 +901,7 @@ class GitNotebookHub(
     companion object {
         /** Logs what a coroutine of the hub's threw, instead of ending the app. */
         val LOGGED = kotlinx.coroutines.CoroutineExceptionHandler { _, error ->
-            runCatching { android.util.Log.w("PenmossGit", "A git notebook task failed", error) }
+            app.penmoss.log.PenmossLog.warn("PenmossGit", "A git notebook task failed", error)
         }
 
         const val PREFS = "penmoss.git"

@@ -297,7 +297,7 @@ class ScreensTest {
         compose.onNodeWithTag("refusedWithoutPictures").performClick()
         compose.onAllNodesWithTag("refusedDiscard")[1].performClick()
         // Discarding deletes the only copy: it asks first (T39, A386).
-        compose.onNodeWithText("Discard this capture?").assertIsDisplayed()
+        compose.onNodeWithText("Discard This Capture?").assertIsDisplayed()
         assertEquals(listOf("copy:c2", "retry:c1", "without:c1"), events)
         compose.onNodeWithTag("refusedDiscardConfirm").performClick()
         compose.onNodeWithContentDescription("Back").performClick()
@@ -322,14 +322,14 @@ class ScreensTest {
             }
         }
         compose.onNodeWithTag("refusedDiscard").performClick()
-        compose.onNodeWithText("Discard this capture?").assertIsDisplayed()
+        compose.onNodeWithText("Discard This Capture?").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         // Cancelled: the dialog goes, the capture stays, and Discard asks again next time (A386).
-        compose.onNodeWithText("Discard this capture?").assertDoesNotExist()
+        compose.onNodeWithText("Discard This Capture?").assertDoesNotExist()
         compose.onNodeWithText("Too long").assertIsDisplayed()
         assertEquals(emptyList<String>(), events)
         compose.onNodeWithTag("refusedDiscard").performClick()
-        compose.onNodeWithText("Discard this capture?").assertIsDisplayed()
+        compose.onNodeWithText("Discard This Capture?").assertIsDisplayed()
         compose.onNodeWithTag("refusedDiscardConfirm").performClick()
         assertEquals(listOf("discard:c1"), events)
     }

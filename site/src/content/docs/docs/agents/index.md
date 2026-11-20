@@ -22,6 +22,10 @@ Agents reach your notes through one MCP server, `penmoss mcp`, which serves ever
 
 Agents connected by name in earlier versions keep their own copies and servers until you remove them in **Settings → Agents**.
 
+## Note descriptions
+
+A note's [description](/docs/ai-descriptions/) is a sentence or two on what it holds. Agents see it wherever a note is named (search results, lists, backlinks and each link `read_note` gives), so they can read descriptions first and open only the notes that matter. Write descriptions yourself, or let AI Descriptions write them.
+
 ## Point an agent at a note
 
 **Copy Agent Reference**, in a note's ⋯ menu (⋮ on Android), its title bar or its right-click menu in the sidebar, copies one line to paste into an agent's conversation:
@@ -52,7 +56,7 @@ The setup commands Penmoss gives you run the CLI inside the app (`'/Applications
 
 :::note[Agents connected before November 2026]
 Their commands name `/Applications/Penmoss.app/Contents/MacOS/Penmoss` instead. They still work, but while one runs, opening Penmoss can take a moment longer. Copy the new command from **Settings → Agents** once and add the server again (in Claude Code, `claude mcp remove` the old one first).
-::: To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. Once it is installed and on your PATH, Agents shows it on one line, **penmoss command installed**; choose **Manage…** to reinstall or remove it. See [Install the CLI](/docs/reference/cli/#install).
+::: To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. Once it is installed and on your PATH, Agents shows it on one line, **penmoss Command Installed**; choose **Manage…** to reinstall or remove it. See [Install the CLI](/docs/reference/cli/#install).
 
 ## When agents sync
 

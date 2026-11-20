@@ -156,6 +156,20 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!--
+            Share Log File (PEN-137, AC49): the scrubbed copy of the log in the cache's share
+            folder, and nothing else, through an authority of its own.
+        -->
+        <provider
+            android:name=".log.LogFileProvider"
+            android:authorities="${applicationId}.logs"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/log_paths" />
+        </provider>
+
         <!-- WorkManager starts on demand with PenmossApp's worker factory (T35, A321; the git notebooks' runs, A881). -->
         <provider
             android:name="androidx.startup.InitializationProvider"

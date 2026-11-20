@@ -109,6 +109,7 @@ class NotebookGraph(
 
     /** Changes one of the notebook's own settings (null: back to its default), sent by the next pass (A411). */
     fun changeSetting(key: String, value: JsonElement?) {
+        app.penmoss.analytics.SettingEvents.record(key, value)
         scope.launch { if (store.changeSetting(key, value)) sync.requestSync() }
     }
 

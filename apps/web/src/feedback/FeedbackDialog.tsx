@@ -1,10 +1,19 @@
 /**
  * The Send feedback form (T49, D41) on the web and in the Mac app: type, priority, title, a
  * description in the Penmoss editor's reduced schema (A790), screenshots, and the captured
- * context exactly as the issue will hold it, with a checkbox per group (A791). An unsent form
- * is a draft kept on this device; a sent one goes through the outbox, so offline it waits
- * (A796).
+ * context exactly as the issue will hold it, with a checkbox per group (A791), and in the Mac
+ * app a bug report's anonymised logs, exactly as attached (PEN-137). An unsent form is a draft
+ * kept on this device; a sent one goes through the outbox, so offline it waits (A796), with the
+ * logs it previewed.
  */
+import {
+  analyticsCopy,
+  countBucket,
+  formatReportSize,
+  reportHours,
+  textBytes,
+  type Limits,
+} from '@penmoss/core/analytics';
 import {
   contextMarkdown,
   FEEDBACK_GROUP_TITLES,
@@ -36,7 +45,10 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from 'react';
+import { useTrackedDialog, type TrackedDialog } from '../analytics/dialog';
+import { record } from '../analytics/record';
 import { useCommands } from '../commands/hooks';
+import { desktop } from '../desktop/bridge';
 import { DialogClose } from '../shell/DialogClose';
 import { buildContext, type ContextFacts } from './context';
 import { checkImage, nameFor, outputType, prepareImage, type Screenshot } from './images';
@@ -78,22 +90,62 @@ export function FeedbackDialog({
 }) {
   // Edit after a refusal reads the report back from the outbox: the form starts again with it.
   const [round, setRound] = useState(0);
+  const tracked = useTrackedDialog('feedback');
   return (
     <FeedbackForm
       key={round}
       snapshot={snapshot}
+      tracked={tracked}
       onClose={onClose}
       onReopen={() => setRound((n) => n + 1)}
     />
   );
 }
 
+/** A bug report's logs as the form shows and attaches them (PEN-137). */
+interface ShownLogs {
+  readonly lines: readonly string[];
+  readonly limits: Limits;
+}
+
+/**
+ * The anonymised logs a bug report attaches, read as the form opens (after scrub #2 with the
+ * open notebooks' names), or the ones a report taken back by Edit previewed. Null outside the
+ * Mac app, or until they are read.
+ */
+function useReportLogs(
+  loaded: boolean,
+  keptLogs: readonly string[] | null,
+  names: readonly string[],
+): ShownLogs | null {
+  const [logs, setLogs] = useState<ShownLogs | null>(null);
+  useEffect(() => {
+    const analytics = desktop()?.analytics;
+    if (!loaded || !analytics) return;
+    let live = true;
+    void Promise.all([
+      analytics.status(),
+      keptLogs ? { lines: keptLogs } : analytics.reportLogs(names),
+    ])
+      .then(([status, report]) => {
+        if (live) setLogs({ lines: report.lines, limits: status.limits });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [loaded, keptLogs, names]);
+  return logs;
+}
+
 function FeedbackForm({
   snapshot,
+  tracked,
   onClose,
   onReopen,
 }: {
   snapshot: FeedbackSnapshot;
+  tracked: TrackedDialog;
   onClose: (restoreFocus?: boolean) => void;
   onReopen: () => void;
 }) {
@@ -121,7 +173,12 @@ function FeedbackForm({
     omitted,
     setOmitted,
     kept,
+    keptLogs,
   } = draft;
+  const logs = useReportLogs(loaded, keptLogs, facts.private.logNames ?? facts.private.names);
+  /** Attach Anonymised Logs: ticked for a bug report (O6). */
+  const [attachLogs, setAttachLogs] = useState(true);
+  const sendsLogs = type === 'bug' && attachLogs && logs !== null && logs.lines.length > 0;
   const [problems, setProblems] = useState<Problems>({});
   const [imageError, setImageError] = useState<string | null>(null);
   const [linkHref, setLinkHref] = useState<string | null>(null);
@@ -311,6 +368,8 @@ function FeedbackForm({
           description: markdown,
           version: appVersion(),
           context: sent,
+          // Exactly the lines the form showed (PEN-137); kept with the entry while it waits.
+          ...(sendsLogs ? { logs: logs.lines } : {}),
         }),
         screenshots,
         state: 'queued',
@@ -326,11 +385,21 @@ function FeedbackForm({
           description: current,
           omitted: [...omitted],
           context,
+          ...(logs ? { logs: logs.lines } : {}),
           updatedAt: Date.now(),
         },
       };
       draft.keeping(false);
       const attempt = await feedback.outbox.enqueue(entry);
+      // The report by name (PEN-137): its type and priority, and counts, never its words.
+      tracked.done();
+      record('feedback', 'sent', {
+        type: type!,
+        priority: priority!,
+        screenshots: countBucket(included.length),
+        logs: sendsLogs,
+        groupsLeftOut: countBucket(omitted.size),
+      });
       // The entry holds the report now, with the form as sent; the form's draft can go.
       await draft.clear();
       answer(attempt);
@@ -448,6 +517,7 @@ function FeedbackForm({
                         value={value}
                         checked={type === value}
                         aria-invalid={problems.type ? true : undefined}
+                        data-event="feedback.type"
                         data-testid={`feedback-type-${value}`}
                         onChange={() => setType(value)}
                       />
@@ -478,6 +548,7 @@ function FeedbackForm({
                         value={value}
                         checked={priority === value}
                         aria-invalid={problems.priority ? true : undefined}
+                        data-event="feedback.priority"
                         data-testid={`feedback-priority-${value}`}
                         onChange={() => setPriority(value)}
                       />
@@ -527,6 +598,7 @@ function FeedbackForm({
                       type="button"
                       className="icon-btn feedback-format"
                       data-ui="option"
+                      data-event="feedback.format"
                       data-testid={`feedback-format-${format.id}`}
                       aria-pressed={
                         ['indent', 'outdent'].includes(format.id)
@@ -555,6 +627,7 @@ function FeedbackForm({
                     type="button"
                     className="icon-btn feedback-format"
                     data-ui="option"
+                    data-event="feedback.format.link"
                     data-testid="feedback-format-link"
                     aria-pressed={active.has('link')}
                     aria-expanded={linkHref !== null}
@@ -598,6 +671,7 @@ function FeedbackForm({
                       type="button"
                       className="btn"
                       data-ui="submit"
+                      data-event="feedback.link.apply"
                       onClick={() => {
                         if (editorRef.current && setFeedbackLink(editorRef.current, linkHref))
                           setLinkHref(null);
@@ -609,6 +683,7 @@ function FeedbackForm({
                       type="button"
                       className="btn quiet"
                       data-ui="dismiss"
+                      data-event="feedback.link.remove"
                       onClick={() => {
                         if (editorRef.current) setFeedbackLink(editorRef.current, '');
                         setLinkHref(null);
@@ -657,6 +732,7 @@ function FeedbackForm({
                           <input
                             type="checkbox"
                             checked={shot.included}
+                            data-event="feedback.screenshot.include"
                             data-testid="feedback-shot-include"
                             onChange={(event) => {
                               const included = event.target.checked;
@@ -678,6 +754,7 @@ function FeedbackForm({
                             type="button"
                             className="icon-btn"
                             data-ui="item"
+                            data-event="feedback.screenshot.earlier"
                             aria-label={`Move Screenshot ${index + 1} Earlier`}
                             data-tip="Move Earlier"
                             disabled={index === 0}
@@ -689,6 +766,7 @@ function FeedbackForm({
                             type="button"
                             className="icon-btn"
                             data-ui="item"
+                            data-event="feedback.screenshot.later"
                             aria-label={`Move Screenshot ${index + 1} Later`}
                             data-tip="Move Later"
                             disabled={index === shots.length - 1}
@@ -702,6 +780,7 @@ function FeedbackForm({
                             data-ui="item"
                             aria-label={`Remove Screenshot ${index + 1}`}
                             data-tip="Remove"
+                            data-event="feedback.screenshot.remove"
                             data-testid="feedback-shot-remove"
                             onClick={() =>
                               setShots((current) => current.filter((item) => item.id !== shot.id))
@@ -719,6 +798,7 @@ function FeedbackForm({
                     type="button"
                     className="btn"
                     data-ui="item"
+                    data-event="feedback.screenshot.add"
                     data-testid="feedback-add-image"
                     onClick={() => fileInput.current?.click()}
                   >
@@ -750,7 +830,7 @@ function FeedbackForm({
                 </p>
               ) : null}
               <details className="feedback-context" data-testid="feedback-context">
-                <summary>Captured Context</summary>
+                <summary data-event="feedback.context.preview">Captured Context</summary>
                 <p className="muted feedback-hint">
                   Exactly what the issue will hold besides your words and screenshots. Untick a
                   group to leave it out.
@@ -762,6 +842,7 @@ function FeedbackForm({
                       <input
                         type="checkbox"
                         checked={!omitted.has(group)}
+                        data-event="feedback.context.group"
                         data-testid={`feedback-group-${group}`}
                         onChange={(event) => {
                           const next = new Set(omitted);
@@ -783,6 +864,10 @@ function FeedbackForm({
                   {preview || 'Nothing: every group is left out.'}
                 </pre>
               </details>
+              {/* A bug report's logs, after the context (PEN-137, O6): none for a feature request. */}
+              {logs && type !== 'feature' ? (
+                <FeedbackLogs id={id} logs={logs} attach={attachLogs} onAttach={setAttachLogs} />
+              ) : null}
             </div>
             <footer className="feedback-foot">
               <span role="status" className="muted" data-testid="feedback-status">
@@ -793,6 +878,7 @@ function FeedbackForm({
                   type="button"
                   className="btn quiet"
                   data-ui="dismiss"
+                  data-event="feedback.discard"
                   data-testid="feedback-discard"
                   onClick={() => void discardDraft()}
                 >
@@ -802,6 +888,7 @@ function FeedbackForm({
                   type="submit"
                   className="btn primary"
                   data-ui="submit"
+                  data-event="feedback.send"
                   data-testid="feedback-send"
                   disabled={!loaded || status.kind === 'sending'}
                   aria-keyshortcuts={ariaKeyShortcuts([SEND_KEYS])}
@@ -813,6 +900,69 @@ function FeedbackForm({
           </form>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Attach Anonymised Logs (PEN-137, ac3): the box, the sentence that follows the limits, and the
+ * exact text attached, collapsed under its line count and size.
+ */
+function FeedbackLogs({
+  id,
+  logs,
+  attach,
+  onAttach,
+}: {
+  id: string;
+  logs: ShownLogs;
+  attach: boolean;
+  onAttach: (attach: boolean) => void;
+}) {
+  const { lines, limits } = logs;
+  const hours = reportHours(limits);
+  if (lines.length === 0) {
+    return (
+      <p className="muted feedback-hint" data-testid="feedback-logs-empty">
+        {analyticsCopy('feedback.logs.empty', 'mac', { hours })}
+      </p>
+    );
+  }
+  const summary = analyticsCopy('feedback.logs.summary', 'mac', {
+    lines: lines.length,
+    size: formatReportSize(textBytes(lines)),
+  });
+  return (
+    <div className="feedback-logs" data-testid="feedback-logs">
+      <label className="feedback-logs-attach">
+        <input
+          type="checkbox"
+          checked={attach}
+          aria-describedby={`${id}-logs-hint`}
+          data-event="feedback.logs.toggle"
+          data-testid="feedback-logs-attach"
+          onChange={(event) => onAttach(event.target.checked)}
+        />
+        {analyticsCopy('feedback.logs.label')}
+      </label>
+      <p id={`${id}-logs-hint`} className="muted feedback-hint">
+        {analyticsCopy('feedback.logs.hint', 'mac', {
+          hours,
+          maxLines: limits['report.lines'],
+          kb: limits['report.kb'],
+        })}
+      </p>
+      <details className="feedback-context" data-testid="feedback-logs-preview">
+        <summary data-event="feedback.logs.preview">{summary}</summary>
+        <pre
+          className="feedback-preview"
+          data-testid="feedback-logs-text"
+          tabIndex={0}
+          aria-label="The anonymised logs as the issue will hold them"
+        >
+          {lines.join('\n')}
+        </pre>
+      </details>
     </div>
   );
 }
@@ -873,19 +1023,32 @@ function FeedbackOutcome({
       <div className="row">
         {status.kind === 'failed' ? (
           <>
-            <button type="button" className="btn quiet" data-ui="dismiss" onClick={onDiscard}>
+            <button
+              type="button"
+              className="btn quiet"
+              data-ui="dismiss"
+              data-event="feedback.outcome.discard"
+              onClick={onDiscard}
+            >
               Discard
             </button>
             <button
               type="button"
               className="btn"
               data-ui="item"
+              data-event="feedback.outcome.edit"
               data-testid="feedback-edit"
               onClick={onEdit}
             >
               Edit
             </button>
-            <button type="button" className="btn" data-ui="submit" onClick={onRetry}>
+            <button
+              type="button"
+              className="btn"
+              data-ui="submit"
+              data-event="feedback.outcome.retry"
+              onClick={onRetry}
+            >
               Retry
             </button>
           </>
@@ -895,6 +1058,7 @@ function FeedbackOutcome({
           type="button"
           className="btn primary"
           data-ui="dismiss"
+          data-event="feedback.outcome.close"
           data-testid="feedback-close"
           onClick={onClose}
         >

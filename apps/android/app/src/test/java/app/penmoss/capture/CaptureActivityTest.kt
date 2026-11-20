@@ -279,17 +279,17 @@ class CaptureActivityTest {
         compose.onNodeWithTag("captureText").performTextReplacement("Call the vet")
         // Cancel asks first, and Keep editing keeps the sheet and the text.
         compose.onNodeWithText("Cancel").performClick()
-        compose.onNodeWithText("Discard this capture?").assertIsDisplayed()
+        compose.onNodeWithText("Discard This Capture?").assertIsDisplayed()
         assertEquals(Lifecycle.State.RESUMED, scenario!!.state)
         compose.onNodeWithTag("captureKeepEditing").performClick()
-        compose.onNodeWithText("Discard this capture?").assertDoesNotExist()
+        compose.onNodeWithText("Discard This Capture?").assertDoesNotExist()
         compose.onNodeWithTag("captureText").assert(hasText("Call the vet"))
         // So do Back and a tap outside the sheet.
         scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        compose.onNodeWithText("Discard this capture?").assertIsDisplayed()
+        compose.onNodeWithText("Discard This Capture?").assertIsDisplayed()
         compose.onNodeWithTag("captureKeepEditing").performClick()
         compose.onRoot().performTouchInput { click(Offset(centerX, 4f)) }
-        compose.onNodeWithText("Discard this capture?").assertIsDisplayed()
+        compose.onNodeWithText("Discard This Capture?").assertIsDisplayed()
         compose.onNodeWithTag("captureDiscard").performClick()
         awaitClosed()
         assertEquals(0, stored().size)

@@ -188,7 +188,7 @@ class FormatBarTest {
         compose.setContent {
             PenmossTheme { LinkDialog(current, onApply = { applied += it }, onDismiss = { dismissed++ }) }
         }
-        compose.onNodeWithText("Edit the link").assertExists()
+        compose.onNodeWithText("Edit the Link").assertExists()
         compose.onNodeWithTag("link-address").performTextReplacement("example.com/page")
         compose.onNodeWithText("Link").assertIsEnabled().performClick()
         compose.onNodeWithText("Remove Link").performClick()

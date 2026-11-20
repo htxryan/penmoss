@@ -208,7 +208,7 @@ describe('Settings → Daily Notes → the templates', () => {
     act(() => reset.click());
     expect(writes).toEqual([['template.daily', undefined]]);
     expect(textarea().value).toBe('## Plan\n\n## Notes\n');
-    expect(status()).toBe('Back to the default');
+    expect(status()).toBe('Back to the Default');
     expect(reset.disabled).toBe(true);
   });
 });

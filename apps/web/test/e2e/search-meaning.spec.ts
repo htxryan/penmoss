@@ -217,7 +217,7 @@ test('Settings → Semantic Search deletes the model after asking, and search go
   await section.getByRole('button', { name: 'Delete Model…' }).click();
   await ask.getByRole('button', { name: 'Delete Model' }).click();
   await expect(ask).toBeHidden();
-  await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · Not downloaded$/);
+  await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · Not Downloaded$/);
   await expect(section.getByRole('switch', { name: 'Semantic Search' })).not.toBeChecked();
   await expect(section.getByRole('button', { name: 'Delete Model…' })).toHaveCount(0);
   await expect(section.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');
@@ -293,7 +293,7 @@ test('Settings → Semantic Search recreates the index while on, and deletes it 
   await ask.getByRole('button', { name: 'Delete Index' }).click();
   await expect(ask).toBeHidden();
   // Nothing left to delete: neither button, and the model is still here.
-  await expect(state).toHaveText('No index');
+  await expect(state).toHaveText('No Index');
   await expect(remove).toHaveCount(0);
   await expect(recreate).toHaveCount(0);
   await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · 219 MB$/);

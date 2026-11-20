@@ -4,9 +4,11 @@
  * reopen. main.ts imports this first, so the scheme, the sandbox and the user-data folder are
  * set before anything else runs.
  */
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app, protocol, type BrowserWindow } from 'electron';
 import { APP_SCHEME, desktopConfig } from './config';
+import { LogFile, type LogLevel } from './log-file';
 import { savePreferences, type Preferences } from './preferences';
 import { macWindowsOn, type TitleBarStyle } from './mac-window';
 import { MainInbox } from './main-inbox';
@@ -37,7 +39,29 @@ export const config = desktopConfig({
 if (config.userData) app.setPath('userData', config.userData);
 
 export const dataFile = (name: string) => join(app.getPath('userData'), name);
-export const log = (message: string) => console.log(`[penmoss] ${message}`);
+
+/**
+ * The log file (PEN-137): `~/Library/Logs/Penmoss/penmoss.log` (the suite's own folder with
+ * `PENMOSS_LOG_DIR`), scrubbed and kept within the limits. Analytics hands it the limits and what
+ * scrub #1 knows once the app is ready (services.ts).
+ */
+export const logFile = new LogFile({
+  dir:
+    config.logDir ??
+    (process.platform === 'darwin'
+      ? join(homedir(), 'Library', 'Logs', 'Penmoss')
+      : join(app.getPath('userData'), 'logs')),
+});
+
+/** A line for the terminal (development) and the log file. */
+export const logAt = (level: LogLevel, message: string, source = 'main'): void => {
+  const line = `[penmoss] ${message}`;
+  if (level === 'info') console.log(line);
+  else if (level === 'warn') console.warn(line);
+  else console.error(line);
+  logFile.write(level, source, message);
+};
+export const log = (message: string) => logAt('info', message);
 
 /** The main and note windows (T45, A712): the only way to find one. */
 export const windows = new WindowRegistry<BrowserWindow>();

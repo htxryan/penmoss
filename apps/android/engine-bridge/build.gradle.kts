@@ -21,11 +21,14 @@ java {
 
 // The built-in themes (T40 P1, A412) ship with the app: contract/themes-v1.json, made from
 // @penmoss/ui and checked by the editor page's vitest, is a resource of this module, and so is
-// the web's command registry, contract/shortcuts-v1.json (T40 P9, A492). Copied on their own
+// the web's command registry, contract/shortcuts-v1.json (T40 P9, A492), and usage analytics'
+// catalogue, contract/analytics-v1.json (PEN-137). Copied on their own
 // into a generated folder, so no other resource of the module is filtered.
 val contractResources = tasks.register<Copy>("contractResources") {
     from(rootProject.file("contract/themes-v1.json"))
     from(rootProject.file("contract/shortcuts-v1.json"))
+    // Usage analytics' catalogue and limits (PEN-137): what the app checks each event against.
+    from(rootProject.file("contract/analytics-v1.json"))
     into(layout.buildDirectory.dir("generated/contract-resources"))
 }
 

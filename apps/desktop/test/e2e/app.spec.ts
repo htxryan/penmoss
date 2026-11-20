@@ -82,6 +82,10 @@ test('edits a note in a git notebook, opens it again with the network blocked, a
     'undefined',
     'undefined',
     [
+      // AI Descriptions (PEN-161): the providers' status and the call; the key never comes back.
+      'ai',
+      // Usage analytics and the log file (PEN-137): events by name, never note data.
+      'analytics',
       'capture',
       'clipboard',
       'feedback',

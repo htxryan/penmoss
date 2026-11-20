@@ -27,7 +27,8 @@ A classic token with the `public_repo` scope works. Penmoss checks a token when 
 - **Priority:** P1 Highest, P2 High, P3 Normal or P4 Lowest.
 - **Title** and **Description**: the description takes bold, italic, lists, links and code.
 - **Screenshots:** up to six pictures, by paste, drag and drop, or the picker. On the Mac, **This window.png** is a picture of the window you were in, offered unticked: tick it to send it.
-- **Captured context:** shows exactly what else the issue will hold, with a checkbox for each group to leave it out.
+- **Captured Context:** shows exactly what else the issue will hold, with a checkbox for each group to leave it out.
+- **Attach Anonymised Logs** (bug reports only, ticked): the app's recent logs, with names, paths, IDs and secrets replaced. Open **Anonymised Logs** to read exactly what is attached, with its line count and size. The issue holds them in a collapsed **Anonymised Logs** block. Untick it to send none.
 
 An unsent form is kept as a draft until you send or discard it.
 
@@ -38,8 +39,14 @@ Facts about the app, never your notes' text:
 1. **App:** which app, its version, the system, the window and the theme.
 2. **Where you are:** the screen, the open panel and the sidebar's state.
 3. **Sync:** online or not, and the notebook's sync state.
-4. **This note**, when one is open: its id, title, folder, tags, dates and counts (words, links, attachments), but not its text.
+4. **This note**, when one is open: its dates and counts (words, links, attachments) and its sync state, never its title, folder, tags or text.
 5. **Recent errors:** the app's last errors, with tokens, emails, names and quoted text removed.
+
+## Anonymised logs
+
+The Mac app and the Android app keep a log on the device: when the app starts, windows open, sync runs, updates are checked, and errors. Each line is written with names replaced: tokens and keys become `‹token›`, email addresses `‹email›`, repository addresses `‹repo-1›`, your GitHub login `‹login›`, notebook names `‹notebook-1›`, paths `‹path›`, IDs `‹id-1›` and quoted text `‹text›`. Before a report is sent, the open notebooks' note titles and folder, tag and attachment names are replaced too.
+
+A bug report attaches the lines from the last 24 hours, at most 300 lines and 16 KB, unless you change that in **Settings → Privacy → Advanced** (**Bug Reports**). The logs never leave the device otherwise; on the Mac, **Settings → Privacy → Show Log File** shows the file in Finder, and on Android **Share Log File** shares a copy you choose where to send. See [Usage data](/docs/help/usage-data/).
 
 ## Offline
 

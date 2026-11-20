@@ -47,16 +47,19 @@ export const SETTINGS_SECTIONS = [
   'journal',
   'quick-capture',
   'shortcuts',
+  // AI Descriptions (PEN-161): a short description of each note, for agents.
+  'ai-descriptions',
   // Notebooks: the Mac app's git notebooks (T50, A856), each with a page of its own (A1098).
   'git-notebooks',
   // Agents: the agents that reach them (A1098), and what they changed.
   'agents',
   'agent-activity',
-  // This Mac: search by meaning (T78, A1158), the GitHub sign-in (T57, T82) and Auto-Update
-  // (T64 item 2, A1112).
+  // This Mac: search by meaning (T78, A1158), the GitHub sign-in (T57, T82), Auto-Update
+  // (T64 item 2, A1112) and Privacy, usage analytics and the logs (PEN-137).
   'meaning',
   'github',
   'updates',
+  'privacy',
 ] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
@@ -86,13 +89,16 @@ export interface RouteLocation {
 
 const NOTE_PATH = /^\/notes\/([^/]+)\/?$/;
 const WINDOW_PATH = /^\/window\/notes\/([^/]+)\/?$/;
-const SETTINGS_PATH = /^\/settings\/([a-z-]+)(?:\/([0-9A-HJKMNP-TV-Z]{26}))?\/?$/;
+const SETTINGS_PATH = /^\/settings\/([a-z-]+)(?:\/([0-9A-HJKMNP-TV-Z]{26}|data))?\/?$/;
 
 /** A git notebook's own page in Settings (A1098). */
 export const gitNotebookPath = (sourceId: string) => `/settings/git-notebooks/${sourceId}`;
 
 /** A git notebook's agents, on a page of their own in Settings → Agents (A1125). */
 export const notebookAgentsPath = (sourceId: string) => `/settings/agents/${sourceId}`;
+
+/** Analytics Data, Privacy's own page under it in Settings (PEN-137, ac36). */
+export const PRIVACY_DATA_PATH = '/settings/privacy/data';
 
 export function parseRoute(pathname: string): Route {
   switch (pathname) {
@@ -116,9 +122,11 @@ export function parseRoute(pathname: string): Route {
   if (settings && named && (SETTINGS_SECTIONS as readonly string[]).includes(named)) {
     const section = named as SettingsSection;
     if (settings[2] === undefined) return { name: 'settings', section };
-    if (section === 'git-notebooks' || section === 'agents') {
-      return { name: 'settings', section, item: settings[2] };
+    const item = settings[2];
+    if ((section === 'git-notebooks' || section === 'agents') && item !== 'data') {
+      return { name: 'settings', section, item };
     }
+    if (section === 'privacy' && item === 'data') return { name: 'settings', section, item };
   }
   const note = NOTE_PATH.exec(pathname);
   if (note) {

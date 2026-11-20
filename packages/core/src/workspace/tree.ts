@@ -23,6 +23,8 @@ export interface FolderRecord {
    * kind, so every tree reads as before: subfolders, then notes.
    */
   readonly together?: true;
+  /** Its AI Descriptions value (PEN-161): `on` or `off`; absent is Inherit. */
+  readonly aiDescription?: 'on' | 'off';
 }
 
 export interface NoteEntry {

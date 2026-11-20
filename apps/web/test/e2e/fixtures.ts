@@ -21,6 +21,7 @@ import {
   GITHUB_TOKEN_CHANGED,
   installFakeBridge,
   SIGN_IN_CHANGED,
+  type FakeAnalyticsConfig,
   MEANING_CHANGED,
   UPDATES_CHANGED,
 } from './support/fake-bridge';
@@ -42,7 +43,7 @@ import { webPreviewPort } from '../../../../scripts/checkout-ports.mjs';
 // Everything else of Playwright's, so a spec imports from here only.
 export * from '@playwright/test';
 export { expect };
-export type { SeedNote, SeededNotebook };
+export type { SeedNote, SeededNotebook, FakeAnalyticsConfig };
 export { GitHost, GITHUB_TOKEN };
 
 /** What a test starts with: a notebook (with folders and notes), or none (null). */
@@ -92,7 +93,14 @@ function encode(value: unknown): unknown {
 export async function connectContext(
   context: BrowserContext,
   host: GitHost,
-  options: { readonly meaning?: boolean; readonly macWindow?: boolean } = {},
+  options: {
+    readonly meaning?: boolean;
+    readonly macWindow?: boolean;
+    /** Usage analytics (PEN-137): main's, in the page, as the spec starts it. */
+    readonly analytics?: FakeAnalyticsConfig | null;
+    /** AI Descriptions' providers (PEN-161), stubbed. */
+    readonly ai?: boolean;
+  } = {},
 ): Promise<void> {
   await context.exposeBinding(GIT_BINDING, async (_source, method: unknown, args: unknown) => {
     if (typeof method !== 'string' || !CALLS.has(method)) {
@@ -106,6 +114,8 @@ export async function connectContext(
     platform: process.platform,
     meaning: meaning !== null,
     macWindow: options.macWindow === true,
+    analytics: options.analytics ?? null,
+    ai: options.ai === true,
   });
   const tell = (hook: string) => {
     for (const page of context.pages()) {
@@ -179,17 +189,23 @@ export const test = base.extend<{
   meaning: boolean;
   /** The windows have the Mac's `macWindow`: Keep on Top's pin and the compact title bar. */
   macWindow: boolean;
+  /** The stand-in Mac's usage analytics (PEN-137), or null for none (a Mac app before it). */
+  analytics: FakeAnalyticsConfig | null;
+  /** The stand-in Mac offers AI Descriptions' providers (PEN-161), stubbed; none unless asked. */
+  ai: boolean;
   /** The notebook the test starts in, or null with `seed: null`. */
   notebook: SeededNotebook | null;
 }>({
   seed: [{}, { option: true }],
   meaning: [false, { option: true }],
   macWindow: [false, { option: true }],
+  analytics: [null, { option: true }],
+  ai: [false, { option: true }],
   // The test's context is a window set of one stand-in Mac: its main process comes with it.
-  context: async ({ context, meaning, macWindow }, use) => {
+  context: async ({ context, meaning, macWindow, analytics, ai }, use) => {
     const host = new GitHost();
     hosts.set(context, host);
-    await connectContext(context, host, { meaning, macWindow });
+    await connectContext(context, host, { meaning, macWindow, analytics, ai });
     await use(context);
     await context.close();
     await host.meaning?.stop();

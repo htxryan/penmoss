@@ -39,7 +39,11 @@
     "./diff-apply": "./src/markdown/diff-apply.ts",
     "./feedback": "./src/feedback.ts",
     "./feedback-github": "./src/feedback-github.ts",
-    "./mirror": "./src/mirror/index.ts"
+    "./mirror": "./src/mirror/index.ts",
+    "./analytics": "./src/analytics/index.ts",
+    "./analytics/node": "./src/analytics/node/index.ts",
+    "./title-case": "./src/title-case.ts",
+    "./ai-description": "./src/ai-description.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

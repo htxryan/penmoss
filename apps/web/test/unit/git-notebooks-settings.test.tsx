@@ -239,6 +239,8 @@ describe('A notebook’s page (PEN-146)', () => {
       'badge-letter',
       'repository',
       'notebook-notes',
+      // AI Descriptions for the whole notebook (PEN-161).
+      'notebook-ai-descriptions',
       'notebook-copy-settings',
       'remove-from-this-mac',
     ]);

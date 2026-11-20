@@ -506,6 +506,8 @@ data class FeedbackSubmission(
     val description: String,
     val version: String,
     val context: FeedbackContextData,
+    /** A bug report's anonymised log lines (PEN-137), oldest first. */
+    val logs: List<String> = emptyList(),
 )
 
 class FeedbackInvalid(message: String, val status: Int = 400) : Exception(message)
@@ -535,7 +537,15 @@ object FeedbackSubmissions {
         if (present("version") && string("version") == null) throw FeedbackInvalid("version must be a string")
         val version = Js.trim(Js.collapseSpaces(string("version").orEmpty())).take(FeedbackLimits.VERSION_MAX)
         val context = if (present("context")) context(payload["context"]!!) ?: throw FeedbackInvalid("context is not a valid captured context") else FeedbackContextData()
-        return FeedbackSubmission(submissionId, type, priority, title, description, version, context)
+        val logs = if (present("logs")) logs(payload["logs"]!!) ?: throw FeedbackInvalid("logs must be a list of lines") else emptyList()
+        return FeedbackSubmission(submissionId, type, priority, title, description, version, context, logs)
+    }
+
+    /** The logs a report attaches: lines of text, within the largest limits. */
+    private fun logs(value: JsonElement): List<String>? {
+        val lines = (value as? JsonArray)?.map { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content ?: return null } ?: return null
+        if (lines.size > FeedbackLogs.MAX_LINES || FeedbackLogs.textBytes(lines) > FeedbackLogs.MAX_BYTES) return null
+        return lines
     }
 
     /** Core's `parseFeedbackContext`: known groups once each, small tables of strings. */
@@ -640,6 +650,8 @@ class GitHubFeedbackApi(
             client = client,
             version = submission.version,
             submissionId = id,
+            // Redacted again over the whole block, whatever the form held (PEN-137).
+            logs = submission.logs.map(FeedbackRedaction::redactSecrets),
         )
         val tooLong = refusal(413, "too_large", "The description and context are longer than a GitHub issue allows; shorten them")
         if (body(names.map { it to LONGEST_ASSET_URL }).length > BODY_MAX) return tooLong

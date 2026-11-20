@@ -84,6 +84,9 @@ class FeedbackFormModel(
 
     fun setDescription(description: String) = update { it.copy(description = description) }
 
+    /** Attach Anonymised Logs ticked or not (PEN-137). */
+    fun setLogs(attach: Boolean) = update { it.copy(logs = attach) }
+
     fun setOmitted(group: String, omitted: Boolean) = update { draft ->
         draft.copy(omitted = if (omitted) (draft.omitted + group).distinct() else draft.omitted - group)
     }
@@ -154,7 +157,7 @@ class FeedbackFormModel(
      * Sends the form, with [context] as previewed (its groups left out as ticked). Nothing goes
      * while a required field is missing: the problems show and are read out instead.
      */
-    fun send(context: FeedbackContextData) {
+    fun send(context: FeedbackContextData, logs: List<String> = emptyList()) {
         if (_phase.value != Phase.Editing) return
         val draft = _draft.value
         if (FeedbackValidation.problems(draft).isNotEmpty()) {
@@ -163,9 +166,10 @@ class FeedbackFormModel(
         }
         _phase.value = Phase.Sending
         finished = true
+        recordSent(draft, context)
         appScope.launch {
             val outcome = try {
-                service.send(draft, context)
+                service.send(draft, context, logs)
             } catch (error: IOException) {
                 finished = false
                 _notice.value = "A screenshot could not be read. Remove it and send again."
@@ -178,6 +182,22 @@ class FeedbackFormModel(
                 is FeedbackOutbox.Outcome.Failed -> Phase.Failed(failedMessage(outcome.status, outcome.message))
             }
         }
+    }
+
+    /** Usage analytics (PEN-137): that a report was sent, by kind and counts only, never its words. */
+    private fun recordSent(draft: FeedbackDraft, context: FeedbackContextData) {
+        val type = FeedbackType.of(draft.type) ?: return
+        app.penmoss.analytics.Analytics.record(
+            "feedback",
+            "sent",
+            mapOf(
+                "type" to type.wire,
+                "priority" to draft.priority,
+                "screenshots" to app.penmoss.analytics.AnalyticsFormat.countBucket(draft.screenshots.size.toLong()),
+                "logs" to draft.attachesLogs,
+                "groupsLeftOut" to app.penmoss.analytics.AnalyticsFormat.countBucket(context.groups.count { it.id in draft.omitted }.toLong()),
+            ),
+        )
     }
 
     /** Deletes the draft and its screenshots: the person chose to. */

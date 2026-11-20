@@ -19,7 +19,7 @@ Without `--notebook`, the server reaches every notebook at once, and each tool a
 
 - **Semantic search covers every notebook** when it's on in Settings → Semantic Search. The model opens once for the whole server. While no other Penmoss process is indexing, the server indexes every notebook it serves, a little at a time, each in turn, and `coverage` says how far each notebook has got.
 
-- **One channel for every notebook.** With `--channel`, the session is listed in every notebook, so **Send to…** offers it in each one. A thread arrives naming its notebook (`notebook`), and the agent's reply goes back to that notebook at once.
+- **One channel for every notebook.** With `--channel`, the session is listed in every notebook, so **Send To…** offers it in each one. A thread arrives naming its notebook (`notebook`), and the agent's reply goes back to that notebook at once.
 
 ## Search and read
 
@@ -49,6 +49,10 @@ A tool's `id` is a note's 26-character id or its short id, such as `K7QD-9HTF2CX
 | `list_recent`    | Notes, newest first, with daily and weekly notes marked                           | `limit` (1 to 100)                         |
 | `get_daily_note` | Today's note (or a date's, or the week's), made from the template if needed       | `date`, `period` (`daily` or `weekly`)     |
 
+### Note descriptions
+
+A note can have a [description](/docs/ai-descriptions/): a sentence or two on what it holds, written by you or by AI Descriptions. `search_notes`, `list_recent`, `list_folder` and `get_backlinks` give each note's `description` when it has one, and `read_note` gives the note's own and `links`, each note it links to (up to 50) with its `id`, `title` and `description`. Read descriptions to choose which notes to open. `set_properties` with `description` sets one (an empty one clears it); Penmoss treats it as written by you.
+
 ### What tags mean
 
 Each tag can have a description you write on the [Tags page](/docs/organise/#the-tags-page). `describe_tags` gives each tag with its `description` (`null` when it has none), how many `notes` have it or a tag nested under it, and the descriptions of the tags above it (`ancestors`, outermost first), so an agent reading `#project/penmoss` also learns what `#project` means. With no `tags`, it gives every tag; with `tags`, those and the tags nested under each. Agents read descriptions but can't change them.
@@ -61,7 +65,7 @@ Each tag can have a description you write on the [Tags page](/docs/organise/#the
 | `append_to_note` | Adds markdown at the end, or at the end of a section                | `id`\*, `markdown`\*, `heading`, `baseVersion`                                                |
 | `update_section` | Replaces, or adds to, the section under a heading                   | `id`\*, `heading`\*, `markdown`\*, `baseVersion`\*, `mode` (`replace`, `prepend` or `append`) |
 | `replace_text`   | Finds and replaces text                                             | `id`\*, `find`\*, `replace`\*, `baseVersion`\*, `all`, `scope` (`text` or `markdown`)         |
-| `set_properties` | Changes the title or the tags                                       | `id`\*, `title`, `tags`, `baseVersion`                                                        |
+| `set_properties` | Changes the title, the tags or the description                      | `id`\*, `title`, `tags`, `description`, `baseVersion`                                         |
 | `tag_note`       | Adds and removes tags                                               | `id`\*, `add`, `remove`, `baseVersion`                                                        |
 | `rename_tag`     | Renames a tag in every note, or merges it into another              | `from`\*, `to`\*, `merge`                                                                     |
 | `move_note`      | Moves a note to a folder, or the top level (`null`)                 | `id`\*, `folderId`\*                                                                          |

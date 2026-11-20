@@ -49,6 +49,8 @@ export interface NoteInfo {
   readonly createdAt: number;
   readonly updatedAt: number;
   readonly tags: string[];
+  /** Its description: the frontmatter `description`, by hand or AI Descriptions (A1656). */
+  readonly description: string | null;
   readonly text: string;
   readonly headings: string;
   /** The body's heading sections: what meaning embeds (A1154). */
@@ -99,6 +101,7 @@ export class NoteCatalog {
       createdAt: Number.isFinite(created) ? created : 0,
       updatedAt: Math.max(changedAtOf(doc), dirtyAt, Number.isFinite(created) ? created : 0),
       tags: rendered.tags,
+      description: state.description ?? null,
       text: rendered.text,
       headings: rendered.headings,
       sections: noteSections(state.body.toJSON() as DocJson),

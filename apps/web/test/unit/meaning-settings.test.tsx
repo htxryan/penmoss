@@ -208,7 +208,7 @@ describe('Settings → Semantic Search (T78)', () => {
     });
     expect(removedIndex).toBe(1);
     expect(shown()).toMatch(/^Indexing/);
-    expect(size()).toBe('No index');
+    expect(size()).toBe('No Index');
 
     // Off with an index: Delete Index…, in red; Recreate gone.
     await act(async () => {
@@ -233,7 +233,7 @@ describe('Settings → Semantic Search (T78)', () => {
     // Nothing left to delete: no button, and the row says so.
     expect(remove()).toBeNull();
     expect(recreate()).toBeNull();
-    expect(size()).toBe('No index');
+    expect(size()).toBe('No Index');
     expect(asked).toEqual([]);
   });
 
@@ -270,7 +270,7 @@ describe('Settings → Semantic Search (T78)', () => {
     expect(ask()).toBeNull();
     expect(toggle().checked).toBe(false);
     expect(host.querySelector('[data-testid="meaning-model-state"]')?.textContent).toBe(
-      'EmbeddingGemma 300M · Not downloaded',
+      'EmbeddingGemma 300M · Not Downloaded',
     );
     expect(button()).toBeNull();
     expect(shown()).toBe(

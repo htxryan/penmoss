@@ -14,11 +14,21 @@
  *   through the binding too; `feedback.capture` takes no picture of the window (null).
  * - `updates`: main's Auto-Update (A1112) over a stand-in feed the spec sets.
  * - Local agents and the `penmoss` command: none on this stand-in Mac.
+ * - `analytics` (PEN-137), only when a spec asks for it (`test.use({ analytics: … })`): main's
+ *   usage analytics with a memory store, the answer, the limits and the log, kept in
+ *   localStorage so a reload keeps them (`window.__penmossFakeAnalytics` shows them to specs).
  *
  * This function is serialized into each page (`addInitScript`): it must not close over anything.
  * Bytes cross the binding as base64 (`{ __bytes }`), both ways.
  */
-import type { MenuCommandEvent, PenmossDesktop } from '../../../src/desktop/bridge';
+import type {
+  DesktopAnalytics,
+  DesktopAnalyticsStatus,
+  MenuCommandEvent,
+  PageEvent,
+  PenmossDesktop,
+} from '../../../src/desktop/bridge';
+import type { Page, PageQuery, StateName, StoredEvent } from '@penmoss/core/analytics';
 
 export const GIT_BINDING = '__penmossGit';
 /** The page's hook the host calls when the notebook list changed. */
@@ -38,6 +48,40 @@ export interface FakeBridgeState {
   theme: unknown;
 }
 
+/**
+ * The stand-in Mac's usage analytics (PEN-137), as a spec starts it: the answer so far, how many
+ * events the record holds (spread over the last six days, newest first: mac, cli and mcp in turn),
+ * the logs' size, and whether Penmoss's server can be reached for Delete My Shared Data.
+ */
+export interface FakeAnalyticsConfig {
+  readonly consent?: 'yes' | 'no' | null;
+  /** Whether main asks (an install with a notebook and no answer); default: no answer yet. */
+  readonly ask?: boolean;
+  readonly events?: number;
+  /** The logs' size on disk, in bytes (default 6 MB). */
+  readonly logBytes?: number;
+  readonly limits?: Readonly<Record<string, number>>;
+  /** Delete My Shared Data finds the server unreachable. */
+  readonly offline?: boolean;
+  /** The lines a bug report attaches (`reportLogs`). */
+  readonly reportLines?: readonly string[];
+}
+
+/** The fake's state, as `window.__penmossFakeAnalytics` shows it (and localStorage keeps it). */
+export interface FakeAnalyticsState {
+  consent: 'yes' | 'no' | null;
+  ask: boolean;
+  install: string;
+  sharingSince: number | null;
+  limits: Record<string, number>;
+  logBytes: number;
+  lastBatch: string | null;
+  events: StoredEvent[];
+  nextId: number;
+  /** Each call that changed something, by name: `answer:yes`, `forget`, `setLimits`… */
+  calls: string[];
+}
+
 declare global {
   interface Window {
     __penmossGit?: (method: string, args: unknown) => Promise<unknown>;
@@ -47,6 +91,9 @@ declare global {
     __penmossSignInChanged?: (state: unknown) => void;
     __penmossMeaningChanged?: (status: unknown) => void;
     __penmossFake?: FakeBridgeState;
+    __penmossFakeAnalytics?: FakeAnalyticsState;
+    /** The page's memory sink (declared again here: the site's typecheck reads this file alone). */
+    __penmossAnalytics?: PageEvent[];
   }
 }
 
@@ -59,6 +106,10 @@ export function installFakeBridge(config: {
    * the compact title bar, so `<html data-titlebar="compact">` is set as in the Mac app.
    */
   readonly macWindow?: boolean;
+  /** Usage analytics (PEN-137); none unless a spec asks. */
+  readonly analytics?: FakeAnalyticsConfig | null;
+  /** AI Descriptions' providers (PEN-161), stubbed; none unless a spec asks. */
+  readonly ai?: boolean;
 }): void {
   const toBase64 = (bytes: Uint8Array): string => {
     let text = '';
@@ -168,6 +219,253 @@ export function installFakeBridge(config: {
     }
     return null;
   };
+  /**
+   * Usage analytics (PEN-137): main's store, answer and limits in the page, as small as the specs
+   * need. Events are kept newest first by (at, id), as the store's keyset pages them.
+   */
+  const fakeAnalytics = (config: FakeAnalyticsConfig): DesktopAnalytics => {
+    const KEY = 'penmoss:fake-analytics';
+    const DAY = 86_400_000;
+    const DEFAULTS: Record<string, number> = {
+      'events.days': 7,
+      'events.max': 5000,
+      'logs.fileKb': 1024,
+      'logs.files': 2,
+      'logs.days': 7,
+      'report.hours': 24,
+      'report.lines': 300,
+      'report.kb': 16,
+    };
+    const hex = (bytes: number) =>
+      Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (byte) =>
+        byte.toString(16).padStart(2, '0'),
+      ).join('');
+    const seed = (): FakeAnalyticsState => {
+      const now = Date.now();
+      const count = config.events ?? 0;
+      const consent = config.consent ?? null;
+      const clients = ['mac', 'cli', 'mcp'] as const;
+      const names = {
+        mac: ['command', 'app.search'],
+        cli: ['cli', 'search'],
+        mcp: ['tool', 'read_note'],
+      };
+      const states: StateName[] =
+        consent === 'yes'
+          ? ['sent', 'sent', 'waiting']
+          : consent === 'no'
+            ? ['local']
+            : ['pending'];
+      const events: StoredEvent[] = [];
+      for (let index = 0; index < count; index++) {
+        const client = clients[index % 3]!;
+        const [kind, name] = names[client];
+        events.push({
+          id: count - index,
+          // Newest first, over six days.
+          at: now - 60_000 - Math.floor((index * 6 * DAY) / Math.max(count, 1)),
+          session: '0123456789abcdef',
+          seq: count - index,
+          client,
+          actor: client === 'mcp' ? 'agent' : 'person',
+          version: '0.0.0',
+          channel: 'dev',
+          os: 'macos',
+          osVersion: '15.1',
+          kind: kind as StoredEvent['kind'],
+          name: name!,
+          props: client === 'mac' ? { source: 'key', keys: 'Mod+K' } : {},
+          state: states[Math.floor(index / 3) % states.length]!,
+          sentAt: null,
+        });
+      }
+      return {
+        consent,
+        ask: config.ask ?? consent === null,
+        install: hex(16),
+        sharingSince: consent === 'yes' ? now - 30 * DAY : null,
+        limits: { ...DEFAULTS, ...config.limits },
+        logBytes: config.logBytes ?? 6 * 1024 * 1024,
+        lastBatch: null,
+        events,
+        nextId: count + 1,
+        calls: [],
+      };
+    };
+    const read = (): FakeAnalyticsState | null => {
+      try {
+        const raw = localStorage.getItem(KEY);
+        return raw ? (JSON.parse(raw) as FakeAnalyticsState) : null;
+      } catch {
+        return null;
+      }
+    };
+    const fake: FakeAnalyticsState = read() ?? seed();
+    window.__penmossFakeAnalytics = fake;
+    const listeners = new Set<(status: DesktopAnalyticsStatus) => void>();
+    const status = (): DesktopAnalyticsStatus => {
+      const counts = { pending: 0, local: 0, waiting: 0, sent: 0, refused: 0 };
+      for (const event of fake.events) counts[event.state] += 1;
+      return {
+        consent: fake.consent,
+        ask: fake.ask && fake.consent === null,
+        install: fake.install,
+        sharingSince: fake.sharingSince,
+        counts,
+        limits: { ...fake.limits } as DesktopAnalyticsStatus['limits'],
+        logBytes: fake.logBytes,
+        lastBatch: fake.lastBatch,
+        optedOut: false,
+      };
+    };
+    const changed = (call?: string) => {
+      if (call) fake.calls.push(call);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(fake));
+      } catch {
+        // A full or blocked store: the page's copy still holds.
+      }
+      const now = status();
+      for (const listener of listeners) listener(now);
+      return now;
+    };
+    const newestFirst = (a: StoredEvent, b: StoredEvent) => b.at - a.at || b.id - a.id;
+    /** What `limits` would delete: events past their age or cap, logs past their size or age. */
+    const outside = (limits: Record<string, number>) => {
+      const now = Date.now();
+      const sorted = [...fake.events].sort(newestFirst);
+      const gone = sorted.filter(
+        (event, index) =>
+          event.at < now - limits['events.days']! * DAY || index >= limits['events.max']!,
+      );
+      const room = limits['logs.fileKb']! * 1024 * limits['logs.files']!;
+      const aged = limits['logs.days']! < fake.limits['logs.days']! ? fake.logBytes / 2 : 0;
+      const logBytes = Math.max(fake.logBytes - room, Math.round(aged), 0);
+      return { gone: new Set(gone.map((event) => event.id)), logBytes };
+    };
+    const unsent = (to: StateName) => {
+      fake.events = fake.events.map((event) =>
+        event.state === 'pending' || event.state === 'waiting' ? { ...event, state: to } : event,
+      );
+    };
+    return {
+      record: (events) => {
+        const state: StateName =
+          fake.consent === null ? 'pending' : fake.consent === 'yes' ? 'waiting' : 'local';
+        for (const event of events) {
+          const id = fake.nextId++;
+          fake.events.push({
+            id,
+            at: event.at,
+            session: 'fedcba9876543210',
+            seq: id,
+            client: 'mac',
+            actor: 'person',
+            version: '0.0.0',
+            channel: 'dev',
+            os: 'macos',
+            osVersion: '15.1',
+            ...(event.sizeClass ? { sizeClass: event.sizeClass } : {}),
+            kind: event.kind,
+            name: event.name,
+            props: event.props ?? {},
+            state,
+            sentAt: null,
+          });
+        }
+        // The page's memory sink too, which the instrumentation specs read.
+        (window.__penmossAnalytics ??= []).push(...events);
+        changed();
+      },
+      log: () => undefined,
+      status: () => Promise.resolve(status()),
+      onChange: (listener) => listen(listeners, listener),
+      answer: (consent) => {
+        fake.consent = consent;
+        fake.ask = false;
+        if (consent === 'yes') fake.sharingSince = Date.now();
+        unsent(consent === 'yes' ? 'waiting' : 'local');
+        return Promise.resolve(changed(`answer:${consent}`));
+      },
+      setSharing: (on) => {
+        fake.consent = on ? 'yes' : 'no';
+        fake.sharingSince = on ? Date.now() : null;
+        if (!on) unsent('local');
+        return Promise.resolve(changed(`sharing:${on ? 'on' : 'off'}`));
+      },
+      resetId: () => {
+        fake.install = hex(16);
+        unsent('local');
+        return Promise.resolve(changed('resetId'));
+      },
+      forget: () => {
+        if (config.offline) return Promise.resolve({ outcome: 'offline' as const });
+        fake.install = hex(16);
+        unsent('local');
+        changed('forget');
+        return Promise.resolve({ outcome: 'ok' as const });
+      },
+      page: (query: PageQuery): Promise<Page> => {
+        const state = query.state ?? 'all';
+        const client = query.client ?? 'all';
+        const matching = fake.events
+          .filter((event) => state === 'all' || event.state === state)
+          .filter(
+            (event) =>
+              client === 'all' ||
+              (client === 'app'
+                ? event.client === 'mac' || event.client === 'android'
+                : event.client === client),
+          )
+          .sort(newestFirst);
+        const limit = query.limit ?? 100;
+        const older = (event: StoredEvent, at: { at: number; id: number }) =>
+          event.at < at.at || (event.at === at.at && event.id < at.id);
+        let events: StoredEvent[];
+        if (query.before) {
+          const cursor = query.before;
+          events = matching.filter((event) => older(event, cursor)).slice(0, limit);
+        } else if (query.after) {
+          const cursor = query.after;
+          const newer = matching.filter((event) => event.id !== cursor.id && !older(event, cursor));
+          events = newer.slice(Math.max(0, newer.length - limit));
+        } else {
+          events = matching.slice(0, limit);
+        }
+        const first = events[0];
+        const newer = first ? matching.indexOf(first) : 0;
+        return Promise.resolve({ events, total: matching.length, newer });
+      },
+      preview: (changes) => {
+        const { gone, logBytes } = outside({ ...fake.limits, ...changes });
+        return Promise.resolve({ events: gone.size, logBytes });
+      },
+      setLimits: (changes) => {
+        const next = changes === null ? { ...DEFAULTS } : { ...fake.limits, ...changes };
+        const { gone, logBytes } = outside(next);
+        fake.events = fake.events.filter((event) => !gone.has(event.id));
+        fake.logBytes -= logBytes;
+        fake.limits = next;
+        return Promise.resolve(changed(changes === null ? 'setLimits:reset' : 'setLimits'));
+      },
+      showLogFile: () => {
+        changed('showLogFile');
+        return Promise.resolve(true);
+      },
+      reportLogs: (names: readonly string[]) => {
+        // As main does: the newest lines the limits allow (only report.lines here), and the
+        // names scrub #2 was given, for the spec to read.
+        (window as { __penmossReportNames?: readonly string[] }).__penmossReportNames = names;
+        const lines = (config.reportLines ?? []).slice(-fake.limits['report.lines']!);
+        const bytes = lines.reduce(
+          (sum, line) => sum + new TextEncoder().encode(line).length + 1,
+          0,
+        );
+        return Promise.resolve({ lines, bytes });
+      },
+    };
+  };
+
   const bridge: Omit<PenmossDesktop, 'session' | 'openInBrowser' | 'admin'> = {
     platform: config.platform,
     version: '0.0.0-e2e',
@@ -291,6 +589,77 @@ export function installFakeBridge(config: {
             },
             setCompactTitleBar: (compact: boolean) => Promise.resolve({ compact, reopened: false }),
           },
+        }
+      : {}),
+    ...(config.analytics ? { analytics: fakeAnalytics(config.analytics) } : {}),
+    // AI Descriptions (PEN-161): a stubbed provider. Each describe is kept in `__aiCalls`; the
+    // answer names the note's title (the prompt's `Title:` line). `sk-ant-good` is the one key
+    // Anthropic accepts here.
+    ...(config.ai
+      ? {
+          ai: (() => {
+            const listeners = new Set<() => void>();
+            let saved = false;
+            let asked = false;
+            const calls: string[] = [];
+            (window as unknown as { __aiCalls: string[] }).__aiCalls = calls;
+            const status = () => ({
+              providers: [
+                {
+                  id: 'anthropic',
+                  label: 'Anthropic (API Key)',
+                  signIn: 'key' as const,
+                  models: [{ id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' }],
+                },
+                {
+                  id: 'claude-code',
+                  label: 'Claude Code on This Mac',
+                  signIn: 'cli' as const,
+                  models: [{ id: 'haiku', label: 'Claude Haiku' }],
+                },
+              ],
+              anthropic: { saved, problem: null, keychain: true },
+              claudeCode: { state: 'ready' as const, version: '2.1.328' },
+              asked,
+            });
+            const changed = () => {
+              for (const listener of listeners) listener();
+            };
+            return {
+              status: () => Promise.resolve(status()),
+              saveKey: (key: string) => {
+                if (key.trim() !== 'sk-ant-good') {
+                  return Promise.resolve({
+                    ok: false as const,
+                    message:
+                      'Anthropic refused the API key. Check it in Settings → AI Descriptions.',
+                  });
+                }
+                saved = true;
+                changed();
+                return Promise.resolve({ ok: true as const, status: status() });
+              },
+              asked: () => {
+                asked = true;
+                return Promise.resolve(status());
+              },
+              removeKey: () => {
+                saved = false;
+                changed();
+                return Promise.resolve({ ok: true as const, status: status() });
+              },
+              test: (provider: string) =>
+                Promise.resolve({ ok: true, message: `${provider} works.` }),
+              describe: (provider: string, model: string, prompt: string) => {
+                calls.push(`${provider}|${model}|${prompt}`);
+                const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'a note';
+                return new Promise<{ ok: true; text: string }>((resolve) =>
+                  setTimeout(() => resolve({ ok: true, text: `A note about ${title}.` }), 50),
+                );
+              },
+              onChange: (listener: () => void) => listen(listeners, listener),
+            };
+          })(),
         }
       : {}),
     onBeforeClose: () => () => undefined,

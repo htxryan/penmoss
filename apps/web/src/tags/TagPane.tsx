@@ -60,6 +60,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
               type="button"
               className="twisty"
               data-ui="item"
+              data-event={expanded(node.tag) ? 'tags.pane.collapse' : 'tags.pane.expand'}
               data-open={expanded(node.tag) ? 'true' : 'false'}
               aria-expanded={expanded(node.tag)}
               aria-label={`${expanded(node.tag) ? 'Collapse' : 'Expand'} #${node.tag}`}
@@ -74,6 +75,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
             type="button"
             className="tag-name"
             data-ui="item"
+            data-event="tags.pane.show"
             aria-label={`#${node.tag}, ${node.count} ${node.count === 1 ? 'note' : 'notes'}`}
             data-tip={`Show Notes Tagged #${node.tag}`}
             onClick={() => showTag(node.tag)}
@@ -88,6 +90,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
             type="button"
             className="tag-edit"
             data-ui="item"
+            data-event="tags.pane.rename"
             aria-label={`Rename #${node.tag}`}
             data-tip="Rename or Merge"
             onClick={() => setRenaming(renaming === node.tag ? null : node.tag)}
@@ -206,10 +209,22 @@ function RenameTag({
         }}
       />
       <div className="tag-rename-actions">
-        <button type="submit" className="btn primary" data-ui="submit" disabled={busy}>
+        <button
+          type="submit"
+          className="btn primary"
+          data-ui="submit"
+          data-event="tags.pane.rename.submit"
+          disabled={busy}
+        >
           {merge ? 'Merge' : 'Rename'}
         </button>
-        <button type="button" className="btn quiet" data-ui="dismiss" onClick={() => onDone(null)}>
+        <button
+          type="button"
+          className="btn quiet"
+          data-ui="dismiss"
+          data-event="tags.pane.rename.cancel"
+          onClick={() => onDone(null)}
+        >
           Cancel
         </button>
       </div>

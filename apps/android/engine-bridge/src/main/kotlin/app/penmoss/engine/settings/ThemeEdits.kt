@@ -15,7 +15,7 @@ import kotlin.random.Random
  */
 object ThemeEdits {
     const val NAME_MAX = 60
-    const val UNTITLED = "Untitled theme"
+    const val UNTITLED = "Untitled Theme"
     private val CUSTOM_ID = Regex("^custom-[a-z0-9]{1,32}$")
 
     fun isCustomId(id: String?): Boolean = id != null && CUSTOM_ID.matches(id)

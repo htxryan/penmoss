@@ -155,6 +155,8 @@ class GitEngine(
     private val onLog: (String) -> Unit = {},
     /** Where copies withheld from the push are kept (A886); without one, the page's sync stops first. */
     private val withheld: WithheldCopies? = null,
+    /** AI Descriptions (PEN-161): what is set and the call, the app's; without one the page describes nothing. */
+    private val ai: AiHost? = null,
 ) {
     private val state = MutableStateFlow(GitEngineStatus())
     val status: StateFlow<GitEngineStatus> = state.asStateFlow()
@@ -219,6 +221,16 @@ class GitEngine(
                 }
                 keeper.withhold(copies)
                 JsonNull
+            })
+            // AI Descriptions (PEN-161): the page asks what is set, and sends only a prompt; the
+            // key, the provider and the model are the app's.
+            put("ai.config", GitHandler { _, _ -> ai?.config() ?: JsonNull })
+            put("ai.describe", GitHandler { call, _ ->
+                val host = ai ?: throw GitRefusal("no_provider", "This phone has no AI provider.")
+                val prompt = (call.args as? JsonObject)?.get("prompt").text()
+                    ?.takeIf { it.isNotBlank() && it.length <= AiHost.MAX_PROMPT_CHARS }
+                    ?: throw GitRefusal("invalid_request", "Not a prompt.")
+                host.describe(prompt)
             })
             put("owner.restore", GitHandler { call, _ ->
                 val args = call.args as? JsonObject ?: throw GitRefusal("invalid_request", "Not a note id.")

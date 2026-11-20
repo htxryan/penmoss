@@ -140,7 +140,23 @@ export function SettingRow({
   );
 }
 
-/** A switch: a native checkbox (Space toggles it, tests check it), drawn as on and off. */
-export function Switch(props: Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'role'>) {
-  return <input {...props} type="checkbox" role="switch" className="lf-switch" />;
+/**
+ * A switch: a native checkbox (Space toggles it, tests check it), drawn as on and off.
+ * `data-event` is its tracked id (PEN-137), a literal at the caller; the click records on or off.
+ */
+export function Switch({
+  'data-event': event,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'role'> & {
+  readonly 'data-event'?: string;
+}) {
+  return (
+    <input
+      {...props}
+      type="checkbox"
+      role="switch"
+      className="lf-switch"
+      data-event={event ?? 'settings.switch'}
+    />
+  );
 }

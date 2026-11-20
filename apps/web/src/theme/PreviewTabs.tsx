@@ -74,6 +74,7 @@ export function PreviewTabs({
             role="tab"
             className="lf-tab"
             data-ui="option"
+            data-event={tab === 'settings' ? 'settings.tabs.settings' : 'settings.tabs.preview'}
             id={`${id}-${tab}-tab`}
             aria-selected={shown === tab}
             aria-controls={`${id}-${tab}`}

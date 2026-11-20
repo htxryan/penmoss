@@ -322,7 +322,7 @@ test('Update Channel is Stable by default; Alpha is kept, checks at once and onl
   await channel(page).getByText('Stable', { exact: true }).click();
   await expect(settings.getByTestId('updates-status')).toHaveText('Penmoss is up to date.');
   await expect(settings.getByTestId('updates-chip')).toHaveText('Up to Date');
-  await expect(settings.getByTestId('updates-checked')).toHaveText(/^Stable · checked /);
+  await expect(settings.getByTestId('updates-checked')).toHaveText(/^Stable · Checked /);
   await expect(settings.getByTestId('updates-install')).toBeHidden();
   expect(host.updateFeed.checked).toEqual([ALPHA, STABLE]);
   expect(host.updateFeed.channel).toBe('latest');

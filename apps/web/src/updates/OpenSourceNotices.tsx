@@ -50,7 +50,13 @@ function NoticesDialog({ onClose }: { readonly onClose: () => void }) {
         </pre>
       )}
       <div className="confirm-actions">
-        <button type="submit" className="btn primary" data-ui="submit" autoFocus>
+        <button
+          data-event="settings.updates.open-source-notices.done"
+          type="submit"
+          className="btn primary"
+          data-ui="submit"
+          autoFocus
+        >
           Done
         </button>
       </div>
@@ -79,6 +85,7 @@ export function OpenSourceNotices() {
         helpId={`${id}-help`}
       >
         <button
+          data-event="settings.updates.open-source-notices.show"
           ref={button}
           type="button"
           className="btn"

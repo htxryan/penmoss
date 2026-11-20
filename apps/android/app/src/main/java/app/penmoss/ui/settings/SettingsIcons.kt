@@ -43,24 +43,26 @@ object SettingsIcons {
     val Monitor = icon("Monitor", rect(3f, 4.5f, 18f, 12f, 1.8f) + "M8.5 20h7M12 16.5V20")
     /** An agent author, as the history panel draws one (T40 P3b, NT16): a four-pointed star. */
     val Spark = icon("Agent", "M12 3.5 13.9 10 20.5 12 13.9 14 12 20.5 10.1 14 3.5 12 10.1 10z")
+    /** AI Descriptions (PEN-161): the web's sparkle, a star and a small one. */
+    val Sparkle = icon("Sparkle", "M12 3.5l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9zM18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z")
     /** The note's sync state (PL10, A429): a cloud with what it means. */
     private const val CLOUD = "M7 18.5h10.3a3.9 3.9 0 0 0 .7-7.75A5.4 5.4 0 0 0 7.6 9.2 4.7 4.7 0 0 0 7 18.5z"
     val CloudDone = icon("Synced", CLOUD + "M9.6 14l1.7 1.7 3.2-3.2")
     val CloudSync = icon("Syncing", CLOUD + "M9.6 14.6a2.5 2.5 0 0 1 4.4-1.6M14.4 13.4a2.5 2.5 0 0 1-4.4 1.6M14 11.6V13h-1.4M10 16.4V15h1.4")
-    val CloudUpload = icon("Waiting to upload", CLOUD + "M12 16.6v-4.8M9.9 13.7 12 11.6l2.1 2.1")
+    val CloudUpload = icon("Waiting to Upload", CLOUD + "M12 16.6v-4.8M9.9 13.7 12 11.6l2.1 2.1")
     val CloudOff = icon("Offline", CLOUD + "M4 4.5l16 16")
-    val CloudAlert = icon("Not synced", CLOUD + "M12 11.4v3M12 16.3v.2")
+    val CloudAlert = icon("Not Synced", CLOUD + "M12 11.4v3M12 16.3v.2")
     /** Git notebooks (T50, A856): the web's `terminal`. */
-    val Terminal = icon("Git notebooks", rect(3f, 4.5f, 18f, 15f, 2f) + "M7 9.5l3 2.5-3 2.5M12.5 15h4.5")
+    val Terminal = icon("Git Notebooks", rect(3f, 4.5f, 18f, 15f, 2f) + "M7 9.5l3 2.5-3 2.5M12.5 15h4.5")
     val Key = icon("Key", circle(8f, 15.5f, 3.6f) + "M10.6 13 19.5 4.5M16.5 7.5l2.2 2.2M14.3 9.7l1.7 1.7")
     /** The note's Info sheet (T40 P7, NT23), the web's Info panel button. */
     /** Settings → What’s New (PEN-109): a speaker announcing. */
     val WhatsNew = icon("What’s New", "M4 10v4h3l6 4V6l-6 4zM16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10")
     val Info = icon("Info", "M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM12 11v5.2M12 7.8h.01")
     /** A setting kept on this phone alone (A1559): the web's `laptop`, the same mark on every platform. */
-    val Laptop = icon("Kept on this phone", rect(5f, 5.5f, 14f, 9.5f, 1.5f) + "M2.5 18.5h19")
+    val Laptop = icon("Kept on This Phone", rect(5f, 5.5f, 14f, 9.5f, 1.5f) + "M2.5 18.5h19")
     /** A setting kept for the phones apart from the Macs (PEN-156, A1605): the web's `phone`. */
-    val Phone = icon("Kept for your phones", rect(7f, 2.8f, 10f, 18.4f, 2.2f) + "M11 18h2")
+    val Phone = icon("Kept for Your Phones", rect(7f, 2.8f, 10f, 18.4f, 2.2f) + "M11 18h2")
 
     /** Keyboard shortcuts (T40 P9, ST8): the web's keyboard icon. */
     val Keyboard = icon("Keyboard", rect(2.5f, 6f, 19f, 12f, 2f) + "M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M18 10h.01M7 14h10")
@@ -102,6 +104,9 @@ object SettingsIcons {
 
     /** Settings → GitHub (PEN-146): a person, signed in or not. */
     val Account = icon("GitHub", circle(12f, 8.5f, 3.5f) + "M5 19.5a7 7 0 0 1 14 0")
+
+    /** Settings → Privacy (PEN-137, N15): the web's `shield`, an outline shield with a tick. */
+    val Shield = icon("Privacy", "M12 3.5 19 6v5.5c0 4.4-2.9 7.6-7 9-4.1-1.4-7-4.6-7-9V6zM8.8 12.2l2.3 2.3 4.2-4.5")
 
     /** A row's drag handle (PEN-146): two columns of dots. */
     val Drag = icon("Drag", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01")

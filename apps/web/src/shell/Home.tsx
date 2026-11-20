@@ -105,6 +105,7 @@ export function Home({ phone }: { readonly phone: boolean }) {
                       className="ph-li"
                       href={notePath(note.id)}
                       data-ui="item"
+                      data-event="home.recent-note"
                       onClick={linkHandler(notePath(note.id))}
                     >
                       <Icon name="file" size={20} />

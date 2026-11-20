@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -77,11 +78,11 @@ fun JournalScreen(
             TopAppBar(
                 title = { Text("Journal") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
                     TextButton(
-                        onClick = onOpenToday,
+                        onClick = trackedClick("calendar.today", onOpenToday),
                         modifier = Modifier.testTag("journalToday").semantics { contentDescription = "Open Today's Note" },
                     ) { Text("Today") }
                 },
@@ -95,7 +96,7 @@ fun JournalScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 IconButton(
-                    onClick = { show(shown.previous()) },
+                    onClick = trackedClick("calendar.previous-month") { show(shown.previous()) },
                     modifier = Modifier.testTag("journalPrev"),
                 ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month") }
                 Text(
@@ -104,7 +105,7 @@ fun JournalScreen(
                     style = MaterialTheme.typography.titleMedium,
                 )
                 IconButton(
-                    onClick = { show(shown.next()) },
+                    onClick = trackedClick("calendar.next-month") { show(shown.next()) },
                     modifier = Modifier.testTag("journalNext"),
                 ) { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month") }
             }
@@ -125,7 +126,7 @@ fun JournalScreen(
                 Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val weekMarked = week.period in marks.weeks
                     TextButton(
-                        onClick = { onOpenWeek(week.monday.toString()) },
+                        onClick = trackedClick("calendar.week") { onOpenWeek(week.monday.toString()) },
                         modifier = Modifier.weight(0.7f).testTag("journalWeek-${week.period}")
                             .semantics { contentDescription = "Week ${week.period}${if (weekMarked) ", has a note" else ""}" },
                     ) {
@@ -167,7 +168,7 @@ private fun DayCell(
         if (marked) append(", has a note")
     }
     TextButton(
-        onClick = onOpen,
+        onClick = trackedClick("calendar.day", onOpen),
         modifier = modifier.testTag("journalDay-${day}").semantics { contentDescription = description },
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -93,6 +93,7 @@ function TimeZoneRow({ settings }: { readonly settings: Record<string, unknown> 
         type="button"
         className="btn wr-zone"
         data-ui="menu"
+        data-event="settings.journal.time-zone"
         aria-haspopup="dialog"
         aria-labelledby={`${id}-label ${id}-zone`}
         aria-describedby={`${id}-help`}
@@ -178,7 +179,7 @@ function TemplateEditor({ settings }: { readonly settings: Record<string, unknow
     pending.current.delete(kind);
     workspace.setSetting(templateSetting(kind), undefined);
     forget(kind);
-    setStatus((current) => ({ ...current, [kind]: 'Back to the default' }));
+    setStatus((current) => ({ ...current, [kind]: 'Back to the Default' }));
   };
 
   /** Puts `{{name}}` where the cursor is (over a selection), and the cursor after it. */
@@ -221,6 +222,7 @@ function TemplateEditor({ settings }: { readonly settings: Record<string, unknow
           <button
             key={each.kind}
             data-ui="option"
+            data-event="settings.journal.template-tab"
             ref={(element) => {
               if (element) tabs.current.set(each.kind, element);
               else tabs.current.delete(each.kind);
@@ -257,12 +259,14 @@ function TemplateEditor({ settings }: { readonly settings: Record<string, unknow
                 text="Placeholder"
                 className="btn quiet"
                 testId="template-placeholder"
+                data-event="settings.journal.placeholder-menu"
               >
                 {PLACEHOLDERS.map((placeholder) => (
                   <MenuItem
                     key={placeholder.name}
                     icon={placeholder.name.includes('week') ? 'week' : 'calendar'}
                     data-testid={`placeholder-${placeholder.name}`}
+                    data-event="settings.journal.placeholder"
                     onClick={() => insert(placeholder.name)}
                   >
                     {placeholder.label}
@@ -317,6 +321,7 @@ function TemplateEditor({ settings }: { readonly settings: Record<string, unknow
           type="button"
           className="btn quiet"
           data-ui="item"
+          data-event="settings.journal.template-reset"
           disabled={!isSet && drafts[kind] === undefined}
           onClick={reset}
         >

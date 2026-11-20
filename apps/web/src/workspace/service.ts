@@ -26,6 +26,7 @@ import {
   renameFolder,
   restoreFolder,
   setSortMode,
+  setFolderAiDescription,
   setTagDescription,
   setTogether,
   unregisterNote,
@@ -38,6 +39,7 @@ import {
 import { isPurged, markPurged, unmarkPurged } from '@penmoss/git-notebook';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import { LocalSettings } from './local-settings';
+import { recordSetting } from '../analytics/track';
 import type { MovePlan } from './model';
 
 /** The web and the Mac app share the Macs' copy of the look and layout (PEN-156, A1605). */
@@ -250,6 +252,11 @@ export class Workspace {
     return restoreFolder(this.doc, id);
   }
 
+  /** A folder's AI Descriptions value (PEN-161): Inherit, On or Off. Synced. */
+  setFolderAiDescription(folderId: string, value: 'inherit' | 'on' | 'off'): void {
+    setFolderAiDescription(this.doc, folderId, value);
+  }
+
   setSortMode(folderId: string | null, mode: SortMode): void {
     setSortMode(this.doc, folderId, mode);
   }
@@ -398,6 +405,8 @@ export class Workspace {
    * and layout stay on this device and never reach the notebook (A1626).
    */
   setSetting(key: string, value: unknown): void {
+    // An allowlisted setting's change, by name (PEN-137): never a text setting's text.
+    recordSetting(key, value);
     if (isLocalSetting(key)) {
       this.local.set(key, value);
       return;

@@ -5,6 +5,7 @@
  * that row. The index is written by hand from the pages, so a new setting adds its line here.
  * The pages and their groups in the nav are here too, so a result can say where it is.
  */
+import { analyticsCopy } from '@penmoss/core/analytics';
 import type { SettingsSection } from '../router';
 
 /** The nav's groups (PEN-146), each naming its scope once. */
@@ -36,12 +37,14 @@ export const SETTINGS_PAGES: ReadonlyArray<{
   { id: 'journal', label: 'Daily Notes', group: 'writing' },
   { id: 'quick-capture', label: 'Quick Capture', group: 'writing' },
   { id: 'shortcuts', label: 'Keyboard Shortcuts', group: 'writing' },
+  { id: 'ai-descriptions', label: 'AI Descriptions', group: 'writing' },
   { id: 'git-notebooks', label: 'All Notebooks', group: 'notebooks' },
   { id: 'agents', label: 'Agents', group: 'agents' },
   { id: 'agent-activity', label: 'Agent Activity', group: 'agents' },
   { id: 'meaning', label: 'Semantic Search', group: 'mac' },
   { id: 'github', label: 'GitHub', group: 'mac' },
   { id: 'updates', label: 'Updates', group: 'mac' },
+  { id: 'privacy', label: 'Privacy', group: 'mac' },
 ];
 
 export const pageLabel = (section: SettingsSection): string =>
@@ -97,6 +100,15 @@ const noteBar = at('note');
 const saves = at('quick-capture', 'Saves To');
 const captureMac = at('quick-capture', 'This Mac');
 const between = at('git-notebooks', 'Between Notebooks');
+const privacy = at('privacy');
+const advanced = at('privacy', 'Advanced');
+
+/** Privacy's words, as the page says them (core's analytics copy, PEN-137). */
+const said = (key: Parameters<typeof analyticsCopy>[0], vars?: Record<string, number>) =>
+  analyticsCopy(key, 'mac', vars);
+const USAGE = ['analytics', 'telemetry', 'usage', 'retention', 'history', 'limit'];
+const LOGS = ['logs', 'diagnostics', 'disk space', 'retention'];
+const REPORTS = ['logs', 'diagnostics', 'bug report', 'feedback'];
 
 /** Every setting a query can find, page by page in the nav's order. */
 export const SETTINGS_INDEX: readonly SettingEntry[] = [
@@ -169,7 +181,7 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   saves('Today’s Note', { help: 'At the end of ## Captures, with the time' }),
   saves('New Note in Inbox', { help: 'Titled by its first line', aliases: ['inbox'] }),
   saves('Notebook', { help: 'Your primary notebook' }),
-  captureMac('Shortcut From Any App', { aliases: ['hotkey', 'global shortcut', 'keys'] }),
+  captureMac('Shortcut from Any App', { aliases: ['hotkey', 'global shortcut', 'keys'] }),
   captureMac('Show in the Menu Bar', {
     help: 'Quick Capture, Today’s Journal and Quick Access',
     aliases: ['menu bar icon', 'tray', 'status bar'],
@@ -177,6 +189,26 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   // Keyboard Shortcuts.
   at('shortcuts')('Keyboard Shortcuts', {
     aliases: ['keys', 'hotkeys', 'key bindings', 'keybindings'],
+  }),
+  // AI Descriptions (PEN-161).
+  at('ai-descriptions')('Describe Notes', {
+    help: 'A short description of each note, for agents',
+    aliases: ['ai', 'description', 'descriptions', 'claude', 'summary', 'summaries'],
+  }),
+  at('ai-descriptions')('Describe a Note', {
+    help: 'After a pause, or at each sync',
+    aliases: ['ai', 'description', 'when'],
+  }),
+  at('ai-descriptions', 'AI Provider')('AI Provider', {
+    help: 'Anthropic with an API key, or Claude Code on this Mac',
+    aliases: ['ai', 'provider', 'claude', 'claude code', 'anthropic', 'api key', 'key'],
+  }),
+  at('ai-descriptions', 'AI Provider')('Model', {
+    aliases: ['ai', 'claude', 'haiku', 'sonnet'],
+  }),
+  at('ai-descriptions', 'Prompt')('Prompt', {
+    help: 'What the AI is asked, with tokens',
+    aliases: ['ai', 'description', 'claude', 'prompt'],
   }),
   // All Notebooks.
   at('git-notebooks')('Add Notebook', { aliases: ['git', 'repository', 'clone', 'github'] }),
@@ -202,12 +234,13 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     ],
   }),
   // Agents.
-  at('agents')('Penmoss Command', {
+  // Each label is its row's (PEN-137): the card's heading, the group's heading.
+  at('agents')('The penmoss Command', {
     help: 'Agents read and edit your notes through it',
     aliases: ['cli', 'terminal', 'install'],
   }),
-  at('agents')('Connected on This Mac', {
-    aliases: ['connect an agent', 'claude code', 'codex', 'mcp', 'disconnect'],
+  at('agents')('Agent Copies on This Mac', {
+    aliases: ['connected', 'connect an agent', 'claude code', 'codex', 'mcp', 'disconnect'],
   }),
   at('agent-activity')('Agent Activity', {
     id: 'agent-activity-filters',
@@ -285,6 +318,64 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     aliases: ['alpha', 'stable', 'beta'],
   }),
   at('updates')('What’s New', { aliases: ['release notes', 'changelog', 'earlier versions'] }),
+  // Privacy (PEN-137): usage analytics and the logs; the limits under Advanced.
+  privacy(said('privacy.share.label'), {
+    help: said('privacy.share.hint'),
+    aliases: [
+      'analytics',
+      'telemetry',
+      'tracking',
+      'usage',
+      'usage data',
+      'statistics',
+      'opt out',
+      'consent',
+    ],
+  }),
+  privacy(said('privacy.viewData.label'), {
+    help: said('privacy.lead'),
+    aliases: ['analytics', 'telemetry', 'tracking', 'events', 'what is recorded', 'usage'],
+  }),
+  privacy(said('privacy.id.label'), {
+    help: said('privacy.id.hint'),
+    aliases: ['analytics', 'telemetry', 'install id', 'identifier'],
+  }),
+  privacy(said('privacy.resetId.button'), {
+    help: said('privacy.id.hint'),
+    aliases: ['analytics', 'telemetry', 'new id', 'reset'],
+  }),
+  privacy(said('privacy.forget.button'), {
+    help: said('forget.title'),
+    aliases: ['analytics', 'telemetry', 'tracking', 'forget', 'erase', 'gdpr', 'delete data'],
+  }),
+  privacy(said('privacy.logs.label'), {
+    help: said('privacy.logs.button'),
+    aliases: ['logs', 'log file', 'diagnostics', 'debug', 'crash'],
+  }),
+  privacy(said('privacy.advanced.label'), {
+    help: said('privacy.advanced.intro'),
+    aliases: ['analytics', 'telemetry', 'limits', 'storage', 'retention', 'diagnostics'],
+  }),
+  advanced(said('limits.events.days.label'), { help: said('limits.usage.title'), aliases: USAGE }),
+  advanced(said('limits.events.max.label'), { help: said('limits.usage.title'), aliases: USAGE }),
+  advanced(said('limits.logs.fileKb.label'), { help: said('limits.logs.title'), aliases: LOGS }),
+  advanced(said('limits.logs.files.label'), { help: said('limits.logs.title'), aliases: LOGS }),
+  advanced(said('limits.logs.days.label'), { help: said('limits.logs.title'), aliases: LOGS }),
+  advanced(said('limits.report.hours.label'), {
+    help: said('limits.report.title'),
+    aliases: REPORTS,
+  }),
+  // The two At Most rows, lines and size, are told apart by their own ids.
+  advanced(said('limits.report.lines.label'), {
+    id: 'report-at-most-lines',
+    help: `${said('limits.report.title')}: lines`,
+    aliases: REPORTS,
+  }),
+  advanced(said('limits.report.kb.label'), {
+    id: 'report-at-most-kb',
+    help: `${said('limits.report.title')}: KB`,
+    aliases: REPORTS,
+  }),
 ];
 
 /** A result: the setting, where its label matched the query (to mark), and its place. */

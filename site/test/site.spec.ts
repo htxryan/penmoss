@@ -536,9 +536,9 @@ test.describe('the docs', () => {
     ]);
     await expect(nav.locator('details[open]')).toHaveCount(1);
     await expect(nav.locator('details[open] summary')).toHaveText('Get Started');
-    // 27 pages in all (34 before A1351, 26 before Time Machine), but what shows is five section
-    // rows and Get Started's five pages.
-    await expect(nav.locator('a[href^="/docs/"]')).toHaveCount(27);
+    // 28 pages in all (34 before A1351, 26 before Time Machine, 27 before AI Descriptions), but
+    // what shows is five section rows and Get Started's five pages.
+    await expect(nav.locator('a[href^="/docs/"]')).toHaveCount(28);
     await expect(nav.getByRole('link')).toHaveText([
       'Introduction',
       'The Mac App',
@@ -697,4 +697,37 @@ test.describe('Cloudflare Web Analytics (PEN-123)', () => {
       expect(errors).toEqual([]);
     });
   }
+});
+
+test.describe('Usage data in the policy (PEN-137)', () => {
+  test('the privacy policy says usage is recorded on the device and sent only with consent', async ({
+    page,
+  }) => {
+    await page.goto('/privacy/');
+    const policy = page.locator('article');
+    await expect(policy.getByRole('heading', { name: 'Usage data' })).toBeVisible();
+    for (const words of [
+      'Recorded on your device, always.',
+      'Sent only with your consent.',
+      'keeps the events for 13 months and no IP address',
+      'only the developer reads them',
+      'Delete My Shared Data',
+      'reset your analytics ID',
+      'penmoss analytics limits',
+      'View Analytics Data',
+      'DO_NOT_TRACK=1',
+    ]) {
+      await expect(policy).toContainText(words);
+    }
+    await expect(policy).not.toContainText('no analytics');
+  });
+
+  test('the help page on usage data shows what a batch holds, and what never is', async ({
+    page,
+  }) => {
+    await page.goto('/docs/help/usage-data/');
+    await expect(page.getByRole('heading', { level: 1, name: 'Usage data' })).toBeVisible();
+    await expect(page.locator('main')).toContainText('Never recorded');
+    await expect(page.locator('main')).toContainText('"kind": "command"');
+  });
 });

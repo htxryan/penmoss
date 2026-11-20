@@ -70,6 +70,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.settings.SettingsIcons
 import kotlin.math.PI
 import kotlin.math.cos
@@ -139,7 +141,7 @@ fun NotePanel(tab: PanelTab, onTab: (PanelTab) -> Unit, onClose: () -> Unit, ope
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    TipIconButton(Icons.Default.Close, "Close Panel", onClick = onClose, modifier = Modifier.testTag("panelClose"))
+                    TipIconButton(Icons.Default.Close, "Close Panel", onClick = trackedClick("note.panel.close", onClose), modifier = Modifier.testTag("panelClose"))
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) { content(tab) }
             }
@@ -173,7 +175,7 @@ private fun PanelStrip(tab: PanelTab, openComments: Int, onPick: (PanelTab) -> U
                         .drawBehind {
                             if (selected) drawRect(colours.primary, size = Size(2.dp.toPx(), size.height))
                         }
-                        .selectable(selected = selected, role = Role.Tab, onClick = { onPick(each) })
+                        .selectable(selected = selected, role = Role.Tab, onClick = trackedClick("note.panel.tab") { onPick(each) })
                         .testTag(each.tag)
                         .semantics {
                             contentDescription = if (each == PanelTab.COMMENTS && openComments > 0) "${each.label}, $openComments open" else each.label
@@ -232,7 +234,7 @@ fun LocalGraphPanel(title: String, neighbours: List<Neighbour>?, onOpen: (String
                     Modifier.weight(1f).semantics { heading() },
                     style = MaterialTheme.typography.titleSmall,
                 )
-                FilledTonalButton(onClick = onOpenGraph, modifier = Modifier.testTag("panelOpenGraph")) { Text("Open Full Graph") }
+                FilledTonalButton(onClick = trackedClick("graph.open-full", onOpenGraph), modifier = Modifier.testTag("panelOpenGraph")) { Text("Open Full Graph") }
             }
         }
         if (!neighbours.isNullOrEmpty()) {
@@ -244,7 +246,7 @@ fun LocalGraphPanel(title: String, neighbours: List<Neighbour>?, onOpen: (String
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
-                        .clickable(onClickLabel = "Open ${neighbour.title}") { onOpen(neighbour.id) }
+                        .clickable(onClickLabel = "Open ${neighbour.title}", onClick = trackedClick("note.panel.neighbour") { onOpen(neighbour.id) })
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .testTag("panelNeighbour-${neighbour.id}"),
                     maxLines = 1,
@@ -289,7 +291,7 @@ private fun GraphLabel(text: String, at: Offset, strong: Boolean, onClick: () ->
             .offset(x = with(density) { (at.x - half).toDp() }, y = with(density) { (at.y + 6.dp.toPx()).toDp() })
             .widthIn(max = 96.dp)
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), RectangleShape)
-            .clickable(onClick = onClick)
+            .clickable(onClick = trackedClick("note.panel.graph-node", onClick))
             .padding(horizontal = 4.dp),
         style = if (strong) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelSmall,
         maxLines = 1,
@@ -313,6 +315,9 @@ internal fun SheetOrPanel(
     if (embedded) {
         Column(Modifier.fillMaxSize().testTag(tag), content = content)
     } else {
+        // Its two sheets, Comments and Info, by name.
+        val comments = tag == "commentsSheet"
+        rememberTrackedDialog(if (comments) "comments" else "noteInfo")
         ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, modifier = Modifier.testTag(tag), content = content)
     }
 }

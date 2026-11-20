@@ -148,7 +148,7 @@ describe('theme schema: validated on read (T28)', () => {
     expect(theme.fonts.body).toBe(NORD.fonts.body);
     expect(theme.fonts.mono).toBe(NORD.fonts.mono);
     expect(theme.editorWidth).toBe(NORD.editorWidth);
-    expect(theme.name).toBe('Untitled theme');
+    expect(theme.name).toBe('Untitled Theme');
     expect(problems).toEqual(['name', 'fonts.body', 'fonts.mono', 'editorWidth']);
   });
 });

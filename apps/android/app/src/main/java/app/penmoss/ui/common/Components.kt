@@ -41,6 +41,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.trackedToggle
 
 /** Material's folder icon (Apache 2.0); the core icon set has none. */
 val FolderIcon: ImageVector by lazy {
@@ -92,7 +94,7 @@ fun NoteRowView(
             .then(
                 if (selecting) {
                     // A tap adds or takes out the note; TalkBack reads a checkbox with its state.
-                    Modifier.toggleable(value = chosen, role = Role.Checkbox) { selection.toggle(item) }
+                    Modifier.toggleable(value = chosen, role = Role.Checkbox, onValueChange = trackedToggle("note-list.select") { selection.toggle(item) })
                 } else {
                     Modifier.combinedClickable(
                         role = Role.Button,
@@ -108,7 +110,8 @@ fun NoteRowView(
                                 press(item)
                             }
                         },
-                    ) { onOpen(item.id) }
+                        onClick = trackedClick("note-list.note") { onOpen(item.id) },
+                    )
                 },
             )
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -184,7 +187,8 @@ fun FolderRowView(
                         press(item)
                     }
                 },
-            ) { onOpen(item.id) }
+                onClick = trackedClick("note-list.folder") { onOpen(item.id) },
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),

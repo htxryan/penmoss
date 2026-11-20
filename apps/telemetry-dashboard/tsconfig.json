@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/vitest-plugin/types", "node"]
+  },
+  "include": [
+    "worker-configuration.d.ts",
+    "src",
+    "test",
+    "vitest.config.ts",
+    "vitest.workers.config.ts"
+  ],
+  // The page (DOM) and the Playwright spec (Node) have their own.
+  "exclude": ["src/client", "test/client", "test/e2e"]
+}

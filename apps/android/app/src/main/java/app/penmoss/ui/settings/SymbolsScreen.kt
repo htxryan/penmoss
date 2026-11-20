@@ -52,6 +52,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.ColourLock
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
@@ -120,13 +122,13 @@ fun SymbolsScreen(
                     headlineContent = { Text(symbol.name, Modifier.testTag("symbol-colour-label-$index")) },
                     supportingContent = {
                         Text(
-                            "${keys.getOrNull(index) ?: "No key"} · ${kindDoes(kind)}",
+                            "${keys.getOrNull(index) ?: "No Key"} · ${kindDoes(kind)}",
                             Modifier.testTag("symbol-key-$index"),
                         )
                     },
                     trailingContent = {
                         IconButton(
-                            onClick = { change(symbols.filterIndexed { at, _ -> at != index }, "Removed ${symbol.name}. Your lists stay as they are.") },
+                            onClick = trackedClick("settings.symbols.row.remove") { change(symbols.filterIndexed { at, _ -> at != index }, "Removed ${symbol.name}. Your lists stay as they are.") },
                             enabled = enabled,
                             modifier = Modifier.testTag("symbol-delete-$index"),
                         ) { Icon(Icons.Default.Close, contentDescription = "Remove ${symbol.name}") }
@@ -156,17 +158,17 @@ fun SymbolsScreen(
                         Modifier.testTag("symbol-colour-label-$index"),
                     )
                 },
-                supportingContent = { Text(keys.getOrNull(index) ?: "No key", Modifier.testTag("symbol-key-$index")) },
+                supportingContent = { Text(keys.getOrNull(index) ?: "No Key", Modifier.testTag("symbol-key-$index")) },
                 trailingContent = {
                     IconButton(
-                        onClick = { change(symbols.filterIndexed { at, _ -> at != index }, "Removed ${symbol.glyph}. Lines with ${symbol.glyph} show it as text.") },
+                        onClick = trackedClick("settings.symbols.row.remove") { change(symbols.filterIndexed { at, _ -> at != index }, "Removed ${symbol.glyph}. Lines with ${symbol.glyph} show it as text.") },
                         enabled = enabled,
                         modifier = Modifier.testTag("symbol-delete-$index"),
                     ) { Icon(Icons.Default.Close, contentDescription = "Remove ${symbol.glyph}") }
                 },
                 modifier = Modifier
                     .testTag("symbol-row-$index")
-                    .clickable(enabled = enabled, onClickLabel = "Edit ${symbol.glyph}") { editing = index },
+                    .clickable(enabled = enabled, onClickLabel = "Edit ${symbol.glyph}", onClick = trackedClick("settings.symbols.row.edit") { editing = index }),
             )
         }
         if (symbols.isEmpty()) Help("No symbols: add one, or restore the defaults.")
@@ -179,14 +181,14 @@ fun SymbolsScreen(
             Box {
                 var adding by remember { mutableStateOf(false) }
                 OutlinedButton(
-                    onClick = { adding = true },
+                    onClick = trackedClick("settings.symbols.add") { adding = true },
                     enabled = enabled && symbols.size < LineSymbols.MAX,
                     modifier = Modifier.testTag("symbol-add"),
                 ) { Text("+ Add ▾") }
                 DropdownMenu(expanded = adding, onDismissRequest = { adding = false }) {
                     DropdownMenuItem(
                         text = { Text("Symbol") },
-                        onClick = {
+                        onClick = trackedClick("settings.symbols.add.symbol") {
                             adding = false
                             editing = symbols.size
                         },
@@ -197,7 +199,7 @@ fun SymbolsScreen(
                         DropdownMenuItem(
                             text = { Text(if (there) "$name (In the List)" else name) },
                             enabled = !there,
-                            onClick = {
+                            onClick = trackedClick("settings.symbols.add.list-item") {
                                 adding = false
                                 change(symbols + LineSymbols.kindSymbol(kind), "Added $name as symbol ${symbols.size + 1}.")
                             },
@@ -211,14 +213,14 @@ fun SymbolsScreen(
         Row(Modifier.padding(horizontal = 8.dp)) {
             // Quiet, since it replaces the list (PEN-146).
             TextButton(
-                onClick = {
+                onClick = trackedClick("settings.symbols.restore-defaults") {
                     onReset()
                     said = "Restored " + LineSymbols.DEFAULTS.joinToString(" ") { it.call } + "."
                 },
                 enabled = enabled && custom,
                 modifier = Modifier.settingRow("restore-default-symbols").testTag("symbol-reset"),
             ) { Text("Restore Defaults") }
-            TextButton(onClick = onShortcuts, modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Keys…") }
+            TextButton(onClick = trackedClick("settings.symbols.shortcuts-link", onShortcuts), modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Keys…") }
         }
         Text(
             said ?: "A glyph is a symbol or emoji without letters, digits or markdown characters.",
@@ -262,7 +264,7 @@ internal fun kindDoes(kind: String): String = when (kind) {
 }
 
 /** What a symbol's row says in place of its colour for an emoji, in its own colours (A1588). */
-internal const val OWN_COLOURS = "Its own colours"
+internal const val OWN_COLOURS = "Its Own Colours"
 
 /** The colour chips' value for "any colour", until one is picked. */
 private const val CUSTOM = "custom"
@@ -310,6 +312,7 @@ private fun SymbolDialog(
             onDismiss = { picking = false },
         )
     }
+    val tracked = rememberTrackedDialog("symbolEditor")
     AlertDialog(
         onDismissRequest = onDismiss,
         // Clear of the keyboard (T51 manual pass): the dialog shrinks above it and its body
@@ -329,7 +332,7 @@ private fun SymbolDialog(
                     ) {
                         Text(glyph.ifEmpty { "●" }, style = MaterialTheme.typography.titleLarge, color = if (locked) Color.Unspecified else symbolColour(colour))
                     }
-                    OutlinedButton(onClick = { picking = true }, modifier = Modifier.testTag("symbol-choose")) {
+                    OutlinedButton(onClick = trackedClick("glyph-picker.open") { picking = true }, modifier = Modifier.testTag("symbol-choose")) {
                         Text("Choose Symbol…")
                     }
                 }
@@ -347,7 +350,7 @@ private fun SymbolDialog(
                     for ((key, label) in LineSymbols.COLOURS) {
                         FilterChip(
                             selected = key == colour,
-                            onClick = { colour = key },
+                            onClick = trackedClick("colour-picker.swatch") { colour = key },
                             enabled = !locked,
                             label = { Text(label) },
                             leadingIcon = {
@@ -359,7 +362,7 @@ private fun SymbolDialog(
                     val custom = LineSymbols.isHexColour(colour)
                     FilterChip(
                         selected = custom,
-                        onClick = { colour = customColour },
+                        onClick = trackedClick("colour-picker.custom") { colour = customColour },
                         enabled = !locked,
                         label = { Text(if (custom) "Custom: ${LineSymbols.colourLabel(colour)}" else "Custom Colour") },
                         leadingIcon = {
@@ -385,10 +388,11 @@ private fun SymbolDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
+                onClick = trackedClick("settings.symbols.edit.save") {
                     // A symbol goes by its glyph (A940): a changed glyph is its name too.
                     val name = if (LineSymbols.glyphKey(glyph) == LineSymbols.glyphKey(initial.glyph) && !isNew) initial.name else glyph
                     refused = onSave(LineSymbol(glyph, name, colour))
+                    if (refused == null) tracked.done()
                 },
                 enabled = glyphProblem == null,
                 modifier = Modifier.testTag("symbol-save"),
@@ -397,12 +401,12 @@ private fun SymbolDialog(
         dismissButton = {
             Row {
                 if (onRemove != null) {
-                    TextButton(onClick = onRemove, modifier = Modifier.testTag("symbol-remove")) {
+                    TextButton(onClick = trackedClick("settings.symbols.edit.remove", tracked.done(onRemove)), modifier = Modifier.testTag("symbol-remove")) {
                         Icon(Icons.Default.Delete, contentDescription = null)
                         Text("Remove")
                     }
                 }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = trackedClick("settings.symbols.edit.cancel", onDismiss)) { Text("Cancel") }
             }
         },
     )

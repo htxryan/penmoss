@@ -37,7 +37,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.NotebookGraph
+import app.penmoss.analytics.trackedClick
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -289,7 +292,7 @@ internal fun InfoButton(linked: Int, onClick: () -> Unit) {
         tooltip = { PlainTooltip { Text("Info") } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.testTag("noteInfo").semantics { contentDescription = description }) {
+        IconButton(onClick = trackedClick("note.info", onClick), modifier = Modifier.testTag("noteInfo").semantics { contentDescription = description }) {
             BadgedBox(badge = { if (linked > 0) Badge { Text(if (linked > 99) "99+" else linked.toString()) } }) {
                 Icon(SettingsIcons.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -322,6 +325,8 @@ internal fun InfoSheet(
     embedded: Boolean = false,
     /** The note's inline `#tags` ([inlineTags]): listed apart under its frontmatter tags (A502). */
     inline: List<String> = emptyList(),
+    /** Its description and AI Description (PEN-161); null leaves the sections out. */
+    description: DescriptionUi? = null,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     SheetOrPanel(embedded, onDismiss, sheet, "infoSheet") {
@@ -373,7 +378,7 @@ internal fun InfoSheet(
                         else -> tags.forEach { tag -> Text("#$tag", Modifier.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium) }
                     }
                     if (canTag) {
-                        AssistChip(onClick = onTags, label = { Text("Edit Tags…") }, modifier = Modifier.testTag("infoEditTags"))
+                        AssistChip(onClick = trackedClick("note.info.edit-tags", onTags), label = { Text("Edit Tags…") }, modifier = Modifier.testTag("infoEditTags"))
                     }
                 }
             }
@@ -387,6 +392,7 @@ internal fun InfoSheet(
                     )
                 }
             }
+            if (description != null) descriptionItems(description)
             item { SheetHeading("Frontmatter") }
             val fieldKeys = fields.orEmpty().map { it.key }
             items(fields.orEmpty()) { field ->
@@ -476,7 +482,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
         item { EmptyLine(if (first) "Looking for links…" else "No other notes link here yet.", "noLinkedMentions") }
     }
     items(linked, key = { "linked-${it.id}" }) { entry ->
-        Column(Modifier.fillMaxWidth().clickable { onOpen(entry.id) }.heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("linked-${entry.id}")) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = trackedClick("note.backlinks.linked") { onOpen(entry.id) }).heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("linked-${entry.id}")) {
             Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             for (mention in entry.mentions) {
                 Text(
@@ -492,7 +498,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
         item { EmptyLine(if (first) "" else "No other notes mention this title.", "noUnlinkedMentions") }
     }
     items(unlinked, key = { "unlinked-${it.id}" }) { entry ->
-        Column(Modifier.fillMaxWidth().clickable { onOpen(entry.id) }.heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("unlinked-${entry.id}")) {
+        Column(Modifier.fillMaxWidth().clickable(onClick = trackedClick("note.backlinks.unlinked") { onOpen(entry.id) }).heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("unlinked-${entry.id}")) {
             Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             Text(
                 buildAnnotatedString {
@@ -535,6 +541,110 @@ internal fun contextString(
                 val label = Backlinks.linkLabel(part.ref, part.ref.noteId?.let(titleOf))
                 if (part.ref.noteId == noteId) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(label) } else append(label)
             }
+        }
+    }
+}
+
+/**
+ * The Info sheet's Description and AI Description (PEN-161), as the Mac's Metadata tab has them:
+ * the description, edited here (Written by You, or by AI Descriptions); Keep Your Description?
+ * while the note asks; the note's own Inherit, On or Off; and what this phone does about it.
+ */
+data class DescriptionUi(
+    val text: String?,
+    /** `ai`, `hand`, or null with no description. */
+    val by: String?,
+    /** The note's own setting: `inherit`, `on` or `off`. */
+    val ai: String,
+    val asks: Boolean,
+    /** This phone can describe notes: Anthropic, with a key. */
+    val ready: Boolean,
+    /** Describe Notes, in Settings → AI Descriptions. */
+    val global: Boolean,
+    val editable: Boolean,
+    val onText: (String) -> Unit,
+    val onAi: (String) -> Unit,
+    val onAnswer: (Boolean) -> Unit,
+)
+
+/** What the sheet says the note's setting does, here (the folders and notebook are the Mac's to show). */
+internal fun aiStatusLine(ui: DescriptionUi): String = when {
+    ui.ai == "off" -> if (ui.text.isNullOrEmpty()) "Off" else "Off: the description stays as it is"
+    !ui.ready -> "No AI provider on this phone: your Mac describes it after the next sync. Settings → AI Descriptions sets one up here."
+    ui.by == "hand" -> "Written by you: kept until you let Claude update it"
+    ui.ai == "on" -> if (ui.text.isNullOrEmpty()) "Waiting for the next change" else "Described"
+    else -> "Inherits from its folder, its notebook, then Describe Notes (${if (ui.global) "On" else "Off"})"
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.descriptionItems(ui: DescriptionUi) {
+    item { SheetHeading("Description") }
+    item {
+        var draft by androidx.compose.runtime.saveable.rememberSaveable(ui.text) { androidx.compose.runtime.mutableStateOf(ui.text.orEmpty()) }
+        app.penmoss.ui.common.OutlinedTextField(
+            value = draft,
+            onValueChange = { draft = it.take(app.penmoss.engine.bridge.BridgeProtocol.MAX_DESCRIPTION_CHARS) },
+            enabled = ui.editable,
+            placeholder = { Text("No description yet. Write one, or let Claude.") },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (draft.trim() != ui.text.orEmpty()) ui.onText(draft) }),
+            minLines = 2,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp).testTag("infoDescription")
+                .onFocusChanged { focus -> if (!focus.isFocused && draft.trim() != ui.text.orEmpty()) ui.onText(draft) },
+        )
+    }
+    if (ui.by != null) {
+        item {
+            Text(
+                if (ui.by == "hand") "Written by you" else "Written by AI Descriptions",
+                Modifier.padding(horizontal = 24.dp).testTag("infoDescriptionBy"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    if (ui.asks && ui.ai != "off") {
+        item {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer).padding(12.dp).testTag("infoDescriptionAsk"),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("Keep Your Description?", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text("Claude would rewrite it the next time this note changes.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    app.penmoss.ui.common.FilledTonalButton(onClick = trackedClick("note.ai.keep-mine") { ui.onAnswer(true) }, modifier = Modifier.testTag("infoKeepMine")) { Text("Keep Mine") }
+                    app.penmoss.ui.common.TextButton(onClick = trackedClick("note.ai.let-claude") { ui.onAnswer(false) }, modifier = Modifier.testTag("infoLetClaude")) { Text("Let Claude Update It") }
+                }
+            }
+        }
+    }
+    item { SheetHeading("AI Description") }
+    item {
+        app.penmoss.ui.settings.Segments(
+            listOf("inherit" to "Inherit", "on" to "On", "off" to "Off"),
+            ui.ai,
+            ui.editable,
+            "infoAi",
+            modifier = Modifier.padding(horizontal = 8.dp),
+            event = "note.ai.mode",
+            onChoose = ui.onAi,
+        )
+    }
+    item {
+        Text(
+            aiStatusLine(ui),
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp).testTag("infoAiStatus"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    item {
+        Row(Modifier.padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            app.penmoss.ui.common.TextButton(
+                onClick = trackedClick("note.ai.clear") { ui.onText("") },
+                enabled = ui.editable && !ui.text.isNullOrEmpty(),
+                modifier = Modifier.testTag("infoDescriptionClear"),
+            ) { Text("Clear") }
         }
     }
 }

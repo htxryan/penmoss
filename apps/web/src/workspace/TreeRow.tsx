@@ -94,6 +94,7 @@ export function FolderTreeRow({
             tabIndex={-1}
             className="icon-btn"
             data-ui="item"
+            data-event="tree.folder-row.new-note"
             aria-label={`New Note in ${row.name}`}
             data-tip="New Note Here"
             data-testid="folder-row-new-note"

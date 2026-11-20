@@ -49,6 +49,7 @@ export function FeedbackOutbox({
             </span>
             <span className="row">
               <button
+                data-event="feedback-outbox.discard"
                 type="button"
                 className="btn quiet"
                 data-ui="dismiss"
@@ -60,6 +61,7 @@ export function FeedbackOutbox({
               </button>
               {entry.state === 'failed' ? (
                 <button
+                  data-event="feedback-outbox.edit"
                   type="button"
                   className="btn quiet"
                   data-ui="item"
@@ -80,6 +82,9 @@ export function FeedbackOutbox({
                 </button>
               ) : null}
               <button
+                data-event={
+                  entry.state === 'failed' ? 'feedback-outbox.retry' : 'feedback-outbox.send-now'
+                }
                 type="button"
                 className="btn"
                 data-ui="submit"

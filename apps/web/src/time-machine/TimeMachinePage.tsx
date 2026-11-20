@@ -108,6 +108,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
               role="tab"
               className="tm-tab"
               data-ui="option"
+              data-event="time-machine.tab.then"
               aria-selected={tab === 'then'}
               onClick={() => go({ tab: 'then' })}
             >
@@ -119,6 +120,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
               role="tab"
               className="tm-tab"
               data-ui="option"
+              data-event="time-machine.tab.changes"
               aria-selected={tab === 'changes'}
               onClick={() => go({ tab: 'changes' })}
             >
@@ -336,6 +338,7 @@ function NotebookThen({ source }: { source: GitSource }) {
             type="button"
             className="icon-btn"
             data-ui="item"
+            data-event="time-machine.earlier"
             aria-label="Earlier Commit"
             data-tip="Earlier Commit"
             disabled={index <= 0}
@@ -359,6 +362,7 @@ function NotebookThen({ source }: { source: GitSource }) {
             type="button"
             className="icon-btn"
             data-ui="item"
+            data-event="time-machine.later"
             aria-label="Later Commit"
             data-tip="Later Commit"
             disabled={index >= commits.length - 1}
@@ -423,6 +427,7 @@ function NotebookThen({ source }: { source: GitSource }) {
                       type="button"
                       className="btn primary"
                       data-ui="submit"
+                      data-event="time-machine.restore-version"
                       disabled={busy}
                       onClick={() => void restoreVersion()}
                     >
@@ -433,6 +438,7 @@ function NotebookThen({ source }: { source: GitSource }) {
                       className="btn quiet"
                       href={notePath(noteId)}
                       data-ui="item"
+                      data-event="time-machine.open-note"
                       onClick={linkHandler(notePath(noteId))}
                     >
                       Open the Note
@@ -443,6 +449,7 @@ function NotebookThen({ source }: { source: GitSource }) {
                     type="button"
                     className="btn primary"
                     data-ui="submit"
+                    data-event="time-machine.restore-note"
                     disabled={busy}
                     onClick={() => void restoreNote()}
                   >
@@ -502,6 +509,7 @@ function TreeList({
             type="button"
             className="tm-note-row"
             data-ui="item"
+            data-event="time-machine.note"
             data-note={note.id}
             aria-pressed={selected === note.id}
             onClick={() => onSelect(note.id)}
@@ -598,7 +606,13 @@ function WhatChanged({ source, week }: { source: GitSource; week: string | null 
           />
         </label>
         <div className="tm-weeks">
-          <button type="button" className="btn quiet" data-ui="item" onClick={() => shift(-1)}>
+          <button
+            type="button"
+            className="btn quiet"
+            data-ui="item"
+            data-event="time-machine.week.previous"
+            onClick={() => shift(-1)}
+          >
             <Icon name="chevL" />
             Previous Week
           </button>
@@ -606,11 +620,18 @@ function WhatChanged({ source, week }: { source: GitSource; week: string | null 
             type="button"
             className="btn quiet"
             data-ui="item"
+            data-event="time-machine.week.this"
             onClick={() => setRange(weekOf(null, zone))}
           >
             This Week
           </button>
-          <button type="button" className="btn quiet" data-ui="item" onClick={() => shift(1)}>
+          <button
+            type="button"
+            className="btn quiet"
+            data-ui="item"
+            data-event="time-machine.week.next"
+            onClick={() => shift(1)}
+          >
             Next Week
             <Icon name="chevR" />
           </button>
@@ -668,6 +689,7 @@ function ChangeRow({
             <a
               href={notePath(change.noteId)}
               data-ui="item"
+              data-event="time-machine.change.open-note"
               onClick={linkHandler(notePath(change.noteId))}
             >
               {title}
@@ -694,6 +716,7 @@ function ChangeRow({
           type="button"
           className="btn quiet tm-show"
           data-ui="item"
+          data-event={open ? 'time-machine.change.hide' : 'time-machine.change.show'}
           aria-expanded={open}
           aria-controls={`${id}-diff`}
           onClick={() => setOpen(!open)}

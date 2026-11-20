@@ -9,6 +9,7 @@
  * excerpts, search queries or other notes' text. Each group is a small table of strings, so the
  * filer can check its shape and size without knowing what the page collects.
  */
+import { fitLogLines, logBlock } from './analytics/log-block';
 
 /** The groups, in the order the issue lists them. */
 export const FEEDBACK_GROUP_IDS = ['app', 'where', 'sync', 'note', 'edits', 'errors'] as const;
@@ -181,7 +182,7 @@ function fenceFor(text: string): string {
  */
 export function contextMarkdown(context: FeedbackContext): string {
   if (context.groups.length === 0) return '';
-  const parts = ['<details><summary>Captured context</summary>'];
+  const parts = ['<details><summary>Captured Context</summary>'];
   for (const group of context.groups) {
     parts.push(`#### ${FEEDBACK_GROUP_TITLES[group.id]}`);
     parts.push(group.rows.length === 0 ? '_None_' : table(group.columns, group.rows));
@@ -201,6 +202,12 @@ export interface FeedbackIssueInput {
   readonly client: FeedbackClient;
   readonly version: string;
   readonly submissionId: string;
+  /**
+   * A bug report's anonymised log lines (PEN-137), oldest first, as the form previewed them:
+   * a collapsed "Anonymised Logs" block before the footer, its oldest lines cut so the body
+   * stays inside the Linear intake's 60,000 characters.
+   */
+  readonly logs?: readonly string[] | undefined;
 }
 
 /**
@@ -219,8 +226,9 @@ export function footerVersion(version: string): string {
 }
 
 /**
- * The issue's body (A794): the description, the screenshots, the captured context, and the
- * footer `Sent from Penmoss <client> <version> · submission <id>`.
+ * The issue's body (A794): the description, the screenshots, the captured context, a bug
+ * report's anonymised logs (PEN-137), and the footer
+ * `Sent from Penmoss <client> <version> · submission <id>`.
  */
 export function feedbackIssueBody(input: FeedbackIssueInput): string {
   const parts: string[] = [];
@@ -236,9 +244,14 @@ export function feedbackIssueBody(input: FeedbackIssueInput): string {
   const context = contextMarkdown(input.context);
   if (context) parts.push(context);
   const version = footerVersion(input.version);
-  parts.push(
-    `Sent from Penmoss ${FEEDBACK_CLIENT_NAMES[input.client]} ${version} · submission ${input.submissionId}`,
-  );
+  const footer = `Sent from Penmoss ${FEEDBACK_CLIENT_NAMES[input.client]} ${version} · submission ${input.submissionId}`;
+  if (input.logs && input.logs.length > 0) {
+    // The rest of the body, and the blank lines around the block.
+    const others = [...parts, footer].join('\n\n').length + 3;
+    const block = logBlock(fitLogLines(input.logs, others));
+    if (block) parts.push(block);
+  }
+  parts.push(footer);
   return `${parts.join('\n\n')}\n`;
 }
 

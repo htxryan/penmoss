@@ -34,6 +34,7 @@ export function Menu({
   face,
   disabled = false,
   setting,
+  'data-event': event,
   children,
 }: {
   /** The button's accessible name and the menu's. */
@@ -54,6 +55,8 @@ export function Menu({
   readonly disabled?: boolean;
   /** Its anchor for Settings search (`data-setting`), on a settings page. */
   readonly setting?: string;
+  /** Its opener's tracked id (PEN-137); `menu.open` when it has none of its own. */
+  readonly 'data-event'?: string;
   readonly children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -113,6 +116,7 @@ export function Menu({
         aria-label={text || face ? undefined : label}
         data-tip={text || face ? title : (title ?? label)}
         data-ui="menu"
+        data-event={event ?? 'menu.open'}
         data-testid={testId}
         disabled={disabled}
         data-setting={setting}
@@ -171,6 +175,8 @@ export function MenuItem({
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'role' | 'className' | 'children'> & {
     readonly 'data-testid'?: string | undefined;
     readonly 'data-command'?: string | undefined;
+    /** Its tracked id (PEN-137), unless it runs a command; `menu.item` when it has neither. */
+    readonly 'data-event'?: string | undefined;
     readonly 'data-sort'?: string | undefined;
   }) {
   return (
@@ -180,6 +186,7 @@ export function MenuItem({
       tabIndex={-1}
       className={danger ? 'menu-item danger' : 'menu-item'}
       data-ui="item"
+      data-event="menu.item"
       {...button}
     >
       <Icon name={icon} />

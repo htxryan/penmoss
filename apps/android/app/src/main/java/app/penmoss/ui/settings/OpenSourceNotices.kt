@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.Notices
 import app.penmoss.ui.common.roles
 
@@ -41,7 +43,7 @@ import app.penmoss.ui.common.roles
 internal fun OpenSourceNoticesLink(text: () -> String = { Notices.text }) {
     var open by rememberSaveable { mutableStateOf(false) }
     TextButton(
-        onClick = { open = true },
+        onClick = trackedClick("settings.updates.open-source-notices.show") { open = true },
         modifier = Modifier.settingRow("open-source-notices").testTag("openSourceNotices"),
         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
     ) { Text("Open Source Notices") }
@@ -50,6 +52,7 @@ internal fun OpenSourceNoticesLink(text: () -> String = { Notices.text }) {
 
 @Composable
 private fun NoticesDialog(text: String, onClose: () -> Unit) {
+    val tracked = rememberTrackedDialog("notices")
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal = 12.dp).testTag("noticesDialog"),
@@ -69,7 +72,7 @@ private fun NoticesDialog(text: String, onClose: () -> Unit) {
                     style = MaterialTheme.roles.body.copy(fontFamily = FontFamily.Monospace),
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onClose, modifier = Modifier.testTag("noticesDone")) { Text("Done") }
+                    TextButton(onClick = trackedClick("settings.updates.open-source-notices.done", tracked.done(onClose)), modifier = Modifier.testTag("noticesDone")) { Text("Done") }
                 }
             }
         }

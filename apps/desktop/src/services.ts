@@ -7,10 +7,22 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { app, net, safeStorage, shell, systemPreferences, utilityProcess } from 'electron';
 import { nodeNotebooks } from '@penmoss/cli/node';
+import { limitsOf } from '@penmoss/core/analytics';
+import {
+  analyticsBase,
+  consentPath,
+  eventsPath,
+  readConsentFile,
+} from '@penmoss/core/analytics/node';
 import { AdminCheck, runHelper } from './admin-check';
-import { config, dataFile, log, mac } from './app-state';
+import { AiProviders } from './ai-provider';
+import { Analytics, macFields, watchConsent } from './analytics';
+import { WorkerStore } from './analytics-store';
+import { config, dataFile, log, logAt, logFile, mac } from './app-state';
+import { boundedExec } from './bounded-exec';
 import { broadcast } from './broadcast';
 import { EmbeddingService } from './embedding-service';
 import { GitNotebooks } from './git-notebooks';
@@ -71,6 +83,9 @@ export const gitNotebooks = new GitNotebooks({
     broadcast('gitChanged');
     // Every agent on this Mac reaches every notebook in the app (D52).
     void localAgents.ensureAll();
+    // The log's scrubber learns a new notebook's name; the one-time question may be due now.
+    refreshKnown();
+    void analytics.changed();
   },
 });
 /**
@@ -149,7 +164,27 @@ export const githubToken = new GitHubToken({
   log,
   onChange: () => {
     broadcast('githubTokenChanged');
+    refreshKnown();
   },
+});
+/**
+ * AI Descriptions' providers (PEN-161, A1656): the Anthropic key sealed like the GitHub token, and
+ * Claude Code on this Mac, run only when the person chose it.
+ */
+export const aiProviders = new AiProviders({
+  dir: app.getPath('userData'),
+  seal: async (plain) =>
+    (await sealable()) ? (await safeStorage.encryptStringAsync(plain)).toString('base64') : null,
+  unseal: async (sealed) => {
+    if (!(await sealable())) return null;
+    return (await safeStorage.decryptStringAsync(Buffer.from(sealed, 'base64'))).result;
+  },
+  fetch: (url, init) => net.fetch(url instanceof Request ? url : String(url), chromiumInit(init)),
+  exec: boundedExec,
+  loginPath: () => loginShellPath(process.env['SHELL'] ?? '/bin/zsh'),
+  api: config.anthropicApi,
+  log,
+  onChange: () => broadcast('aiChanged'),
 });
 /**
  * Add a Git Notebook's GitHub browsing (T81, A1163–A1165): git's own credential, asked for on
@@ -219,3 +254,95 @@ export const localAgents = new LocalAgents({
 });
 /** Every git a git notebook runs, so a crashed run's leftovers die at the next launch (A853). */
 export const gitProcesses = new GitProcessFile(dataFile('git-processes.json'), { log });
+
+// --- usage analytics and the log file (PEN-137) ---
+
+const analyticsEnv = { ...process.env, PENMOSS_HOME: penmossHome };
+
+const analyticsConsent = consentPath(analyticsEnv);
+
+/**
+ * The usage record's worker thread (`analytics-worker.cjs`, beside boot.cjs): it owns
+ * `~/.penmoss/analytics/events.db`, so SQLite never runs on the main thread. Should it fail to
+ * start, the app goes on with nothing recorded.
+ */
+function startStoreWorker(): WorkerStore {
+  const limits = limitsOf(readConsentFile(analyticsConsent));
+  const report = (message: string) => logAt('warn', message, 'analytics');
+  try {
+    const worker = new Worker(join(__dirname, 'analytics-worker.cjs'), {
+      workerData: { path: eventsPath(analyticsEnv), limits },
+    });
+    worker.unref();
+    return new WorkerStore(worker, report);
+  } catch (error) {
+    report(`analytics worker did not start: ${String(error)}`);
+    const none = {
+      postMessage: () => {
+        throw new Error('no worker');
+      },
+      on: () => none,
+    };
+    return new WorkerStore(none, report);
+  }
+}
+
+/**
+ * Usage analytics (PEN-137): the answer in `~/.penmoss/analytics.json` (shared with the CLI and the
+ * MCP server), the record in the worker, sending to t.penmoss.app (the suite's stand-in with
+ * `PENMOSS_ANALYTICS_URL`, unpackaged builds only) only with consent.
+ */
+export const analytics = new Analytics({
+  consentPath: analyticsConsent,
+  store: startStoreWorker(),
+  env: process.env,
+  base: analyticsBase({ PENMOSS_ANALYTICS_URL: config.analyticsUrl ?? undefined }),
+  fields: macFields({
+    version: config.testVersion ?? app.getVersion(),
+    packaged: app.isPackaged,
+    platform: process.platform,
+    systemVersion: process.getSystemVersion(),
+  }),
+  hasNotebook: () => gitNotebooks.list().then((list) => list.length > 0),
+  logs: {
+    bytes: () => logFile.bytes(),
+    preview: (limits) => logFile.preview(limits),
+    apply: (limits) => logFile.apply(limits),
+  },
+  onChange: (status) => broadcast('analyticsChanged', status),
+  log: (message) => logAt('info', message, 'analytics'),
+  fetch: (url, init) => net.fetch(url instanceof Request ? url : String(url), init),
+});
+
+/** The CLI's `penmoss analytics on|off|reset|limits` show in Settings → Privacy at once. */
+export const consentWatcher = { close: () => undefined } as { close(): void };
+
+/** Starts analytics once the app is ready: the worker, the send timer, the watcher. */
+export function startAnalytics(): void {
+  analytics.start();
+  const watcher = watchConsent(analyticsConsent, () => void analytics.reload());
+  consentWatcher.close = () => watcher.close();
+  refreshKnown();
+}
+
+/**
+ * What the log file's scrubber knows (scrub #1): the GitHub logins and the notebooks' names,
+ * repositories and branches, read again when they change.
+ */
+export function refreshKnown(): void {
+  void Promise.all([
+    gitNotebooks.list().catch(() => []),
+    githubToken.logins().catch(() => [] as string[]),
+  ]).then(([notebooks, logins]) => {
+    logFile.setKnown({
+      login: logins[0] ?? null,
+      notebooks: notebooks.flatMap((notebook) => [
+        notebook.name,
+        ...(notebook.pendingName ? [notebook.pendingName] : []),
+      ]),
+      repositories: notebooks.flatMap((notebook) => [notebook.repository, notebook.remote]),
+      branches: notebooks.map((notebook) => notebook.branch),
+      names: logins.slice(1),
+    });
+  });
+}

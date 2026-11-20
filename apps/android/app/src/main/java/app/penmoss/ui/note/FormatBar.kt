@@ -46,6 +46,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.FormatState
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.settings.LineSymbol
@@ -135,26 +137,26 @@ fun FormatBar(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (onInsert != null) BarTool("Insert a Block", EditorIcons.Plus, tag = "insertBlock", onClick = onInsert)
+                if (onInsert != null) BarTool("Insert a Block", EditorIcons.Plus, tag = "insertBlock", event = "editor.format.insert", onClick = onInsert)
                 for (button in MARKS) {
-                    BarIcon(button.label, button.icon, active = button.command in state.active) { onCommand(button.command) }
+                    BarIcon(button.label, button.icon, active = button.command in state.active, event = "editor.format.mark") { onCommand(button.command) }
                 }
-                BarIcon("Link", EditorIcons.Link, active = FormatCommand.LINK in state.active, onClick = onLink)
+                BarIcon("Link", EditorIcons.Link, active = FormatCommand.LINK in state.active, event = "editor.format.link", onClick = onLink)
                 StyleButton(state, onCommand)
                 if (onBlock != null) BlockMenuButton(state, onBlock, onTurnInto)
                 for (button in LISTS) {
-                    BarIcon(button.label, button.icon, active = button.command in state.active) { onCommand(button.command) }
+                    BarIcon(button.label, button.icon, active = button.command in state.active, event = "editor.format.list") { onCommand(button.command) }
                 }
                 if (onSymbol != null) SymbolButton(state, symbols, onSymbol, onEditSymbols)
-                BarIcon("Outdent", EditorIcons.Outdent, enabled = state.canOutdent) { onCommand(FormatCommand.OUTDENT) }
-                BarIcon("Indent", EditorIcons.Indent, enabled = state.canIndent) { onCommand(FormatCommand.INDENT) }
+                BarIcon("Outdent", EditorIcons.Outdent, enabled = state.canOutdent, event = "editor.format.outdent") { onCommand(FormatCommand.OUTDENT) }
+                BarIcon("Indent", EditorIcons.Indent, enabled = state.canIndent, event = "editor.format.indent") { onCommand(FormatCommand.INDENT) }
                 if (state.inTable) {
-                    for (button in TABLE) BarIcon(button.label, button.icon) { onCommand(button.command) }
+                    for (button in TABLE) BarIcon(button.label, button.icon, event = "editor.format.table") { onCommand(button.command) }
                 }
-                BarIcon("Add a Picture", EditorIcons.Picture, onClick = onPicture)
-                if (onAttach != null) BarIcon("Attach a File", EditorIcons.Attach, onClick = onAttach)
-                BarIcon("Undo", EditorIcons.Undo, enabled = state.canUndo) { onCommand(FormatCommand.UNDO) }
-                BarIcon("Redo", EditorIcons.Redo, enabled = state.canRedo) { onCommand(FormatCommand.REDO) }
+                BarIcon("Add a Picture", EditorIcons.Picture, event = "editor.format.picture", onClick = onPicture)
+                if (onAttach != null) BarIcon("Attach a File", EditorIcons.Attach, event = "editor.format.attach", onClick = onAttach)
+                BarIcon("Undo", EditorIcons.Undo, enabled = state.canUndo, event = "editor.format.undo") { onCommand(FormatCommand.UNDO) }
+                BarIcon("Redo", EditorIcons.Redo, enabled = state.canRedo, event = "editor.format.redo") { onCommand(FormatCommand.REDO) }
             }
         }
     }
@@ -166,7 +168,7 @@ private fun StyleButton(state: FormatState, onCommand: (FormatCommand) -> Unit) 
     var open by remember { mutableStateOf(false) }
     val styled = STYLES.any { (command, _) -> command != FormatCommand.PARAGRAPH && command in state.active }
     Box {
-        BarIcon("Text Style", EditorIcons.Heading, active = styled) { open = true }
+        BarIcon("Text Style", EditorIcons.Heading, active = styled, event = "editor.format.style") { open = true }
         DropdownMenu(
             expanded = open,
             onDismissRequest = { open = false },
@@ -176,7 +178,7 @@ private fun StyleButton(state: FormatState, onCommand: (FormatCommand) -> Unit) 
             for ((command, label) in STYLES) {
                 DropdownMenuItem(
                     text = { Text(label) },
-                    onClick = {
+                    onClick = trackedClick("editor.format.style.item") {
                         open = false
                         onCommand(command)
                     },
@@ -196,7 +198,7 @@ private fun StyleButton(state: FormatState, onCommand: (FormatCommand) -> Unit) 
 private fun SymbolButton(state: FormatState, symbols: List<LineSymbol>, onSymbol: (Int) -> Unit, onEditSymbols: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        BarIcon("Symbol", EditorIcons.Star, active = state.symbols.isNotEmpty(), enabled = state.canSymbol) { open = true }
+        BarIcon("Symbol", EditorIcons.Star, active = state.symbols.isNotEmpty(), enabled = state.canSymbol, event = "editor.format.symbol") { open = true }
         DropdownMenu(
             expanded = open,
             onDismissRequest = { open = false },
@@ -224,7 +226,7 @@ private fun SymbolButton(state: FormatState, symbols: List<LineSymbol>, onSymbol
                     } else {
                         null
                     },
-                    onClick = {
+                    onClick = trackedClick("editor.format.symbol.item") {
                         open = false
                         onSymbol(index)
                     },
@@ -238,12 +240,13 @@ private fun SymbolButton(state: FormatState, symbols: List<LineSymbol>, onSymbol
                 )
             }
             if (symbols.isEmpty()) {
+                // untracked: a disabled line that says the menu is empty, never tapped
                 DropdownMenuItem(text = { Text("No symbols yet") }, onClick = {}, enabled = false)
             }
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text("Edit Symbols…") },
-                onClick = {
+                onClick = trackedClick("editor.format.symbol.edit") {
                     open = false
                     onEditSymbols()
                 },
@@ -259,11 +262,13 @@ private fun BarIcon(
     icon: ImageVector,
     active: Boolean = false,
     enabled: Boolean = true,
+    /** The button's tracked id (PEN-137). */
+    event: String,
     onClick: () -> Unit,
 ) {
     val colours = MaterialTheme.colorScheme
     Surface(
-        onClick = onClick,
+        onClick = trackedClick(event, onClick),
         enabled = enabled,
         shape = RectangleShape,
         color = if (active) colours.primaryContainer else colours.surfaceContainer,
@@ -293,9 +298,10 @@ fun LinkDialog(current: String?, onApply: (String) -> Unit, onDismiss: () -> Uni
     var address by rememberSaveable { mutableStateOf(current.orEmpty()) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    val tracked = rememberTrackedDialog("link")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (current == null) "Add a link" else "Edit the link") },
+        title = { Text(if (current == null) "Add a Link" else "Edit the Link") },
         text = {
             OutlinedTextField(
                 value = address,
@@ -304,17 +310,22 @@ fun LinkDialog(current: String?, onApply: (String) -> Unit, onDismiss: () -> Uni
                 placeholder = { Text("penmoss.app") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (address.isNotBlank()) onApply(address) }),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (address.isNotBlank()) {
+                        tracked.done()
+                        onApply(address)
+                    }
+                }),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("link-address"),
             )
         },
         confirmButton = {
-            TextButton(onClick = { onApply(address) }, enabled = address.isNotBlank()) { Text("Link") }
+            TextButton(onClick = trackedClick("editor.link.apply", tracked.done { onApply(address) }), enabled = address.isNotBlank()) { Text("Link") }
         },
         dismissButton = {
             Row {
-                if (current != null) TextButton(onClick = { onApply("") }) { Text("Remove Link") }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                if (current != null) TextButton(onClick = trackedClick("editor.link.remove", tracked.done { onApply("") })) { Text("Remove Link") }
+                TextButton(onClick = trackedClick("editor.link.cancel", onDismiss)) { Text("Cancel") }
             }
         },
     )

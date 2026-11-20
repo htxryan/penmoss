@@ -55,7 +55,7 @@ test.describe('in Quanta, with two notes', () => {
       settings.getByTestId('git-notebook').getByRole('heading', { level: 1 }),
     ).toHaveText('Quanta');
     await page
-      .getByRole('navigation', { name: 'Settings sections' })
+      .getByRole('navigation', { name: 'Settings Sections' })
       .getByRole('link', { name: 'All Notebooks', exact: true })
       .click();
     await expect(page).toHaveURL(/\/settings\/git-notebooks$/);
@@ -64,7 +64,7 @@ test.describe('in Quanta, with two notes', () => {
     // Settings → Agents: each notebook, with the name agents reach it by.
     await card.waitFor({ state: 'detached' });
     await page
-      .getByRole('navigation', { name: 'Settings sections' })
+      .getByRole('navigation', { name: 'Settings Sections' })
       .getByRole('link', { name: 'Agents', exact: true })
       .click();
     await expect(page).toHaveURL(/\/settings\/agents$/);

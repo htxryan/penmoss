@@ -219,6 +219,7 @@ export function SettingsInfo() {
         aria-expanded={open}
         aria-controls={`${id}-tip`}
         data-testid="settings-info"
+        data-event="settings.info"
         onFocus={(event) => {
           if (returning.current) returning.current = false;
           else if (event.currentTarget.matches(':focus-visible')) setOpen(true);
@@ -264,6 +265,7 @@ export function SettingsInfo() {
                 linkHandler(home.path)(event);
               }}
               data-testid="settings-home-link"
+              data-event="settings.info.home"
             >
               {home.name}
             </a>

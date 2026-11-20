@@ -61,6 +61,28 @@ class FeedbackFormTest {
         assertEquals(FeedbackMarkdown.context(preview), FeedbackMarkdown.context(groups))
     }
 
+    /** PEN-137 (AC7): a bug's logs travel in the payload, so a report sent later sends what it previewed; Edit puts them back. */
+    @Test
+    fun aBugsLogsTravelInThePayloadAndComeBackWithEdit() {
+        val logs = listOf("2026-11-19T11:54:16.525Z info a", "  at frame")
+        val bug = draft.copy(type = "bug", priority = 2, title = "Odd")
+        val payload = FeedbackPayload.of(bug, "0.31 (build 431425)", FeedbackContextData(), logs)
+        assertEquals(logs, FeedbackSubmissions.read(payload).logs)
+        val back = FeedbackPayload.editOf(payload)!!
+        assertEquals(logs, back.logs)
+        assertTrue(back.draft.attachesLogs)
+        // Unticked, or a feature request: none go, and Edit keeps it unticked.
+        val unticked = FeedbackPayload.of(bug.copy(logs = false), "0.31 (build 431425)", FeedbackContextData(), logs)
+        assertEquals(emptyList<String>(), FeedbackSubmissions.read(unticked).logs)
+        assertEquals(false, FeedbackPayload.editOf(unticked)!!.draft.logs)
+        val feature = FeedbackPayload.of(bug.copy(type = "feature"), "0.31 (build 431425)", FeedbackContextData(), logs)
+        assertTrue(!Json.parseToJsonElement(feature).jsonObject.containsKey("logs"))
+        assertTrue(!bug.copy(type = "feature").attachesLogs)
+        // A payload whose logs are not lines of text is refused.
+        val bad = payload.replace(Regex("\"logs\":\\[.*]"), "\"logs\":[1,2]")
+        assertTrue(runCatching { FeedbackSubmissions.read(bad) }.exceptionOrNull() is FeedbackInvalid)
+    }
+
     @Test
     fun imagesAreScaledToTheLongSideAndOnlyPngStaysPng() {
         assertEquals(1080 to 2400, FeedbackImages.scaledSize(1080, 2400))

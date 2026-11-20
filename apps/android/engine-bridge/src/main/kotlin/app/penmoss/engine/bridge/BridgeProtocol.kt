@@ -173,6 +173,15 @@ sealed interface ToEditor {
     /** Add ([on]) or remove a frontmatter tag on the open note, as the web's tag chips do (T38). */
     data class SetTag(val noteId: String, val tag: String, val on: Boolean) : ToEditor
 
+    /** The open note's description, written by hand in the Info sheet (PEN-161); empty clears it. */
+    data class SetDescription(val noteId: String, val text: String) : ToEditor
+
+    /** The open note's own AI Description setting (PEN-161): `inherit`, `on` or `off`. */
+    data class SetAiDescription(val noteId: String, val value: String) : ToEditor
+
+    /** Keep Your Description?'s answer (PEN-161): `keep` (Off for the note) or `update`. */
+    data class AnswerDescription(val noteId: String, val answer: String) : ToEditor
+
     /** A daily or weekly note's kind (T40 P5), as the page resolves and answers it. */
     enum class PeriodKind(val wire: String) {
         DAILY("daily"),
@@ -430,6 +439,11 @@ sealed interface FromEditor {
         val period: String?,
         val fields: List<InfoField>,
         val links: List<String>,
+        /** Its description (PEN-161), who wrote it (`ai`, `hand`), its own setting, and whether the sheet asks to keep it. */
+        val description: String? = null,
+        val descriptionBy: String? = null,
+        val ai: String = "inherit",
+        val descriptionAsks: Boolean = false,
     ) : FromEditor
 
     /**
@@ -489,6 +503,12 @@ object BridgeProtocol {
 
     /** Longer than any tag Ryan types (A361); the page normalises a tag with the shared rules (T38). */
     const val MAX_TAG_CHARS = app.penmoss.engine.notes.Tags.MAX_CHARS
+
+    /** The longest description a note keeps (core's `DESCRIPTION_MAX_CHARS`, PEN-161). */
+    const val MAX_DESCRIPTION_CHARS = 600
+
+    /** A note's, folder's or notebook's AI Description setting (PEN-161). */
+    val AI_SETTINGS = setOf("inherit", "on", "off")
 
     /** What a note may hold for a picture the app keeps (A304): `attachments/<sha256>.<ext>`. */
     val ATTACHMENT_PATH = Regex("^attachments/([0-9a-f]{64})\\.(png|jpg|gif|webp|avif)$")
@@ -597,6 +617,18 @@ object BridgeProtocol {
                 type("setTag", message.noteId)
                 put("tag", message.tag)
                 put("on", message.on)
+            }
+            is ToEditor.SetDescription -> {
+                type("setDescription", message.noteId)
+                put("text", message.text)
+            }
+            is ToEditor.SetAiDescription -> {
+                type("setAiDescription", message.noteId)
+                put("value", message.value)
+            }
+            is ToEditor.AnswerDescription -> {
+                type("answerDescription", message.noteId)
+                put("answer", message.answer)
             }
             is ToEditor.NoteContent -> {
                 type("noteContent", message.noteId)
@@ -753,6 +785,10 @@ object BridgeProtocol {
                     }
                 }
                 putJsonArray("links") { message.links.forEach { add(it) } }
+                put("description", message.description?.let(::JsonPrimitive) ?: JsonNull)
+                put("descriptionBy", message.descriptionBy?.let(::JsonPrimitive) ?: JsonNull)
+                put("ai", message.ai)
+                put("descriptionAsks", message.descriptionAsks)
             }
             is FromEditor.Text -> {
                 type("text", message.noteId)
@@ -908,6 +944,10 @@ object BridgeProtocol {
                 links = value.strings("links")
                     ?.takeIf { links -> links.size <= MAX_REPORTED_LINKS && links.all(NOTE_ID::matches) }
                     ?: return null,
+                description = value.string("description")?.take(MAX_DESCRIPTION_CHARS),
+                descriptionBy = value.string("descriptionBy")?.takeIf { it == "ai" || it == "hand" },
+                ai = value.string("ai")?.takeIf { it in AI_SETTINGS } ?: "inherit",
+                descriptionAsks = value.boolean("descriptionAsks") == true,
             )
             "text" -> FromEditor.Text(
                 noteId,
@@ -1080,6 +1120,9 @@ object BridgeProtocol {
                 value.string("tag")?.takeIf { it.isNotBlank() && it.length <= MAX_TAG_CHARS } ?: return null,
                 value.boolean("on") ?: return null,
             )
+            "setDescription" -> ToEditor.SetDescription(noteId, value.string("text")?.takeIf { it.length <= MAX_DESCRIPTION_CHARS } ?: return null)
+            "setAiDescription" -> ToEditor.SetAiDescription(noteId, value.string("value")?.takeIf { it in AI_SETTINGS } ?: return null)
+            "answerDescription" -> ToEditor.AnswerDescription(noteId, value.string("answer")?.takeIf { it == "keep" || it == "update" } ?: return null)
             "noteContent" -> {
                 val state = ContentState.of(value.string("state")) ?: return null
                 val updates = storedOf(value["updates"]) ?: return null

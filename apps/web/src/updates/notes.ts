@@ -133,10 +133,13 @@ export function versionLabel(version: string): string {
   return build === null ? version : `build ${build}`;
 }
 
+/** A version as a heading names it (Title Case): "Build 1183", "0.2.1". */
+const headingVersion = (version: string) => version.charAt(0).toUpperCase() + version.slice(1);
+
 /**
  * The notes Settings → Updates shows: `current` is this app's version, `offered` the newer one
  * an update check found (or null), and `since` the version Penmoss ran before this one (or null
- * when it isn't known), where an Alpha build's "In this version" starts.
+ * when it isn't known), where an Alpha build's "In This Version" starts.
  */
 export function notesView(
   file: DesktopReleaseNotes | null,
@@ -158,7 +161,9 @@ export function notesView(
     const start = alphaStart(file, here, base, since);
     from = start.from;
     currentBlock = {
-      title: start.label ? `In this version (since ${start.label})` : 'In this version',
+      title: start.label
+        ? `In This Version (Since ${headingVersion(start.label)})`
+        : 'In This Version',
       groups: groupNotes(range(file, from, here, platform)),
       builds: true,
     };
@@ -169,7 +174,7 @@ export function notesView(
         { version: current, tag: `v${current}`, build: here, date: '' },
         platform,
       ),
-      title: 'In this version',
+      title: 'In This Version',
     };
   }
 
@@ -179,7 +184,7 @@ export function notesView(
     const offeredAlpha = alphaBuildOf(offered) !== null;
     const start = here ?? before(file, there)?.build ?? null;
     offeredBlock = {
-      title: `What's new in ${versionLabel(offered)}`,
+      title: `What's New in ${headingVersion(versionLabel(offered))}`,
       groups: groupNotes(range(file, start, there, platform)),
       builds: offeredAlpha,
     };
@@ -206,7 +211,7 @@ export function notesView(
       ? releases
       : [
           {
-            title: base ? `Earlier builds (since ${base.version})` : 'Earlier builds',
+            title: base ? `Earlier Builds (Since ${base.version})` : 'Earlier Builds',
             groups: builds,
             builds: true,
           },
@@ -217,7 +222,7 @@ export function notesView(
 }
 
 /**
- * Where an Alpha build's "In this version" starts: after the version Penmoss ran before it when
+ * Where an Alpha build's "In This Version" starts: after the version Penmoss ran before it when
  * that is an older build since the last stable release; after the last stable release when it
  * ran one from before that; and otherwise (not known, or not older) after the build before this
  * one, so only this build's own notes. `label` is what the heading says it is since, if anything.
@@ -254,7 +259,7 @@ export function updatedNotice(
   return versionLabel(current);
 }
 
-/** Settings → Updates opened from the notice scrolls to "In this version". */
+/** Settings → Updates opened from the notice scrolls to "In This Version". */
 export const WHATS_NEW_PATH = '/settings/updates?whats-new';
 
 /** A note as a line: "Fixed: …" is its group, so only its text, and its build on Alpha. */

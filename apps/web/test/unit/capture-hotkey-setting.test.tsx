@@ -6,7 +6,7 @@ import type { CaptureHotkey, PenmossDesktop } from '../../src/desktop/bridge';
 import { CaptureHotkeySetting } from '../../src/desktop/CaptureHotkeySetting';
 import { acceleratorToCombo, comboToAccelerator } from '../../src/desktop/hotkey-keys';
 
-// Settings → Quick Capture → Shortcut From Any App (T30, A226; PEN-146): the Mac app's capture
+// Settings → Quick Capture → Shortcut from Any App (T30, A226; PEN-146): the Mac app's capture
 // hotkey is recorded by pressing the keys, as every other shortcut in Settings is, and the row
 // says what main answered: the new keys, its refusal, or that nothing was saved.
 
@@ -65,7 +65,7 @@ describe('the capture hotkey setting', () => {
     expect(row()!.dataset.setting).toBe('shortcut-from-any-app');
     expect(row()!.dataset.accelerator).toBe('Control+Alt+Command+N');
     await settle(() => change().click());
-    expect(row()!.textContent).toContain('Press keys… Esc cancels');
+    expect(row()!.textContent).toContain('Press Keys… Esc Cancels');
     expect(change().textContent).toBe('Cancel');
     // A lone modifier keeps it listening.
     await settle(() => press({ key: 'Control', code: 'ControlLeft', ctrlKey: true }));

@@ -1,5 +1,5 @@
 {
-  "$comment": "Every message of the Android editor bridge, version 1 (T32, A282; T33 added messages, A300, A309, A311; T38 added create, setTag, created and tags; T43 added the notebook of open, create and copyConflicts (A766), removed again with the rest of T43 on Android since a git notebook has no notebooks inside it (A912); T40 P1 added width, P1b preview; T40 P4 added focusTitle; T40 P5 added createPeriodic, createdPeriodic and periodicNav; T40 P8 added copy, clipboard, insertPlain, source, blocks, insert, turnInto, block, folds and counts, the table and heading 4–6 commands, and the state's table, code and block fields; the P8 reviews added captureSelection, undoDelete, and source and blockDeleted from the page; part two added file, fileStored, insertFiles, fileInfo, openFile and webPictures; T40 P7 added noteContent both ways, noteChanged, showHeading, watchNote, noteInfo, and openNote's heading; T40 P9 added keys and command, a createPeriodic request tag its error echoes, and each period target's period; T44 added symbols, symbol, and the state's symbols and canSymbol; T48 added commentDraft both ways, commentCreate, commentReply, commentEdit, commentDelete, commentDeleteThread, commentStatus, commentTarget and commentActive, and comments and commentOpen from the page; its review added commentAuthor, who the phone writes as, a removed first comment's removed, A784, and the failed delivery state with its reason; T51 added fonts, A944, and lightbox and closeLightbox, A948; T60 put the agent writer in place of the token in a thread's target, added the gone reason, A1062, commentSessions, A1077, and commentSent, A1078). Checked by apps/android/editor/test/contract.test.ts and the Kotlin BridgeProtocolTest; invalidFromEditor holds messages the page must never send, which the app refuses. Updates are base64 Yjs bytes that Kotlin never reads. A real `theme` carries the whole theme /sync/tree resolved (A305); the example names a built-in only.",
+  "$comment": "Every message of the Android editor bridge, version 1 (T32, A282; T33 added messages, A300, A309, A311; T38 added create, setTag, created and tags; T43 added the notebook of open, create and copyConflicts (A766), removed again with the rest of T43 on Android since a git notebook has no notebooks inside it (A912); T40 P1 added width, P1b preview; T40 P4 added focusTitle; T40 P5 added createPeriodic, createdPeriodic and periodicNav; T40 P8 added copy, clipboard, insertPlain, source, blocks, insert, turnInto, block, folds and counts, the table and heading 4–6 commands, and the state's table, code and block fields; the P8 reviews added captureSelection, undoDelete, and source and blockDeleted from the page; part two added file, fileStored, insertFiles, fileInfo, openFile and webPictures; T40 P7 added noteContent both ways, noteChanged, showHeading, watchNote, noteInfo, and openNote's heading; T40 P9 added keys and command, a createPeriodic request tag its error echoes, and each period target's period; T44 added symbols, symbol, and the state's symbols and canSymbol; T48 added commentDraft both ways, commentCreate, commentReply, commentEdit, commentDelete, commentDeleteThread, commentStatus, commentTarget and commentActive, and comments and commentOpen from the page; its review added commentAuthor, who the phone writes as, a removed first comment's removed, A784, and the failed delivery state with its reason; T51 added fonts, A944, and lightbox and closeLightbox, A948; T60 put the agent writer in place of the token in a thread's target, added the gone reason, A1062, commentSessions, A1077, and commentSent, A1078; PEN-161 added setDescription, setAiDescription and answerDescription, and noteInfo's description, descriptionBy, ai and descriptionAsks). Checked by apps/android/editor/test/contract.test.ts and the Kotlin BridgeProtocolTest; invalidFromEditor holds messages the page must never send, which the app refuses. Updates are base64 Yjs bytes that Kotlin never reads. A real `theme` carries the whole theme /sync/tree resolved (A305); the example names a built-in only.",
   "formatCommands": [
     "bold",
     "italic",
@@ -289,6 +289,30 @@
       "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
       "tag": "inbox",
       "on": false
+    },
+    {
+      "v": 1,
+      "type": "setDescription",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "text": "Plans for the spring garden: beds, seeds and dates."
+    },
+    {
+      "v": 1,
+      "type": "setDescription",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "text": ""
+    },
+    {
+      "v": 1,
+      "type": "setAiDescription",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "value": "off"
+    },
+    {
+      "v": 1,
+      "type": "answerDescription",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "answer": "keep"
     },
     {
       "v": 1,
@@ -1182,7 +1206,11 @@
           "value": "daily"
         }
       ],
-      "links": ["01JD2Z7Q8R4T6Y8W0E2R4T6YB2"]
+      "links": ["01JD2Z7Q8R4T6Y8W0E2R4T6YB2"],
+      "description": "The day's plans and what got done.",
+      "descriptionBy": "ai",
+      "ai": "inherit",
+      "descriptionAsks": false
     },
     {
       "v": 1,
@@ -1197,7 +1225,11 @@
           "value": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
         }
       ],
-      "links": []
+      "links": [],
+      "description": null,
+      "descriptionBy": null,
+      "ai": "on",
+      "descriptionAsks": false
     },
     {
       "v": 1,
@@ -1623,7 +1655,11 @@
     "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:\",\"label\":\"Android app (Pixel 9)\"}",
     "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1\",\"label\":\"  \"}",
     "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1\"}",
-    "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1\",\"label\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+    "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1\",\"label\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+    "{\"v\":1,\"type\":\"setDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"text\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+    "{\"v\":1,\"type\":\"setDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"setAiDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"value\":\"maybe\"}",
+    "{\"v\":1,\"type\":\"answerDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"answer\":\"later\"}"
   ],
   "invalidFromEditor": [
     "{\"v\":1,\"type\":\"lightbox\",\"open\":\"true\"}",

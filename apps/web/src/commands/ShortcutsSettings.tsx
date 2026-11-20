@@ -12,6 +12,7 @@ import { GroupHead, ScopeMarker } from '../theme/look-rows';
 import '../journal/writing.css';
 import { settingId } from '../pages/settings-index';
 import { linkHandler, settingsPath } from '../router';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { useWorkspace } from '../workspace/hooks';
 import type { CommandArea, CommandDefinition } from './definitions';
@@ -191,7 +192,7 @@ export function ShortcutsSettings() {
     const help = custom
       ? `Changed from ${keysText(command.keys)}`
       : keys.length === 0
-        ? 'No shortcut'
+        ? 'No Shortcut'
         : undefined;
     return (
       <div
@@ -209,13 +210,20 @@ export function ShortcutsSettings() {
           </span>
           {help ? <span className="lf-row-help">{help}</span> : null}
           {rowNotice?.kind === 'conflict' ? (
-            <div className="kb-conflict" role="alert" data-testid="shortcut-conflict">
-              <Kbd combo={rowNotice.combo} /> is used by{' '}
-              {rowNotice.others.map((other) => `“${title(other)}”`).join(' and ')}.
+            <ConfirmBlock
+              className="kb-conflict"
+              title="Replace This Shortcut?"
+              testId="shortcut-conflict"
+            >
+              <span>
+                <Kbd combo={rowNotice.combo} /> is used by{' '}
+                {rowNotice.others.map((other) => `“${title(other)}”`).join(' and ')}.
+              </span>
               <button
                 type="button"
                 className="btn"
                 data-ui="submit"
+                data-event="settings.shortcuts.conflict.replace"
                 onClick={() => {
                   setNotice(null);
                   assign(command.id, rowNotice.combo, true);
@@ -227,11 +235,12 @@ export function ShortcutsSettings() {
                 type="button"
                 className="btn quiet"
                 data-ui="dismiss"
+                data-event="settings.shortcuts.conflict.cancel"
                 onClick={() => setNotice(null)}
               >
                 Cancel
               </button>
-            </div>
+            </ConfirmBlock>
           ) : rowNotice ? (
             <div
               className={rowNotice.kind === 'error' ? 'kb-error' : 'kb-done'}
@@ -247,6 +256,7 @@ export function ShortcutsSettings() {
               type="button"
               className="btn quiet kb-remove"
               data-ui="item"
+              data-event="settings.shortcuts.row.remove"
               aria-label={`Remove the Shortcut for ${command.title}`}
               onClick={() => {
                 setNotice(null);
@@ -261,6 +271,7 @@ export function ShortcutsSettings() {
               type="button"
               className="btn quiet"
               data-ui="item"
+              data-event="settings.shortcuts.row.reset"
               aria-label={`Reset the Shortcut for ${command.title}`}
               onClick={() => {
                 setNotice(null);
@@ -275,6 +286,7 @@ export function ShortcutsSettings() {
               type="button"
               className={keys.length > 0 || listening ? 'kb-key-btn' : 'btn quiet'}
               data-ui="item"
+              data-event="settings.shortcuts.row.edit"
               ref={(element) => {
                 if (element) editButtons.current.set(command.id, element);
                 else editButtons.current.delete(command.id);
@@ -292,7 +304,7 @@ export function ShortcutsSettings() {
             >
               {listening ? (
                 <span className="chip" role="status">
-                  Press keys… Esc cancels
+                  Press Keys… Esc Cancels
                 </span>
               ) : keys.length > 0 ? (
                 keys.map((combo) => <Kbd key={combo} combo={combo} />)
@@ -320,6 +332,7 @@ export function ShortcutsSettings() {
       type="button"
       className="btn"
       data-ui="item"
+      data-event="settings.shortcuts.reset-all"
       data-testid={`shortcuts-reset-${where}`}
       disabled={changed.length === 0}
       onClick={() => setConfirmReset(true)}
@@ -363,6 +376,7 @@ export function ShortcutsSettings() {
                 type="button"
                 className="icon-btn"
                 data-ui="dismiss"
+                data-event="settings.shortcuts.clear-keys"
                 aria-label="Clear the Keys"
                 data-tip="Clear the Keys"
                 onClick={() => {
@@ -379,7 +393,7 @@ export function ShortcutsSettings() {
             className="input"
             type="search"
             placeholder={`Search ${commands.definitions.size} commands, or press keys`}
-            aria-label="Search shortcuts"
+            aria-label="Search Shortcuts"
             aria-describedby={`${id}-found`}
             value={filter}
             onFocus={() => setSearchFocused(true)}
@@ -401,6 +415,7 @@ export function ShortcutsSettings() {
             <label key={value} className="seg-option">
               <input
                 type="radio"
+                data-event="settings.shortcuts.show"
                 name={`${id}-show`}
                 value={value}
                 checked={show === value}
@@ -443,6 +458,7 @@ export function ShortcutsSettings() {
             The capture shortcut from any app is on{' '}
             <a
               data-ui="item"
+              data-event="settings.shortcuts.quick-capture-link"
               href={settingsPath('quick-capture')}
               onClick={linkHandler(settingsPath('quick-capture'))}
             >
@@ -474,12 +490,18 @@ export function ShortcutsSettings() {
               type="button"
               className="btn"
               data-ui="dismiss"
+              data-event="settings.shortcuts.reset-all.cancel"
               onClick={() => setConfirmReset(false)}
               autoFocus
             >
               Cancel
             </button>
-            <button type="submit" className="btn danger-fill" data-ui="submit">
+            <button
+              type="submit"
+              className="btn danger-fill"
+              data-ui="submit"
+              data-event="settings.shortcuts.reset-all.confirm"
+            >
               Reset to Defaults
             </button>
           </div>

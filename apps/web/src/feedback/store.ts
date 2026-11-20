@@ -44,6 +44,11 @@ export interface FeedbackDraft {
    * group (the ticks are `omitted`); the form shows that, not the screen it is opened over.
    */
   readonly context?: FeedbackContext;
+  /**
+   * The anonymised logs the form showed when the report was made (PEN-137): one taken back by
+   * Edit shows, and sends, the same lines, not the logs of now.
+   */
+  readonly logs?: readonly string[];
   readonly updatedAt: number;
 }
 

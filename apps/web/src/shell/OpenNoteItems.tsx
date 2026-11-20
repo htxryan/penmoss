@@ -40,6 +40,7 @@ export function OpenNoteItems({
         <MenuItem
           icon="plus"
           data-testid={`${testIdPrefix}-open-tab`}
+          data-event="note.menu.open-tab"
           hint={<ClickHint modifier="mod" />}
           onClick={onTab}
         >
@@ -49,6 +50,7 @@ export function OpenNoteItems({
       <MenuItem
         icon="windowNew"
         data-testid={`${testIdPrefix}-open-window`}
+        data-event="note.menu.open-window"
         hint={<ClickHint modifier="alt" />}
         onClick={onWindow}
       >

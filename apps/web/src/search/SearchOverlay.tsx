@@ -30,6 +30,7 @@ import {
 } from './filter-options';
 import type { Source } from '../sources/registry';
 import type { TagSearch } from './show-tag';
+import { useTrackedDialog } from '../analytics/dialog';
 
 /** This device's words answer each keystroke at once (A111); Enter answers without waiting. */
 const TYPING_MS = 60;
@@ -135,6 +136,7 @@ export function SearchOverlay({
   onClose,
   initial = null,
 }: SearchOverlayProps) {
+  const tracked = useTrackedDialog('search');
   const list = useNoteList();
   const workspace = useWorkspaceState();
   const [query, setQuery] = useState('');
@@ -261,6 +263,7 @@ export function SearchOverlay({
   const hits = useMemo(() => outcome?.hits ?? [], [outcome]);
   const choose = (hit: SearchHit | undefined, where?: TabIntent) => {
     if (!hit) return;
+    tracked.done();
     if (where) onOpenNote(hit.id, hit.heading, where);
     else onOpenNote(hit.id, hit.heading);
   };

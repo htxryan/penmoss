@@ -5,8 +5,10 @@
  * APIs: only `node-io.ts` and `node-notebooks.ts` use them.
  */
 
+import type { AnalyticsOs, Channel, ConsentFile } from '@penmoss/core/analytics';
+import type { AnalyticsStore } from '@penmoss/core/analytics/node';
 import type { Embedder, VectorCache } from '@penmoss/core/search';
-import type { LocalNotebook } from '@penmoss/git-notebook/local';
+import type { LocalNotebook, ToolCallRecord } from '@penmoss/git-notebook/local';
 
 export type TokenLocation = 'keychain' | 'file';
 
@@ -205,6 +207,8 @@ export interface NotebookIo {
       log(text: string): void;
       readonly stopped?: Promise<string>;
       detach?(args: readonly string[], log?: string): boolean;
+      /** Each tool call, for usage analytics (PEN-137): never its arguments or answer. */
+      onToolCall?(call: ToolCallRecord): void;
     },
     options?: {
       /**
@@ -256,6 +260,32 @@ export interface MeaningIo {
   ): Promise<OpenedMeaning | null>;
 }
 
+/**
+ * Usage analytics on this machine (PEN-137, N4): the answer, ID and limits in
+ * `~/.penmoss/analytics.json`, shared with the Mac app, and the record in
+ * `~/.penmoss/analytics/events.db`. The CLI and the MCP server only record; the app sends.
+ */
+export interface AnalyticsIo {
+  readonly consentPath: string;
+  readonly eventsPath: string;
+  /** The answer, read fresh each time (a new file, written, when there is none). */
+  readConsent(): ConsentFile;
+  writeConsent(file: ConsentFile): void;
+  /** Opens the shared record; throws where it cannot (no `node:sqlite`, a read-only home). */
+  openStore(): AnalyticsStore;
+  /** The endpoint's base, for `penmoss analytics forget` only. */
+  readonly base: string;
+  readonly fetch?: typeof fetch;
+  now(): number;
+  /** What every event this process records says of it. */
+  readonly fields: {
+    readonly version: string;
+    readonly channel: Channel;
+    readonly os: AnalyticsOs;
+    readonly osVersion: string;
+  };
+}
+
 export interface Io {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** Search by meaning, in the app's binary (T75). */
@@ -277,4 +307,6 @@ export interface Io {
   readonly stdio?: StdioIo;
   /** Git notebooks (T50); absent where the CLI has no git or files. */
   readonly notebooks?: NotebookIo;
+  /** Usage analytics (PEN-137); absent, nothing is recorded. */
+  readonly analytics?: AnalyticsIo;
 }

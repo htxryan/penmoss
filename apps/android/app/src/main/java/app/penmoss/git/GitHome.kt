@@ -87,6 +87,10 @@ fun NotebooksHome(
                             if (localId != null) GitNotebookActivity.open(context, localId)
                         },
                     )
+                    // A phone with notebooks from before the usage question is asked it once, before Home (PEN-137, AC9).
+                    else -> app.penmoss.git.firstrun.ConsentGate(graph.analytics, openUrl = { url ->
+                        runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                    }) { when {
                     land -> {
                         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                         androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -110,6 +114,7 @@ fun NotebooksHome(
                         onSettings = { nav.open(app.penmoss.ui.settings.SettingsRoutes.HOME) },
                         onAddNotebook = { nav.open(app.penmoss.ui.settings.SettingsRoutes.addNotebook(home = true)) },
                     )
+                    } }
                 }
             }
             settingsRoutes(SettingsHost(graph, nav, context))

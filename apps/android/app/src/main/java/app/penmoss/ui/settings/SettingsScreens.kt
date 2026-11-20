@@ -107,6 +107,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLimits
 import app.penmoss.feedback.MarkdownPreviewView
@@ -135,7 +137,7 @@ import java.time.LocalDate
 
 @Composable
 internal fun BackButton(onBack: () -> Unit) {
-    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
 }
 
 /**
@@ -196,7 +198,7 @@ fun SettingsHome(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     trailingIcon = {
-                        if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear the Search") }
+                        if (query.isNotEmpty()) IconButton(onClick = trackedClick("settings.search.clear") { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear the Search") }
                     },
                 )
             }
@@ -205,7 +207,7 @@ fun SettingsHome(
                 item(key = "refused") {
                     ListItem(
                         headlineContent = { Text(refusal) },
-                        trailingContent = { TextButton(onClick = onDismissRefusal, Modifier.testTag("dismissRefused")) { Text("Dismiss") } },
+                        trailingContent = { TextButton(onClick = trackedClick("settings.refused.dismiss", onDismissRefusal), Modifier.testTag("dismissRefused")) { Text("Dismiss") } },
                         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.errorContainer),
                         modifier = Modifier.testTag("settingsRefused").semantics { liveRegion = LiveRegionMode.Polite },
                     )
@@ -221,7 +223,7 @@ fun SettingsHome(
                         supportingContent = { Text(listOfNotNull(entry.section, entry.help).joinToString(" · "), maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .testTag("found-${entry.id}")
-                            .clickable(role = Role.Button, onClick = {
+                            .clickable(role = Role.Button, onClick = trackedClick("settings.search.result") {
                                 // Its screen scrolls to the row and marks it a moment (PEN-148).
                                 mark.request(entry.id)
                                 onOpen(entry.route)
@@ -254,7 +256,7 @@ fun SettingsHome(
                         },
                         modifier = Modifier
                             .testTag("section-${section.id}")
-                            .clickable(role = Role.Button, onClick = { onOpen(section.route) }),
+                            .clickable(role = Role.Button, onClick = trackedClick("settings.nav.section") { onOpen(section.route) }),
                     )
                 }
             }
@@ -397,12 +399,12 @@ internal fun settingsWait(noNotebook: Boolean) = if (noNotebook) SETTINGS_NO_NOT
 
 /** A radio choice as a whole row, so the label is the target and TalkBack reads one control. */
 @Composable
-internal fun ChoiceRow(label: String, supporting: String?, selected: Boolean, enabled: Boolean, tag: String, onClick: () -> Unit) {
+internal fun ChoiceRow(label: String, supporting: String?, selected: Boolean, enabled: Boolean, tag: String, event: String, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(label) },
         supportingContent = supporting?.let { { Text(it) } },
         leadingContent = { RadioButton(selected = selected, onClick = null, enabled = enabled) },
-        modifier = Modifier.testTag(tag).selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
+        modifier = Modifier.testTag(tag).selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = trackedClick(event, onClick)),
     )
 }
 
@@ -416,13 +418,14 @@ internal fun Segments(
     modifier: Modifier = Modifier,
     icons: Map<String, ImageVector> = emptyMap(),
     itemTag: (String) -> String = { "$tag-$it" },
+    event: String,
     onChoose: (String) -> Unit,
 ) {
     SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag(tag)) {
         options.forEachIndexed { index, (value, label) ->
             SegmentedButton(
                 selected = selected == value,
-                onClick = { onChoose(value) },
+                onClick = trackedClick(event) { onChoose(value) },
                 enabled = enabled,
                 shape = SegmentedButtonDefaults.itemShape(index, options.size, SQUARE),
                 icon = { icons[value]?.let { Icon(it, contentDescription = null, Modifier.size(18.dp)) } ?: SegmentedButtonDefaults.Icon(selected == value) },
@@ -515,7 +518,7 @@ fun AppearanceScreen(
             return@Column
         }
         GroupTitle("Theme", Modifier.settingRow("theme"), deviceOnly = true)
-        Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
+        Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, event = "settings.appearance.mode", onChoose = onMode)
         Help(
             if (mode == "system") "System follows this phone’s setting: ${if (systemDark) "dark" else "light"} right now."
             else "Always $mode, whatever the phone’s setting.",
@@ -523,7 +526,7 @@ fun AppearanceScreen(
         ThemeGrid(themes, chosen, enabled, onTheme)
         if (editor != null) {
             // One button for both (PEN-146): a built-in is duplicated first, your own opens as it is.
-            FilledTonalButton(onClick = editor.onOpen, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).settingRow("customize-theme").testTag("customizeTheme")) {
+            FilledTonalButton(onClick = trackedClick("settings.appearance.customize-theme", editor.onOpen), enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).settingRow("customize-theme").testTag("customizeTheme")) {
                 Text("Customize ${editor.name}…")
             }
             Help(
@@ -565,7 +568,7 @@ internal fun SettingsPreviewTabs(previewing: Boolean, tag: String, onPreview: (B
                     .weight(1f)
                     .fillMaxHeight()
                     .background(if (on) colours.background else androidx.compose.ui.graphics.lerp(colours.background, androidx.compose.ui.graphics.Color.Black, if (colours.background.luminance() < 0.5f) 0.25f else 0.05f))
-                    .selectable(on, role = Role.Tab) { onPreview(preview) }
+                    .selectable(on, role = Role.Tab, onClick = trackedClick(if (preview) "settings.tabs.preview" else "settings.tabs.settings") { onPreview(preview) })
                     .testTag(if (preview) "${tag}PreviewTab" else "${tag}SettingsTab"),
                 contentAlignment = Alignment.Center,
             ) {
@@ -646,8 +649,8 @@ private fun ThemeCardView(theme: ThemeCard, selected: Boolean, enabled: Boolean,
     Surface(
         modifier = modifier
             .testTag("theme-${theme.id}")
-            .semantics { if (theme.custom) stateDescription = if (selected) "Selected, custom theme" else "Custom theme" }
-            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
+            .semantics { if (theme.custom) stateDescription = if (selected) "Selected, Custom Theme" else "Custom Theme" }
+            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = trackedClick("settings.appearance.theme", onClick)),
         shape = RectangleShape,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) colours.primary else colours.outlineVariant),
         color = colours.surfaceContainer,
@@ -769,10 +772,10 @@ fun DailyNotesScreen(
             headlineContent = { Text("Time Zone") },
             supportingContent = { Text("$timeZone · today is ${app.penmoss.ui.journal.journalLongDate(today).substringBeforeLast(' ')}") },
             trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
-            modifier = Modifier.settingRow("time-zone").testTag("timeZone").clickable(enabled = enabled, role = Role.Button, onClick = onTimeZone),
+            modifier = Modifier.settingRow("time-zone").testTag("timeZone").clickable(enabled = enabled, role = Role.Button, onClick = trackedClick("settings.journal.time-zone", onTimeZone)),
         )
         if (phoneZone != timeZone) {
-            TextButton(onClick = { onUsePhoneZone(phoneZone) }, enabled = enabled, modifier = Modifier.padding(horizontal = 8.dp).testTag("dailyUsePhoneZone")) {
+            TextButton(onClick = trackedClick("settings.journal.use-phone-zone") { onUsePhoneZone(phoneZone) }, enabled = enabled, modifier = Modifier.padding(horizontal = 8.dp).testTag("dailyUsePhoneZone")) {
                 Text("Use This Phone’s Zone ($phoneZone)")
             }
         }
@@ -780,7 +783,7 @@ fun DailyNotesScreen(
             val shown = tab.coerceIn(0, templates.size - 1)
             PrimaryTabRow(selectedTabIndex = shown, modifier = Modifier.padding(top = 8.dp).testTag("templateTabs")) {
                 templates.forEachIndexed { index, field ->
-                    Tab(selected = index == shown, onClick = { tab = index }, text = { Text(field.label) }, modifier = Modifier.settingRow(settingId(field.label)).testTag("tab-${field.key}"))
+                    Tab(selected = index == shown, onClick = trackedClick("settings.journal.template-tab") { tab = index }, text = { Text(field.label) }, modifier = Modifier.settingRow(settingId(field.label)).testTag("tab-${field.key}"))
                 }
             }
             val field = templates[shown]
@@ -833,7 +836,7 @@ private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, t
         listOf(Triple("Write", false, "pencil"), Triple("Preview", true, "eye")).forEachIndexed { index, (label, preview, glyph) ->
             SegmentedButton(
                 selected = previewing == preview,
-                onClick = { previewing = preview },
+                onClick = trackedClick(if (preview) "settings.journal.template-preview" else "settings.journal.template-write") { previewing = preview },
                 shape = SegmentedButtonDefaults.itemShape(index, 2, SQUARE),
                 icon = { icons?.icon(glyph)?.let { Icon(LucideAssets.vector(it), contentDescription = null, Modifier.size(18.dp)) } },
                 modifier = Modifier.testTag(if (preview) "templatePreviewTab" else "templateWriteTab"),
@@ -880,12 +883,12 @@ private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, t
     )
     Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box {
-            TextButton(onClick = { placing = true }, enabled = enabled, modifier = Modifier.testTag("placeholder-${field.key}")) { Text("+ Placeholder") }
+            TextButton(onClick = trackedClick("settings.journal.placeholder-menu") { placing = true }, enabled = enabled, modifier = Modifier.testTag("placeholder-${field.key}")) { Text("+ Placeholder") }
             DropdownMenu(expanded = placing, onDismissRequest = { placing = false }) {
                 for ((placeholder, example) in PLACEHOLDERS) {
                     DropdownMenuItem(
                         text = { Text("$placeholder  $example") },
-                        onClick = {
+                        onClick = trackedClick("settings.journal.placeholder") {
                             placing = false
                             // At the cursor, or over the selection.
                             val at = draft.selection
@@ -900,10 +903,10 @@ private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, t
             }
         }
         TextButton(
-            onClick = {
+            onClick = trackedClick("settings.journal.template-reset") {
                 typed = false
                 onSave(field.key, null)
-                status = "Back to the default"
+                status = "Back to the Default"
             },
             enabled = enabled && field.custom,
             modifier = Modifier.testTag("reset-${field.key}"),
@@ -944,6 +947,8 @@ fun TimeZonePicker(current: String, phoneZone: String, zones: List<String>, onPi
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val shown = remember(query, zones, current) { matchingZones(listOf(current) + (zones - current), query) }
+    // The web's time-zone picker is a dialog; here it is a screen, counted by the same name.
+    val tracked = rememberTrackedDialog("timeZone")
     Scaffold(
         topBar = {
             TopAppBar(
@@ -957,7 +962,7 @@ fun TimeZonePicker(current: String, phoneZone: String, zones: List<String>, onPi
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         trailingIcon = {
-                            if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear") }
+                            if (query.isNotEmpty()) IconButton(onClick = trackedClick("settings.journal.time-zone.clear") { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear") }
                         },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -976,7 +981,7 @@ fun TimeZonePicker(current: String, phoneZone: String, zones: List<String>, onPi
                 ListItem(
                     headlineContent = { Text("Use This Phone’s Zone") },
                     supportingContent = { Text(phoneZone) },
-                    modifier = Modifier.testTag("usePhoneZone").clickable(role = Role.Button) { onPick(phoneZone) },
+                    modifier = Modifier.testTag("usePhoneZone").clickable(role = Role.Button, onClick = trackedClick("settings.journal.time-zone.use-phone-zone", tracked.done { onPick(phoneZone) })),
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                 )
             }
@@ -986,7 +991,7 @@ fun TimeZonePicker(current: String, phoneZone: String, zones: List<String>, onPi
                     ListItem(
                         headlineContent = { Text(zone.replace('_', ' ')) },
                         trailingContent = if (zone == current) ({ Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }) else null,
-                        modifier = Modifier.testTag("zone-$zone").selectable(selected = zone == current, role = Role.RadioButton) { onPick(zone) },
+                        modifier = Modifier.testTag("zone-$zone").selectable(selected = zone == current, role = Role.RadioButton, onClick = trackedClick("settings.journal.time-zone.pick", tracked.done { onPick(zone) })),
                     )
                 }
             }
@@ -1015,16 +1020,16 @@ fun QuickCaptureScreen(
     SectionScreen("Quick Capture", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
         GroupTitle("Saves To", Modifier.settingRow("saves-to"))
         Column(Modifier.selectableGroup()) {
-            ChoiceRow("Today’s Note", "At the end of ## Captures, with the time", destination == "daily", enabled, "capture-daily") { onChoose("daily") }
-            ChoiceRow("New Note in Inbox", "Titled by its first line", destination == "inbox", enabled, "capture-inbox") { onChoose("inbox") }
+            ChoiceRow("Today’s Note", "At the end of ## Captures, with the time", destination == "daily", enabled, "capture-daily", event = "settings.quick-capture.destination") { onChoose("daily") }
+            ChoiceRow("New Note in Inbox", "Titled by its first line", destination == "inbox", enabled, "capture-inbox", event = "settings.quick-capture.destination") { onChoose("inbox") }
         }
         Help("The capture sheet starts on this, and lets you pick the other for one capture.")
         GroupTitle("Notebook")
         ListItem(
-            headlineContent = { Text(notebook ?: "No notebook yet") },
+            headlineContent = { Text(notebook ?: "No Notebook Yet") },
             supportingContent = { Text(if (notebook != null) "Your primary notebook · change it on All Notebooks" else "Add one on All Notebooks") },
             trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
-            modifier = Modifier.testTag("captureNotebook").clickable(role = Role.Button, onClick = onNotebook),
+            modifier = Modifier.testTag("captureNotebook").clickable(role = Role.Button, onClick = trackedClick("settings.quick-capture.notebook-link", onNotebook)),
         )
     }
 }

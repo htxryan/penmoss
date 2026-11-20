@@ -180,6 +180,7 @@ export function CaptureForm({
           <label>
             <input
               type="radio"
+              data-event="capture.destination"
               name={`${id}-dest`}
               value="daily"
               checked={destination === 'daily'}
@@ -190,6 +191,7 @@ export function CaptureForm({
           <label>
             <input
               type="radio"
+              data-event="capture.destination"
               name={`${id}-dest`}
               value="inbox"
               checked={destination === 'inbox'}
@@ -199,13 +201,20 @@ export function CaptureForm({
           </label>
         </fieldset>
         <div className="row">
-          <button type="button" className="btn quiet" data-ui="dismiss" onClick={cancel}>
+          <button
+            type="button"
+            className="btn quiet"
+            data-ui="dismiss"
+            data-event="capture.cancel"
+            onClick={cancel}
+          >
             Cancel
           </button>
           <button
             type="submit"
             className="btn primary"
             data-ui="submit"
+            data-event="capture.save"
             data-testid="capture-save"
             disabled={saving || text.trim() === '' || choosing}
             aria-keyshortcuts={ariaKeyShortcuts([SAVE_KEYS])}

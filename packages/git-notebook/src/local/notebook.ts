@@ -36,7 +36,7 @@ import {
   bodyText,
   headingRefs,
   incomingMarkdown,
-  NOTE_PROPERTIES,
+  SETTABLE_PROPERTIES,
   planCreate,
   planEdit,
   unknownProperties,
@@ -96,6 +96,8 @@ export interface LocalNoteContent {
   readonly id: string;
   readonly title: string;
   readonly tags: string[];
+  /** The note's description, or null (A1656). */
+  readonly description: string | null;
   readonly markdown: string;
   readonly body: string;
   readonly headings: string[];
@@ -110,6 +112,8 @@ export interface LocalNoteContent {
 
 /** What one read gives an agent at once (A150). */
 export const READ_PART_BYTES = 60_000;
+/** At most this many linked notes in read_note's `links` (A1656). */
+const MAX_LINKED = 50;
 /** Markdown in one edit. */
 export const MAX_MARKDOWN_BYTES = 256 * 1024;
 /** A create replayed with the same derived key within this returns its note. */
@@ -291,6 +295,7 @@ export class LocalNotebook {
         updatedAt: note.updatedAt,
         seq: note.rev,
         tags: note.tags,
+        description: note.description,
       })),
     };
   }
@@ -304,6 +309,7 @@ export class LocalNotebook {
       id,
       title: state.title,
       tags: info.tags,
+      description: info.description,
       // `updated` as the note's file has it (A1024): its last change, not the
       // list's time, which is never before `created` (a day's note made ahead of its day).
       markdown: renderNote(
@@ -319,6 +325,30 @@ export class LocalNotebook {
       // Only the text of a body this build cannot read, and said so (A1493).
       ...(state.unsupported ? { notice: unsupportedNotice(state.unsupported) } : {}),
     };
+  }
+
+  /**
+   * The notes this one links to, each with its description when it has one (A1656): what an
+   * agent reads to choose which link to follow. In the order they first appear, at most 50.
+   */
+  private linkedNotes(info: NoteInfo) {
+    const wanted = [...new Set(info.links.map((link) => link.noteId))].filter(
+      (each): each is string => typeof each === 'string' && each !== info.id,
+    );
+    if (wanted.length === 0) return [];
+    const live = new Map(this.notes.live().map((note) => [note.id, note]));
+    const linked: Array<{ id: string; title: string; description?: string }> = [];
+    for (const noteId of wanted) {
+      const note = live.get(noteId);
+      if (!note) continue;
+      linked.push({
+        id: note.id,
+        title: note.title,
+        ...(note.description ? { description: note.description } : {}),
+      });
+      if (linked.length === MAX_LINKED) break;
+    }
+    return linked;
   }
 
   /** read_note's view (A150): the body or one section, at most `maxBytes` from `offset`. */
@@ -376,6 +406,8 @@ export class LocalNotebook {
       id,
       title: state.title,
       tags: info.tags,
+      description: info.description,
+      links: this.linkedNotes(info),
       headings: headingRefs(state.body),
       baseVersion: this.notes.remember(id, doc),
       deleted: info.deleted,
@@ -875,14 +907,19 @@ export class LocalNotebook {
 export const markdownMarks = (text: string): string =>
   text.replaceAll(MATCH_START, '**').replaceAll(MATCH_END, '**');
 
-/** Title and tags as set_properties sets them (A16, A73). */
-export function propertiesOp(input: { readonly title?: unknown; readonly tags?: unknown }): EditOp {
+/** Title, tags and description as set_properties sets them (A16, A73, A1656). */
+export function propertiesOp(input: {
+  readonly title?: unknown;
+  readonly tags?: unknown;
+  readonly description?: unknown;
+}): EditOp {
   const keys = Object.keys(input).filter((key) => input[key as keyof typeof input] !== undefined);
-  const unknown = keys.filter((key) => !NOTE_PROPERTIES.includes(key));
+  const unknown = keys.filter((key) => !SETTABLE_PROPERTIES.includes(key));
   if (unknown.length > 0) fail(unknownProperties(unknown));
   return {
     op: 'properties',
     ...(typeof input.title === 'string' ? { title: input.title } : {}),
     ...(Array.isArray(input.tags) ? { tags: input.tags as string[] } : {}),
+    ...(typeof input.description === 'string' ? { description: input.description } : {}),
   };
 }

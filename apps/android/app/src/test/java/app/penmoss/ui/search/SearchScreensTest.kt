@@ -256,7 +256,7 @@ class SearchScreensTest {
         assertFalse(runSearchAction("app.toggleSidebar", targets))
         assertEquals(
             listOf(
-                "open settings/shortcuts", "open settings", "open settings/shortcuts", "open settings/git", "open settings/about", "feedback", "home", "open graph", "new note", "capture",
+                "open settings/shortcuts", "open settings", "open settings/shortcuts", "open settings/git", "open settings/about", "open settings/privacy", "feedback", "home", "open graph", "new note", "capture",
                 "open trash", "periodic daily", "periodic weekly", "open journal", "open settings/daily", "new folder",
                 "open settings/appearance", "open settings/display", "open settings/symbols", "open settings/appearance", "dark",
             ),

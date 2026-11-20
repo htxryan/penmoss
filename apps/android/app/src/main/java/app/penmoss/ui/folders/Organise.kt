@@ -29,6 +29,8 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
@@ -72,6 +74,7 @@ fun FolderPickerSheet(
     onDismiss: () -> Unit,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tracked = rememberTrackedDialog("folderPicker")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Text(
             title,
@@ -83,7 +86,7 @@ fun FolderPickerSheet(
         LazyColumn(Modifier.fillMaxWidth().testTag("folderPicker"), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
             for (choice in choices) {
                 item(key = choice.id ?: "", contentType = "choice") {
-                    FolderChoiceRow(choice, chosen = choice.id == current, onPick = onPick)
+                    FolderChoiceRow(choice, chosen = choice.id == current, onPick = { tracked.done(); onPick(it) })
                 }
             }
         }
@@ -106,7 +109,7 @@ private fun FolderChoiceRow(choice: FolderChoice, chosen: Boolean, onPick: (Stri
                 // Two folders of the same name are told apart by their parent.
                 choice.parent?.let { stateDescription = "in ${it}" }
             }
-            .clickable(role = Role.Button, onClickLabel = "Choose") { onPick(choice.id) }
+            .clickable(role = Role.Button, onClickLabel = "Choose", onClick = trackedClick("folder-picker.choose") { onPick(choice.id) })
             .padding(start = 24.dp + 20.dp * indent, end = 24.dp)
             .testTag("folderChoice:${choice.id ?: "top"}"),
         verticalAlignment = Alignment.CenterVertically,
@@ -150,11 +153,13 @@ fun TagSheet(
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var typed by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    val tracked = rememberTrackedDialog("tag")
     val add = { raw: String ->
         val tag = Tags.normalise(raw)
         if (tag == null) {
             error = Tags.INVALID
         } else {
+            tracked.done()
             onAdd(tag)
             typed = ""
             error = null
@@ -177,7 +182,7 @@ fun TagSheet(
                             // The whole chip removes the tag: one target, at the chip's full size.
                             InputChip(
                                 selected = false,
-                                onClick = { onRemove(tag) },
+                                onClick = trackedClick("tags.note-chip.remove", tracked.done { onRemove(tag) }),
                                 label = { Text("#$tag", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 trailingIcon = { Icon(Icons.Default.Close, contentDescription = null, Modifier.size(InputChipDefaults.IconSize)) },
                                 modifier = Modifier
@@ -216,13 +221,13 @@ fun TagSheet(
                     keyboardActions = KeyboardActions(onDone = { if (typed.isNotBlank()) add(typed) }),
                 )
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = { add(typed) }, enabled = typed.isNotBlank()) { Text("Add") }
+                TextButton(onClick = trackedClick("tags.note.add") { add(typed) }, enabled = typed.isNotBlank()) { Text("Add") }
             }
             val suggestions = remember(typed, known, tags) { Tags.suggest(typed, known, tags) }
             if (suggestions.isNotEmpty()) {
                 FlowRow(Modifier.testTag("tagSuggestions"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (name in suggestions) {
-                        SuggestionChip(onClick = { add(name) }, label = { Text("#$name") }, modifier = Modifier.testTag("suggestion:$name"))
+                        SuggestionChip(onClick = trackedClick("tags.note.suggestion") { add(name) }, label = { Text("#$name") }, modifier = Modifier.testTag("suggestion:$name"))
                     }
                 }
             }

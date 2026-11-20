@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "defaultPrompt": "Write a description of this note for an AI agent deciding whether to read it.\n\nOne or two plain sentences, at most 40 words. Say what the note is about and what it holds (decisions, lists, plans, code, references). No preamble, no quotes, no markdown, and don't start with \"This note\".\n\nTitle: {{title}}\nTags: {{tags}}\nFolder: {{folder}}\n\n{{body}}",
+  "tokens": [
+    "{{title}}",
+    "{{body}}",
+    "{{tags}}",
+    "{{folder}}",
+    "{{notebook}}",
+    "{{description}}",
+    "{{date}}"
+  ],
+  "models": [
+    {
+      "id": "claude-haiku-5-5",
+      "label": "Claude Haiku 5.5"
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "label": "Claude Sonnet 5.5"
+    }
+  ],
+  "pauses": [30, 60, 120, 300, 600]
+}

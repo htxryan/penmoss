@@ -466,7 +466,9 @@ test.describe('in a 1440 × 900 window', () => {
 const info = (page: Page) => page.getByRole('complementary', { name: 'Metadata' });
 
 // T41.
-test('the Info panel: details, tags edited there, frontmatter and backlinks', async ({ page }) => {
+test('the Info panel: tags edited there, the description, details with the id, and backlinks', async ({
+  page,
+}) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -478,8 +480,9 @@ test('the Info panel: details, tags edited there, frontmatter and backlinks', as
   const panel = info(page);
   await expect(panel.getByTestId('info-folder')).toHaveText('Top level');
   await expect(panel.getByTestId('info-created')).not.toHaveText('Unknown');
-  await expect(panel.getByTestId('info-frontmatter')).toContainText(id);
-  await expect(panel.getByTestId('info-frontmatter')).toContainText(`Info ${RUN}`);
+  // The frontmatter shown nowhere else, the id, is a row of Details (PEN-161).
+  await expect(panel.getByTestId('info-id')).toHaveText(id);
+  await expect(panel.getByTestId('ai-description')).toBeVisible();
   await expect(panel.getByTestId('backlinks')).toBeVisible();
 
   // A tag added in the panel lands in the frontmatter.
@@ -488,7 +491,6 @@ test('the Info panel: details, tags edited there, frontmatter and backlinks', as
   await field.fill(tag);
   await field.press('Enter');
   await expect(panel.getByRole('button', { name: `#${tag}`, exact: true })).toBeVisible();
-  await expect(panel.getByTestId('info-frontmatter')).toContainText(`[${tag}]`);
   await expect(panel.getByTestId('info-inline-tags')).toContainText(`#${tag}x`);
 
   // Its shortcut hides and shows it; Add a tag from the palette opens it with the field.
@@ -605,7 +607,8 @@ test('the note panel keeps one set of columns, rows and gaps on every tab', asyn
 
   // Every tab's content starts the same distance under the head, in the same text size.
   const first = {
-    info: '.note-side .info-list',
+    // Metadata starts with its heading (layout A, PEN-161); the other tabs with their bar.
+    info: '.note-side .note-info > :first-child',
     comments: '.note-side .comments-filter',
     history: '.note-side .history-scroll',
     graph: '.note-side .note-graph-bar',
@@ -662,8 +665,8 @@ test('the note panel keeps one set of columns, rows and gaps on every tab', asyn
   expect(new Set(starts).size, JSON.stringify(starts)).toBe(1);
   expect(new Set(sizes).size, JSON.stringify(sizes)).toBe(1);
 
-  // Metadata: its rows one height, the details' and the frontmatter's values on one column, and
-  // Backlinks as far under the frontmatter as Tags and Frontmatter are under what precedes them.
+  // Metadata: its rows one height, the details' values on one column, and each section heading
+  // (Description, Details, Backlinks) as far under what precedes it; Tags opens the panel.
   await page.getByTestId('note-tab-info').click();
   await expect(page.locator('.note-side .bl-heading')).toBeVisible();
   // Settled first, as each tab is above: its frontmatter is read a moment after the tab opens,
@@ -673,17 +676,17 @@ test('the note panel keeps one set of columns, rows and gaps on every tab', asyn
     page.locator('.note-side .note-info').evaluate((panel) => {
       const rect = (el: Element) => el.getBoundingClientRect();
       const r = (n: number) => Math.round(n * 10) / 10;
-      const heads = [...panel.querySelectorAll('.info-subheading, .bl-heading')].map((head) => {
-        const block = head.classList.contains('bl-heading') ? head.closest('.backlinks')! : head;
-        return r(rect(head).top - rect(block.previousElementSibling!).bottom);
-      });
+      const heads = [...panel.querySelectorAll('.info-subheading, .bl-heading')]
+        .filter((head) => !head.previousElementSibling?.classList.contains('info-heading'))
+        .map((head) => {
+          const block = head.classList.contains('bl-heading') ? head.closest('.backlinks')! : head;
+          return r(rect(head).top - rect(block.previousElementSibling!).bottom);
+        });
       return {
         heights: [...panel.querySelectorAll('.info-list dt, .info-list dd')].map((el) =>
           r(rect(el).height),
         ),
-        values: [...panel.querySelectorAll('.info-list dd, .info-frontmatter dd')].map((el) =>
-          r(rect(el).x),
-        ),
+        values: [...panel.querySelectorAll('.info-list dd')].map((el) => r(rect(el).x)),
         heads,
       };
     });

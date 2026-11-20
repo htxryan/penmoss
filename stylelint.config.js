@@ -47,6 +47,12 @@ export default {
       rules: { 'color-no-hex': null },
     },
     {
+      // The usage dashboard's own palette (PEN-137): its series colours, validated for
+      // colour-blind readers in light and dark, are not the app's themes.
+      files: ['apps/telemetry-dashboard/src/client/styles.css'],
+      rules: { 'color-no-hex': null },
+    },
+    {
       // Where the type scale and its roles are written (A1561).
       files: ['apps/web/src/shell/type.css'],
       rules: { 'penmoss/type-tokens': null },

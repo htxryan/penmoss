@@ -109,10 +109,10 @@ class SettingsScreensTest {
         val list = compose.onNodeWithTag("settingsSections")
         compose.onNodeWithText("Look and Feel").assertIsDisplayed()
         compose.onNodeWithText("Nord · Dark").assertIsDisplayed()
-        compose.onNodeWithText("Every shortcut on Home").assertIsDisplayed()
+        compose.onNodeWithText("Every Shortcut on Home").assertIsDisplayed()
         compose.onNodeWithTag("section-appearance").performClick()
         compose.onNodeWithTag("section-home").performClick()
-        compose.onNodeWithText("The theme’s width").assertIsDisplayed()
+        compose.onNodeWithText("The Theme’s Width").assertIsDisplayed()
         compose.onNodeWithTag("section-note").performClick()
         // Note pushes Symbols below a short screen (A1634).
         list.performScrollToNode(hasText("☐ ★ ? ! 💡 →"))
@@ -124,7 +124,7 @@ class SettingsScreensTest {
         list.performScrollToNode(hasText("For a hardware keyboard"))
         compose.onNodeWithTag("section-shortcuts").performClick()
         // Each notebook with its dot, the primary first, then All Notebooks.
-        list.performScrollToNode(hasText("Primary · synced at 4:12 PM"))
+        list.performScrollToNode(hasText("Primary · Synced at 4:12 PM"))
         compose.onNodeWithTag("section-notebook-n1").performClick()
         list.performScrollToNode(hasText("Add, Primary Notebook, Between Notebooks"))
         compose.onNodeWithTag("section-git").performClick()
@@ -151,7 +151,7 @@ class SettingsScreensTest {
         val groups = settingsGroups(Settings(), "Penmoss")
         assertEquals(listOf("Look and Feel", "Writing", "Notebooks", "Agents", "This Phone"), groups.map { it.title })
         assertEquals(listOf("appearance", "home", "note", "symbols"), groups[0].sections.map { it.id })
-        assertEquals(listOf("daily", "capture", "shortcuts"), groups[1].sections.map { it.id })
+        assertEquals(listOf("daily", "capture", "shortcuts", "ai-descriptions"), groups[1].sections.map { it.id })
         assertEquals(listOf("git"), groups[2].sections.map { it.id })
         assertEquals(listOf("agent-activity"), groups[3].sections.map { it.id })
         assertEquals(listOf("storage", "github", "whatsnew"), groups[4].sections.map { it.id })
@@ -358,8 +358,8 @@ class SettingsScreensTest {
         }
         compose.onNodeWithText(SETTINGS_WAIT).assertIsDisplayed()
         compose.onNodeWithTag("width-full").assertIsNotEnabled()
-        assertEquals("The theme’s width", noteSummary(false))
-        assertEquals("Full width", noteSummary(true))
+        assertEquals("The Theme’s Width", noteSummary(false))
+        assertEquals("Full Width", noteSummary(true))
     }
 
     @Test
@@ -419,7 +419,7 @@ class SettingsScreensTest {
         compose.onNodeWithTag("templateWriteTab").performScrollTo().performClick()
         compose.onNodeWithTag("reset-template.daily").performScrollTo().assertIsEnabled().performClick()
         assertEquals(SettingKeys.DAILY_TEMPLATE to null, saved.last())
-        compose.onNodeWithText("Back to the default").assertIsDisplayed()
+        compose.onNodeWithText("Back to the Default").assertIsDisplayed()
         // The weekly template is the other tab, over the same editor.
         compose.onNodeWithTag("tab-template.weekly").performClick()
         compose.onNodeWithTag("template-template.weekly").assertExists()

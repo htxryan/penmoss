@@ -6,6 +6,18 @@
  * requests: there is no server to sign in to.
  */
 import type {
+  ConsentAnswer,
+  EventKind,
+  ForgetResult,
+  LimitKey,
+  Limits,
+  Page,
+  PageQuery,
+  Props,
+  SizeClass,
+  StateName,
+} from '@penmoss/core/analytics';
+import type {
   BrowseError,
   GitHubOwner,
   GitHubRepo,
@@ -441,6 +453,10 @@ export interface PenmossDesktop {
   readonly updates?: DesktopUpdates;
   /** Search by meaning (T76): main and note windows. */
   readonly meaning?: DesktopMeaning;
+  /** Usage analytics and the log file (PEN-137): main and note windows. */
+  readonly analytics?: DesktopAnalytics;
+  /** AI Descriptions' providers on this Mac (PEN-161): main and note windows. */
+  readonly ai?: DesktopAi;
   readonly clipboard: {
     /** Only just after a key press or click, or a menu command (false otherwise). */
     write(data: ClipboardWrite): Promise<boolean>;
@@ -478,6 +494,65 @@ declare global {
   interface Window {
     penmossDesktop?: PenmossDesktop;
   }
+}
+
+/** One AI provider this Mac offers (PEN-161), as Settings' AI Provider menu lists it. */
+export interface DesktopAiProvider {
+  /** `anthropic`, `claude-code`: what `ai.provider` holds. */
+  readonly id: string;
+  /** `Anthropic (API Key)`, `Claude Code on This Mac`. */
+  readonly label: string;
+  /** How it signs in: a key typed in Settings, or a program's own sign-in on this Mac. */
+  readonly signIn: 'key' | 'cli';
+  readonly models: readonly { readonly id: string; readonly label: string }[];
+}
+
+/** What each provider's sign-in looks like now. The key itself is never sent to a page. */
+export interface DesktopAiStatus {
+  readonly providers: readonly DesktopAiProvider[];
+  /** The Anthropic key: kept or not, and what Anthropic last said of it. */
+  readonly anthropic: {
+    readonly saved: boolean;
+    readonly problem: string | null;
+    readonly keychain: boolean;
+  };
+  /** Claude Code on this Mac: `ready` (found and signed in), `signed-out`, `missing`. */
+  readonly claudeCode: {
+    readonly state: 'ready' | 'signed-out' | 'missing' | 'unknown';
+    readonly version: string | null;
+  };
+  /** The first run asked "Describe Notes for Agents?" on this Mac already. */
+  readonly asked: boolean;
+}
+
+/** A describe call's answer: the model's text, or why there is none, in plain words. */
+export type DesktopAiAnswer =
+  | { readonly ok: true; readonly text: string }
+  | {
+      readonly ok: false;
+      /** `no-provider`, `no-key`, `refused`, `offline`, `rate-limited`, `timeout`, `failed`. */
+      readonly code: string;
+      readonly message: string;
+    };
+
+export interface DesktopAi {
+  status(): Promise<DesktopAiStatus | null>;
+  /** Checks the key with Anthropic and keeps it sealed (after a key press or click only). */
+  saveKey(
+    key: string,
+  ): Promise<
+    | { readonly ok: true; readonly status: DesktopAiStatus }
+    | { readonly ok: false; readonly message: string }
+    | null
+  >;
+  removeKey(): Promise<{ readonly ok: true; readonly status: DesktopAiStatus } | null>;
+  /** The first run asked its question: it is not asked again on this Mac. */
+  asked(): Promise<DesktopAiStatus | null>;
+  /** Asks the provider whether it works: the kept key, or Claude Code's sign-in. */
+  test(provider: string): Promise<{ readonly ok: boolean; readonly message: string } | null>;
+  /** Sends `prompt` to `provider`'s `model` and answers its text. */
+  describe(provider: string, model: string, prompt: string): Promise<DesktopAiAnswer | null>;
+  onChange(listener: () => void): () => void;
 }
 
 /** What filing feedback answered (core's `FeedbackAnswer`). */
@@ -706,4 +781,68 @@ export interface DesktopMeaning {
 
 export function desktop(): PenmossDesktop | null {
   return typeof window === 'undefined' ? null : (window.penmossDesktop ?? null);
+}
+
+/** What the page records: main stamps the session, `seq`, the client fields and the state. */
+export interface PageEvent {
+  readonly kind: EventKind;
+  readonly name: string;
+  readonly props?: Props;
+  readonly at: number;
+  readonly sizeClass?: SizeClass;
+}
+
+/** Usage analytics' state as Settings → Privacy shows it (PEN-137). */
+export interface DesktopAnalyticsStatus {
+  /** null until the person answers. */
+  readonly consent: ConsentAnswer | null;
+  /** Whether to ask now: no answer, and this install has a notebook (first run or update). */
+  readonly ask: boolean;
+  readonly install: string;
+  readonly sharingSince: number | null;
+  readonly counts: Readonly<Record<StateName, number>>;
+  readonly limits: Limits;
+  /** The events' and the logs' size on disk, in bytes. */
+  readonly logBytes: number;
+  /** The exact body of the last batch sent, or null. */
+  readonly lastBatch: string | null;
+  /** DO_NOT_TRACK or PENMOSS_ANALYTICS=off in main's environment. */
+  readonly optedOut: boolean;
+}
+
+/** What lowering limits would delete now. */
+export interface LimitsPreview {
+  readonly events: number;
+  readonly logBytes: number;
+}
+
+/** The logs a bug report attaches, after scrub #2. */
+export interface ReportLogs {
+  readonly lines: readonly string[];
+  readonly bytes: number;
+}
+
+export interface DesktopAnalytics {
+  /** Records events (fire and forget; main checks each against the catalogue). */
+  record(events: readonly PageEvent[]): void;
+  /** A line for the log file from the page (console.warn/error, the error ring); rate-limited. */
+  log(level: 'warn' | 'error', message: string): void;
+  status(): Promise<DesktopAnalyticsStatus>;
+  onChange(listener: (status: DesktopAnalyticsStatus) => void): () => void;
+  /** The consent question's answer (first run, or the one-time dialog). */
+  answer(consent: ConsentAnswer): Promise<DesktopAnalyticsStatus>;
+  /** Settings → Privacy's switch. */
+  setSharing(on: boolean): Promise<DesktopAnalyticsStatus>;
+  resetId(): Promise<DesktopAnalyticsStatus>;
+  /** Delete My Shared Data, after the confirmation: then a new ID. */
+  forget(): Promise<ForgetResult>;
+  page(query: PageQuery): Promise<Page>;
+  /** What setting `changes` would delete now (nothing is changed). */
+  preview(changes: Partial<Record<LimitKey, number>>): Promise<LimitsPreview>;
+  /** Saves `changes` (null: Reset to Defaults) and prunes at once. */
+  setLimits(changes: Partial<Record<LimitKey, number>> | null): Promise<DesktopAnalyticsStatus>;
+  /** Reveals the log file in Finder. */
+  showLogFile(): Promise<boolean>;
+  /** The logs for a bug report, with `names` (note titles, folders, tags…) scrubbed too. */
+  reportLogs(names: readonly string[]): Promise<ReportLogs>;
 }

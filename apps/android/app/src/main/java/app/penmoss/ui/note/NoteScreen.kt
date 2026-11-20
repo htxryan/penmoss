@@ -72,6 +72,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.NotebookGraph
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.EditorUiState
 import app.penmoss.editor.EditorWebView
 import app.penmoss.editor.FormatState
@@ -220,7 +222,7 @@ fun NoteRoute(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
                     if (!note.makingPeriodic) {
@@ -329,7 +331,7 @@ fun NoteRoute(
                     symbols = note.symbols,
                     onSymbol = controller::toggleSymbol,
                     // Settings → Symbols, as the web picker's Edit symbols… (T44, A747).
-                    onEditSymbols = { appCommands.run("app.symbols") },
+                    onEditSymbols = { appCommands.run("app.symbols", source = "button") },
                 )
             }
         }
@@ -370,7 +372,7 @@ private fun NoteDialogs(note: NoteScreenState, onSyncStorage: () -> Unit) {
     note.moving?.let { pick ->
         FolderPickerFor(
             graph,
-            title = "Move “${note.editor.title.ifBlank { Items.UNTITLED }}” to…",
+            title = "Move “${note.editor.title.ifBlank { Items.UNTITLED }}” To…",
             current = pick.current,
             onPick = { folder ->
                 note.moving = null
@@ -495,6 +497,22 @@ private fun NoteInfoTab(note: NoteScreenState, onOpenNote: (String) -> Unit) {
         inline = remember(allTags, tags) { inlineTags(allTags, tags) },
         canTag = note.ready,
         fields = info?.fields,
+        description = info?.let { known ->
+            val settings by graph.device.settings.collectAsStateWithLifecycle()
+            val key by graph.device.aiDescriptions.key.collectAsStateWithLifecycle()
+            DescriptionUi(
+                text = known.description,
+                by = known.descriptionBy,
+                ai = known.ai,
+                asks = known.descriptionAsks,
+                ready = key.saved && !key.refused && graph.device.aiDescriptions.provider == app.penmoss.ai.AiKeys.ANTHROPIC,
+                global = (settings.settings.values[app.penmoss.ai.AiKeys.GLOBAL] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true",
+                editable = note.ready && !note.editor.readOnly,
+                onText = { note.controller.setDescription(it) },
+                onAi = { note.controller.setAiDescription(it) },
+                onAnswer = { keep -> note.controller.answerDescription(keep) },
+            )
+        },
         backlinks = backlinksUi,
         titleOf = { titles[it] },
         onTags = { note.tagging = true },
@@ -592,37 +610,27 @@ internal fun NoteMenu(
     onCopyAgentReference: (() -> Unit)? = null,
 ) {
     Box {
-        TipIconButton(Icons.Default.MoreVert, "Note Actions", onClick = { onOpen(true) }, modifier = Modifier.testTag("noteMore"))
+        TipIconButton(Icons.Default.MoreVert, "Note Actions", onClick = trackedClick("note.more") { onOpen(true) }, modifier = Modifier.testTag("noteMore"))
         DropdownMenu(expanded = open, onDismissRequest = { onOpen(false) }) {
-            val item = @Composable { label: String, tag: String, enabled: Boolean, action: () -> Unit ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    enabled = enabled,
-                    onClick = {
-                        onOpen(false)
-                        action()
-                    },
-                    modifier = Modifier.testTag(tag),
-                )
-            }
-            item("View Metadata", "noteMetadata", true) { onPanel(PanelTab.METADATA) }
+            val close = { onOpen(false) }
+            NoteMenuItem("View Metadata", "noteMetadata", true, close, event = "note.menu.metadata") { onPanel(PanelTab.METADATA) }
             DropdownMenuItem(
                 text = { Text("Comments") },
                 trailingIcon = { if (openComments != null && openComments > 0) Text(openComments.toString()) },
-                onClick = {
+                onClick = trackedClick("note.menu.comments") {
                     onOpen(false)
                     onPanel(PanelTab.COMMENTS)
                 },
                 modifier = Modifier.testTag("noteComments"),
             )
-            item("Version History", "noteHistory", ready) { onPanel(PanelTab.HISTORY) }
-            item("Local Graph", "noteLocalGraph", true) { onPanel(PanelTab.GRAPH) }
+            NoteMenuItem("Version History", "noteHistory", ready, close, event = "note.menu.history") { onPanel(PanelTab.HISTORY) }
+            NoteMenuItem("Local Graph", "noteLocalGraph", true, close, event = "note.menu.local-graph") { onPanel(PanelTab.GRAPH) }
             // Markdown Source, as the web names it, ticked while it shows (a second tap shows the note).
             DropdownMenuItem(
                 text = { Text("Markdown Source") },
                 enabled = ready,
                 trailingIcon = { if (source) Icon(Icons.Default.Check, contentDescription = null) },
-                onClick = {
+                onClick = trackedClick("note.menu.source") {
                     onOpen(false)
                     onSource(!source)
                 },
@@ -632,20 +640,43 @@ internal fun NoteMenu(
                 },
             )
             HorizontalDivider()
-            item("Copy Note as Markdown", "noteCopyMarkdown", ready) { onCopy(CopyFormat.MARKDOWN) }
-            item("Copy Note as Rich Text", "noteCopyRich", ready) { onCopy(CopyFormat.RICH) }
-            if (onCopyAgentReference != null) item("Copy Agent Reference", "noteCopyAgentReference", true, onCopyAgentReference)
+            NoteMenuItem("Copy Note as Markdown", "noteCopyMarkdown", ready, close, event = "note.menu.copy-markdown") { onCopy(CopyFormat.MARKDOWN) }
+            NoteMenuItem("Copy Note as Rich Text", "noteCopyRich", ready, close, event = "note.menu.copy-rich") { onCopy(CopyFormat.RICH) }
+            if (onCopyAgentReference != null) {
+                NoteMenuItem("Copy Agent Reference", "noteCopyAgentReference", true, close, event = "note.menu.copy-agent-reference", action = onCopyAgentReference)
+            }
             HorizontalDivider()
-            item("Find in Note", "noteFind", ready, onFind)
-            item("Word Count", "noteWordCount", ready, onCount)
+            NoteMenuItem("Find in Note", "noteFind", ready, close, event = "note.menu.find", action = onFind)
+            NoteMenuItem("Word Count", "noteWordCount", ready, close, event = "note.menu.word-count", action = onCount)
             HorizontalDivider()
             if (pinned != null) {
-                item(if (pinned) "Unpin from Quick Access" else "Pin to Quick Access", "notePin", true, onPin)
+                NoteMenuItem(
+                    if (pinned) "Unpin from Quick Access" else "Pin to Quick Access",
+                    "notePin",
+                    true,
+                    close,
+                    event = if (pinned) "note.menu.quick-access.unpin" else "note.menu.quick-access.pin",
+                    action = onPin,
+                )
             }
-            item("Move to Folder…", "noteMove", canMove, onMove)
-            item("Move to Trash", "noteTrash", ready, onTrash)
+            NoteMenuItem("Move to Folder…", "noteMove", canMove, close, event = "note.menu.move", action = onMove)
+            NoteMenuItem("Move to Trash", "noteTrash", ready, close, event = "note.menu.trash", action = onTrash)
         }
     }
+}
+
+/** One item of the note's ⋮ menu: it closes the menu, then does [action], counted as [event]. */
+@Composable
+private fun NoteMenuItem(label: String, tag: String, enabled: Boolean, close: () -> Unit, event: String, action: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        enabled = enabled,
+        onClick = trackedClick(event) {
+            close()
+            action()
+        },
+        modifier = Modifier.testTag(tag),
+    )
 }
 
 /** What to tell Ryan when a tag change was not sent (T38 review). */
@@ -673,7 +704,7 @@ internal fun NoteSyncIcon(sync: NoteSync, onClick: () -> Unit) {
         tooltip = { PlainTooltip { Text(sync.label, Modifier.testTag("noteSyncTooltip")) } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.testTag("noteSync")) {
+        IconButton(onClick = trackedClick("note.status.save-status", onClick), modifier = Modifier.testTag("noteSync")) {
             Icon(
                 icon,
                 contentDescription = "Sync: ${sync.label}",
@@ -687,25 +718,26 @@ internal fun NoteSyncIcon(sync: NoteSync, onClick: () -> Unit) {
 @Composable
 internal fun NoteSyncExplanation(sync: NoteSync, onSyncStorage: () -> Unit, onRetryPictures: () -> Unit, onDismiss: () -> Unit) {
     val failed = sync.state == NoteSyncState.PICTURES_FAILED
+    val tracked = rememberTrackedDialog("noteSync")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(sync.label) },
         text = { Text(sync.explanation, Modifier.testTag("noteSyncExplanation")) },
         confirmButton = {
             if (failed) {
-                TextButton(onClick = {
+                TextButton(onClick = trackedClick("note.status.retry-pictures", tracked.done {
                     onDismiss()
                     onRetryPictures()
-                }, modifier = Modifier.testTag("retryNotePictures")) { Text("Retry") }
+                }), modifier = Modifier.testTag("retryNotePictures")) { Text("Retry") }
             } else {
-                TextButton(onClick = onDismiss) { Text("OK") }
+                TextButton(onClick = trackedClick("dialog.close", onDismiss)) { Text("OK") }
             }
         },
         dismissButton = {
-            TextButton(onClick = {
+            TextButton(onClick = trackedClick("note.status.notebook-sync", tracked.done {
                 onDismiss()
                 onSyncStorage()
-            }, modifier = Modifier.testTag("openSyncStorage")) { Text("Notebook Sync") }
+            }), modifier = Modifier.testTag("openSyncStorage")) { Text("Notebook Sync") }
         },
     )
 }
@@ -748,8 +780,8 @@ internal fun CopyNotice(copyTitle: String, onOpen: () -> Unit, onDismiss: () -> 
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss, modifier = Modifier.testTag("dismissCopyNotice")) { Text("Dismiss") }
-                TextButton(onClick = onOpen, modifier = Modifier.testTag("openCopy")) { Text("Open the Copy") }
+                TextButton(onClick = trackedClick("note.copy-notice.dismiss", onDismiss), modifier = Modifier.testTag("dismissCopyNotice")) { Text("Dismiss") }
+                TextButton(onClick = trackedClick("note.copy-notice.open", onOpen), modifier = Modifier.testTag("openCopy")) { Text("Open the Copy") }
             }
         }
     }
@@ -784,7 +816,7 @@ internal fun PeriodNavRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(
-                onClick = { onOpenPeriodic(kind, nav.prev.date) },
+                onClick = trackedClick("journal.period-nav.previous") { onOpenPeriodic(kind, nav.prev.date) },
                 modifier = Modifier.testTag("periodPrev").semantics { contentDescription = nav.prev.full },
             ) { Text(nav.prev.label, maxLines = 1) }
             Text(
@@ -795,7 +827,7 @@ internal fun PeriodNavRow(
                 maxLines = 1,
             )
             TextButton(
-                onClick = { onOpenPeriodic(kind, nav.next.date) },
+                onClick = trackedClick("journal.period-nav.next") { onOpenPeriodic(kind, nav.next.date) },
                 modifier = Modifier.testTag("periodNext").semantics { contentDescription = nav.next.full },
             ) { Text(nav.next.label, maxLines = 1) }
         }
@@ -807,12 +839,12 @@ internal fun PeriodNavRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 if (week != null) {
-                    PeriodChip(week, held = week.period in marks.weeks, tag = "periodWeek") {
+                    PeriodChip(week, held = week.period in marks.weeks, tag = "periodWeek", event = "journal.period-nav.week") {
                         onOpenPeriodic(ToEditor.PeriodKind.WEEKLY, week.date)
                     }
                 }
                 days?.forEach { day ->
-                    PeriodChip(day, held = day.period in marks.days, tag = "periodDay-${day.date}") {
+                    PeriodChip(day, held = day.period in marks.days, tag = "periodDay-${day.date}", event = "journal.period-nav.day") {
                         onOpenPeriodic(ToEditor.PeriodKind.DAILY, day.date)
                     }
                 }
@@ -840,9 +872,9 @@ internal fun hasHardwareKeyboard(configuration: android.content.res.Configuratio
  * in its spoken name, in the calendar's words (A454).
  */
 @Composable
-private fun PeriodChip(target: FromEditor.NavTarget, held: Boolean, tag: String, onClick: () -> Unit) {
+private fun PeriodChip(target: FromEditor.NavTarget, held: Boolean, tag: String, event: String, onClick: () -> Unit) {
     AssistChip(
-        onClick = onClick,
+        onClick = trackedClick(event, onClick),
         label = { Text(target.label, maxLines = 1) },
         leadingIcon = if (held) {
             {

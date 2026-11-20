@@ -297,7 +297,7 @@ test.describe('managing tags', () => {
     // Delete confirms, then offers Undo; the notes stay.
     await more('garden', 'Delete…');
     const remove = page.getByTestId('tags-delete-dialog');
-    await expect(remove.getByRole('heading', { name: 'Delete #garden' })).toBeVisible();
+    await expect(remove.getByRole('heading', { name: 'Delete #garden?' })).toBeVisible();
     await expect(remove).toContainText('Removes #garden from 1 note. The notes stay');
     await remove.getByRole('button', { name: 'Delete Tag' }).click();
     await expect(toast).toContainText('Deleted #garden from 1 note.');

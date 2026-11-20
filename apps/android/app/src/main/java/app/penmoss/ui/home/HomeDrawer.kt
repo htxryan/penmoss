@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.LucideAssets
 import app.penmoss.ui.common.NotebookBadgeView
 import app.penmoss.ui.common.rememberLucideIcons
@@ -71,12 +72,12 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                     )
                 }
                 for (note in ui.quickAccess) {
-                    Item(note.title.ifEmpty { "Untitled" }, "file-text", "drawerQuickAccessNote-${note.id}", onClick = go { actions.onOpen(note.id) })
+                    Item(note.title.ifEmpty { "Untitled" }, "file-text", "drawerQuickAccessNote-${note.id}", event = "sidebar.quick-access.note", onClick = go { actions.onOpen(note.id) })
                 }
             } else {
-                Item("Quick Access", "star", "drawerQuickAccess", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
+                Item("Quick Access", "star", "drawerQuickAccess", event = "sidebar.drawer.quick-access", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
             }
-            Item("Recent Notes", "clock", "drawerRecent", selected = ui.page == HomePage.RECENT, onClick = go { actions.onPage(HomePage.RECENT) })
+            Item("Recent Notes", "clock", "drawerRecent", event = "sidebar.drawer.recent", selected = ui.page == HomePage.RECENT, onClick = go { actions.onPage(HomePage.RECENT) })
             if (ui.notebooks.isNotEmpty()) {
                 Heading("Notebooks")
                 for (notebook in ui.notebooks) {
@@ -84,7 +85,7 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                     NavigationDrawerItem(
                         label = { Text(notebook.name, maxLines = 1) },
                         selected = here && ui.page == HomePage.NOTES,
-                        onClick = go { if (here) actions.onPage(HomePage.NOTES) else actions.onNotebook(notebook.localId) },
+                        onClick = trackedClick("sidebar.notebook.open", go { if (here) actions.onPage(HomePage.NOTES) else actions.onNotebook(notebook.localId) }),
                         icon = notebook.badge?.let { badge -> { NotebookBadgeView(badge, notebook.name) } },
                         modifier = Modifier.testTag("drawerNotebook-${notebook.localId}"),
                         // Square, as the app's controls are (SquareControls.kt).
@@ -93,9 +94,9 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Item("Trash", "trash", "openTrash", onClick = go(actions.onTrash))
-            Item("Settings", "settings", "drawerSettings", onClick = go(actions.onSettings))
-            actions.onFeedback?.let { Item("Send Feedback", "message-square", "homeFeedback", onClick = go(it)) }
+            Item("Trash", "trash", "openTrash", event = "sidebar.drawer.trash", onClick = go(actions.onTrash))
+            Item("Settings", "settings", "drawerSettings", event = "sidebar.drawer.settings", onClick = go(actions.onSettings))
+            actions.onFeedback?.let { Item("Send Feedback", "message-square", "homeFeedback", event = "sidebar.drawer.feedback", onClick = go(it)) }
             Spacer(Modifier.height(12.dp))
         }
     }
@@ -113,12 +114,12 @@ private fun Heading(text: String) {
 }
 
 @Composable
-private fun Item(label: String, icon: String, tag: String, selected: Boolean = false, onClick: () -> Unit) {
+private fun Item(label: String, icon: String, tag: String, event: String, selected: Boolean = false, onClick: () -> Unit) {
     val glyph = rememberLucideIcons()?.icon(icon)
     NavigationDrawerItem(
         label = { Text(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
         selected = selected,
-        onClick = onClick,
+        onClick = trackedClick(event, onClick),
         icon = { if (glyph != null) Icon(LucideAssets.vector(glyph), contentDescription = null, Modifier.size(22.dp)) else Spacer(Modifier.size(22.dp)) },
         modifier = Modifier.testTag(tag),
         shape = RectangleShape,

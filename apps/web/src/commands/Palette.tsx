@@ -9,6 +9,7 @@ import type { CommandDefinition } from './definitions';
 import { fuzzyMatch, highlightRuns, type FuzzyMatch } from '@penmoss/core/fuzzy';
 import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
+import { useTrackedDialog } from '../analytics/dialog';
 
 /** The palette (⌘K), Quick Open (⌘P), or New Tab's picker (⌘T, A1594): notes, New Note first. */
 export type PaletteMode = 'all' | 'notes' | 'newTab';
@@ -53,6 +54,9 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
   const version = useCommandsVersion();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  const tracked = useTrackedDialog(
+    mode === 'all' ? 'palette' : mode === 'newTab' ? 'newTab' : 'quickOpen',
+  );
 
   const items = useMemo((): Item[] => {
     void version;
@@ -109,6 +113,7 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
 
   const choose = (item: Item | undefined, where?: TabIntent) => {
     if (!item) return;
+    tracked.done();
     if (item.kind === 'command') onRunCommand(item.command.id);
     else if (where) onOpenNote(item.note.id, where);
     // New Tab's picker opens a new tab in front unless ⌘↩ asks for one behind (A1594).

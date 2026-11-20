@@ -64,6 +64,7 @@ export function RecentSection({
               <a
                 className="sb-item"
                 data-ui="item"
+                data-event="sidebar.recent.note"
                 href={notePath(note.id)}
                 aria-current={note.id === activeId ? 'page' : undefined}
                 data-testid="recent-note"

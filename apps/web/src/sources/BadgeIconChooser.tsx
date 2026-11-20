@@ -33,6 +33,7 @@ export function BadgeIconChooser({
         <span className="badge-icon-name">{name}</span>
       </span>
       <button
+        data-event="settings.git-notebooks.badge.choose-icon"
         ref={button}
         type="button"
         className="btn"

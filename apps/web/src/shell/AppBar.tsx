@@ -43,6 +43,7 @@ export function AppBar({
           type="button"
           className="icon-btn"
           data-ui="menu"
+          data-event="sidebar.drawer.open"
           aria-label="Open Navigation"
           data-tip="Folders, journal, tags, Settings and Trash"
           aria-expanded={drawer.open}

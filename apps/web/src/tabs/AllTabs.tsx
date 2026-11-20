@@ -6,6 +6,7 @@ import { usePickerList } from '../shell/picker-list';
 import { facePath, type TabFace } from './describe';
 import { useTabs } from './hooks';
 import { TabMark } from './TabStrip';
+import { useTrackedDialog } from '../analytics/dialog';
 
 /**
  * All Tabs (AC12): every open tab in a list that filters as you type, each with its ⌘ number;
@@ -36,6 +37,7 @@ export function AllTabs({
       element.style.visibility = 'visible';
     }
   }, [anchor]);
+  const tracked = useTrackedDialog('allTabs');
   const latestClose = useRef(onClose);
   useLayoutEffect(() => {
     latestClose.current = onClose;
@@ -59,6 +61,7 @@ export function AllTabs({
   }, [faces, query]);
   const choose = (face: TabFace | undefined) => {
     if (!face) return;
+    tracked.done();
     tabs?.activate(face.id);
     onClose();
   };

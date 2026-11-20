@@ -53,6 +53,8 @@ export interface FeedbackDraftFields {
   readonly setOmitted: Dispatch<SetStateAction<ReadonlySet<FeedbackGroupId>>>;
   /** A report taken back by Edit: the context it was captured with, not this screen's. */
   readonly kept: FeedbackContext | null;
+  /** A report taken back by Edit: the anonymised logs it previewed (PEN-137), or null. */
+  readonly keptLogs: readonly string[] | null;
   /** Whether the draft is still written (false from Send or Discard; true again if Send fails). */
   readonly keeping: (keep: boolean) => void;
   /** Removes the draft, screenshots too. */
@@ -77,6 +79,7 @@ export function useFeedbackDraft(
   const [shots, setShots] = useState<Screenshot[]>([]);
   const [omitted, setOmitted] = useState<ReadonlySet<FeedbackGroupId>>(new Set());
   const [kept, setKept] = useState<FeedbackContext | null>(null);
+  const [keptLogs, setKeptLogs] = useState<readonly string[] | null>(null);
   const initialDescription = useRef<JSONContent | null>(null);
 
   useEffect(() => {
@@ -110,6 +113,7 @@ export function useFeedbackDraft(
           initialDescription.current = draft.description;
           setOmitted(new Set(draft.omitted));
           setKept(draft.context ?? null);
+          setKeptLogs(draft.logs ?? null);
         }
         setShots([...behind, ...kept]);
         setLoaded(true);
@@ -135,6 +139,7 @@ export function useFeedbackDraft(
       description,
       omitted: [...omitted],
       ...(kept ? { context: kept } : {}),
+      ...(keptLogs ? { logs: keptLogs } : {}),
       updatedAt: Date.now(),
     };
     const timer = setTimeout(() => {
@@ -155,6 +160,7 @@ export function useFeedbackDraft(
     shots,
     omitted,
     kept,
+    keptLogs,
   ]);
   // The screenshots, only when they change (not with every keystroke's save).
   useEffect(() => {
@@ -187,6 +193,7 @@ export function useFeedbackDraft(
     omitted,
     setOmitted,
     kept,
+    keptLogs,
     keeping: (keep) => {
       keepDraft.current = keep;
     },

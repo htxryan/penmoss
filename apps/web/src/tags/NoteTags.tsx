@@ -25,8 +25,11 @@ export function NoteTags({
   inline = [],
   adding,
   onAdding,
+  button = 'tag-add',
 }: {
   replica: Yjs14Replica | null;
+  /** The + Tag button's look: the dashed chip under the title, a normal button in the panel. */
+  button?: 'tag-add' | 'btn';
   /** The note's inline `#tags`: already on it, so never suggested (A577). */
   inline?: readonly string[];
   adding: boolean;
@@ -101,7 +104,7 @@ export function NoteTags({
         <button
           ref={addButton}
           type="button"
-          className="tag-add"
+          className={button === 'btn' ? 'btn tag-add-btn' : 'tag-add'}
           data-command="note.addTag"
           aria-label="Add a Tag"
           data-tip="Add a Tag"
@@ -123,6 +126,7 @@ export function NoteTags({
               type="button"
               className="tag-chip-name"
               data-ui="item"
+              data-event="tags.note-chip.show"
               data-tip={`Show Notes Tagged #${tag}`}
               onClick={() => showTag(tag)}
             >
@@ -133,6 +137,7 @@ export function NoteTags({
                 type="button"
                 className="tag-chip-remove"
                 data-ui="item"
+                data-event="tags.note-chip.remove"
                 aria-label={`Remove the Tag #${tag}`}
                 data-tip={`Remove the Tag #${tag}`}
                 onClick={() => setFrontmatterTag(replica.doc, tag, false)}
@@ -242,7 +247,7 @@ export function NoteTags({
         <button
           ref={addButton}
           type="button"
-          className="tag-add"
+          className={button === 'btn' ? 'btn tag-add-btn' : 'tag-add'}
           data-command="note.addTag"
           aria-label="Add a Tag"
           data-tip="Add a Tag"

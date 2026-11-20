@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.keys.KeyNames
@@ -137,7 +139,7 @@ class RecentSwitch {
 @Composable
 fun RecentSwitcher(notes: List<NoteItem>, index: Int, onOpen: (Int) -> Unit, onDismiss: () -> Unit) {
     Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)).clickable(onClickLabel = "Close", onClick = onDismiss),
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)).clickable(onClickLabel = "Close", onClick = trackedClick("recent.close", onDismiss)),
         contentAlignment = Alignment.Center,
     ) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.padding(24.dp).widthIn(max = 480.dp).testTag("recentSwitcher")) {
@@ -154,7 +156,7 @@ fun RecentSwitcher(notes: List<NoteItem>, index: Int, onOpen: (Int) -> Unit, onD
                         note.title,
                         Modifier.fillMaxWidth()
                             .background(if (chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-                            .clickable(role = Role.Button) { onOpen(at) }
+                            .clickable(role = Role.Button, onClick = trackedClick("recent.note") { onOpen(at) })
                             .semantics {
                                 selected = chosen
                                 if (chosen) liveRegion = LiveRegionMode.Polite
@@ -201,7 +203,10 @@ internal fun RecentSwitcherHost(graph: app.penmoss.NotebookGraph, currentNote: S
     val listed by androidx.compose.runtime.rememberUpdatedState(notes)
     val open by androidx.compose.runtime.rememberUpdatedState(openNote)
     val current by androidx.compose.runtime.rememberUpdatedState(currentNote)
+    // Counted by name while it shows; choosing a note, by key or by tap, is what it is for.
+    val tracked = rememberTrackedDialog("recent", open = switch.open)
     RecentSwitcherKeys(switch, count = { listed.size }) { at ->
+        tracked.done()
         // The open note again: nothing to open.
         listed.getOrNull(at)?.let { if (it.id != current) open(it.id) }
     }
@@ -210,6 +215,7 @@ internal fun RecentSwitcherHost(graph: app.penmoss.NotebookGraph, currentNote: S
             notes,
             switch.index,
             onOpen = { at ->
+                tracked.done()
                 switch.close()
                 notes.getOrNull(at)?.let { if (it.id != currentNote) openNote(it.id) }
             },

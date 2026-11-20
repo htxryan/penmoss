@@ -14,6 +14,8 @@ import { attach, restore, retag, settings } from './commands/workspace';
 import { append, create, daily, edit, mv, setTitle, tag, trash } from './commands/write';
 import { mcp, notebook } from './commands/notebook';
 import { models } from './commands/models';
+import { analytics } from './commands/analytics';
+import { recordRun, type RunSeen } from './analytics';
 import { CliError, EXIT } from './errors';
 import type { Io, NotebookIo } from './io';
 import { VERSION } from './version';
@@ -43,6 +45,7 @@ export const COMMANDS: readonly Command[] = [
   notebook,
   mcp,
   models,
+  analytics,
 ];
 
 /**
@@ -76,7 +79,7 @@ export const NOTEBOOK_COMMANDS: ReadonlySet<string> = new Set([
 /** Reads sync first only; every other command syncs before its change too, and after it. */
 const SYNC_FIRST: ReadonlySet<string> = new Set(['search', 'cat', 'ls', 'open']);
 
-const NOTEBOOK_FLAGS: readonly FlagSpec[] = [
+export const NOTEBOOK_FLAGS: readonly FlagSpec[] = [
   {
     name: 'notebook',
     type: 'string',
@@ -93,7 +96,7 @@ const NOTEBOOK_FLAGS: readonly FlagSpec[] = [
 const flagsOf = (command: Command): readonly FlagSpec[] =>
   NOTEBOOK_COMMANDS.has(command.name) ? [...command.flags, ...NOTEBOOK_FLAGS] : command.flags;
 
-const GLOBAL_FLAGS: readonly FlagSpec[] = [
+export const GLOBAL_FLAGS: readonly FlagSpec[] = [
   {
     name: 'json',
     type: 'boolean',
@@ -113,7 +116,20 @@ const EXIT_HELP = [
   '  7  refused for another reason (400, 413, 422, 428), or by the repository’s host',
 ];
 
+/**
+ * Runs `penmoss <argv>`: its exit code. At exit, one usage analytics event names the command,
+ * its flags (never their values), the exit code and how long it took (PEN-137); writing it never
+ * changes the output or the code.
+ */
 export async function run(argv: readonly string[], io: Io): Promise<number> {
+  const started = io.analytics?.now() ?? 0;
+  const seen: RunSeen = { command: null, flags: [] };
+  const code = await runCommand(argv, io, seen);
+  recordRun(io, seen, code, started);
+  return code;
+}
+
+async function runCommand(argv: readonly string[], io: Io, seen: RunSeen): Promise<number> {
   const [name, ...rest] = argv;
   // JSON errors only for a real --json flag (A173): not a value, nothing after `--`. Until the
   // command line is parsed, only a known command's own parse can say; for anything else, a
@@ -122,6 +138,7 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
   let json = (end < 0 ? rest : rest.slice(0, end)).includes('--json');
   try {
     if (name === undefined || name === '--help' || name === '-h' || name === 'help') {
+      seen.command = 'help';
       const topic = name === 'help' ? rest[0] : undefined;
       const command =
         topic === undefined ? undefined : COMMANDS.find((each) => each.name === topic);
@@ -130,6 +147,7 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
       return EXIT.OK;
     }
     if (name === '--version' || name === '-V') {
+      seen.command = 'version';
       io.stdout.write(`penmoss ${VERSION}\n`);
       return EXIT.OK;
     }
@@ -141,13 +159,17 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
           : `unknown command “${name}”`,
       );
     }
+    seen.command = command.name;
     let parsed;
     try {
       parsed = parseArgs(rest, [...flagsOf(command), ...GLOBAL_FLAGS]);
     } catch (error) {
       json = error instanceof UsageError && error.flags?.['json'] === true;
+      // The flags' names only: the spec's, never what follows them.
+      if (error instanceof UsageError) seen.flags = Object.keys(error.flags ?? {});
       throw error;
     }
+    seen.flags = Object.keys(parsed.flags);
     json = parsed.flags['json'] === true;
     if (parsed.flags['help'] === true) {
       io.stdout.write(commandHelp(command));
@@ -390,6 +412,8 @@ function mainHelp(): string {
     '  PENMOSS_HOME       Where git notebooks are kept (default ~/.penmoss)',
     '  PENMOSS_GIT_TOKEN  A token for git notebooks’ repositories, instead of a saved one',
     '  NO_COLOR           Never style output',
+    '  DO_NOT_TRACK=1     Keep this shell’s usage analytics on this machine (see `penmoss',
+    '                     analytics`); PENMOSS_ANALYTICS=off does the same',
     '',
     'Exit codes:',
     ...EXIT_HELP,

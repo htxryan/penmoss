@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { deviceStorage } from '../shell/device-pref';
+import { withoutRecording } from '../analytics/track';
 import { copySettings, readInStep, writeInStep } from './copy-settings';
 import type { OpenSourcesState } from './registry';
 
@@ -40,7 +41,10 @@ export function useSettingsInStep(state: OpenSourcesState): void {
       timer = null;
       if (!root.getState().loaded) return;
       for (const other of others) {
-        if (other.workspace.getState().loaded) copySettings(root, other.workspace);
+        // A copy of the person's change, which was recorded once as it was made (PEN-137).
+        if (other.workspace.getState().loaded) {
+          withoutRecording(() => copySettings(root, other.workspace));
+        }
       }
     };
     const schedule = () => {

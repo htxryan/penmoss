@@ -90,6 +90,8 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('app.status', 'GitHub Settings', 'General'),
   // T64 item 2 (A1112): Settings → Updates, checking now. The Mac app only.
   global('app.checkForUpdates', 'Check for Updates…', 'General'),
+  // PEN-137: Settings → Privacy, usage analytics and the logs. The Mac app only.
+  global('app.privacy', 'Privacy Settings', 'General'),
   // T49 (D41, A797): a bug report or feature request to the Penmoss board. No default keys.
   global('app.sendFeedback', 'Send Feedback', 'General'),
   global('app.home', 'Close the Note', 'Navigation'),

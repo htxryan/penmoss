@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Usage analytics' dashboard (PEN-137) on stats.penmoss.app: one page and a read-only API over
+  // the ingest Worker's D1. Cloudflare Access stands in front of it, and the Worker checks
+  // Access's JWT on every request too (src/access.ts), assets included.
+  "name": "penmoss-telemetry-dashboard",
+  "main": "src/index.ts",
+  // Same date as apps/relay and apps/telemetry.
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "stats.penmoss.app", "custom_domain": true }],
+  // The page, built into ./dist by build.mjs. run_worker_first: the Worker checks Access before
+  // any file is served, then hands the request to the assets.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "none",
+  },
+  // apps/telemetry's named queries (queries/*.sql) are imported as text.
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "penmoss-telemetry",
+      // The same database as apps/telemetry/wrangler.jsonc: Ryan puts the id there and here.
+      "database_id": "68e145aa-e209-4bc2-92dc-dfec57a854f5",
+      "migrations_dir": "../telemetry/migrations",
+    },
+  ],
+  "vars": {
+    // Ryan: the Zero Trust team's name (<team>.cloudflareaccess.com), and the Access
+    // application's AUD tag (Zero Trust → Access → Applications → stats.penmoss.app → Overview).
+    // Without both, every request is refused.
+    "ACCESS_TEAM": "redhale",
+    "ACCESS_AUD": "2888e38f4c0687a10659b44dd8c9a31dda3c3a9c39cbdc684b1c9f2d323d8095",
+  },
+}

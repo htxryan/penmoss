@@ -215,6 +215,22 @@ export class GitHubToken {
     return this.find(await this.load(), login)?.token ?? null;
   }
 
+  /**
+   * The logins kept, first first, read from the file without unsealing a token: what the log
+   * file's scrubber replaces (PEN-137).
+   */
+  async logins(): Promise<string[]> {
+    try {
+      const parsed = JSON.parse(await readFile(this.tokenFile, 'utf8')) as Partial<Stored>;
+      const others = Array.isArray(parsed.others) ? (parsed.others as unknown[]) : [];
+      return [parsed, ...others]
+        .map((each) => (each as { login?: unknown } | null)?.login)
+        .filter((login): login is string => typeof login === 'string' && login !== '');
+    } catch {
+      return [];
+    }
+  }
+
   async status(): Promise<GitHubTokenStatus> {
     const kept = await this.load();
     const first = kept[0]?.account ?? null;

@@ -32,6 +32,7 @@ import {
 } from 'react';
 import { useCommands } from '../commands/hooks';
 import { useSource } from '../sources/hooks';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { shortWhen } from '../shell/when';
 import {
   canEdit,
@@ -195,6 +196,7 @@ function Composer({
   autoFocus,
   initial = '',
   testId,
+  'data-event': tracked,
 }: {
   readonly label: string;
   readonly placeholder: string;
@@ -203,6 +205,8 @@ function Composer({
   readonly autoFocus?: boolean;
   readonly initial?: string;
   readonly testId: string;
+  /** Its Send button's tracked id (PEN-137). */
+  readonly 'data-event'?: string;
 }) {
   const [body, setBody] = useState(initial);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -243,7 +247,13 @@ function Composer({
       />
       <span className="comment-composer-actions">
         {onCancel ? (
-          <button type="button" className="btn quiet" data-ui="dismiss" onClick={onCancel}>
+          <button
+            type="button"
+            className="btn quiet"
+            data-ui="dismiss"
+            data-event="comments.composer.cancel"
+            onClick={onCancel}
+          >
             Cancel
           </button>
         ) : null}
@@ -252,6 +262,7 @@ function Composer({
           type="button"
           className="btn primary"
           data-ui="submit"
+          data-event={tracked ?? 'comments.composer.send'}
           disabled={body.trim() === ''}
           onClick={send}
           data-testid={`${testId}-send`}
@@ -287,6 +298,7 @@ function Quote({ placed, onShow }: { readonly placed: PlacedThread; readonly onS
       type="button"
       className="comment-quote"
       data-ui="item"
+      data-event="comments.quote"
       onClick={onShow}
       title="Show in the Note"
       data-testid="comment-quote"
@@ -373,6 +385,7 @@ export function CommentThread({
                     type="button"
                     className="icon-btn"
                     data-ui="item"
+                    data-event="comments.edit"
                     aria-label="Edit Comment"
                     data-tip="Edit"
                     onClick={() => setEditing(comment.id)}
@@ -391,6 +404,7 @@ export function CommentThread({
                     }
                     data-tip={comment.author.kind === 'agent' ? 'Remove' : 'Delete'}
                     data-ui="item"
+                    data-event="comments.remove"
                     data-testid="comment-remove"
                     onClick={() => remove(replica, thread.id, comment.id)}
                   >
@@ -406,6 +420,7 @@ export function CommentThread({
                 initial={comment.body}
                 autoFocus
                 testId="comment-edit"
+                data-event="comments.edit.save"
                 onSend={(body) => {
                   edit(replica, thread.id, comment.id, body);
                   setEditing(null);
@@ -445,6 +460,7 @@ export function CommentThread({
                 type="button"
                 className="btn quiet comment-send-again"
                 data-ui="item"
+                data-event="comments.send-again"
                 data-testid="comment-send-again"
                 onClick={() => setAgain(true)}
               >
@@ -460,6 +476,7 @@ export function CommentThread({
             label="Reply"
             placeholder="Reply"
             testId="comment-reply"
+            data-event="comments.reply.send"
             onSend={(body) => {
               if (reply(replica, thread.id, body, author())) sent(thread.id);
             }}
@@ -479,6 +496,7 @@ export function CommentThread({
           type="button"
           className="btn quiet"
           data-ui="item"
+          data-event={resolved ? 'comments.reopen' : 'comments.resolve'}
           data-testid={resolved ? 'comment-reopen' : 'comment-resolve'}
           onClick={() => {
             resolve(replica, thread.id, resolved, author());
@@ -493,6 +511,7 @@ export function CommentThread({
             type="button"
             className="btn quiet"
             data-ui="item"
+            data-event="comments.reply"
             onClick={() => onActivate(true)}
           >
             Reply
@@ -502,6 +521,7 @@ export function CommentThread({
           type="button"
           className="btn quiet danger"
           data-ui="item"
+          data-event="comments.thread.delete"
           aria-expanded={deleting}
           data-testid="comment-delete-thread"
           onClick={() => setDeleting((open) => !open)}
@@ -511,17 +531,19 @@ export function CommentThread({
         </button>
       </span>
       {deleting ? (
-        <div className="comment-confirm" role="alertdialog" aria-label="Delete this thread?">
+        <ConfirmBlock className="comment-confirm" title="Delete This Thread?">
           <p>
-            Delete this thread and its{' '}
-            {thread.comments.length === 1 ? 'comment' : `${thread.comments.length} comments`} on
-            every device? To keep them, resolve it instead.
+            {thread.comments.length === 1
+              ? 'Its comment is deleted'
+              : `Its ${thread.comments.length} comments are deleted`}{' '}
+            on every device. To keep them, resolve it instead.
           </p>
           <span className="comment-composer-actions">
             <button
               type="button"
               className="btn quiet"
               data-ui="dismiss"
+              data-event="comments.thread.delete.cancel"
               data-testid="comment-delete-cancel"
               onClick={() => setDeleting(false)}
             >
@@ -531,6 +553,7 @@ export function CommentThread({
               type="button"
               className="btn danger"
               data-ui="submit"
+              data-event="comments.thread.delete.confirm"
               data-testid="comment-delete-confirm"
               onClick={() => {
                 setDeleting(false);
@@ -541,7 +564,7 @@ export function CommentThread({
               Delete
             </button>
           </span>
-        </div>
+        </ConfirmBlock>
       ) : null}
     </Root>
   );
@@ -580,6 +603,7 @@ export function CommentDraft({
         placeholder="Add a comment"
         autoFocus
         testId="comment-new"
+        data-event="comments.new.send"
         onSend={(body) => {
           const id = draft
             ? startThread(replica, draft, body, deviceAuthor(), target)
@@ -635,6 +659,7 @@ export function CommentsPanel({
             type="button"
             className="btn quiet"
             data-ui="option"
+            data-event="comments.filter.open"
             aria-pressed={effective === 'open'}
             data-testid="comments-filter-open"
             onClick={() => {
@@ -648,6 +673,7 @@ export function CommentsPanel({
             type="button"
             className="btn quiet"
             data-ui="option"
+            data-event="comments.filter.resolved"
             aria-pressed={effective === 'resolved'}
             data-testid="comments-filter-resolved"
             onClick={() => {

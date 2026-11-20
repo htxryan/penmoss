@@ -11,6 +11,7 @@ export function DialogClose({ label, onClose }: { label: string; onClose: () => 
       type="button"
       className="icon-btn dlg-close"
       data-ui="dismiss"
+      data-event="dialog.close"
       aria-label={label}
       data-tip={`${label} (Esc)`}
       onClick={onClose}

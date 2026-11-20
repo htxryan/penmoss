@@ -243,6 +243,7 @@ function NotebookTags({
                 type="button"
                 className="btn"
                 data-ui="item"
+                data-event="tags.selected.rename"
                 onClick={() => setRenaming(picked[0]!)}
               >
                 <Icon name="pencil" size={14} />
@@ -253,6 +254,7 @@ function NotebookTags({
               type="button"
               className="btn"
               data-ui="item"
+              data-event="tags.selected.merge"
               onClick={() => setMerging({ sources: picked, target: null })}
             >
               <Icon name="branch" size={14} />
@@ -262,6 +264,7 @@ function NotebookTags({
               type="button"
               className="btn danger"
               data-ui="item"
+              data-event="tags.selected.delete"
               onClick={() => setDeleting(picked)}
             >
               <Icon name="trash" size={14} />
@@ -271,6 +274,7 @@ function NotebookTags({
               type="button"
               className="icon-btn"
               data-ui="item"
+              data-event="tags.selected.clear"
               aria-label="Clear Selection"
               data-tip="Clear Selection"
               onClick={() => setSelected(new Set())}
@@ -294,6 +298,7 @@ function NotebookTags({
             <span role="columnheader">
               <Checkbox
                 label="Select All"
+                data-event="tags.select-all"
                 checked={allShown}
                 mixed={!allShown && someShown}
                 onChange={(on) =>
@@ -308,8 +313,20 @@ function NotebookTags({
                 }
               />
             </span>
-            <SortHeader label="Tag" by="tag" sort={sort} onSort={setSort} />
-            <SortHeader label="Notes" by="notes" sort={sort} onSort={setSort} />
+            <SortHeader
+              label="Tag"
+              by="tag"
+              data-event="tags.sort.tag"
+              sort={sort}
+              onSort={setSort}
+            />
+            <SortHeader
+              label="Notes"
+              by="notes"
+              data-event="tags.sort.notes"
+              sort={sort}
+              onSort={setSort}
+            />
             <span role="columnheader">Description</span>
             <span role="columnheader">
               <span className="sr-only">Actions</span>
@@ -392,11 +409,14 @@ function Checkbox({
   checked,
   mixed = false,
   onChange,
+  'data-event': tracked,
 }: {
   readonly label: string;
   readonly checked: boolean;
   readonly mixed?: boolean;
   readonly onChange: (on: boolean) => void;
+  /** Its tracked id (PEN-137). */
+  readonly 'data-event'?: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   useLayoutEffect(() => {
@@ -407,6 +427,7 @@ function Checkbox({
       ref={ref}
       type="checkbox"
       className="tags-check"
+      data-event={tracked ?? 'tags.select'}
       aria-label={label}
       checked={checked}
       onChange={(event) => onChange(event.target.checked)}
@@ -420,11 +441,14 @@ function SortHeader({
   by,
   sort,
   onSort,
+  'data-event': tracked,
 }: {
   readonly label: string;
   readonly by: Sort['by'];
   readonly sort: Sort;
   readonly onSort: (sort: Sort) => void;
+  /** Its tracked id (PEN-137). */
+  readonly 'data-event'?: string;
 }) {
   const on = sort.by === by;
   return (
@@ -437,6 +461,7 @@ function SortHeader({
         type="button"
         className="tags-sort"
         data-ui="item"
+        data-event={tracked ?? 'tags.sort'}
         onClick={() => onSort({ by, up: on ? !sort.up : true })}
       >
         {label}
@@ -508,7 +533,12 @@ function TagRowView({
       }}
     >
       <span role="cell">
-        <Checkbox label={`Select #${row.tag}`} checked={selected} onChange={onSelect} />
+        <Checkbox
+          label={`Select #${row.tag}`}
+          data-event="tags.row.select"
+          checked={selected}
+          onChange={onSelect}
+        />
       </span>
       <span role="cell" className="tags-name-cell">
         {name}
@@ -526,18 +556,19 @@ function TagRowView({
           icon="more"
           iconSize={14}
           testId={`tag-more-${row.tag}`}
+          data-event="tags.row.more"
         >
-          <MenuItem icon="search" onClick={onShow}>
+          <MenuItem icon="search" data-event="tags.row.show-notes" onClick={onShow}>
             Show Notes
           </MenuItem>
-          <MenuItem icon="pencil" onClick={onStartRename}>
+          <MenuItem icon="pencil" data-event="tags.row.rename" onClick={onStartRename}>
             Rename…
           </MenuItem>
-          <MenuItem icon="branch" onClick={() => onMergeInto(null)}>
+          <MenuItem icon="branch" data-event="tags.row.merge" onClick={() => onMergeInto(null)}>
             Merge Into…
           </MenuItem>
           <div className="menu-sep" role="separator" />
-          <MenuItem icon="trash" danger onClick={onDelete}>
+          <MenuItem icon="trash" danger data-event="tags.row.delete" onClick={onDelete}>
             Delete…
           </MenuItem>
         </Menu>
@@ -563,6 +594,7 @@ function TagRowView({
       type="button"
       className="tags-name"
       data-ui="item"
+      data-event="tags.row.show"
       aria-label={`#${row.tag}`}
       data-tip={`Show Notes Tagged #${row.tag}`}
       onClick={onShow}
@@ -656,6 +688,7 @@ function RenameRow({
               type="button"
               className="btn"
               data-ui="dismiss"
+              data-event="tags.rename.pick-another"
               onClick={() => {
                 input.current?.focus();
                 input.current?.select();
@@ -667,6 +700,7 @@ function RenameRow({
               type="button"
               className="btn primary"
               data-ui="submit"
+              data-event="tags.rename.merge"
               onClick={() => {
                 closed.current = true;
                 onMergeInto(existing.tag);
@@ -687,6 +721,7 @@ function RenameRow({
             <label className="tags-strip-check">
               <input
                 type="checkbox"
+                data-event="tags.rename.nested"
                 checked={nestedOn}
                 onChange={(event) => setNestedOn(event.target.checked)}
               />
@@ -715,13 +750,20 @@ function RenameRow({
                 ? `Renames ${moved.length + 1} tags in ${notesText(notes)}.`
                 : `Renames it in ${notesText(notes)}.`}
             </span>
-            <button type="button" className="btn" data-ui="dismiss" onClick={cancel}>
+            <button
+              type="button"
+              className="btn"
+              data-ui="dismiss"
+              data-event="tags.rename.cancel"
+              onClick={cancel}
+            >
               Cancel
             </button>
             <button
               type="button"
               className="btn primary"
               data-ui="submit"
+              data-event="tags.rename.submit"
               disabled={busy || unchanged}
               onClick={commit}
             >
@@ -923,6 +965,7 @@ function DescriptionField({
           type="button"
           className="tags-desc-view"
           data-ui="item"
+          data-event="tags.description.edit"
           data-empty={value ? undefined : ''}
           aria-label={value ? `Description of #${tag}: ${value}` : `Add a Description of #${tag}`}
           onClick={() => setDraft(value)}
@@ -946,7 +989,13 @@ function DescriptionField({
         ) : state === 'failed' ? (
           <>
             <span className="tags-save-failed">Not saved</span>
-            <button type="button" className="btn quiet" data-ui="submit" onClick={store}>
+            <button
+              type="button"
+              className="btn quiet"
+              data-ui="submit"
+              data-event="tags.description.retry"
+              onClick={store}
+            >
               Try Again
             </button>
           </>

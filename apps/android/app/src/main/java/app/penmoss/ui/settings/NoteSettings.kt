@@ -36,7 +36,7 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 
 /** What the Settings list says of Note: its width. */
-fun noteSummary(fullWidth: Boolean): String = if (fullWidth) "Full width" else "The theme’s width"
+fun noteSummary(fullWidth: Boolean): String = if (fullWidth) "Full Width" else "The Theme’s Width"
 
 @Composable
 internal fun NoteSettingsRoute(graph: DeviceGraph, onBack: () -> Unit) {
@@ -96,6 +96,7 @@ fun NoteSettingsScreen(
                 if (fullWidth) "full" else "theme",
                 enabled,
                 "width",
+                event = "settings.note.width",
             ) { onFullWidth(it == "full") }
             Help("The theme’s is $editorWidth rem. Kept on this phone. A phone already uses its whole width; this shows on a tablet or an unfolded phone. A hardware keyboard’s Toggle Full-Width Notes changes it too.")
         }

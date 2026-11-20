@@ -17,7 +17,13 @@ export function WeekChangesLink({ replica }: { replica: Yjs14Replica | null }) {
   const href = timeMachinePath(source.id, { tab: 'changes', week: period.period });
   return (
     <p className="week-changes">
-      <a href={href} data-ui="item" data-testid="week-changes" onClick={linkHandler(href)}>
+      <a
+        href={href}
+        data-ui="item"
+        data-event="time-machine.week-link"
+        data-testid="week-changes"
+        onClick={linkHandler(href)}
+      >
         <Icon name="history" size={14} />
         What changed this week
       </a>

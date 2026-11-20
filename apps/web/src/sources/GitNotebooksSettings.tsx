@@ -64,6 +64,7 @@ import { useCopyTagsDefault } from '../workspace/copy-tags-state';
 import { NameClash } from './NameClash';
 import { useNotebookRename } from './notebook-names';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
+import { NotebookAiRow } from './NotebookAiRow';
 import {
   PHASE_WORDS,
   agoWords,
@@ -84,6 +85,8 @@ import {
 import './sources.css';
 import './notebook-settings.css';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { ConfirmBlock } from '../shell/ConfirmBlock';
+import { withoutRecording } from '../analytics/track';
 
 const when = (at: number | null) =>
   at === null
@@ -159,6 +162,7 @@ function ReconfirmPurges({
   if (notes === null) {
     return (
       <button
+        data-event="settings.git-notebooks.reconfirm.open"
         data-ui="item"
         type="button"
         className="btn"
@@ -188,7 +192,7 @@ function ReconfirmPurges({
     void work().finally(() => setBusy(false));
   };
   return (
-    <div className="git-reconfirm" data-testid="git-reconfirm-panel">
+    <ConfirmBlock className="git-reconfirm" title="Delete for Good?" testId="git-reconfirm-panel">
       {again.length > 0 ? (
         <>
           <p>
@@ -217,6 +221,7 @@ function ReconfirmPurges({
               <li key={note.id} data-testid="git-never-note">
                 <span>{title(note)}</span>{' '}
                 <button
+                  data-event="settings.git-notebooks.reconfirm.keep-note"
                   data-ui="item"
                   type="button"
                   className="btn"
@@ -237,6 +242,7 @@ function ReconfirmPurges({
                   Keep Note
                 </button>{' '}
                 <button
+                  data-event="settings.git-notebooks.reconfirm.purge-note"
                   data-ui="item"
                   type="button"
                   className="btn"
@@ -269,6 +275,7 @@ function ReconfirmPurges({
             <li key={note.id}>
               Kept {title(note)}.{' '}
               <button
+                data-event="settings.git-notebooks.reconfirm.undo-keep"
                 data-ui="item"
                 type="button"
                 className="btn"
@@ -290,6 +297,7 @@ function ReconfirmPurges({
       <div className="settings-actions">
         {again.length > 0 ? (
           <button
+            data-event="settings.git-notebooks.reconfirm.confirm"
             data-ui="item"
             type="button"
             className="btn"
@@ -307,10 +315,11 @@ function ReconfirmPurges({
             }}
           >
             <Icon name="key" size={14} />
-            Confirm {again.length === 1 ? '1 note' : `${again.length} notes`} with Touch ID
+            Confirm {again.length === 1 ? '1 Note' : `${again.length} Notes`} with Touch ID
           </button>
         ) : null}
         <button
+          data-event="settings.git-notebooks.reconfirm.cancel"
           data-ui="item"
           type="button"
           className="btn"
@@ -324,7 +333,7 @@ function ReconfirmPurges({
           {kept.length > 0 ? 'Done' : 'Cancel'}
         </button>
       </div>
-    </div>
+    </ConfirmBlock>
   );
 }
 
@@ -398,6 +407,7 @@ function AllNotebooks({
         intro="The notebooks on this Mac, and what goes between them."
         actions={
           <button
+            data-event="settings.git-notebooks.add"
             data-ui="item"
             type="button"
             className="btn primary"
@@ -454,6 +464,7 @@ function GitNotebookRow({ source }: { source: GitSource }) {
   return (
     <li>
       <a
+        data-event="settings.git-notebooks.row.open"
         href={path}
         data-ui="item"
         className="git-notebook-row"
@@ -479,7 +490,7 @@ function GitNotebookRow({ source }: { source: GitSource }) {
             data-testid="git-row-state"
           >
             {stopped
-              ? `${status.detail}${status.lastSyncAt ? ` · last synced ${when(status.lastSyncAt)}` : ''}`
+              ? `${status.detail}${status.lastSyncAt ? ` · Last Synced ${when(status.lastSyncAt)}` : ''}`
               : `${info.repository} · ${syncLine(status, now)}`}
           </span>
         </span>
@@ -584,6 +595,7 @@ function BetweenNotebooks() {
             help="From one notebook to another, once"
           >
             <button
+              data-event="settings.git-notebooks.copy-settings.open"
               data-ui="item"
               type="button"
               className="btn"
@@ -641,7 +653,7 @@ function CopySettingsPanel({
   const targets = target ? [target] : others;
   const copy = () => {
     const changed = targets.reduce(
-      (sum, each) => sum + copySettings(source.workspace, each.workspace),
+      (sum, each) => sum + withoutRecording(() => copySettings(source.workspace, each.workspace)),
       0,
     );
     const where = target ? target.name : 'the other notebooks';
@@ -698,6 +710,7 @@ function CopySettingsPanel({
       </p>
       <div className="settings-actions">
         <button
+          data-event="settings.git-notebooks.copy-settings.copy"
           data-ui="item"
           type="button"
           className="btn primary"
@@ -708,7 +721,13 @@ function CopySettingsPanel({
           <Icon name="copy" size={14} />
           Copy Settings
         </button>
-        <button data-ui="item" type="button" className="btn" onClick={onClose}>
+        <button
+          data-event="settings.git-notebooks.copy-settings.cancel"
+          data-ui="item"
+          type="button"
+          className="btn"
+          onClick={onClose}
+        >
           {done ? 'Done' : 'Cancel'}
         </button>
       </div>
@@ -852,11 +871,12 @@ function GitNotebookCard({
           >
             <span className="nset-dot" data-state={dotState(status)} aria-hidden="true" />
             {syncLine(status, now)}
-            {waiting > 0 ? ` · ${waiting} waiting` : ''}
+            {waiting > 0 ? ` · ${waiting} Waiting` : ''}
           </span>
         }
         actions={
           <button
+            data-event="settings.git-notebooks.sync-now"
             data-ui="item"
             type="button"
             className="btn"
@@ -894,11 +914,12 @@ function GitNotebookCard({
       <div
         className="nset-tabs"
         role="tablist"
-        aria-label={`${info.name} settings`}
+        aria-label={`${info.name} Settings`}
         onKeyDown={onTabKey}
       >
         {TABS.map((each) => (
           <button
+            data-event="settings.git-notebooks.tab"
             key={each.id}
             type="button"
             role="tab"
@@ -1035,6 +1056,7 @@ function OverviewTab({
           testId="git-note-count"
           help={notes === 1 ? '1 note' : `${notes.toLocaleString()} notes`}
         />
+        <NotebookAiRow source={source} />
         {state.all.length > 1 ? (
           <SettingRow
             setting="notebook-copy-settings"
@@ -1042,6 +1064,7 @@ function OverviewTab({
             help="Copy from or to other notebooks"
           >
             <button
+              data-event="settings.git-notebooks.copy-settings.open"
               data-ui="item"
               type="button"
               className="btn"
@@ -1064,6 +1087,7 @@ function OverviewTab({
       </div>
       <div className="nset-foot" data-setting="remove-from-this-mac">
         <button
+          data-event="settings.git-notebooks.remove"
           data-ui="item"
           type="button"
           className="btn danger"
@@ -1075,7 +1099,11 @@ function OverviewTab({
           Remove from This Mac…
         </button>
         {removing ? (
-          <div className="git-remove-confirm" role="alert" data-testid="git-remove-confirm">
+          <ConfirmBlock
+            className="git-remove-confirm"
+            title="Remove This Notebook?"
+            testId="git-remove-confirm"
+          >
             <p>
               {removing.known
                 ? `${unpushedWords(removing.notes, removing.folders)} not pushed yet: removing now loses ${removing.notes + (removing.folders ? 1 : 0) === 1 ? 'it' : 'them'}.`
@@ -1083,6 +1111,7 @@ function OverviewTab({
             </p>
             <div className="settings-actions">
               <button
+                data-event="settings.git-notebooks.remove.push-first"
                 data-ui="item"
                 type="button"
                 className="btn primary"
@@ -1097,6 +1126,7 @@ function OverviewTab({
                 Push First
               </button>
               <button
+                data-event="settings.git-notebooks.remove.anyway"
                 data-ui="item"
                 type="button"
                 className="btn danger"
@@ -1111,6 +1141,7 @@ function OverviewTab({
                 Remove Anyway
               </button>
               <button
+                data-event="settings.git-notebooks.remove.keep"
                 data-ui="item"
                 type="button"
                 className="btn"
@@ -1119,7 +1150,7 @@ function OverviewTab({
                 Keep It
               </button>
             </div>
-          </div>
+          </ConfirmBlock>
         ) : (
           <p className="muted nset-foot-note">
             Removes this Mac’s copy, after Touch ID. The repository keeps everything pushed.
@@ -1175,6 +1206,7 @@ function NotebookName({ source }: { source: GitSource }) {
             onChange={(event) => setDraft(event.target.value)}
           />
           <button
+            data-event="settings.git-notebooks.rename"
             type="submit"
             className="btn"
             data-ui="submit"
@@ -1296,21 +1328,21 @@ function SyncTab({
           help={[
             status.closing ? 'Pushing…' : PHASE_WORDS[status.phase],
             waiting === 0
-              ? 'nothing waits to be pushed'
-              : `${waiting === 1 ? '1 note waits' : `${waiting} notes wait`} to be pushed`,
+              ? 'Nothing Waits to Be Pushed'
+              : `${waiting === 1 ? '1 Note Waits' : `${waiting} Notes Wait`} to Be Pushed`,
             status.lastSyncAt === null
-              ? 'never synced'
-              : `last synced ${agoWords(status.lastSyncAt, now)}`,
-            ...(status.nextRetryAt ? [`tries again ${when(status.nextRetryAt)}`] : []),
+              ? 'Never Synced'
+              : `Last Synced ${agoWords(status.lastSyncAt, now)}`,
+            ...(status.nextRetryAt ? [`Tries Again ${when(status.nextRetryAt)}`] : []),
           ].join(' · ')}
         />
       </div>
       <details className="nset-details" data-testid="git-details">
-        <summary>
+        <summary data-event="settings.git-notebooks.details">
           Details
           {notices > 0 ? (
             <span className="chip" data-testid="git-details-count">
-              {notices === 1 ? '1 notice' : `${notices} notices`}
+              {notices === 1 ? '1 Notice' : `${notices} Notices`}
             </span>
           ) : null}
         </summary>
@@ -1463,6 +1495,7 @@ function GitTab({
           />
           <div className="settings-actions">
             <button
+              data-event="settings.git-notebooks.token.save"
               type="submit"
               className="btn"
               data-ui="submit"
@@ -1472,6 +1505,7 @@ function GitTab({
             </button>
             {info.hasToken ? (
               <button
+                data-event="settings.git-notebooks.token.forget"
                 data-ui="item"
                 type="button"
                 className="btn"
@@ -1564,7 +1598,13 @@ function CommitIdentity({
         />
       </label>
       <div className="settings-actions">
-        <button type="submit" className="btn" data-ui="submit" disabled={busy}>
+        <button
+          data-event="settings.git-notebooks.author.save"
+          type="submit"
+          className="btn"
+          data-ui="submit"
+          disabled={busy}
+        >
           Save
         </button>
       </div>

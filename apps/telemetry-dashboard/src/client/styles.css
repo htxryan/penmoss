@@ -1,0 +1,684 @@
+/*
+ * The dashboard's page (PEN-137). Its own palette and type, not the app's themes: the series
+ * colours are the data-viz reference palette (blue, orange, aqua first: person, agent, script),
+ * validated in light and dark against these surfaces; the funnel is one blue ramp.
+ */
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #6b6a65;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: #e1e0d9;
+  --hover: #f0efec;
+  --focus: #2a78d6;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+  --s5: #e87ba4;
+  --s6: #008300;
+  --s7: #6250d6;
+  --s8: #e34948;
+  --other: #a3a29b;
+  --ramp-1: #104281;
+  --ramp-2: #1c5cab;
+  --ramp-3: #2a78d6;
+  --ramp-4: #5598e7;
+  --ramp-5: #86b6ef;
+  --link: #8d8c86;
+  --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-hero: 3rem;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 650;
+  --leading: 1.4;
+  --leading-tight: 1.15;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #9d9c95;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: #2c2c2a;
+    --hover: #262624;
+    --focus: #3987e5;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --s5: #d55181;
+    --s6: #0ca30c;
+    --s7: #9085e9;
+    --s8: #e66767;
+    --other: #6b6a65;
+    --ramp-1: #cde2fb;
+    --ramp-2: #9ec5f4;
+    --ramp-3: #6da7ec;
+    --ramp-4: #3987e5;
+    --ramp-5: #256abf;
+    --link: #6b6a65;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #9d9c95;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: #2c2c2a;
+  --hover: #262624;
+  --focus: #3987e5;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --s5: #d55181;
+  --s6: #0ca30c;
+  --s7: #9085e9;
+  --s8: #e66767;
+  --other: #6b6a65;
+  --ramp-1: #cde2fb;
+  --ramp-2: #9ec5f4;
+  --ramp-3: #6da7ec;
+  --ramp-4: #3987e5;
+  --ramp-5: #256abf;
+  --link: #6b6a65;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  line-height: var(--leading);
+}
+
+/* The bar at the top: the name, then the filters, which fill it. */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.brand {
+  padding: 8px 16px;
+  align-self: center;
+}
+
+.brand p {
+  margin: 0;
+}
+
+.brand-name {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+}
+
+.access {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+}
+
+.filters {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.filter {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border-left: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.filter:hover {
+  background: var(--hover);
+}
+
+.filter select {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: 0;
+}
+
+/* The views: tabs that fill the strip. */
+.views {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  scrollbar-width: none;
+}
+
+.views a {
+  flex: 1 0 auto;
+  padding: 10px 16px;
+  border-right: 1px solid var(--border);
+  border-bottom: 2px solid transparent;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.views a:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.views a[aria-current='page'] {
+  border-bottom-color: var(--s1);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  gap: 16px;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 16px;
+  transition: opacity 120ms;
+}
+
+main[aria-busy='true'] {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main {
+    transition: none;
+  }
+}
+
+.view-title,
+.range,
+.freshness,
+.tiles,
+.picker,
+.card.wide {
+  grid-column: 1 / -1;
+}
+
+.view-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.range {
+  margin: -12px 0 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.freshness {
+  margin: -14px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+#status:empty {
+  display: none;
+}
+
+#status {
+  margin: 0 16px 16px;
+  color: var(--ink-2);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.tile {
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.tile dt {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.tile dd {
+  margin: 4px 0 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.card > header {
+  padding: 12px 16px 4px;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.note {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0 0;
+  padding: 0 16px;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.key {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.key.line {
+  height: 2px;
+  width: 14px;
+  border-radius: 1px;
+}
+
+.chart-body {
+  position: relative;
+  min-height: 48px;
+  padding: 8px 16px;
+}
+
+.chart {
+  display: block;
+  overflow: visible;
+}
+
+.chart text {
+  fill: var(--muted);
+  font-family: var(--font);
+  font-size: var(--text-xs);
+}
+
+.chart .label {
+  fill: var(--ink-2);
+}
+
+.chart .node-label {
+  fill: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.chart .node-value {
+  fill: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .col-head {
+  fill: var(--ink-2);
+  font-weight: var(--weight-medium);
+}
+
+.chart .value {
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .tick {
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+
+.baseline {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+
+.line {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.area {
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+
+.cross-line {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+
+.hit-area {
+  fill: transparent;
+}
+
+.hit {
+  cursor: default;
+  outline: none;
+}
+
+.hit-area.hit:hover,
+.hit-area.hit:focus-visible {
+  fill: var(--hover);
+  fill-opacity: 0.5;
+}
+
+.link {
+  fill: none;
+  stroke: var(--link);
+  stroke-opacity: 0.6;
+}
+
+.node-box {
+  fill: var(--surface);
+  stroke: var(--s1);
+  stroke-width: 1.5;
+}
+
+.node-box.end {
+  stroke: var(--other);
+}
+
+.node:hover .node-box,
+.node:focus-visible .node-box {
+  fill: var(--hover);
+}
+
+.empty {
+  margin: 8px 0;
+  color: var(--ink-2);
+}
+
+.table-holder {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0 16px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+th,
+td {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--grid);
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-weight: var(--weight-medium);
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Table and Download CSV: a bar at the card's foot, its buttons filling it. */
+.tools {
+  display: flex;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+}
+
+.tools button {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.tools button:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.tools button[aria-pressed='true'] {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--s1);
+}
+
+.tools button:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.picker .occurrences {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.picker label {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.picker input {
+  flex: 1 1 260px;
+  max-width: 420px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.tip {
+  position: fixed;
+  z-index: 10;
+  max-width: 300px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--ink) 15%, transparent);
+  pointer-events: none;
+  font-size: var(--text-sm);
+}
+
+.tip-title {
+  margin-bottom: 4px;
+  color: var(--ink-2);
+}
+
+.tip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tip-row strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-row span:last-child {
+  color: var(--ink-2);
+}
+
+.tip-key {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+@media (max-width: 600px) {
+  .brand {
+    width: 100%;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filter {
+    flex-basis: 50%;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filter:nth-child(odd) {
+    border-left: 0;
+  }
+}
+
+/* A card title's count ("Never Used 412"). */
+.card h2 .count {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--hover);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  vertical-align: middle;
+}
+
+/* Never Used: a compact list of chips. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* An event's id under its display name (review round 2): muted, in a tooltip and a table cell. */
+.tip-id,
+.cell-id {
+  color: var(--ink-2);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--text-xs, 11px);
+}
+
+.tip-id {
+  margin: -2px 0 4px;
+}
+
+.cell-id {
+  display: block;
+}

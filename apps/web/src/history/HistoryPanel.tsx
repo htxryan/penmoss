@@ -369,6 +369,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
             type="button"
             className="btn"
             data-ui="submit"
+            data-event="history.retry"
             onClick={() => {
               // Shows "Loading versions…" while it tries (T39 review).
               setError(null);
@@ -441,6 +442,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                             type="button"
                             className="history-entry"
                             data-ui="item"
+                            data-event="history.version"
                             data-version={v.id}
                             data-dim={described?.summary === 'No text changes' ? '' : undefined}
                             aria-pressed={picked}
@@ -583,6 +585,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                       type="button"
                       className="btn"
                       data-ui="submit"
+                      data-event="history.view"
                       aria-label="View This Version"
                       data-tip="View This Version"
                       data-testid="history-view-open"
@@ -596,6 +599,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                     type="button"
                     className="btn primary"
                     data-ui="submit"
+                    data-event="history.restore"
                     aria-label="Restore This Version"
                     data-tip="Restore This Version"
                     disabled={busy}
@@ -609,6 +613,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                       type="button"
                       className="btn"
                       data-ui="submit"
+                      data-event="history.revert"
                       aria-label="Revert This Edit"
                       data-tip="Revert This Edit"
                       disabled={busy}
@@ -622,6 +627,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                     type="button"
                     className="btn"
                     data-ui="submit"
+                    data-event="history.copy"
                     aria-label="Copy Text"
                     data-tip="Copy Text"
                     disabled={!shown}

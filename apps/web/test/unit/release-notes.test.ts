@@ -48,7 +48,7 @@ describe('notesView', () => {
     const view = notesView(FILE, '0.2.1', null);
     if (view.status !== 'ok') throw new Error(view.status);
     expect(view.offered).toBeNull();
-    expect(view.current?.title).toBe('In this version');
+    expect(view.current?.title).toBe('In This Version');
     expect(view.current?.builds).toBe(false);
     expect(read(view.current)).toEqual([
       ['New', ['Release notes in the app.']],
@@ -63,7 +63,7 @@ describe('notesView', () => {
   it('shows what a stable update brings: after this build, up to the offered one', () => {
     const view = notesView(FILE, '0.2.0', '0.2.1');
     if (view.status !== 'ok') throw new Error(view.status);
-    expect(view.offered?.title).toBe("What's new in 0.2.1");
+    expect(view.offered?.title).toBe("What's New in 0.2.1");
     expect(read(view.offered)?.flatMap(([, texts]) => texts)).toEqual([
       'Release notes in the app.',
       'Search ranks titles first.',
@@ -76,11 +76,11 @@ describe('notesView', () => {
   it('shows an Alpha build its notes since the build it updated from, with builds', () => {
     const view = notesView(FILE, '0.2.2-alpha.1185', null, 'mac', '0.2.2-alpha.1183');
     if (view.status !== 'ok') throw new Error(view.status);
-    expect(view.current?.title).toBe('In this version (since build 1183)');
+    expect(view.current?.title).toBe('In This Version (Since Build 1183)');
     expect(view.current?.builds).toBe(true);
     expect(read(view.current)).toEqual([['Fixed', ['Daily notes open on the right day.']]]);
     expect(view.earlier.map((block) => block.title)).toEqual([
-      'Earlier builds (since 0.2.1)',
+      'Earlier Builds (Since 0.2.1)',
       '0.2.1',
       '0.2.0',
     ]);
@@ -90,7 +90,7 @@ describe('notesView', () => {
   it('starts an Alpha build updated from before the last stable release at that release', () => {
     const view = notesView(FILE, '0.2.2-alpha.1185', null, 'mac', '0.2.1-alpha.1175');
     if (view.status !== 'ok') throw new Error(view.status);
-    expect(view.current?.title).toBe('In this version (since 0.2.1)');
+    expect(view.current?.title).toBe('In This Version (Since 0.2.1)');
     expect(read(view.current)).toEqual([
       ['New', ['After 0.2.1.']],
       ['Fixed', ['Daily notes open on the right day.']],
@@ -102,9 +102,9 @@ describe('notesView', () => {
     for (const since of [null, '0.1.9', '0.2.2-alpha.1190']) {
       const view = notesView(FILE, '0.2.2-alpha.1185', null, 'mac', since);
       if (view.status !== 'ok') throw new Error(view.status);
-      expect(view.current?.title).toBe('In this version');
+      expect(view.current?.title).toBe('In This Version');
       expect(read(view.current)).toEqual([['Fixed', ['Daily notes open on the right day.']]]);
-      expect(view.earlier[0]?.title).toBe('Earlier builds (since 0.2.1)');
+      expect(view.earlier[0]?.title).toBe('Earlier Builds (Since 0.2.1)');
     }
   });
 
@@ -112,19 +112,19 @@ describe('notesView', () => {
     const alphaOnly = { ...FILE, releases: [] };
     const view = notesView(alphaOnly, '0.2.2-alpha.1185', null, 'mac', '0.2.2-alpha.1178');
     if (view.status !== 'ok') throw new Error(view.status);
-    expect(view.current?.title).toBe('In this version (since build 1178)');
+    expect(view.current?.title).toBe('In This Version (Since Build 1178)');
     expect(read(view.current)).toEqual([
       ['New', ['After 0.2.1.']],
       ['Fixed', ['Daily notes open on the right day.']],
     ]);
-    expect(view.earlier.map((block) => block.title)).toEqual(['Earlier builds']);
+    expect(view.earlier.map((block) => block.title)).toEqual(['Earlier Builds']);
     expect(view.earlier[0]?.groups.flatMap((g) => g.notes.map((n) => n.build))).not.toContain(1183);
   });
 
   it('shows what an Alpha update brings, build by build', () => {
     const view = notesView(FILE, '0.2.2-alpha.1183', '0.2.2-alpha.1185');
     if (view.status !== 'ok') throw new Error(view.status);
-    expect(view.offered?.title).toBe("What's new in build 1185");
+    expect(view.offered?.title).toBe("What's New in Build 1185");
     expect(view.offered?.builds).toBe(true);
     expect(read(view.offered)).toEqual([['Fixed', ['Daily notes open on the right day.']]]);
   });

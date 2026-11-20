@@ -62,6 +62,9 @@ internal object SettingsRoutes {
     const val ZONE = "settings/daily/zone"
     const val CAPTURE = "settings/capture"
 
+    /** Settings → AI Descriptions (PEN-161): Describe Notes, when, this phone's provider and key, the prompt. */
+    const val AI = "settings/ai-descriptions"
+
     /** A notebook's page (PEN-146), on a tab: overview, sync or git. */
     const val NOTEBOOK = "settings/git/{id}?tab={tab}"
     const val AGENT_ACTIVITY = AgentActivityRoutes.ACTIVITY
@@ -70,6 +73,10 @@ internal object SettingsRoutes {
 
     /** What changed in this version and earlier ones (PEN-109). */
     const val WHATS_NEW = "settings/whatsnew"
+
+    /** Settings → Privacy (PEN-137), and the record it shows as its own screen. */
+    const val PRIVACY = "settings/privacy"
+    const val PRIVACY_DATA = "settings/privacy/data"
 
     /** The theme editor for one custom theme (T40 P1b). */
     const val THEME = "settings/appearance/theme/{id}"
@@ -176,9 +183,13 @@ internal fun settingsGroups(
     notebooks: List<NotebookEntry> = emptyList(),
     /** What Storage takes now; null while it is counted. */
     storage: String? = null,
-    github: String = "Not signed in",
+    github: String = "Not Signed In",
     version: String = BuildConfig.VERSION_NAME,
     agentActivity: String = "What agents changed, with Undo",
+    /** Whether the usage record is shared, and its size (PEN-137); null leaves Privacy out. */
+    privacy: String? = null,
+    /** AI Descriptions (PEN-161): on or off, and with which provider. */
+    ai: String = "Off",
 ): List<SettingsGroup> = listOf(
     SettingsGroup(
         "Look and Feel",
@@ -196,6 +207,7 @@ internal fun settingsGroups(
             SettingsSection("capture", "Quick Capture", destinationLabel(settings.captureDestination), SettingsIcons.Inbox, SettingsRoutes.CAPTURE),
             // A hardware keyboard's shortcuts (T40 P9, ST8): how many the person changed.
             SettingsSection("shortcuts", "Keyboard Shortcuts", shortcutsSummary(settings), SettingsIcons.Keyboard, CommandRoutes.SHORTCUTS),
+            SettingsSection("ai-descriptions", "AI Descriptions", ai, SettingsIcons.Sparkle, SettingsRoutes.AI),
         ),
     ),
     SettingsGroup(
@@ -204,7 +216,7 @@ internal fun settingsGroups(
             SettingsSection(
                 "notebook-${notebook.localId}",
                 notebook.name,
-                if (notebook.primary) "Primary · ${notebook.status.replaceFirstChar { it.lowercase() }}" else notebook.status,
+                if (notebook.primary) "Primary · ${notebook.status}" else notebook.status,
                 route = SettingsRoutes.notebook(notebook.localId),
                 dot = notebook.dot,
                 badge = notebook.badge,
@@ -221,6 +233,9 @@ internal fun settingsGroups(
             SettingsSection("storage", "Storage", storage ?: "Counting…", SettingsIcons.Storage, SettingsRoutes.STORAGE),
             SettingsSection("github", "GitHub", github, SettingsIcons.Account, SettingsRoutes.GITHUB),
             SettingsSection("whatsnew", "What’s New", version, SettingsIcons.WhatsNew, SettingsRoutes.WHATS_NEW),
+        ) + listOfNotNull(
+            // Settings → Privacy (PEN-137): the last of This Phone, as on the Mac's This Mac.
+            privacy?.let { SettingsSection("privacy", "Privacy", it, SettingsIcons.Shield, SettingsRoutes.PRIVACY) },
         ),
     ),
 )
@@ -229,7 +244,7 @@ internal fun settingsGroups(
 internal fun shortcutsSummary(settings: Settings): String {
     // The ones this phone uses: not a Mac-only binding, nor one it cannot read (review N1).
     val changed = app.penmoss.engine.keys.Bindings.of(app.penmoss.engine.keys.ShortcutCatalogue.bundled, settings.values).usable.size
-    return if (changed == 0) "For a hardware keyboard" else "$changed changed"
+    return if (changed == 0) "For a hardware keyboard" else "$changed Changed"
 }
 
 @Composable
@@ -247,6 +262,7 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
     var storage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(views.size) { storage = formatBytes(storageUse(device).total) }
     val github = FeedbackRoutes.tokenSummary(device.githubToken.accounts().map { it.login })
+    val privacy = rememberPrivacySummary(device)
     SettingsHome(
         settingsGroups(
             state.settings,
@@ -255,6 +271,8 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
             notebooks = notebookEntries(views, statuses, hub?.journal(), badges),
             storage = storage,
             github = github,
+            privacy = privacy,
+            ai = app.penmoss.ui.settings.aiSummary(state.settings.values, device.aiDescriptions.ready),
         ),
         onOpen = { route -> host.nav.open(route) },
         onBack = onBack,
@@ -553,8 +571,12 @@ internal fun NavGraphBuilder.settingsRoutes(host: SettingsHost) {
     composable(SettingsRoutes.DAILY) { entry -> DailyNotesRoute(host, onTimeZone = { nav.open(SettingsRoutes.ZONE) }, onBack = back(entry)) }
     composable(SettingsRoutes.ZONE) { entry -> TimeZoneRoute(host, onBack = back(entry)) }
     composable(SettingsRoutes.CAPTURE) { entry -> QuickCaptureRoute(host, onNotebooks = { nav.open(CommandRoutes.GIT_NOTEBOOKS) }, onBack = back(entry)) }
+    composable(SettingsRoutes.AI) { entry -> AiDescriptionsRoute(host, onBack = back(entry)) }
     // What changed in this version and earlier ones (PEN-109).
     composable(SettingsRoutes.WHATS_NEW) { entry -> WhatsNewRoute(onBack = back(entry)) }
+    // Settings → Privacy and its Analytics Data (PEN-137).
+    composable(SettingsRoutes.PRIVACY) { entry -> PrivacyRoute(device, onViewData = { nav.open(SettingsRoutes.PRIVACY_DATA) }, onBack = back(entry)) }
+    composable(SettingsRoutes.PRIVACY_DATA) { entry -> AnalyticsDataRoute(device, onBack = back(entry)) }
     // This phone's storage (T40 P8; PEN-146), apart from any notebook's sync.
     composable(SettingsRoutes.STORAGE) { entry -> StorageRoute(device, onBack = back(entry)) }
     // Home's shortcuts and sections, synced with the Mac's sidebar (T42, A576; T40 ST12, A650).

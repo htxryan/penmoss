@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SETTINGS_SECTIONS, type SettingsSection } from '../../src/router';
 import { SettingsSearch, SettingsSearchResults } from '../../src/pages/SettingsSearch';
 import { revealSetting, useSettingsSearch } from '../../src/pages/settings-search';
+import { isTitleCase, titleCaseProblem } from '@penmoss/core/title-case';
 import {
   searchSettings,
+  SETTINGS_GROUPS,
   SETTINGS_INDEX,
   SETTINGS_PAGES,
   settingId,
@@ -20,13 +22,28 @@ const labels = (query: string, available?: readonly SettingsSection[]) =>
   searchSettings(query, available).map((match) => match.entry.label);
 
 describe('the settings index (PEN-146)', () => {
+  it('writes every label, page and group in Title Case, as its row does (PEN-137)', () => {
+    const names = [
+      ...SETTINGS_INDEX.flatMap((entry) => [entry.label, entry.group ?? 'Title']),
+      ...SETTINGS_PAGES.map((page) => page.label),
+      ...SETTINGS_GROUPS.flatMap((group) => [group.label, group.scope ?? 'Title']),
+    ];
+    expect(names.filter((name) => !isTitleCase(name)).map(titleCaseProblem)).toEqual([]);
+  });
+
   it('names each row by its label in kebab case', () => {
     expect(settingId('Note Font Size')).toBe('note-font-size');
     expect(settingId('Today’s Note')).toBe('todays-note');
     expect(settingId('Copy Settings…')).toBe('copy-settings');
     expect(settingId('What’s New')).toBe('whats-new');
     // Each entry's id is its label's, but for a row named apart from another of its label.
-    const apart = new Set(['tags-section', 'agent-activity-filters']);
+    const apart = new Set([
+      'tags-section',
+      'agent-activity-filters',
+      // Privacy → Advanced's two At Most fields (PEN-137).
+      'report-at-most-lines',
+      'report-at-most-kb',
+    ]);
     for (const entry of SETTINGS_INDEX) {
       if (!apart.has(entry.id)) expect(entry.id).toBe(settingId(entry.label));
     }

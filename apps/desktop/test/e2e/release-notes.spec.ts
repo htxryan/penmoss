@@ -76,7 +76,7 @@ for (const mode of ['light', 'dark'] as const) {
     await expect(current).toBeHidden();
     await page.getByTestId('whats-new-summary').click();
     await expect(current).toBeVisible();
-    await expect(current.getByRole('heading', { level: 3 })).toHaveText('In this version');
+    await expect(current.getByRole('heading', { level: 3 })).toHaveText('In This Version');
     await expect(current.getByRole('heading', { level: 4 })).toHaveText([
       'New',
       'Improved',
@@ -147,7 +147,7 @@ test('without a release-notes file, Settings → Updates links to GitHub', async
 });
 
 // PEN-110: after Penmoss updates (a stored older version), a notice says so once (in the sidebar's
-// bottom panel since PEN-135), and What's New opens Settings → Updates at "In this version". It
+// bottom panel since PEN-135), and What's New opens Settings → Updates at "In This Version". It
 // never comes back.
 test("after an update, a notice says so once and What's New opens this version's notes", async () => {
   const userData = dataDir();

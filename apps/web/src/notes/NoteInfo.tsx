@@ -33,6 +33,7 @@ import { kindLabel } from './kind';
 import { gitNotebookPath, linkHandler } from '../router';
 import { charactersLabel, readingLabel, wordsLabel } from '@penmoss/model/stats';
 import { tokensLabel } from './tokens';
+import { DescriptionSection } from './DescriptionSection';
 
 function SaveStatusLabel({ status }: { status: SaveStatus | null }) {
   const source = useSource();
@@ -46,6 +47,7 @@ function SaveStatusLabel({ status }: { status: SaveStatus | null }) {
         className="save-status"
         data-state={status.state}
         data-ui="item"
+        data-event="note.status.save-status"
         href={path}
         title={status.hint}
         aria-label={`${status.label}: ${status.hint}`}
@@ -76,6 +78,7 @@ export function SyncNowButton() {
       type="button"
       className="icon-btn status-sync-now"
       data-ui="item"
+      data-event="note.status.sync-now"
       data-testid="status-sync-now"
       aria-label="Sync Now"
       data-tip="Sync Now"
@@ -117,7 +120,8 @@ export function StatusBar({
   const counted = (field: MetadataField) =>
     field === 'words' || field === 'characters' || field === 'reading';
   const shown = statusBar.filter(
-    (field): field is TextField => field !== 'tags' && !(selection && counted(field)),
+    (field): field is TextField =>
+      field !== 'tags' && field !== 'description' && !(selection && counted(field)),
   );
   return (
     <footer className="status-bar" data-testid="status-bar" aria-label="Note status">
@@ -178,14 +182,19 @@ export function PinnedMetadata({
   const fields = useNoteDetails(noteId, replica)?.fields ?? {};
   if (underTitle.length === 0) return null;
   const frontmatterTags = Array.isArray(fields['tags']) ? (fields['tags'] as string[]) : [];
-  const details = underTitle.filter((field) => field !== 'tags' && texts[field]);
+  const details = underTitle.filter(
+    (field): field is TextField => field !== 'tags' && field !== 'description' && !!texts[field],
+  );
+  const description = typeof fields['description'] === 'string' ? fields['description'] : '';
+  const showDescription = underTitle.includes('description') && description !== '';
+  if (details.length === 0 && !underTitle.includes('tags') && !showDescription) return null;
   return (
     <div className="doc-meta" data-testid="pinned-metadata">
       {details.length > 0 ? (
         <span className="doc-meta-details">
           {details.map((field) => (
             <span key={field} className="doc-meta-field" data-field={field}>
-              {texts[field as Exclude<MetadataField, 'tags'>]}
+              {texts[field]}
             </span>
           ))}
         </span>
@@ -198,6 +207,11 @@ export function PinnedMetadata({
           onAdding={onAddingTag}
         />
       ) : null}
+      {showDescription ? (
+        <p className="doc-meta-description" data-field="description" title="Description">
+          {description}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -207,11 +221,6 @@ function createdLabel(iso: string | undefined): string {
   if (!iso) return 'Unknown';
   const time = Date.parse(iso);
   return Number.isFinite(time) ? shortWhen(time) : iso;
-}
-
-function frontmatterValue(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.join(', ')}]`;
-  return String(value);
 }
 
 /** The details, read from the note's document at most every 300 ms while it changes (not per keystroke). */
@@ -249,7 +258,7 @@ function useNoteDetails(noteId: string, replica: Yjs14Replica | null) {
   return details && details.replica === replica ? details : null;
 }
 
-type TextField = Exclude<MetadataField, 'tags'>;
+type TextField = Exclude<MetadataField, 'tags' | 'description'>;
 
 /** Each field's value as a short label, as the status bar and the row under the title show it. */
 function useFieldTexts(
@@ -320,6 +329,22 @@ export function InfoPanel({
           {details?.period ? <span className="muted">{details.period}</span> : null}
         </p>
       ) : null}
+      {/* Layout A (Ryan, 20 Nov 2026; PEN-161): Tags, then Description, then Details, then Backlinks. */}
+      <h3 className="info-subheading">Tags</h3>
+      <NoteTags
+        replica={replica}
+        inline={inline}
+        adding={addingTag}
+        onAdding={onAddingTag}
+        button="btn"
+      />
+      {inline.length > 0 ? (
+        <p className="info-inline-tags muted" data-testid="info-inline-tags">
+          In the text: {inline.map((tag) => `#${tag}`).join(' ')}
+        </p>
+      ) : null}
+      <DescriptionSection noteId={noteId} replica={replica} />
+      <h3 className="info-subheading">Details</h3>
       <dl className="info-list" data-testid="note-details">
         {/* Which notebook, so its repository; only once there are other notebooks. */}
         {gitNotebooks > 1 ? (
@@ -351,22 +376,11 @@ export function InfoPanel({
         <dd data-testid="info-tokens" title="Estimated with GPT-4o’s tokenizer">
           {tokens !== null ? tokens.toLocaleString('en-US') : '…'}
         </dd>
-      </dl>
-      <h3 className="info-subheading">Tags</h3>
-      <NoteTags replica={replica} inline={inline} adding={addingTag} onAdding={onAddingTag} />
-      {inline.length > 0 ? (
-        <p className="info-inline-tags muted" data-testid="info-inline-tags">
-          In the text: {inline.map((tag) => `#${tag}`).join(' ')}
-        </p>
-      ) : null}
-      <h3 className="info-subheading">Frontmatter</h3>
-      <dl className="info-frontmatter" data-testid="info-frontmatter">
-        {Object.entries(fields).map(([key, value]) => (
-          <div key={key}>
-            <dt>{key}</dt>
-            <dd>{frontmatterValue(value)}</dd>
-          </div>
-        ))}
+        {/* The frontmatter shown nowhere else (PEN-161): the note's id. */}
+        <dt>ID</dt>
+        <dd className="info-id" data-testid="info-id">
+          {typeof fields['id'] === 'string' ? fields['id'] : noteId}
+        </dd>
       </dl>
       <BacklinksPanel noteId={noteId} />
     </section>

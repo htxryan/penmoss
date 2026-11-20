@@ -65,6 +65,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import app.penmoss.analytics.rememberTrackedDialog
+import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.BlockChoices
 import app.penmoss.editor.FormatState
 import app.penmoss.editor.NoteCounts
@@ -82,6 +84,7 @@ import app.penmoss.ui.open
 /** The note's counts (NT24), as the web's status bar reads them, and the selection's. */
 @Composable
 internal fun WordCountDialog(counts: NoteCounts?, onDismiss: () -> Unit) {
+    rememberTrackedDialog("wordCount")
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Word Count") },
@@ -97,7 +100,7 @@ internal fun WordCountDialog(counts: NoteCounts?, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } },
+        confirmButton = { TextButton(onClick = trackedClick("dialog.close", onDismiss)) { Text("OK") } },
     )
 }
 
@@ -197,13 +200,13 @@ internal fun FindBar(
                     .testTag("findCount")
                     .semantics { liveRegion = LiveRegionMode.Polite },
             )
-            IconButton(onClick = { target.next(false) }, enabled = count > 0, modifier = Modifier.testTag("findPrevious")) {
+            IconButton(onClick = trackedClick("editor.find.previous") { target.next(false) }, enabled = count > 0, modifier = Modifier.testTag("findPrevious")) {
                 Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Previous Match")
             }
-            IconButton(onClick = { target.next(true) }, enabled = count > 0, modifier = Modifier.testTag("findNext")) {
+            IconButton(onClick = trackedClick("editor.find.next") { target.next(true) }, enabled = count > 0, modifier = Modifier.testTag("findNext")) {
                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Next Match")
             }
-            IconButton(onClick = onClose, modifier = Modifier.testTag("findClose")) {
+            IconButton(onClick = trackedClick("editor.find.close", onClose), modifier = Modifier.testTag("findClose")) {
                 Icon(Icons.Default.Close, contentDescription = "Close Find")
             }
         }
@@ -227,10 +230,11 @@ internal fun BlockSheet(
     var query by rememberSaveable(purpose) { mutableStateOf("") }
     LaunchedEffect(purpose, query) { onQuery(query) }
     val items = choices?.takeIf { it.purpose == purpose && it.query == query }?.items
+    val tracked = rememberTrackedDialog("blockPicker")
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag("blockSheet")) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Text(
-                if (purpose == BlockPurpose.INSERT) "Insert" else "Turn into",
+                if (purpose == BlockPurpose.INSERT) "Insert" else "Turn Into",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
@@ -241,7 +245,12 @@ internal fun BlockSheet(
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { items?.firstOrNull()?.let(onPick) }),
+                keyboardActions = KeyboardActions(onDone = {
+                    items?.firstOrNull()?.let { first ->
+                        tracked.done()
+                        onPick(first)
+                    }
+                }),
                 modifier = Modifier.fillMaxWidth().testTag("blockSearch"),
             )
             when {
@@ -252,7 +261,7 @@ internal fun BlockSheet(
                     modifier = Modifier.padding(vertical = 16.dp).testTag("blockNone"),
                 )
                 else -> LazyColumn(Modifier.heightIn(max = 480.dp).padding(vertical = 8.dp)) {
-                    items(items, key = { it.id }) { entry -> BlockRow(entry) { onPick(entry) } }
+                    items(items, key = { it.id }) { entry -> BlockRow(entry, tracked.done { onPick(entry) }) }
                 }
             }
         }
@@ -266,7 +275,7 @@ private fun BlockRow(entry: BlockEntry, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(role = Role.Button, onClick = trackedClick("editor.block-sheet.pick", onClick))
             .semantics(mergeDescendants = true) { selected = active }
             .testTag("block-${entry.id}")
             .padding(vertical = 6.dp),
@@ -313,30 +322,34 @@ private fun BlockRow(entry: BlockEntry, onClick: () -> Unit) {
 internal fun BlockMenuButton(state: FormatState, onAction: (BlockAction) -> Unit, onTurnInto: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        BarTool("Block Actions", EditorIcons.Block, tag = "blockMenu") { open = true }
+        BarTool("Block Actions", EditorIcons.Block, tag = "blockMenu", event = "editor.format.block") { open = true }
         DropdownMenu(
             expanded = open,
             onDismissRequest = { open = false },
             properties = PopupProperties(focusable = false),
         ) {
-            val item = @Composable { label: String, tag: String, enabled: Boolean, action: () -> Unit ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    enabled = enabled,
-                    onClick = {
-                        open = false
-                        action()
-                    },
-                    modifier = Modifier.focusProperties { canFocus = false }.testTag(tag),
-                )
-            }
-            item("Move Up", "blockMoveUp", state.canMoveUp) { onAction(BlockAction.MOVE_UP) }
-            item("Move Down", "blockMoveDown", state.canMoveDown) { onAction(BlockAction.MOVE_DOWN) }
-            item("Turn into…", "blockTurnInto", state.canTurnInto, onTurnInto)
-            item("Duplicate Block", "blockDuplicate", true) { onAction(BlockAction.DUPLICATE) }
-            item("Delete Block", "blockDelete", true) { onAction(BlockAction.DELETE) }
+            val close = { open = false }
+            BlockMenuItem("Move Up", "blockMoveUp", state.canMoveUp, close, event = "editor.block.move-up") { onAction(BlockAction.MOVE_UP) }
+            BlockMenuItem("Move Down", "blockMoveDown", state.canMoveDown, close, event = "editor.block.move-down") { onAction(BlockAction.MOVE_DOWN) }
+            BlockMenuItem("Turn Into…", "blockTurnInto", state.canTurnInto, close, event = "editor.block.turn-into", action = onTurnInto)
+            BlockMenuItem("Duplicate Block", "blockDuplicate", true, close, event = "editor.block.duplicate") { onAction(BlockAction.DUPLICATE) }
+            BlockMenuItem("Delete Block", "blockDelete", true, close, event = "editor.block.delete") { onAction(BlockAction.DELETE) }
         }
     }
+}
+
+/** One item of the Block menu: it closes the menu, then does [action], counted as [event]; it never takes the focus. */
+@Composable
+private fun BlockMenuItem(label: String, tag: String, enabled: Boolean, close: () -> Unit, event: String, action: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        enabled = enabled,
+        onClick = trackedClick(event) {
+            close()
+            action()
+        },
+        modifier = Modifier.focusProperties { canFocus = false }.testTag(tag),
+    )
 }
 
 /** A bar button for the tools (the bar's own style: 44 dp, never taking the focus). */
@@ -346,11 +359,13 @@ internal fun BarTool(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     tag: String,
     enabled: Boolean = true,
+    /** The button's tracked id (PEN-137). */
+    event: String,
     onClick: () -> Unit,
 ) {
     val colours = MaterialTheme.colorScheme
     Surface(
-        onClick = onClick,
+        onClick = trackedClick(event, onClick),
         enabled = enabled,
         shape = RectangleShape,
         color = colours.surfaceContainer,

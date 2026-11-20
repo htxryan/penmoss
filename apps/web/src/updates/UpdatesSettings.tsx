@@ -82,6 +82,7 @@ export function UpdatesSettings() {
           <span className="updates-card-actions">
             {offered ? (
               <button
+                data-event="settings.updates.install"
                 type="button"
                 className="btn primary"
                 data-ui="submit"
@@ -94,6 +95,7 @@ export function UpdatesSettings() {
               </button>
             ) : null}
             <button
+              data-event="settings.updates.check"
               type="button"
               className="btn"
               disabled={busy || working || !state?.supported}
@@ -166,6 +168,7 @@ export function UpdatesSettings() {
               {CHANNELS.map((item) => (
                 <label key={item.value} className="seg-option">
                   <input
+                    data-event="settings.updates.channel"
                     type="radio"
                     name={`${id}-channel`}
                     value={item.value}
@@ -211,6 +214,7 @@ export function UpdateNotice({ notice: shown }: { readonly notice: UpdateNoticeM
           actions={
             shown.dismiss ? (
               <button
+                data-event="updates.toast.install"
                 type="button"
                 className="btn primary"
                 data-ui="submit"
@@ -232,6 +236,7 @@ export function UpdateNotice({ notice: shown }: { readonly notice: UpdateNoticeM
           icon={<Icon name="refresh" />}
           actions={
             <button
+              data-event="updates.toast.whats-new"
               type="button"
               className="btn primary"
               data-ui="submit"
@@ -273,6 +278,11 @@ export function SidebarUpdateNotice({
         : `${notice.text.replace(/\.$/, '')}: Settings → Updates`;
     return (
       <button
+        data-event={
+          notice.kind === 'updated'
+            ? 'updates.sidebar-dot.whats-new'
+            : 'updates.sidebar-dot.settings'
+        }
         type="button"
         className="icon-btn sb-update-dot"
         data-ui="submit"
@@ -292,6 +302,7 @@ export function SidebarUpdateNotice({
       <Icon name="refresh" size={14} />
       <span className="sb-update-text">Updated to {notice.version}.</span>
       <button
+        data-event="updates.sidebar.whats-new"
         type="button"
         className="sb-update-action"
         data-ui="submit"
@@ -301,6 +312,7 @@ export function SidebarUpdateNotice({
         What's New
       </button>
       <button
+        data-event="updates.sidebar.dismiss"
         type="button"
         className="icon-btn sb-update-close"
         data-ui="dismiss"
@@ -324,6 +336,7 @@ export function SidebarUpdateNotice({
       {notice.dismiss ? (
         <>
           <button
+            data-event="updates.sidebar.install"
             type="button"
             className="sb-update-action"
             data-ui="submit"
@@ -333,6 +346,7 @@ export function SidebarUpdateNotice({
             Install and Restart
           </button>
           <button
+            data-event="updates.sidebar.dismiss"
             type="button"
             className="icon-btn sb-update-close"
             data-ui="dismiss"
