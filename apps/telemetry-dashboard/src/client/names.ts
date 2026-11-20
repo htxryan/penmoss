@@ -209,3 +209,423 @@ const KINDS: Record<string, string> = {
 export function commandName(name: string): EventName {
   return { title: displayName('command', name), id: name };
 }
+
+// ---------------------------------------------------------------------------------------------
+// The words for recorded values, which every view and Sessions' props share (PEN-173).
+
+export const CLIENT_LABELS: Record<string, string> = {
+  mac: 'Mac',
+  android: 'Android',
+  cli: 'CLI',
+  mcp: 'MCP',
+};
+export const ACTOR_LABELS: Record<string, string> = {
+  person: 'Person',
+  agent: 'Agent',
+  script: 'Script',
+};
+/** The MCP clients' fixed list (core's AGENT_CLIENTS), as people name them. */
+export const AGENT_CLIENT_LABELS: Record<string, string> = {
+  'claude-code': 'Claude Code',
+  'claude-desktop': 'Claude Desktop',
+  codex: 'Codex',
+  cursor: 'Cursor',
+  vscode: 'VS Code',
+  windsurf: 'Windsurf',
+  zed: 'Zed',
+  gemini: 'Gemini',
+  goose: 'Goose',
+  cline: 'Cline',
+  continue: 'Continue',
+  penmoss: 'Penmoss',
+  other: 'Other Agent',
+};
+/** Who ran a CLI command or MCP tool: an agent client by name, else the actor. */
+export const agentLabel = (key: string) =>
+  AGENT_CLIENT_LABELS[key] ?? ACTOR_LABELS[key] ?? titled(key);
+export const STEP_RESULT_LABELS: Record<string, string> = {
+  done: 'Done',
+  back: 'Back',
+  failed: 'Failed',
+};
+/**
+ * A CLI command's or MCP tool's results, as the Agents query's columns name them, in order: blue,
+ * then orange, aqua, and the rest.
+ */
+export const RESULTS = [
+  { key: 'ok', label: 'OK', color: 'var(--s1)' },
+  { key: 'invalid', label: 'Invalid', color: 'var(--s2)' },
+  { key: 'not_found', label: 'Not Found', color: 'var(--s3)' },
+  { key: 'conflict', label: 'Conflict', color: 'var(--s4)' },
+  { key: 'failed', label: 'Failed', color: 'var(--s5)' },
+] as const;
+export const SOURCE_LABELS: Record<string, string> = {
+  key: 'Key',
+  palette: 'Palette',
+  button: 'Button',
+  menu: 'Menu',
+  tray: 'Tray',
+  hotkey: 'Hotkey',
+  editor: 'Editor',
+  other: 'Other',
+  '': 'Other',
+};
+export const SYNC_LABELS: Record<string, string> = {
+  ok: 'OK',
+  conflict: 'Conflict',
+  offline: 'Offline',
+  failed: 'Failed',
+};
+/** An OS as people write it. */
+export const osName = (os: string) =>
+  ({ macos: 'macOS', android: 'Android', linux: 'Linux', windows: 'Windows' })[os] ?? 'Other';
+
+/** A prop's value as recorded (core's PropValue). */
+export type PropValue = string | number | boolean | readonly string[];
+
+interface PropWords {
+  /** The prop's label, in Title Case. */
+  readonly label: string;
+  /** Its recorded values' words, keyed as recorded. */
+  readonly values?: Readonly<Record<string, string>>;
+  /** Or a function from the value to its word. */
+  readonly word?: (value: PropValue) => string;
+}
+
+const YES_NO = { true: 'Yes', false: 'No' };
+const each = (value: PropValue) => (Array.isArray(value) ? value : [value]).map(String);
+
+/** Which window an `app window` or `app layout` event is about. */
+const WINDOW_LABELS: Readonly<Record<string, string>> = {
+  main: 'Main',
+  note: 'Note',
+  capture: 'Quick Capture',
+};
+
+/**
+ * Each kind's props (core's PROP_SPECS, in its order), labelled, with a word for each value. A
+ * test walks PROP_SPECS, so a prop added there fails until it has its words here.
+ */
+export const PROP_WORDS: Readonly<Record<string, Readonly<Record<string, PropWords>>>> = {
+  app: {
+    notebooks: { label: 'Notebooks' },
+    notes: { label: 'Notes' },
+    agents: { label: 'Agents', values: YES_NO },
+    theme: { label: 'Theme', word: (value) => titled(String(value)) },
+    active: { label: 'Active For' },
+  },
+  command: {
+    source: { label: 'Source', values: SOURCE_LABELS },
+    keys: { label: 'Keys' },
+    custom: { label: 'Own Shortcut', values: YES_NO },
+    ran: { label: 'Ran', values: YES_NO },
+  },
+  screen: { from: { label: 'From', word: (value) => displayName('screen', String(value)) } },
+  dialog: {
+    action: { label: 'Action', values: { open: 'Open', done: 'Done', cancel: 'Cancel' } },
+    open: { label: 'Open For' },
+  },
+  click: { state: { label: 'State', values: { on: 'On', off: 'Off' } } },
+  menu: {
+    source: {
+      label: 'Source',
+      values: { menubar: 'Menu Bar', tray: 'Tray', context: 'Context Menu' },
+    },
+  },
+  setting: {
+    value: {
+      label: 'Value',
+      word: (value) =>
+        typeof value === 'boolean'
+          ? YES_NO[String(value) as 'true' | 'false']
+          : typeof value === 'number'
+            ? String(value)
+            : titled(String(value)),
+    },
+    changed: { label: 'Changed', values: { true: 'Yes' } },
+  },
+  firstrun: {
+    result: { label: 'Result', values: STEP_RESULT_LABELS },
+    error: { label: 'Error', word: (value) => titled(String(value)) },
+  },
+  feedback: {
+    type: { label: 'Type', values: { bug: 'Bug', feature: 'Feature' } },
+    priority: { label: 'Priority', values: { 1: '1', 2: '2', 3: '3', 4: '4' } },
+    screenshots: { label: 'Screenshots' },
+    logs: { label: 'Logs', values: YES_NO },
+    groupsLeftOut: { label: 'Groups Left Out' },
+  },
+  sync: {
+    result: { label: 'Result', values: SYNC_LABELS },
+    took: { label: 'Took' },
+    changed: { label: 'Changed' },
+  },
+  cli: {
+    // CLI_FLAGS are stored without their dashes.
+    flags: {
+      label: 'Flags',
+      word: (value) =>
+        each(value)
+          .map((flag) => `--${flag}`)
+          .join(' '),
+    },
+    exit: {
+      label: 'Exit',
+      values: {
+        OK: 'OK',
+        ERROR: 'Error',
+        USAGE: 'Usage',
+        AUTH: 'Auth',
+        NOT_FOUND: 'Not Found',
+        CONFLICT: 'Conflict',
+        AMBIGUOUS: 'Ambiguous',
+        REFUSED: 'Refused',
+      },
+    },
+    took: { label: 'Took' },
+    tty: { label: 'Terminal', values: YES_NO },
+  },
+  tool: {
+    agentClient: { label: 'Agent', values: AGENT_CLIENT_LABELS },
+    // Keyed as the tool records it (notFound), not as the Agents query's column (not_found).
+    result: {
+      label: 'Result',
+      values: {
+        ok: 'OK',
+        invalid: 'Invalid',
+        notFound: 'Not Found',
+        conflict: 'Conflict',
+        failed: 'Failed',
+      },
+    },
+    took: { label: 'Took' },
+  },
+};
+
+/**
+ * The words for props tied to one name (core's NAME_PROP_SPECS, PEN-174), keyed `kind.name`: an
+ * event of that name takes these and no others. The same test walks NAME_PROP_SPECS.
+ */
+export const NAME_PROP_WORDS: Readonly<Record<string, Readonly<Record<string, PropWords>>>> = {
+  'app.window': {
+    window: { label: 'Window', values: WINDOW_LABELS },
+    width: { label: 'Width' },
+    height: { label: 'Height' },
+    fullScreen: { label: 'Full Screen', values: YES_NO },
+    maximised: { label: 'Maximised', values: YES_NO },
+  },
+  'app.layout': {
+    window: { label: 'Window', values: WINDOW_LABELS },
+    sidebar: { label: 'Sidebar', values: { shown: 'Shown', rail: 'Rail', hidden: 'Hidden' } },
+    sidebarWidth: { label: 'Sidebar Width' },
+    panel: { label: 'Note Panel', values: { open: 'Open', closed: 'Closed', none: 'None' } },
+    fullWidth: { label: 'Full Width', values: YES_NO },
+    themeMode: { label: 'Theme Mode', values: { light: 'Light', dark: 'Dark', system: 'System' } },
+    tabs: { label: 'Tabs' },
+  },
+};
+
+export interface PropInWords {
+  readonly label: string;
+  readonly value: string;
+}
+
+/** The word for one prop's value. */
+function propWord(words: PropWords | undefined, value: PropValue): string {
+  if (words?.word) return words.word(value);
+  const key = String(value);
+  if (words?.values && Object.hasOwn(words.values, key)) return words.values[key]!;
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return each(value).join(' ');
+  // A bucket, a key combination or a count shows as recorded; a word it doesn't know, from a
+  // newer client, in Title Case.
+  if (typeof value === 'number' || (words && !words.values)) return key;
+  return titled(key);
+}
+
+/**
+ * An event's props as label and value pairs, in PROP_SPECS' order: every recorded prop, No and 0
+ * included, and a key this page doesn't know (a newer client's) in Title Case at the end.
+ */
+export function propsInWords(
+  kind: string,
+  props: Readonly<Record<string, PropValue>> | null | undefined,
+  name?: string,
+): PropInWords[] {
+  const known =
+    (name === undefined ? undefined : NAME_PROP_WORDS[`${kind}.${name}`]) ?? PROP_WORDS[kind] ?? {};
+  const recorded = Object.entries(props ?? {});
+  const order = Object.keys(known);
+  return recorded
+    .sort(([a], [b]) => {
+      const i = order.indexOf(a);
+      const j = order.indexOf(b);
+      return (i < 0 ? order.length : i) - (j < 0 ? order.length : j);
+    })
+    .map(([key, value]) => ({
+      label: known[key]?.label ?? titled(key),
+      value: propWord(known[key], value),
+    }));
+}
+
+// ---------------------------------------------------------------------------------------------
+// Times and lengths in a session (PEN-173).
+
+const pad = (n: number) => String(n).padStart(2, '0');
+/** The minus sign a negative gap starts with. */
+export const MINUS = '−';
+
+/** Time since a session started: "0:12", "1:02", "1:02:03" past an hour. */
+export function sinceStart(ms: number): string {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(seconds % 60)}`
+    : `${minutes}:${pad(seconds % 60)}`;
+}
+
+/** A length: "42s", "18m 04s", "2h 05m"; a negative one starts with a minus. */
+export function duration(ms: number): string {
+  if (ms < 0) return `${MINUS}${duration(-ms)}`;
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${pad(seconds % 60)}s`;
+  return `${Math.floor(minutes / 60)}h ${pad(minutes % 60)}m`;
+}
+
+/** The gap since the event before: "+11s", "+1m 21s", "+2h 05m", "−3s" when a clock moved back. */
+export function gap(ms: number): string {
+  return ms < 0 ? duration(ms) : `+${duration(ms)}`;
+}
+
+/**
+ * A session's length: its last event's time less its first's. A session of one event has
+ * nothing to measure to, so its length is that event's took bucket ("<1s"), or 0s without one.
+ */
+export function sessionLength(session: {
+  readonly started: number;
+  readonly ended: number;
+  readonly events: number;
+  readonly took?: string | null;
+}): string {
+  if (session.events <= 1) return session.took || '0s';
+  return duration(session.ended - session.started);
+}
+
+const count = (n: number) => n.toLocaleString('en-GB');
+
+/**
+ * What This Install's Sessions holds when it is cut: "Showing 500 of 1,250: this session, the 250
+ * before it and the 249 after it." Empty when it holds them all.
+ */
+export function cutLine(total: number, before: number, after: number): string {
+  const shown = before + after + 1;
+  if (shown >= total) return '';
+  const sides =
+    before === 0 && after === 0
+      ? ''
+      : before === 0
+        ? ` and the ${count(after)} after it`
+        : after === 0
+          ? ` and the ${count(before)} before it`
+          : before === after
+            ? ` and the ${count(before)} either side of it`
+            : `, the ${count(before)} before it and the ${count(after)} after it`;
+  return `Showing ${count(shown)} of ${count(total)}: this session${sides}.`;
+}
+
+/** An install as the page shows it: its first 8 hex characters (PEN-173). */
+export const shortInstall = (install: string) => `${install.slice(0, 8)}…`;
+
+/** A window's size class in words, or '' for none (the CLI and MCP). */
+export function windowName(sizeClass: string | null | undefined): string {
+  const words: Record<string, string> = {
+    compact: 'Compact Window',
+    medium: 'Medium Window',
+    expanded: 'Expanded Window',
+  };
+  return words[sizeClass ?? ''] ?? '';
+}
+
+/** What a stretch needs of an event. */
+export interface StretchEvent {
+  readonly at: number;
+  readonly client: string;
+  readonly kind: string;
+  readonly name: string;
+  readonly props?: Readonly<Record<string, PropValue>> | null;
+}
+
+/** A run of a session's events on one screen. */
+export interface Stretch {
+  /** The screen's display name, or what the run is ("Before Any Screen", "CLI Run"…). */
+  readonly title: string;
+  /** The screen's id ("screen:note"), or '' for a run with no screen. */
+  readonly id: string;
+  /** Its events: from `first` up to, not including, `end` (indexes in the session's list). */
+  readonly first: number;
+  readonly end: number;
+  /** "from 0:12 · 1m 21s here · came from Home". */
+  readonly summary: string;
+}
+
+/**
+ * A session's events (in seq order) split where the screen changes. A screen event naming the
+ * screen already showing stays in its stretch. Events before the first screen are "Before Any
+ * Screen"; a session with no screen events is one stretch named for what it is.
+ */
+export function stretches(events: readonly StretchEvent[]): Stretch[] {
+  if (events.length === 0) return [];
+  const start = Math.min(...events.map((e) => e.at));
+  const starts: { first: number; screen: string | null; from: string | null }[] = [];
+  events.forEach((e, i) => {
+    const current = starts.at(-1);
+    if (e.kind === 'screen' && (current === undefined || current.screen !== e.name)) {
+      const from = e.props?.['from'];
+      starts.push({ first: i, screen: e.name, from: typeof from === 'string' ? from : null });
+    } else if (current === undefined) {
+      starts.push({ first: i, screen: null, from: null });
+    }
+  });
+  const hasScreens = starts.some((s) => s.screen !== null);
+  const opening = events[0]!;
+  const unscreened = hasScreens
+    ? 'Before Any Screen'
+    : opening.client === 'cli'
+      ? 'CLI Run'
+      : opening.client === 'mcp'
+        ? 'MCP Connection'
+        : events.every((e) => e.kind === 'firstrun')
+          ? 'First Run'
+          : 'No Screens';
+  const last = events.at(-1)!;
+  return starts.map((s, k) => {
+    const next = starts[k + 1];
+    const end = next?.first ?? events.length;
+    const at = events[s.first]!.at;
+    const took = events[0]!.props?.['took'];
+    const stay =
+      events.length === 1
+        ? sessionLength({
+            started: at,
+            ended: at,
+            events: 1,
+            took: typeof took === 'string' ? took : null,
+          })
+        : duration((next ? events[next.first]!.at : last.at) - at);
+    const name = s.screen === null ? null : eventName(`screen:${s.screen}`);
+    return {
+      title: name?.title ?? unscreened,
+      id: name?.id ?? '',
+      first: s.first,
+      end,
+      summary: [
+        `from ${sinceStart(at - start)}`,
+        `${stay} here`,
+        ...(s.from ? [`came from ${displayName('screen', s.from)}`] : []),
+      ].join(' · '),
+    };
+  });
+}

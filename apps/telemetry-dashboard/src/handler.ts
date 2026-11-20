@@ -47,7 +47,7 @@ async function api(
   if (!(VIEWS as readonly string[]).includes(view)) return json({ error: 'No such view.' }, 404);
   let filters;
   try {
-    filters = readFilters(url);
+    filters = readFilters(url, view as View);
   } catch (error) {
     if (error instanceof BadRequest) return json({ error: error.message }, 400);
     throw error;
