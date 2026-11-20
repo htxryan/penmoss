@@ -98,8 +98,8 @@ function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
     drafts.splice(3, 1, { kind: 'command', name: 'app.trash', props: { source: 'palette' } });
   }
   // Where the sidebar and the note came to rest (PEN-175): Paths skips these, so what comes
-  // after the palette is still the next action.
-  drafts.splice(3, 0, { kind: 'scroll', name: 'sidebar', props: { position: 0.25 } });
+  // after Home is still the palette.
+  drafts.splice(2, 0, { kind: 'scroll', name: 'sidebar', props: { position: 0.25 } });
   drafts.push({ kind: 'scroll', name: 'note', props: { position: 0.42 } });
   drafts.push(
     {

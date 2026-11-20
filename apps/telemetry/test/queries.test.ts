@@ -177,6 +177,16 @@ describe('what they say', () => {
     for (const row of rows) {
       expect([row.n1, row.n2, row.n3].join(' ')).not.toMatch(/scroll:/);
     }
+    // Every session scrolls the sidebar between Home and the palette: the palette comes next.
+    const fromHome = await runQuery<{ depth: number; n1: string }>(env.DB, 'next', {
+      ...ALL,
+      startKind: 'screen',
+      startName: 'home',
+    });
+    expect(
+      fromHome.find((row) => row.depth === 1 && row.n1 === 'command:app.palette'),
+    ).toBeDefined();
+    expect(fromHome.some((row) => row.n1?.startsWith('scroll:'))).toBe(false);
     // A scroll still starts a path when asked for one; the steps after it are actions.
     const fromScroll = await runQuery<{ depth: number; n1: string }>(env.DB, 'next', {
       ...ALL,
@@ -185,7 +195,7 @@ describe('what they say', () => {
     });
     expect(fromScroll.find((row) => row.depth === 0)).toBeDefined();
     expect(
-      fromScroll.find((row) => row.depth === 1 && row.n1 === 'command:note.new'),
+      fromScroll.find((row) => row.depth === 1 && row.n1 === 'command:app.palette'),
     ).toBeDefined();
   });
 
