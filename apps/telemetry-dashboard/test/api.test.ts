@@ -351,9 +351,8 @@ describe('sessions (PEN-173)', () => {
     expect(data).toMatchObject({ days: 90, install: INSTALL, session: SESSION, more: false });
     const own = fixtureInstalls(NOW)[0]!.events.filter((e) => e.session === SESSION);
     expect(data.events.map((e) => e.seq)).toEqual(own.map((e) => e.seq));
-    expect(data.events[2]).toMatchObject({
+    expect(data.events.find((e) => e.name === 'app.palette')).toMatchObject({
       kind: 'command',
-      name: 'app.palette',
       props: { source: 'key', keys: 'Mod+K', custom: false, ran: true },
     });
     // The install's sessions in 90 days, oldest first, the open one among them.

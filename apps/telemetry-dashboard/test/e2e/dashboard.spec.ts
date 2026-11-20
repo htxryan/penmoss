@@ -523,7 +523,7 @@ interface SessionEvent {
 
 /**
  * The newest Mac session on the list's first page that goes Launch, Home, Command Palette, New
- * Note, with its events spread out (not today's, whose times may all be now): its row's link.
+ * Note (its window and layout events aside), with its events spread out (not today's, whose times may all be now): its row's link.
  */
 async function appSession(page: Page, dashboard: Dashboard) {
   const links = sessionRows(page).locator('td:first-child a');
@@ -535,7 +535,11 @@ async function appSession(page: Page, dashboard: Dashboard) {
       { headers: { 'cf-access-jwt-assertion': dashboard.token } },
     );
     const { events } = (await answer.json()) as { events: SessionEvent[] };
-    const names = events.slice(0, 4).map((e) => `${e.kind}:${e.name}`);
+    // A launch is followed by its window's size and layout (PEN-174), before any screen.
+    const names = events
+      .filter((e) => e.kind !== 'app' || (e.name !== 'window' && e.name !== 'layout'))
+      .slice(0, 4)
+      .map((e) => `${e.kind}:${e.name}`);
     const spread = new Set(events.map((e) => e.at)).size === events.length;
     if (
       spread &&
@@ -677,6 +681,16 @@ test("Sessions: the list, a session's timeline, its install's sessions and a cop
   await expect(rows.first().locator('.ev-kind')).toHaveText('App');
   await expect(rows.first().locator('.ev-name')).toContainText('Launch');
   await expect(rows.first().locator('.ev-since')).toHaveText('0:00');
+  // The launch's window size and layout (PEN-174), in words.
+  const opened = rows.filter({ has: page.locator('.cell-id', { hasText: /^app:window$/ }) });
+  await expect(opened.first().locator('.prop-chip').first()).toHaveText('Window Main');
+  await expect(opened.first().locator('.prop-chip', { hasText: 'Full Screen' })).toHaveText(
+    'Full Screen No',
+  );
+  const layout = rows.filter({ has: page.locator('.cell-id', { hasText: /^app:layout$/ }) });
+  await expect(layout.locator('.prop-chip', { hasText: 'Sidebar Width' })).toHaveText(
+    'Sidebar Width 280',
+  );
   const headings = timeline.locator('.stretch-title');
   await expect(headings.nth(0)).toHaveText('Before Any Screen');
   await expect(headings.nth(1)).toHaveText('Home screen:home');
