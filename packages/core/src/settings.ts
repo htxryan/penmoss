@@ -10,6 +10,7 @@
  * Which settings are the notebook's own and which a device's is `isNotebookSetting`, here; where
  * each is kept is `@penmoss/model`'s (`NOTEBOOK_MAP`, `DEVICE_MAP`, `mergedSettings`).
  */
+import { AI_DESCRIPTION_NOTEBOOK_SETTING, AI_PROVIDER_SETTING } from './ai-description';
 import { DISPLAY_SETTING_KEYS, PHONE_SHORTCUT_SETTING_KEYS } from './display';
 import { FONT_SETTING_KEYS } from './fonts';
 import { STATUS_BAR_SETTING, UNDER_TITLE_SETTING } from './note-metadata';
@@ -47,10 +48,16 @@ export const DAD_JOKES_SETTING = 'home.dadJokes';
 /**
  * A git notebook's own settings (A827): the same in every client of the notebook, kept in its
  * notebook map. Its badge (PEN-140, A1504: `badge.color`, `badge.glyph`) is one: it names the
- * notebook on every Mac. Every other key is a device's.
+ * notebook on every Mac. So is its AI Descriptions value (PEN-161, `ai.description`). Every other
+ * key is a device's.
  */
 export function isNotebookSetting(key: string): boolean {
-  return key === TIME_ZONE_SETTING || key.startsWith('template.') || key.startsWith('badge.');
+  return (
+    key === TIME_ZONE_SETTING ||
+    key === AI_DESCRIPTION_NOTEBOOK_SETTING ||
+    key.startsWith('template.') ||
+    key.startsWith('badge.')
+  );
 }
 
 /**
@@ -119,6 +126,8 @@ export const LOCAL_SETTING_KEYS: readonly string[] = [
   FULL_WIDTH_SETTING,
   UNDER_TITLE_SETTING,
   STATUS_BAR_SETTING,
+  // The AI provider is this device's own (PEN-161): a key or Claude Code is per device.
+  AI_PROVIDER_SETTING,
 ];
 
 /** The local keys by prefix: the note's title-bar buttons (`noteBar.<button>`). */

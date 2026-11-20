@@ -6,6 +6,7 @@
  */
 import { readIdentity, readTitle } from './note';
 import { frontmatterTags } from './tags';
+import { readAiSetting, readDescription } from './description';
 import type { Yjs14Replica } from './yjs14';
 import type { createFrontmatter } from '@penmoss/core';
 
@@ -17,11 +18,15 @@ export function noteFields(noteId: string, replica: Yjs14Replica): NoteFields {
   const title = readTitle(replica.doc);
   // Inline tags stay in the body; frontmatter lists the ones set there (T18).
   const tags = frontmatterTags(replica.doc);
+  const description = readDescription(replica.doc);
+  const ai = readAiSetting(replica.doc);
   return {
     id: noteId,
     ...(title ? { title } : {}),
     ...(identity.created ? { created: identity.created } : {}),
     ...(tags.length > 0 ? { tags } : {}),
     ...(identity.kind && identity.kind !== 'note' ? { type: identity.kind } : {}),
+    ...(description ? { description } : {}),
+    ...(ai !== 'inherit' ? { 'ai-description': ai } : {}),
   };
 }

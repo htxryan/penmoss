@@ -14,7 +14,7 @@ import { blocksOf, reuseBlocks } from '@penmoss/core/diff-apply';
 import type { DocJson } from '@penmoss/core/links';
 import { noteHeadings, noteSections, type NoteSection } from '@penmoss/core/search';
 import { NOTE_ROOT } from './replica';
-import { readIdentity, readTitle } from './note';
+import { NOTE_META, readIdentity, readTitle } from './note';
 import { frontmatterTags, noteTags } from './tags';
 import type * as Y from '@y/y';
 import { pmnodeToDelta, ynodeToPmnode } from '@y/prosemirror';
@@ -55,6 +55,21 @@ export interface NoteState {
   readonly listedTags: string[];
   /** Every tag, frontmatter and inline (`noteTags`, T18). */
   readonly tags: string[];
+  /** The note's description (PEN-161); absent when it has none. */
+  readonly description?: string;
+  /** The note's own AI Descriptions value (PEN-161); absent for Inherit. */
+  readonly aiDescription?: 'on' | 'off';
+}
+
+/** The description and the note's own value, as `meta` holds them (see `./description`). */
+function descriptionState(doc: Y.Doc): Pick<NoteState, 'description' | 'aiDescription'> {
+  const meta = doc.get(NOTE_META);
+  const description: unknown = meta.getAttr('description');
+  const ai: unknown = meta.getAttr('aiDescription');
+  return {
+    ...(typeof description === 'string' && description.trim() !== '' ? { description } : {}),
+    ...(ai === 'on' || ai === 'off' ? { aiDescription: ai } : {}),
+  };
 }
 
 export function readNoteState(doc: Y.Doc): NoteState {
@@ -66,6 +81,7 @@ export function readNoteState(doc: Y.Doc): NoteState {
     unsupported: body ? null : unsupportedTypes(doc),
     listedTags: frontmatterTags(doc),
     tags: noteTags(doc),
+    ...descriptionState(doc),
   };
 }
 
@@ -107,6 +123,8 @@ export function renderNote(
     ...(updated ? { updated } : {}),
     ...(listed.length > 0 ? { tags: listed } : {}),
     ...(identity.kind && identity.kind !== 'note' ? { type: identity.kind } : {}),
+    ...(state.description ? { description: state.description } : {}),
+    ...(state.aiDescription ? { 'ai-description': state.aiDescription } : {}),
   });
   return {
     title,
