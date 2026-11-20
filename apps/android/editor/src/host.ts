@@ -754,6 +754,10 @@ export class EditorHost {
         // Whether the keyboard is up (T40 P6 review S8): hiding it does not blur the note.
         this.imeVisible = message.visible;
         return;
+      case 'underTitle':
+        this.descriptionShown = message.description;
+        this.showDescription();
+        return;
       case 'width':
         // Full width lifts only the theme's cap, as on the web (A501); the gutters stay.
         if (message.full) this.elements.root.dataset['width'] = 'full';
@@ -1044,6 +1048,7 @@ export class EditorHost {
       infoTimer = null;
       if (this.current?.replica !== replica) return;
       const info = this.noteInfo(noteId, replica, this.current.collab?.editor ?? null);
+      this.showDescription();
       const key = JSON.stringify(info);
       if (key === lastInfo) return;
       lastInfo = key;
@@ -1443,6 +1448,26 @@ export class EditorHost {
     } else {
       answerDescriptionAsk(doc, message.answer);
     }
+  }
+
+  /** Settings → Note's Description Under the Title (PEN-161). */
+  private descriptionShown = false;
+  private descriptionLine: HTMLElement | null = null;
+
+  /** The open note's description under its title, when that is on and it has one. */
+  private showDescription(): void {
+    const doc = this.current?.replica.doc;
+    const text = this.descriptionShown && doc ? (readDescription(doc) ?? '') : '';
+    if (!this.descriptionLine) {
+      if (text === '') return;
+      const line = document.createElement('p');
+      line.className = 'doc-meta-description';
+      line.dataset['testid'] = 'note-description';
+      this.elements.title.insertAdjacentElement('afterend', line);
+      this.descriptionLine = line;
+    }
+    this.descriptionLine.textContent = text;
+    this.descriptionLine.hidden = text === '';
   }
 
   /**

@@ -149,3 +149,14 @@ body {
 .note-body .pm-image-copy {
   display: none;
 }
+
+/*
+ * The note's description under its title (PEN-161), when Settings → Note says so: a sentence or
+ * two in the details' colour, as the Mac shows it.
+ */
+.doc-meta-description {
+  margin: -0.4rem 0 0.9rem;
+  color: var(--pm-color-meta, var(--pm-muted));
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-relaxed);
+}

@@ -165,10 +165,16 @@ class AiKeyStore(private val prefs: SharedPreferences, private val box: SecretBo
         get() = prefs.getBoolean(REFUSED, false)
         set(value) = prefs.edit { putBoolean(REFUSED, value) }
 
+    /** The first run asked "Describe Notes for Agents?" on this phone: it asks once. */
+    var asked: Boolean
+        get() = prefs.getBoolean(ASKED, false)
+        set(value) = prefs.edit { putBoolean(ASKED, value) }
+
     companion object {
         const val PREFS = "penmoss.ai"
         private const val KEY = "anthropic.key"
         private const val REFUSED = "anthropic.refused"
+        private const val ASKED = "firstRun.asked"
     }
 }
 
@@ -228,6 +234,13 @@ class AiDescriptions(
     fun removeKey() {
         keys.remove()
         changed()
+    }
+
+    /** Whether the first run still has to ask about AI Descriptions on this phone. */
+    val askPending: Boolean get() = !keys.asked
+
+    fun markAsked() {
+        keys.asked = true
     }
 
     override suspend fun config(): JsonElement {

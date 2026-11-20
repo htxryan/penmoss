@@ -72,6 +72,10 @@ sealed interface Screen {
     data class Name(val place: Place) : Screen
     data class SetUp(val setup: Setup) : Screen
 
+    /** AI Descriptions (PEN-161): "Describe Notes for Agents?", then the key, after Setting Up. */
+    data class AiQuestion(val localId: String?) : Screen
+    data class AiKey(val localId: String?) : Screen
+
     /** The usage question (PEN-137): the first run's last step, after the notebook is set up. */
     data class Consent(val localId: String?) : Screen
 }

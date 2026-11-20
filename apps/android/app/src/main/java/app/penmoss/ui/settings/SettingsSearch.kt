@@ -38,6 +38,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Notes in the Sidebar", "Home", SettingsRoutes.DISPLAY, "Quick Access's notes, one tap each", "quick access", "drawer", "menu", "pinned"),
     entry("Recent Notes", "Home", SettingsRoutes.DISPLAY, "How many Home lists", "recent count"),
     entry("Note Width", "Note", SettingsRoutes.NOTE, "The theme’s width or the full width", "full width", "wide", "layout"),
+    entry("Description Under the Title", "Note", SettingsRoutes.NOTE, "The note’s description under its title", "description", "under the title", "metadata", "ai"),
     entry("Symbols", "Symbols", SettingsRoutes.SYMBOLS, "Mark a line with a symbol at its start", "line symbols", "glyph", "emoji", "star"),
     entry("Restore Default Symbols", "Symbols", SettingsRoutes.SYMBOLS, null, "reset symbols"),
     entry("Time Zone", "Daily Notes", SettingsRoutes.DAILY, "Which day today is", "timezone", "zone", "clock"),

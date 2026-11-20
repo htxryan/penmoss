@@ -31,9 +31,22 @@ import kotlinx.serialization.json.JsonPrimitive
 /*
  * Settings → Note on the phone (A1634): the Mac's Note page (`NoteSettings`), with what the
  * phone's note has. Note Width moved here from Appearance. The Mac's Note Panel, Title Bar Buttons,
- * Under the Title and In the Status Bar are not here: the phone's note draws its panel over the
- * note, its bar's buttons are fixed, and it has no details under its title or status bar.
+ * In the Status Bar are not here: the phone's note draws its panel over the note, and its bar's
+ * buttons are fixed. Under the Title has only the description (PEN-161): the phone has no status bar.
  */
+
+/** The fields under a note's title (core's `metadata.underTitle`); the phone shows only the description. */
+internal const val UNDER_TITLE = "metadata.underTitle"
+
+/** Whether the description shows under the title. */
+fun descriptionUnderTitle(values: kotlinx.serialization.json.JsonObject): Boolean =
+    (values[UNDER_TITLE] as? kotlinx.serialization.json.JsonArray)?.any { (it as? JsonPrimitive)?.content == "description" } == true
+
+/** The setting with the description in or out, keeping any other field the Mac put there. */
+fun withDescription(values: kotlinx.serialization.json.JsonObject, on: Boolean): kotlinx.serialization.json.JsonArray {
+    val others = (values[UNDER_TITLE] as? kotlinx.serialization.json.JsonArray).orEmpty().filter { (it as? JsonPrimitive)?.content != "description" }
+    return kotlinx.serialization.json.JsonArray(if (on) others + JsonPrimitive("description") else others)
+}
 
 /** What the Settings list says of Note: its width. */
 fun noteSummary(fullWidth: Boolean): String = if (fullWidth) "Full Width" else "The Theme’s Width"
@@ -52,6 +65,8 @@ internal fun NoteSettingsRoute(graph: DeviceGraph, onBack: () -> Unit) {
         enabled = state.known,
         // Off is stored too, as the web stores it, so another device's copy never wins (A501).
         onFullWidth = { graph.changeSetting(SettingKeys.FULL_WIDTH, JsonPrimitive(it)) },
+        descriptionUnderTitle = descriptionUnderTitle(settings.values),
+        onDescriptionUnderTitle = { on -> graph.changeSetting(UNDER_TITLE, withDescription(settings.values, on)) },
         onBack = onBack,
         noteFont = familyName(settings.noteFont),
         noteSize = settings.noteFontSize,
@@ -73,6 +88,9 @@ fun NoteSettingsScreen(
     enabled: Boolean,
     onFullWidth: (Boolean) -> Unit,
     onBack: () -> Unit,
+    /** Settings → Note's Description Under the Title (PEN-161), this phone's own. */
+    descriptionUnderTitle: Boolean = false,
+    onDescriptionUnderTitle: (Boolean) -> Unit = {},
     /** The Note Font's name and the Note Font Size, which the Preview tab names. */
     noteFont: String = "Theme Default",
     noteSize: Int = 16,
@@ -99,6 +117,16 @@ fun NoteSettingsScreen(
                 event = "settings.note.width",
             ) { onFullWidth(it == "full") }
             Help("The theme’s is $editorWidth rem. Kept on this phone. A phone already uses its whole width; this shows on a tablet or an unfolded phone. A hardware keyboard’s Toggle Full-Width Notes changes it too.")
+            GroupTitle("Under the Title", deviceOnly = true)
+            Toggle(
+                "Description",
+                "The note’s description, from its Metadata tab, under its title.",
+                descriptionUnderTitle,
+                enabled,
+                "underTitle-description",
+                event = "settings.note.under-title",
+                onChange = onDescriptionUnderTitle,
+            )
         }
     }
 }

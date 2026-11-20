@@ -159,7 +159,7 @@ private fun HomePreview(ui: HomeUi) {
 
 /** A switch as a whole row, so TalkBack reads one control with its name. */
 @Composable
-private fun Toggle(label: String, supporting: String?, on: Boolean, enabled: Boolean, tag: String, modifier: Modifier = Modifier, event: String, onChange: (Boolean) -> Unit) {
+internal fun Toggle(label: String, supporting: String?, on: Boolean, enabled: Boolean, tag: String, modifier: Modifier = Modifier, event: String, onChange: (Boolean) -> Unit) {
     ListItem(
         headlineContent = { Text(label) },
         supportingContent = supporting?.let { { Text(it, style = MaterialTheme.typography.bodySmall) } },

@@ -314,7 +314,8 @@ class SettingsScreensTest {
         }
         compose.onNodeWithTag("noteSettingsTab").assertIsSelected()
         compose.onNodeWithText("Layout").assertIsDisplayed()
-        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).assertCountEquals(1)
+        // Layout and Under the Title (PEN-161), both kept on this phone.
+        compose.onAllNodesWithTag("deviceOnly", useUnmergedTree = true).assertCountEquals(2)
         compose.onNodeWithText("The theme’s is 52 rem.", substring = true).assertIsDisplayed()
         compose.onNodeWithTag("width-theme").assertIsSelected()
         compose.onNodeWithTag("width-full").performClick()

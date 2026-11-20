@@ -55,6 +55,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -489,6 +491,14 @@ private fun NoteInfoTab(note: NoteScreenState, onOpenNote: (String) -> Unit) {
     val allTags by remember(noteId) { graph.store.observeTagsOf(noteId) }.collectAsStateWithLifecycle(emptyList())
     val tags = note.tags
     val info = note.info
+    // AI Descriptions (PEN-161): where the note's setting comes from, read again as it changes.
+    var aiEffective by remember(noteId) { mutableStateOf<app.penmoss.engine.api.AiNoteStatus?>(null) }
+    var describing by remember(noteId) { mutableStateOf(false) }
+    var describeSaid by remember(noteId) { mutableStateOf<String?>(null) }
+    val describeScope = rememberCoroutineScope()
+    LaunchedEffect(noteId, info?.ai, info?.description) {
+        aiEffective = runCatching { graph.api.aiNote(noteId) }.getOrNull()
+    }
     InfoSheet(
         noteId = noteId,
         rows = infoRows(note.crumbs.map { it.name }, info, note.placed?.updatedAt, saved = note.noteSync, counts = note.counts),
@@ -511,6 +521,22 @@ private fun NoteInfoTab(note: NoteScreenState, onOpenNote: (String) -> Unit) {
                 onText = { note.controller.setDescription(it) },
                 onAi = { note.controller.setAiDescription(it) },
                 onAnswer = { keep -> note.controller.answerDescription(keep) },
+                effective = aiEffective,
+                describing = describing,
+                said = describeSaid,
+                onDescribeNow = {
+                    describeScope.launch {
+                        describing = true
+                        describeSaid = null
+                        val answer = runCatching { graph.api.describeNow(noteId) }.getOrNull()
+                        describing = false
+                        describeSaid = when {
+                            answer == null -> "Couldn’t reach the notebook. Try again."
+                            answer.ok -> "Described just now"
+                            else -> answer.message ?: "The description failed."
+                        }
+                    }
+                },
             )
         },
         backlinks = backlinksUi,

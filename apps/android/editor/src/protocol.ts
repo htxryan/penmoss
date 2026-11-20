@@ -263,6 +263,11 @@ export type ToEditor =
    */
   | { readonly v: 1; readonly type: 'width'; readonly full: boolean }
   /**
+   * What shows under the title (PEN-161): the note's description, when Settings → Note says so
+   * (`metadata.underTitle` holds `description`), as the Mac shows it under the title.
+   */
+  | { readonly v: 1; readonly type: 'underTitle'; readonly description: boolean }
+  /**
    * The person's fonts (T51, A944): the synced `font.interface`, `font.note` and `font.noteSize`,
    * each by core `fonts.ts`'s rules, laid over the theme's own (`fontVariables`).
    */
@@ -963,6 +968,10 @@ export function parseToEditor(raw: string): ToEditor | null {
       const { theme, variant } = value;
       if (!isRecord(theme) || (variant !== 'light' && variant !== 'dark')) return null;
       return { v: 1, type: 'theme', theme, variant };
+    }
+    case 'underTitle': {
+      const description = value['description'];
+      return typeof description === 'boolean' ? { v: 1, type: 'underTitle', description } : null;
     }
     case 'width': {
       const { full } = value;
