@@ -1,7 +1,8 @@
 /**
- * The dashboard's page (PEN-137): a filter bar, seven views, and for each chart a legend (two
- * series or more), a Table toggle and Download CSV. Everything comes from /api/<view>; nothing is
- * per install.
+ * The dashboard's page (PEN-137): a filter bar, eight views, and for each chart a legend (two
+ * series or more), a Table toggle and Download CSV. Everything comes from /api/<view>. Nothing is
+ * per install outside Sessions (PEN-173), which lists sessions and shows one session's events and
+ * its install's sessions, the install shown only by its first 8 hex characters.
  */
 import {
   bars,
@@ -19,20 +20,42 @@ import {
   type TreeNode,
 } from './charts';
 import {
+  ACTOR_LABELS,
+  CLIENT_LABELS,
   FIRSTRUN_LABELS,
+  RESULTS,
+  SOURCE_LABELS,
+  STEP_RESULT_LABELS,
+  SYNC_LABELS,
+  agentLabel,
   commandName,
+  cutLine,
   displayName,
   eventName,
   kindName,
+  osName,
+  propsInWords,
+  sessionLength,
+  shortInstall,
+  stretches,
   titled,
+  windowName,
   type EventName,
 } from './names';
+import { createTimeline, timesOf, type TimelineEvent } from './timeline';
 
 type Row = Record<string, string | number | null>;
-/** A display name with the id it was recorded by: the id is a muted line under it. */
-type Cell = string | number | EventName;
+/** A link in a table's cell (a session's start). */
+interface LinkCell {
+  readonly text: string;
+  readonly href: string;
+}
+/** A display name with the id it was recorded by (the id is a muted line under it), or a link. */
+type Cell = string | number | EventName | LinkCell;
 
-const named = (value: Cell): value is EventName => typeof value === 'object';
+/** A named cell: it has an id, even an empty one (Paths' "Session Ended"). */
+const named = (value: Cell): value is EventName => typeof value === 'object' && 'id' in value;
+const linked = (value: Cell): value is LinkCell => typeof value === 'object' && 'href' in value;
 
 interface TableSpec {
   readonly columns: readonly string[];
@@ -61,6 +84,16 @@ interface CardSpec {
   readonly empty?: boolean;
   /** Across the whole view, not one column. */
   readonly wide?: boolean;
+  /** A table-only card whose table shows in full, the page scrolling (Recent Sessions). */
+  readonly tall?: boolean;
+  /** Placed between the header and the body (a pager, a line under the note). */
+  readonly before?: HTMLElement;
+  /** A custom body with no padding, its rows edge to edge (the timeline). */
+  readonly flush?: boolean;
+  /** The CSV's file name, when penmoss-<id>-<days>d.csv would mean nothing. */
+  readonly file?: string;
+  /** The CSV's rows, header first, when they are not the table's. */
+  readonly csv?: () => readonly (readonly (string | number)[])[];
 }
 
 const VIEW_NAMES = {
@@ -68,64 +101,13 @@ const VIEW_NAMES = {
   commands: 'Commands & Shortcuts',
   firstrun: 'First Run',
   paths: 'Paths',
+  sessions: 'Sessions',
   platforms: 'Platforms',
   agents: 'Agents',
   health: 'Health',
 } as const;
 type ViewName = keyof typeof VIEW_NAMES;
 
-const CLIENT_LABELS: Record<string, string> = {
-  mac: 'Mac',
-  android: 'Android',
-  cli: 'CLI',
-  mcp: 'MCP',
-};
-const ACTOR_LABELS: Record<string, string> = { person: 'Person', agent: 'Agent', script: 'Script' };
-/** The MCP clients' fixed list (core's AGENT_CLIENTS), as people name them. */
-const AGENT_CLIENT_LABELS: Record<string, string> = {
-  'claude-code': 'Claude Code',
-  'claude-desktop': 'Claude Desktop',
-  codex: 'Codex',
-  cursor: 'Cursor',
-  vscode: 'VS Code',
-  windsurf: 'Windsurf',
-  zed: 'Zed',
-  gemini: 'Gemini',
-  goose: 'Goose',
-  cline: 'Cline',
-  continue: 'Continue',
-  penmoss: 'Penmoss',
-  other: 'Other Agent',
-};
-/** Who ran a CLI command or MCP tool: an agent client by name, else the actor. */
-const agentLabel = (key: string) => AGENT_CLIENT_LABELS[key] ?? ACTOR_LABELS[key] ?? titled(key);
-const STEP_RESULT_LABELS: Record<string, string> = { done: 'Done', back: 'Back', failed: 'Failed' };
-/** A CLI command's or MCP tool's results, in order: blue, then orange, aqua, and the rest. */
-const RESULTS = [
-  { key: 'ok', label: 'OK', color: 'var(--s1)' },
-  { key: 'invalid', label: 'Invalid', color: 'var(--s2)' },
-  { key: 'not_found', label: 'Not Found', color: 'var(--s3)' },
-  { key: 'conflict', label: 'Conflict', color: 'var(--s4)' },
-  { key: 'failed', label: 'Failed', color: 'var(--s5)' },
-] as const;
-
-const SOURCE_LABELS: Record<string, string> = {
-  key: 'Key',
-  palette: 'Palette',
-  button: 'Button',
-  menu: 'Menu',
-  tray: 'Tray',
-  hotkey: 'Hotkey',
-  editor: 'Editor',
-  other: 'Other',
-  '': 'Other',
-};
-const SYNC_LABELS: Record<string, string> = {
-  ok: 'OK',
-  conflict: 'Conflict',
-  offline: 'Offline',
-  failed: 'Failed',
-};
 /** Person, agent, script: blue, orange, aqua (series 1–3). */
 const ACTOR_COLOURS: Record<string, string> = {
   person: 'var(--s1)',
@@ -135,7 +117,8 @@ const ACTOR_COLOURS: Record<string, string> = {
 const slot = (i: number) => (i < 8 ? `var(--s${i + 1})` : 'var(--other)');
 
 // ---------------------------------------------------------------------------------------------
-// State: the filters and the view, in the address so a reload keeps them.
+// State: the filters and the view, in the address so a reload keeps them; on Sessions, the
+// list's page and an open session's install and id too (PEN-173).
 
 interface State {
   view: ViewName;
@@ -145,36 +128,121 @@ interface State {
   channel: string;
   version: string;
   start: string;
+  /** Sessions' page, from 1. */
+  page: number;
+  /** An open session's install and id, as the address has them (checked before use). */
+  install: string;
+  session: string;
 }
 
-function readState(): State {
-  const [view = 'overview', query = ''] = location.hash.slice(1).split('?');
+const FILTER_KEYS = ['client', 'actor', 'channel', 'version'] as const;
+
+const DEFAULTS: State = {
+  view: 'overview',
+  days: '30',
+  client: '',
+  actor: '',
+  channel: '',
+  version: '',
+  start: 'command:app.palette',
+  page: 1,
+  install: '',
+  session: '',
+};
+
+const INSTALL_ID = /^[0-9a-f]{32}$/;
+const SESSION_ID = /^[0-9a-f]{16}$/;
+
+/**
+ * The state an address (`#view?…`) stands for, from `current`. A bare `#view` keeps the current
+ * filters and Start From and opens the view's first page. A hash with any parameter is the whole
+ * filter bar: a filter it leaves out is All, a missing page is 1; only Paths' start, which only
+ * Paths writes, keeps the current one when it is missing.
+ */
+function stateOf(hash: string, current: State): State {
+  const text = hash.replace(/^#/, '');
+  const at = text.indexOf('?');
+  const name = at < 0 ? text : text.slice(0, at);
+  const view = (name in VIEW_NAMES ? name : 'overview') as ViewName;
+  const query = at < 0 ? '' : text.slice(at + 1);
+  if (query === '') return { ...current, view, page: 1, install: '', session: '' };
   const params = new URLSearchParams(query);
+  const page = params.get('page') ?? '';
   return {
-    view: (view in VIEW_NAMES ? view : 'overview') as ViewName,
-    days: params.get('days') ?? '30',
+    view,
+    days: params.get('days') ?? DEFAULTS.days,
     client: params.get('client') ?? '',
     actor: params.get('actor') ?? '',
     channel: params.get('channel') ?? '',
     version: params.get('version') ?? '',
-    start: params.get('start') ?? 'command:app.palette',
+    start: params.get('start') ?? current.start,
+    page: /^[1-9]\d{0,3}$/.test(page) ? Number(page) : 1,
+    install: view === 'sessions' ? (params.get('install') ?? '') : '',
+    session: view === 'sessions' ? (params.get('session') ?? '') : '',
   };
 }
 
-let state = readState();
+let state = stateOf(location.hash, DEFAULTS);
 
-function query(withStart: boolean): string {
-  const params = new URLSearchParams({ days: state.days });
-  for (const key of ['client', 'actor', 'channel', 'version'] as const) {
-    if (state[key]) params.set(key, state[key]);
+const sameState = (a: State, b: State) =>
+  (Object.keys(a) as (keyof State)[]).every((key) => a[key] === b[key]);
+
+/** The period and filters as parameters. */
+function filterParams(from: State = state): URLSearchParams {
+  const params = new URLSearchParams({ days: from.days });
+  for (const key of FILTER_KEYS) {
+    if (from[key]) params.set(key, from[key]);
   }
-  if (withStart && state.start) params.set('start', state.start);
+  return params;
+}
+
+/** The address's parameters for `from`: the filters, Paths' start, Sessions' page and session. */
+function query(from: State = state): string {
+  const params = filterParams(from);
+  if (from.view === 'paths' && from.start) params.set('start', from.start);
+  if (from.view === 'sessions') {
+    if (from.page > 1) params.set('page', String(from.page));
+    if (from.install) params.set('install', from.install);
+    if (from.session) params.set('session', from.session);
+  }
   return params.toString();
 }
 
+/** The address of `changes` made to the state: a link's href. */
+const hrefOf = (changes: Partial<State>) => {
+  const to = { ...state, ...changes };
+  return `#${to.view}?${query(to)}`;
+};
+
+/** Sessions' list at `page`, with the address's filters. */
+const listHref = (page = state.page) =>
+  hrefOf({ view: 'sessions', page, install: '', session: '' });
+
+/** A session's address: the list's, with the install and the session. */
+const sessionHref = (install: string, session: string) =>
+  hrefOf({ view: 'sessions', install, session });
+
+/** Whether Sessions is showing a session (or an address that tries to name one). */
+const sessionOpen = () =>
+  state.view === 'sessions' && (state.install !== '' || state.session !== '');
+
 function writeHash(): void {
-  const params = new URLSearchParams(query(state.view === 'paths'));
-  history.replaceState(null, '', `#${state.view}?${params.toString()}`);
+  history.replaceState(null, '', `#${state.view}?${query()}`);
+}
+
+/** The API request for the view: only what each view needs. */
+function requestPath(): string {
+  if (sessionOpen()) {
+    return `/api/session?${new URLSearchParams({ install: state.install, session: state.session }).toString()}`;
+  }
+  if (state.view === 'sessions') {
+    const params = filterParams();
+    if (state.page > 1) params.set('page', String(state.page));
+    return `/api/sessions?${params.toString()}`;
+  }
+  const params = filterParams();
+  if (state.view === 'paths' && state.start) params.set('start', state.start);
+  return `/api/${state.view}?${params.toString()}`;
 }
 
 async function load<T>(path: string): Promise<T> {
@@ -241,22 +309,33 @@ const distinct = (rows: readonly Row[], key: string) => [
 const resizers = new Set<() => void>();
 new ResizeObserver(() => resizers.forEach((draw) => draw())).observe(document.documentElement);
 
-/** The table as CSV: a named column is followed by its ids ("Command", "Command ID"). */
-function csvOf(table: TableSpec): string {
+/** Rows as CSV text. */
+function csvText(rows: readonly (readonly (string | number)[])[]): string {
   const cell = (value: string | number) => {
     const text = String(value);
     return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
+  return rows.map((row) => row.map(cell).join(',')).join('\n') + '\n';
+}
+
+/** The table as CSV: a named column is followed by its ids ("Command", "Command ID"). */
+function csvOf(table: TableSpec): string {
   const withIds = table.columns.map((_, i) => table.rows.some((row) => named(row[i]!)));
   const head = table.columns.flatMap((column, i) =>
     withIds[i] ? [column, `${column} ID`] : [column],
   );
   const body = table.rows.map((row) =>
-    row.flatMap((value, i) =>
-      named(value) ? [value.title, value.id] : withIds[i] ? [value, ''] : [value],
+    row.flatMap((value, i): (string | number)[] =>
+      named(value)
+        ? [value.title, value.id]
+        : linked(value)
+          ? [value.text]
+          : withIds[i]
+            ? [value, '']
+            : [value],
     ),
   );
-  return [head, ...body].map((row) => row.map(cell).join(',')).join('\n') + '\n';
+  return csvText([head, ...body]);
 }
 
 function tableElement(spec: TableSpec, caption: string): HTMLTableElement {
@@ -286,6 +365,11 @@ function tableElement(spec: TableSpec, caption: string): HTMLTableElement {
         id.className = 'cell-id';
         id.textContent = value.id;
         td.append(value.title, ...(value.id ? [id] : []));
+      } else if (linked(value)) {
+        const link = document.createElement('a');
+        link.href = value.href;
+        link.textContent = value.text;
+        td.append(link);
       } else {
         td.textContent = typeof value === 'number' ? value.toLocaleString('en-GB') : value;
         if (typeof value === 'number') td.className = 'num';
@@ -327,6 +411,7 @@ function card(spec: CardSpec): HTMLElement {
     head.append(note);
   }
   section.append(head);
+  if (spec.before) section.append(spec.before);
   if (spec.legend && spec.legend.length >= 2) {
     const legend = document.createElement('ul');
     legend.className = 'legend';
@@ -342,7 +427,7 @@ function card(spec: CardSpec): HTMLElement {
     section.append(legend);
   }
   const body = document.createElement('div');
-  body.className = 'chart-body';
+  body.className = spec.flush ? 'chart-body flush' : 'chart-body';
   const drawn = spec.chart !== null || spec.custom !== undefined;
   body.hidden = !drawn && !spec.empty;
   section.append(body);
@@ -368,7 +453,7 @@ function card(spec: CardSpec): HTMLElement {
     requestAnimationFrame(redraw);
   }
   const tableHolder = document.createElement('div');
-  tableHolder.className = 'table-holder';
+  tableHolder.className = spec.tall ? 'table-holder tall' : 'table-holder';
   tableHolder.hidden = drawn;
   tableHolder.append(tableElement(spec.table, spec.title));
   const tools = document.createElement('footer');
@@ -390,10 +475,11 @@ function card(spec: CardSpec): HTMLElement {
     button(
       'Download CSV',
       () => {
-        const blob = new Blob([csvOf(spec.table)], { type: 'text/csv' });
+        const text = spec.csv ? csvText(spec.csv()) : csvOf(spec.table);
+        const blob = new Blob([text], { type: 'text/csv' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `penmoss-${spec.id}-${state.days}d.csv`;
+        link.download = spec.file ?? `penmoss-${spec.id}-${state.days}d.csv`;
         document.body.append(link);
         link.click();
         link.remove();
@@ -407,8 +493,8 @@ function card(spec: CardSpec): HTMLElement {
   return section;
 }
 
-/** Figures in a row of tiles, every number the same size. */
-function tiles(items: readonly { label: string; value: number }[]): HTMLElement {
+/** Figures in a row of tiles, every number the same size; a word ("Mac") the same size too. */
+function tiles(items: readonly { label: string; value: number | string }[]): HTMLElement {
   const list = document.createElement('dl');
   list.className = 'tiles';
   for (const item of items) {
@@ -417,7 +503,7 @@ function tiles(items: readonly { label: string; value: number }[]): HTMLElement 
     const label = document.createElement('dt');
     label.textContent = item.label;
     const value = document.createElement('dd');
-    value.textContent = formatNumber(item.value);
+    value.textContent = typeof item.value === 'number' ? formatNumber(item.value) : item.value;
     tile.append(label, value);
     list.append(tile);
   }
@@ -857,8 +943,6 @@ function platforms(answer: Answer): HTMLElement[] {
     row['width'] === null || row['height'] === null
       ? 'Other'
       : `${String(row['width'])} × ${String(row['height'])}`;
-  const osName = (os: string) =>
-    ({ macos: 'macOS', android: 'Android', linux: 'Linux', windows: 'Windows' })[os] ?? 'Other';
   return [
     card({
       id: 'os-versions',
@@ -1162,6 +1246,419 @@ function health(answer: Answer): HTMLElement[] {
   ];
 }
 
+// ---------------------------------------------------------------------------------------------
+// Sessions (PEN-173): the recent sessions, and one session's events in order.
+
+/** What a view's renderer gives render() besides its body: its own header, range and title. */
+interface Rendered {
+  /** In place of the view's h1 (a session's header row). */
+  readonly head?: readonly HTMLElement[];
+  readonly body: readonly HTMLElement[];
+  /** The days the range line spans, when not the period (Sessions reads at most 90). */
+  readonly rangeDays?: number;
+  /** The tab's title, before " · Penmoss Usage". */
+  readonly title?: string;
+  /** Runs once the page is in place. */
+  readonly after?: () => void;
+}
+
+/** "20 Nov, 09:14" from ms (UTC, as the range line says). */
+function when(ms: number): string {
+  return new Date(ms).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  });
+}
+
+function node<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  ...children: (Node | string)[]
+): HTMLElementTagNameMap[K] {
+  const made = document.createElement(tag);
+  if (className) made.className = className;
+  made.append(...children);
+  return made;
+}
+
+/** A link styled as a button; with no href it is disabled (aria-disabled), as at a list's end. */
+function linkButton(label: string, href: string | null): HTMLAnchorElement {
+  const link = node('a', 'btn', label);
+  if (href) link.href = href;
+  else link.setAttribute('aria-disabled', 'true');
+  return link;
+}
+
+const backLink = () => {
+  const link = node('a', 'back', '← All Sessions');
+  link.href = listHref();
+  return link;
+};
+
+const eventsWord = (n: number) => `${n.toLocaleString('en-GB')} ${n === 1 ? 'event' : 'events'}`;
+const clientName = (client: unknown) => CLIENT_LABELS[String(client)] ?? titled(String(client));
+const screenCell = (name: Row[string] | undefined): Cell =>
+  name ? eventName(`screen:${String(name)}`) : 'No Screens';
+
+function sessionsList(answer: Answer): Rendered {
+  const rows = rowsOf(answer, 'sessions');
+  const total = Number(answer['total'] ?? 0);
+  const page = Number(answer['page'] ?? 1);
+  const size = Number(answer['pageSize'] ?? 50);
+  const days = Number(answer['days'] ?? answer.filters.days);
+  // A page past the end came back as page 1: the address and links follow what is shown.
+  if (page !== state.page) {
+    state.page = page;
+    writeHash();
+  }
+  const capped = days < answer.filters.days;
+  let before: HTMLElement | undefined;
+  if (total > 0) {
+    const from = (page - 1) * size + 1;
+    const to = Math.min(page * size, total);
+    before = node(
+      'div',
+      'pager',
+      node(
+        'span',
+        'pager-range',
+        `${from.toLocaleString('en-GB')}–${to.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')}`,
+      ),
+      linkButton('Newer', page > 1 ? listHref(page - 1) : null),
+      linkButton('Older', to < total ? listHref(page + 1) : null),
+    );
+    before.setAttribute('aria-label', 'Pages');
+  }
+  const length = (row: Row) =>
+    sessionLength({
+      started: Number(row['started']),
+      ended: Number(row['ended']),
+      events: Number(row['events']),
+      took: row['took'] === null ? null : String(row['took'] ?? ''),
+    });
+  const os = (row: Row) => `${osName(String(row['os']))} ${String(row['os_version'])}`;
+  const screenId = (name: Row[string] | undefined) => (name ? eventName(`screen:${String(name)}`).id : '');
+  return {
+    rangeDays: days,
+    body: [
+      card({
+        id: 'recent-sessions',
+        title: 'Recent Sessions',
+        wide: true,
+        tall: true,
+        note: `Sessions with an event that matches the filters, newest first${capped ? ', over the last 90 days' : ''}. Choose a start time to read the session.`,
+        chart: null,
+        ...(before ? { before } : {}),
+        table: {
+          columns: [
+            'Started',
+            'Length',
+            'Client',
+            'Version',
+            'OS',
+            'Events',
+            'First Screen',
+            'Last Screen',
+          ],
+          rows: rows.map((row) => [
+            {
+              text: when(Number(row['started'])),
+              href: sessionHref(String(row['install']), String(row['session'])),
+            },
+            length(row),
+            clientName(row['client']),
+            String(row['version']),
+            os(row),
+            Number(row['events']),
+            screenCell(row['first_screen']),
+            screenCell(row['last_screen']),
+          ]),
+        },
+        file: `penmoss-sessions-${state.days}d.csv`,
+        csv: () => [
+          [
+            'Started',
+            'Length',
+            'Client',
+            'Version',
+            'OS',
+            'Events',
+            'First Screen',
+            'First Screen ID',
+            'Last Screen',
+            'Last Screen ID',
+            'Install',
+            'Session',
+          ],
+          ...rows.map((row) => {
+            const first = screenCell(row['first_screen']);
+            const last = screenCell(row['last_screen']);
+            return [
+              new Date(Number(row['started'])).toISOString(),
+              Math.round((Number(row['ended']) - Number(row['started'])) / 1000),
+              clientName(row['client']),
+              String(row['version']),
+              os(row),
+              Number(row['events']),
+              typeof first === 'string' ? first : (first as EventName).title,
+              screenId(row['first_screen']),
+              typeof last === 'string' ? last : (last as EventName).title,
+              screenId(row['last_screen']),
+              String(row['install']).slice(0, 8),
+              String(row['session']),
+            ];
+          }),
+        ],
+        empty: rows.length === 0,
+      }),
+    ],
+  };
+}
+
+/** A session address that names no session: shown without asking the API. */
+function notASessionLink(): HTMLElement[] {
+  const heading = node('h1', 'view-title', 'Not a Session Link');
+  return [
+    backLink(),
+    heading,
+    node('p', 'gone', "This address doesn't name a session."),
+    linkButton('All Sessions', listHref()),
+  ];
+}
+
+/** Copy Link: the address to the clipboard, or, when the browser refuses, a field to copy from. */
+function copyLink(status: HTMLElement, head: HTMLElement): HTMLButtonElement {
+  let shown = 0;
+  const copy = button('Copy Link', () => {
+    const href = location.href;
+    const refused = () => {
+      head.parentElement?.querySelector('.copy-fallback')?.remove();
+      const field = document.createElement('input');
+      field.id = 'session-link';
+      field.readOnly = true;
+      field.value = href;
+      const label = node('label', '', 'Session Link');
+      label.htmlFor = field.id;
+      const fallback = node(
+        'div',
+        'copy-fallback',
+        label,
+        field,
+        node('p', '', 'Select the link and copy it.'),
+      );
+      head.after(fallback);
+      field.focus();
+      field.select();
+    };
+    if (!navigator.clipboard) {
+      refused();
+      return;
+    }
+    navigator.clipboard.writeText(href).then(() => {
+      const mine = ++shown;
+      status.textContent = 'Link Copied';
+      setTimeout(() => {
+        if (mine === shown) status.textContent = '';
+      }, 3000);
+    }, refused);
+  });
+  copy.className = 'btn';
+  return copy;
+}
+
+function sessionPage(answer: Answer): Rendered {
+  const install = String(answer['install']);
+  const session = String(answer['session']);
+  const events = (answer['events'] as TimelineEvent[] | undefined) ?? [];
+  const others = rowsOf(answer, 'others');
+  const othersTotal = Number(answer['othersTotal'] ?? others.length);
+  if (events.length === 0) {
+    return {
+      rangeDays: 90,
+      title: 'Session Not Found',
+      head: [backLink(), node('h1', 'view-title', 'Session Not Found')],
+      body: [
+        node(
+          'p',
+          'gone',
+          "Nothing from this session in the last 90 days. It may be older, which this tab doesn't read, or its install deleted its shared data.",
+        ),
+        linkButton('All Sessions', listHref()),
+      ],
+    };
+  }
+  const at = events.map((e) => e.at);
+  const index = others.findIndex((row) => row['session'] === session);
+  const own = others[index];
+  const first = events[0]!;
+  const started = own ? Number(own['started']) : Math.min(...at);
+  const length = sessionLength({
+    started,
+    ended: own ? Number(own['ended']) : Math.max(...at),
+    events: own ? Number(own['events']) : events.length,
+    took: own
+      ? (own['took'] as string | null)
+      : typeof first.props['took'] === 'string'
+        ? first.props['took']
+        : null,
+  });
+  const title = `Session on ${stamp(started)}`;
+
+  // The header row: the h1, then Copy Link, Previous Session and Next Session.
+  const copied = node('span', 'copied');
+  copied.setAttribute('role', 'status');
+  const head = node('div', 'session-head');
+  const neighbour = (row: Row | undefined) =>
+    row ? sessionHref(install, String(row['session'])) : null;
+  const actions = node(
+    'div',
+    'session-actions',
+    copied,
+    copyLink(copied, head),
+    linkButton('Previous Session', index > 0 ? neighbour(others[index - 1]) : null),
+    linkButton('Next Session', index >= 0 ? neighbour(others[index + 1]) : null),
+  );
+  head.append(node('h1', 'view-title', title), actions);
+
+  const ids = node(
+    'p',
+    'ids',
+    [`Install ${shortInstall(install)}`, `Session ${session}`, windowName(first.size_class)]
+      .filter(Boolean)
+      .join(' · '),
+  );
+  const actors = [...new Set(events.map((e) => e.actor))].map((a) => ACTOR_LABELS[a] ?? titled(a));
+
+  // The timeline: one list of events, one current index (timeline.ts).
+  const timeline = createTimeline(events);
+  const parts = stretches(events);
+  const screenOf = (i: number): Cell => {
+    const part = parts.find((p) => i >= p.first && i < p.end);
+    return part ? { title: part.title, id: part.id } : '';
+  };
+  const times = timesOf(events);
+  const timelineCard = card({
+    id: 'timeline',
+    title: 'Timeline',
+    note: `Every event in order, divided where the screen changes.${answer['more'] ? ' Showing the first 5,000 events.' : ''}`,
+    chart: null,
+    custom: timeline.element,
+    flush: true,
+    table: {
+      columns: ['Seq', 'Since Start', 'Gap', 'Kind', 'Event', 'Screen', 'Details'],
+      rows: events.map((event, i) => [
+        event.seq,
+        times[i]!.since,
+        times[i]!.gap,
+        kindName(`${event.kind}:${event.name}`),
+        eventName(`${event.kind}:${event.name}`),
+        screenOf(i),
+        propsInWords(event.kind, event.props)
+          .map((prop) => `${prop.label} ${prop.value}`)
+          .join(' · '),
+      ]),
+    },
+    file: `penmoss-session-${session}.csv`,
+  });
+
+  // This Install's Sessions: the 500 nearest, oldest first, the open one marked.
+  const list = node('ol', 'ss');
+  list.setAttribute('aria-label', "This Install's Sessions");
+  for (const row of others) {
+    const open = row['session'] === session;
+    const link = node(
+      'a',
+      'ss-item',
+      node('span', 'ss-when', when(Number(row['started']))),
+      node(
+        'span',
+        'ss-meta',
+        [
+          clientName(row['client']),
+          sessionLength({
+            started: Number(row['started']),
+            ended: Number(row['ended']),
+            events: Number(row['events']),
+            took: row['took'] as string | null,
+          }),
+          eventsWord(Number(row['events'])),
+        ].join(' · '),
+      ),
+    );
+    link.href = sessionHref(install, String(row['session']));
+    if (open) {
+      link.setAttribute('aria-current', 'page');
+      link.append(node('span', 'ss-this', 'This Session'));
+    }
+    list.append(node('li', '', link));
+  }
+  const cut = cutLine(othersTotal, Math.max(0, index), Math.max(0, others.length - index - 1));
+  const sideCard = card({
+    id: 'install-sessions',
+    title: "This Install's Sessions",
+    count: othersTotal,
+    note: 'Every session of this install in the last 90 days, oldest first, whatever the filters.',
+    ...(cut ? { before: node('p', 'cut', cut) } : {}),
+    chart: null,
+    custom: list,
+    table: {
+      columns: ['Started', 'Client', 'Length', 'Events'],
+      rows: others.map((row) => [
+        when(Number(row['started'])),
+        clientName(row['client']),
+        sessionLength({
+          started: Number(row['started']),
+          ended: Number(row['ended']),
+          events: Number(row['events']),
+          took: row['took'] as string | null,
+        }),
+        Number(row['events']),
+      ]),
+    },
+    file: `penmoss-install-sessions-${session}.csv`,
+  });
+  sideCard.classList.add('side');
+
+  return {
+    rangeDays: 90,
+    title,
+    head: [backLink(), head],
+    body: [
+      ids,
+      sessionTiles([
+        { label: 'Length', value: length },
+        { label: 'Events', value: own ? Number(own['events']) : events.length },
+        { label: 'Client', value: clientName(first.client) },
+        { label: 'Actor', value: actors.join(', ') },
+        { label: 'Version', value: first.version },
+        { label: 'Channel', value: titled(first.channel) },
+        { label: 'OS', value: `${osName(first.os)} ${first.os_version}` },
+      ]),
+      node('div', 'session-cols', timelineCard, sideCard),
+    ],
+    after: () => {
+      // The open session in the middle of its list's box; the window doesn't move.
+      const item = list.querySelector('[aria-current]')?.parentElement;
+      if (item) list.scrollTop = item.offsetTop - list.clientHeight / 2 + item.offsetHeight / 2;
+    },
+  };
+}
+
+/** A session's tiles: words as well as figures, two to a row on a phone. */
+function sessionTiles(items: readonly { label: string; value: number | string }[]): HTMLElement {
+  const list = tiles(items);
+  list.classList.add('session-tiles');
+  return list;
+}
+
+/** Sessions: the list, or one session when the address names one. */
+function sessions(answer: Answer): Rendered {
+  return sessionOpen() ? sessionPage(answer) : sessionsList(answer);
+}
+
 /** "19 Nov, 17:58 UTC" from ms. */
 function stamp(ms: number): string {
   return `${new Date(ms).toLocaleString('en-GB', {
@@ -1189,11 +1686,12 @@ function freshnessLine(answer: Answer): HTMLElement {
   return line;
 }
 
-const RENDERERS: Record<ViewName, (answer: Answer) => HTMLElement[]> = {
+const RENDERERS: Record<ViewName, (answer: Answer) => HTMLElement[] | Rendered> = {
   overview,
   commands,
   firstrun: firstRun,
   paths,
+  sessions,
   platforms,
   agents,
   health,
@@ -1204,46 +1702,90 @@ const RENDERERS: Record<ViewName, (answer: Answer) => HTMLElement[]> = {
 
 const main = document.querySelector<HTMLElement>('#view')!;
 const status = document.querySelector<HTMLElement>('#status')!;
+const strip = document.querySelector<HTMLElement>('nav.views')!;
 let rendering = 0;
 
-async function render(): Promise<void> {
+/**
+ * The tab strip: the current tab marked and scrolled into the strip (by its scrollLeft, never
+ * scrollIntoView, which would move the window too), and every tab's link carrying the filters (and
+ * Paths' its Start From), so a tab click keeps them.
+ */
+function updateTabs(): void {
+  for (const link of strip.querySelectorAll<HTMLAnchorElement>('a[data-view]')) {
+    const view = link.dataset['view'] as ViewName;
+    link.setAttribute('href', hrefOf({ view, page: 1, install: '', session: '' }));
+    if (view !== state.view) {
+      link.removeAttribute('aria-current');
+      continue;
+    }
+    link.setAttribute('aria-current', 'page');
+    const box = strip.getBoundingClientRect();
+    const tab = link.getBoundingClientRect();
+    if (tab.left < box.left) strip.scrollLeft += tab.left - box.left;
+    else if (tab.right > box.right) strip.scrollLeft += tab.right - box.right;
+  }
+}
+
+/** Draws the view the state names. True when it is still the current render once drawn. */
+async function render(): Promise<boolean> {
   const ticket = ++rendering;
   writeHash();
   hideTip();
-  for (const link of document.querySelectorAll<HTMLAnchorElement>('nav.views a')) {
-    if (link.dataset['view'] === state.view) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  }
+  updateTabs();
   document.title = `${VIEW_NAMES[state.view]} · Penmoss Usage`;
+  if (sessionOpen() && !(INSTALL_ID.test(state.install) && SESSION_ID.test(state.session))) {
+    // An address that names no session: nothing to ask the API.
+    resizers.clear();
+    main.replaceChildren(...notASessionLink());
+    main.removeAttribute('aria-busy');
+    status.textContent = '';
+    document.title = 'Not a Session Link · Penmoss Usage';
+    return true;
+  }
   // The last view stays, dimmed, until the next one is ready.
   main.setAttribute('aria-busy', 'true');
   try {
-    const answer = await load<Answer>(`/api/${state.view}?${query(state.view === 'paths')}`);
-    if (ticket !== rendering) return;
+    const answer = await load<Answer>(requestPath());
+    if (ticket !== rendering) return false;
     resizers.clear();
+    const drawn = RENDERERS[state.view](answer);
+    const page: Rendered = Array.isArray(drawn) ? { body: drawn } : drawn;
     const heading = document.createElement('h1');
     heading.className = 'view-title';
     heading.textContent = VIEW_NAMES[state.view];
     const range = document.createElement('p');
     range.className = 'range';
-    const first = daysOf(answer.today, answer.filters.days)[0] ?? answer.today;
+    const first = daysOf(answer.today, page.rangeDays ?? answer.filters.days)[0] ?? answer.today;
     range.textContent = `${shortDay(first)} to ${shortDay(answer.today)} (UTC)`;
-    main.replaceChildren(heading, range, freshnessLine(answer), ...RENDERERS[state.view](answer));
+    main.replaceChildren(...(page.head ?? [heading]), range, freshnessLine(answer), ...page.body);
+    document.title = `${page.title ?? VIEW_NAMES[state.view]} · Penmoss Usage`;
     status.textContent = '';
+    page.after?.();
+    return true;
   } catch (error) {
-    if (ticket !== rendering) return;
+    if (ticket !== rendering) return false;
     status.textContent = `Couldn't load this view: ${error instanceof Error ? error.message : String(error)}`;
+    return true;
   } finally {
     if (ticket === rendering) main.removeAttribute('aria-busy');
   }
 }
 
+/** The filter bar's selects, set to the state. */
+function showFilters(): void {
+  for (const key of ['days', ...FILTER_KEYS] as const) {
+    document.querySelector<HTMLSelectElement>(`#filter-${key}`)!.value = state[key];
+  }
+}
+
 function setUpFilters(): void {
-  for (const key of ['days', 'client', 'actor', 'channel', 'version'] as const) {
+  for (const key of ['days', ...FILTER_KEYS] as const) {
     const select = document.querySelector<HTMLSelectElement>(`#filter-${key}`)!;
     select.value = state[key];
     select.addEventListener('change', () => {
-      state[key] = select.value;
+      // A filter replaces the address, as it always has; on Sessions it goes back to the list's
+      // first page, so Back from there skips an open session.
+      state = { ...state, [key]: select.value, page: 1, install: '', session: '' };
       void render();
     });
   }
@@ -1259,12 +1801,46 @@ function setUpFilters(): void {
   });
 }
 
-window.addEventListener('hashchange', () => {
-  const next = readState();
-  if (next.view !== state.view) {
-    state = { ...state, view: next.view };
-    void render();
-  }
+// Moving around (PEN-173): links push history entries, so Back returns to each step, its
+// filters and where it was scrolled. The page restores the scroll itself, after the view is
+// drawn, rather than the browser before the answer arrives.
+history.scrollRestoration = 'manual';
+/** Where each address was scrolled when it was left. */
+const positions = new Map<string, number>();
+/** Whether the address is changing because a link here was clicked (then it opens at the top). */
+let navigating = false;
+
+document.addEventListener('click', (event) => {
+  // A plain left click only: Cmd, Ctrl, Shift or Alt (or a middle click) opens a new tab or window.
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const link = (event.target as Element | null)?.closest?.<HTMLAnchorElement>('a[href^="#"]');
+  if (!link) return;
+  event.preventDefault();
+  const target = link.getAttribute('href')!;
+  // The address already showing: no hashchange comes, and nothing changes.
+  if (target === location.hash) return;
+  navigating = true;
+  location.hash = target;
+});
+
+window.addEventListener('hashchange', (event) => {
+  positions.set(new URL(event.oldURL).hash, window.scrollY);
+  const clicked = navigating;
+  navigating = false;
+  const bare = !location.hash.includes('?') || location.hash.endsWith('?');
+  const next = stateOf(location.hash, state);
+  if (!bare && sameState(next, state)) return;
+  state = next;
+  showFilters();
+  void render().then((current) => {
+    if (!current) return;
+    // After the cards' own chart redraws, which are queued the same way, so the page is at its
+    // full height.
+    requestAnimationFrame(() => {
+      window.scrollTo(0, clicked ? 0 : (positions.get(location.hash) ?? 0));
+    });
+  });
 });
 
 setUpFilters();

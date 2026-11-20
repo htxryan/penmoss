@@ -1,11 +1,13 @@
 /**
  * The dashboard's read-only API (PEN-137): GET /api/<view>?days=&client=&actor=&channel=&version=
- * for its seven views, and /api/versions for the filter. Each view runs fixed named queries
+ * for its eight views, and /api/versions for the filter. Each view runs fixed named queries
  * (apps/telemetry/queries/*.sql); every filter is checked against its list or pattern and bound
  * as a parameter. No route takes SQL, and nothing here writes.
  *
- * Nothing is shown per install: every row is a count, and a path is shown only when at least
- * MIN_SESSIONS sessions took it.
+ * Nothing is shown per install outside Sessions (PEN-173, amending A1641): every other row is a
+ * count, and a path is shown only when at least MIN_SESSIONS sessions took it, to keep its chart
+ * readable. Sessions (/api/sessions, /api/session) lists sessions and gives one session's events
+ * and its install's sessions; the page shows an install only by its first 8 hex characters.
  */
 import {
   ACTORS,
@@ -13,7 +15,9 @@ import {
   CHANNELS,
   CLIENTS,
   FIRSTRUN_STEPS,
+  INSTALL_PATTERN,
   KINDS,
+  SESSION_PATTERN,
   isCatalogued,
 } from '@penmoss/core/analytics';
 import { runQuery, type QueryName, type QueryParams } from '@penmoss/telemetry/queries';
@@ -29,17 +33,28 @@ export const DAYS = [7, 30, 90, 365, 395] as const;
 export const RAW_DAYS = 90;
 /** A path seen in fewer sessions than this is never shown. */
 export const MIN_SESSIONS = 5;
+/** Sessions' list: this many a page (sessions.sql's LIMIT). */
+export const SESSIONS_PAGE = 50;
+/** A session's timeline shows at most this many events (session.sql reads one more). */
+export const MAX_EVENTS = 5000;
 /** Rows written a day on D1's Workers Free plan (D20): the Health view's line. */
 export const DAILY_WRITE_CAP = 100_000;
 
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9.]{1,20})?$/;
 const FILTERS = ['days', 'client', 'actor', 'channel', 'version', 'start'] as const;
+/** The parameters only one view takes (PEN-173): the list's page, a session's two ids. */
+const VIEW_FILTERS: Partial<Record<View, readonly string[]>> = {
+  sessions: ['page'],
+  session: ['install', 'session'],
+};
 
 export const VIEWS = [
   'overview',
   'commands',
   'firstrun',
   'paths',
+  'sessions',
+  'session',
   'platforms',
   'agents',
   'health',
@@ -55,6 +70,11 @@ export interface Filters {
   readonly version: string;
   /** Paths' start event, kind:name, or ''. */
   readonly start: string;
+  /** Sessions' page, from 1 (only on /api/sessions). */
+  readonly page?: number;
+  /** A session's install and id (only on /api/session, where both are needed). */
+  readonly install?: string;
+  readonly session?: string;
 }
 
 export class BadRequest extends Error {}
@@ -64,10 +84,11 @@ const oneOf = (name: string, value: string, list: readonly string[]) => {
   return value;
 };
 
-/** The filters in `url`, checked; a BadRequest says which one is wrong. */
-export function readFilters(url: URL): Filters {
+/** The filters in `url` for `view`, checked; a BadRequest says which one is wrong. */
+export function readFilters(url: URL, view: View): Filters {
+  const known: readonly string[] = [...FILTERS, ...(VIEW_FILTERS[view] ?? [])];
   for (const key of url.searchParams.keys()) {
-    if (!(FILTERS as readonly string[]).includes(key)) throw new BadRequest(`no filter ${key}`);
+    if (!known.includes(key)) throw new BadRequest(`no filter ${key}`);
   }
   const get = (key: string) => url.searchParams.get(key) ?? '';
   const days = Number(get('days') || 30);
@@ -82,7 +103,7 @@ export function readFilters(url: URL): Filters {
       throw new BadRequest('start is a catalogued kind:name');
     }
   }
-  return {
+  const filters: Filters = {
     days: days as Filters['days'],
     client: oneOf('client', get('client'), CLIENTS),
     actor: oneOf('actor', get('actor'), ACTORS),
@@ -90,9 +111,26 @@ export function readFilters(url: URL): Filters {
     version,
     start,
   };
+  if (view === 'sessions') {
+    const page = get('page') || '1';
+    if (!/^[1-9]\d{0,3}$/.test(page)) throw new BadRequest('page is a whole number, 1 to 9999');
+    return { ...filters, page: Number(page) };
+  }
+  if (view === 'session') {
+    const install = get('install');
+    const session = get('session');
+    if (!INSTALL_PATTERN.test(install)) throw new BadRequest('install is 32 hex characters');
+    if (!SESSION_PATTERN.test(session)) throw new BadRequest('session is 16 hex characters');
+    return { ...filters, install, session };
+  }
+  return filters;
 }
 
 type Row = Record<string, string | number | null>;
+
+/** A row without the query's `total` column, which the answer gives once. */
+const withoutTotal = (row: Row): Row =>
+  Object.fromEntries(Object.entries(row).filter(([key]) => key !== 'total'));
 
 interface PathNode {
   readonly event: string;
@@ -191,6 +229,46 @@ export async function viewData(
       const [startKind = '', startName = ''] = filters.start.split(/:(.*)/s);
       const rows = await run('next', { ...raw, startKind, startName });
       return { ...raw, options, start: filters.start, tree: pathTree(filters.start, rows) };
+    }
+    case 'sessions': {
+      // A page past the end (the list shrank, an old link) answers the first page instead.
+      let page = filters.page ?? 1;
+      let rows = await run('sessions', { ...raw, page });
+      if (rows.length === 0 && page > 1) {
+        page = 1;
+        rows = await run('sessions', { ...raw, page });
+      }
+      return {
+        ...raw,
+        page,
+        pageSize: SESSIONS_PAGE,
+        total: Number(rows[0]?.['total'] ?? 0),
+        sessions: rows.map(withoutTotal),
+      };
+    }
+    case 'session': {
+      // The last 90 days, whatever the period or the filters.
+      const ids = {
+        days: RAW_DAYS,
+        install: filters.install ?? '',
+        session: filters.session ?? '',
+      };
+      const [events, others] = await Promise.all([
+        run('session', ids),
+        run('install-sessions', ids),
+      ]);
+      return {
+        days: RAW_DAYS,
+        install: filters.install,
+        session: filters.session,
+        events: events.slice(0, MAX_EVENTS).map((row) => ({
+          ...row,
+          props: JSON.parse(String(row['props'] ?? '{}')) as unknown,
+        })),
+        more: events.length > MAX_EVENTS,
+        others: others.map(withoutTotal),
+        othersTotal: Number(others[0]?.['total'] ?? 0),
+      };
     }
     case 'platforms': {
       const [platforms, adoption, sizes, windowSizes] = await Promise.all([

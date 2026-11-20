@@ -79,7 +79,12 @@ function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
   const drafts: Draft[] = [
     { kind: 'app', name: 'launch', props: { notebooks: '1', notes: '10–49' } },
     { kind: 'screen', name: 'home', props: {} },
-    { kind: 'command', name: 'app.palette', props: { source: 'key', keys: 'Mod+K', ran: true } },
+    // A command run by its key always records its keys and whether they are the person's own.
+    {
+      kind: 'command',
+      name: 'app.palette',
+      props: { source: 'key', keys: 'Mod+K', custom: false, ran: true },
+    },
     { kind: 'command', name: 'note.new', props: { source: 'palette', ran: true } },
     { kind: 'screen', name: 'note', props: { from: 'home' } },
   ];

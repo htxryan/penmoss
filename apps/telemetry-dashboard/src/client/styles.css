@@ -30,6 +30,8 @@
   --ramp-4: #5598e7;
   --ramp-5: #86b6ef;
   --link: #8d8c86;
+  /* A stretch heading's ground in a session's timeline (PEN-173). */
+  --band: #f1f0ec;
   --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
@@ -72,6 +74,7 @@
     --ramp-4: #3987e5;
     --ramp-5: #256abf;
     --link: #6b6a65;
+    --band: #222221;
   }
 }
 
@@ -102,6 +105,7 @@
   --ramp-4: #3987e5;
   --ramp-5: #256abf;
   --link: #6b6a65;
+  --band: #222221;
 }
 
 * {
@@ -681,4 +685,450 @@ th.num {
 
 .cell-id {
   display: block;
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Sessions (PEN-173): the list, and one session's timeline beside its install's sessions. */
+
+/* A link or button drawn as a button; a link with no href is disabled (aria-disabled). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--hover);
+}
+
+.btn[aria-disabled='true'] {
+  color: var(--muted);
+  background: var(--surface);
+  cursor: default;
+}
+
+/* A button on its own (All Sessions): its own border. */
+main > .btn {
+  justify-self: start;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+/* A table-only card whose table shows in full: the page scrolls, not the box. */
+.table-holder.tall {
+  max-height: none;
+}
+
+/* A custom body edge to edge: the timeline's rows and headings. */
+.chart-body.flush {
+  padding: 0;
+}
+
+/* The list's pager: a bar between the card's header and its table, its buttons filling it. */
+.pager {
+  display: flex;
+  align-items: stretch;
+  margin: 4px 0 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.pager-range {
+  align-self: center;
+  margin-right: auto;
+  padding: 0 16px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.pager .btn {
+  padding: 8px 18px;
+  border-left: 1px solid var(--border);
+}
+
+.table-holder td a {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  text-decoration-color: var(--axis);
+  text-underline-offset: 2px;
+}
+
+.table-holder td a:hover {
+  text-decoration-color: var(--ink);
+}
+
+/* "← All Sessions", over a session's header. */
+.back {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-bottom: -8px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* Session Not Found, Not a Session Link. */
+.gone {
+  grid-column: 1 / -1;
+  max-width: 64ch;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+/* The header row: the h1, then Copy Link, Previous Session and Next Session, flush together. */
+.session-head {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.session-head .view-title {
+  margin-right: auto;
+}
+
+.session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.session-actions .btn {
+  border: 1px solid var(--border);
+}
+
+.session-actions .btn + .btn {
+  border-left: 0;
+}
+
+.session-actions > .copied + .btn {
+  border-radius: 6px 0 0 6px;
+}
+
+.session-actions > .btn:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.copied {
+  align-self: center;
+  margin-right: 10px;
+  color: var(--s3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.copied:empty {
+  display: none;
+}
+
+/* When the clipboard is refused: the address in a field, selected. */
+.copy-fallback {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.copy-fallback label {
+  color: var(--ink-2);
+  font-weight: var(--weight-medium);
+}
+
+.copy-fallback input {
+  flex: 1 1 320px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--text-xs);
+}
+
+.copy-fallback p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+/* "Install a3a3a3a3… · Session 0000001400000003 · Expanded Window". */
+.ids {
+  grid-column: 1 / -1;
+  margin: -14px 0 0;
+  color: var(--ink-2);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--text-xs);
+}
+
+/* Seven tiles fit one row at 1280px; the words in them a step smaller than a figure's. */
+.session-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.session-tiles dd {
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+
+/* The timeline beside This Install's Sessions, which drops under it when there isn't room. */
+.session-cols {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.session-cols > .card {
+  flex: 999 1 560px;
+}
+
+.session-cols > .card.side {
+  flex: 1 1 280px;
+}
+
+/* The timeline: a column header row, then each stretch under its pinned heading. */
+.timeline {
+  border-top: 1px solid var(--border);
+}
+
+.ev {
+  display: grid;
+  grid-template-columns: 76px 72px 104px minmax(160px, 1fr) minmax(0, 1.6fr);
+  gap: 12px;
+  align-items: start;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--grid);
+  font-size: var(--text-sm);
+  /* The pinned stretch heading's height: a row under it counts as out of view. */
+  scroll-margin-top: 64px;
+}
+
+.ev-cols {
+  white-space: nowrap;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  color: var(--ink-2);
+  font-weight: var(--weight-medium);
+}
+
+.ev-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li.ev {
+  position: relative;
+  cursor: default;
+}
+
+li.ev:hover,
+li.ev[aria-current='true'] {
+  background: var(--hover);
+}
+
+/* The current event: the hover ground and an accent bar at its left. */
+li.ev[aria-current='true']::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--s1);
+  content: '';
+}
+
+.ev-since,
+.ev-gap {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.ev-kind {
+  color: var(--ink-2);
+}
+
+.ev-name {
+  min-width: 0;
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.ev-name .cell-id {
+  font-weight: var(--weight-regular);
+}
+
+.stretch-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--band);
+}
+
+.stretch-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.stretch-title .cell-id {
+  display: inline;
+}
+
+.stretch-summary {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+}
+
+/* An event's props: a label, muted, and its value. */
+.prop-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prop-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.prop-label {
+  color: var(--ink-2);
+}
+
+.prop-value {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+/* This Install's Sessions: a list that scrolls in its card. */
+.cut {
+  margin: 0 16px 6px;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+}
+
+.ss {
+  position: relative;
+  max-height: 560px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.side .chart-body {
+  padding: 0;
+}
+
+.ss-item {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--grid);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.ss-item:hover,
+.ss-item[aria-current='page'] {
+  background: var(--hover);
+}
+
+.ss-item[aria-current='page']::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--s1);
+  content: '';
+}
+
+.ss-when {
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.ss-meta {
+  color: var(--ink-2);
+}
+
+.ss-this {
+  flex-basis: 100%;
+  color: var(--s1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+@media (max-width: 600px) {
+  .session-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ev-cols {
+    display: none;
+  }
+
+  /* Each event on three lines: since start, gap and kind; its name; its chips. */
+  li.ev {
+    grid-template-columns: auto auto 1fr;
+    gap: 2px 10px;
+  }
+
+  li.ev .ev-name,
+  li.ev .prop-chips {
+    grid-column: 1 / -1;
+  }
+
+  .ev {
+    scroll-margin-top: 72px;
+  }
 }

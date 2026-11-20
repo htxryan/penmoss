@@ -1,18 +1,22 @@
 /**
  * The dashboard's API (PEN-137, AC30–AC34) against the fixture D1: each view's JSON, the filters
- * checked and applied, Paths' small-numbers rule, nothing per install, the 5-minute cache, and no
- * way to send SQL.
+ * checked and applied, Paths' small-numbers rule, nothing per install outside Sessions (PEN-173),
+ * the 5-minute cache, and no way to send SQL.
  */
 import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { fixtureInstalls, seedFixture } from '../../telemetry/test/fixture';
 import { ACCESS_HEADER, AccessVerifier } from '../src/access';
+import { insertEvent } from '../../telemetry/src/ingest';
 import { MIN_SESSIONS, pathTree } from '../src/api';
 import { handle, type Deps } from '../src/handler';
 import { createSigner } from './signer';
 
 const NOW = Date.UTC(2026, 10, 19, 18, 0);
+/** The fixture's first install, a Mac, and its session today. */
+const INSTALL = 'a0'.repeat(16);
+const SESSION = '0000000000000000';
 const ORIGIN = 'https://stats.penmoss.test';
 let token: string;
 let deps: Deps;
@@ -212,6 +216,24 @@ describe('the filters', () => {
       '/api/overview?query=events',
       '/api/paths?start=command:not.a.command',
       '/api/paths?start=SELECT:1',
+      // Sessions' own parameters (PEN-173): checked, and refused on every other route.
+      '/api/sessions?page=0',
+      '/api/sessions?page=-1',
+      '/api/sessions?page=1.5',
+      '/api/sessions?page=10000',
+      '/api/sessions?page=2%20OR%201',
+      `/api/sessions?install=${INSTALL}`,
+      '/api/session',
+      `/api/session?install=${INSTALL}`,
+      `/api/session?session=${SESSION}`,
+      `/api/session?install=${INSTALL.toUpperCase()}&session=${SESSION}`,
+      `/api/session?install=${INSTALL.slice(1)}&session=${SESSION}`,
+      `/api/session?install=${INSTALL}&session=${SESSION}x`,
+      `/api/session?install=${INSTALL}&session=x'%20OR%201=1`,
+      `/api/session?install=${INSTALL}&session=${SESSION}&page=2`,
+      '/api/overview?page=2',
+      `/api/overview?install=${INSTALL}`,
+      `/api/paths?session=${SESSION}`,
     ]) {
       const response = await get(path);
       expect(response.status, path).toBe(400);
@@ -222,8 +244,8 @@ describe('the filters', () => {
   });
 });
 
-describe('nothing per install', () => {
-  it('no view’s JSON holds an install or session id', async () => {
+describe('nothing per install outside Sessions (PEN-173)', () => {
+  it('no other view’s JSON holds an install or session id', async () => {
     const ids = fixtureInstalls(NOW).flatMap(({ install, events }) => [
       install,
       ...events.map((e) => e.session),
@@ -269,6 +291,121 @@ describe('nothing per install', () => {
   });
 });
 
+describe('sessions (PEN-173)', () => {
+  type SessionsAnswer = { days: number; page: number; total: number; sessions: Rows };
+
+  it('lists the newest sessions first, 50 a page, with the total', async () => {
+    const data = await view<SessionsAnswer>('/api/sessions?days=30');
+    expect(data).toMatchObject({ days: 30, page: 1 });
+    expect(data.sessions).toHaveLength(50);
+    expect(data.total).toBeGreaterThan(100);
+    const started = data.sessions.map((row) => Number(row['started']));
+    expect(started).toEqual([...started].sort((a, b) => b - a));
+    expect(Object.keys(data.sessions[0]!).sort()).toEqual(
+      [
+        'client',
+        'ended',
+        'events',
+        'first_screen',
+        'install',
+        'last_screen',
+        'os',
+        'os_version',
+        'session',
+        'started',
+        'took',
+        'version',
+      ].sort(),
+    );
+    const second = await view<SessionsAnswer>('/api/sessions?days=30&page=2');
+    expect(second.page).toBe(2);
+    expect(Number(second.sessions[0]!['started'])).toBeLessThanOrEqual(started.at(-1)!);
+  });
+
+  it('answers the first page for a page past the end', async () => {
+    const data = await view<SessionsAnswer>('/api/sessions?days=30&page=9999');
+    expect(data.page).toBe(1);
+    expect(data.sessions).toHaveLength(50);
+  });
+
+  it('reads at most 90 days, and the filters narrow it', async () => {
+    const year = await view<SessionsAnswer>('/api/sessions?days=365');
+    expect(year.days).toBe(90);
+    const phones = await view<SessionsAnswer>('/api/sessions?days=30&client=android');
+    expect(phones.total).toBeLessThan(year.total);
+    expect(new Set(phones.sessions.map((row) => row['client']))).toEqual(new Set(['android']));
+    const none = await view<SessionsAnswer>('/api/sessions?days=7&client=android&actor=script');
+    expect(none).toMatchObject({ total: 0, page: 1, sessions: [] });
+  });
+
+  it('gives one session’s events in order, props parsed, and its install’s sessions', async () => {
+    const data = await view<{
+      days: number;
+      install: string;
+      session: string;
+      events: { seq: number; kind: string; name: string; props: unknown }[];
+      more: boolean;
+      others: Rows;
+      othersTotal: number;
+    }>(`/api/session?install=${INSTALL}&session=${SESSION}`);
+    expect(data).toMatchObject({ days: 90, install: INSTALL, session: SESSION, more: false });
+    const own = fixtureInstalls(NOW)[0]!.events.filter((e) => e.session === SESSION);
+    expect(data.events.map((e) => e.seq)).toEqual(own.map((e) => e.seq));
+    expect(data.events[2]).toMatchObject({
+      kind: 'command',
+      name: 'app.palette',
+      props: { source: 'key', keys: 'Mod+K', custom: false, ran: true },
+    });
+    // The install's sessions in 90 days, oldest first, the open one among them.
+    const sessions = new Set(fixtureInstalls(NOW)[0]!.events.map((e) => e.session));
+    expect(data.othersTotal).toBe(sessions.size);
+    expect(data.others).toHaveLength(sessions.size);
+    expect(data.others.at(-1)).toMatchObject({ session: SESSION, client: 'mac' });
+    expect(data.others[0]).not.toHaveProperty('total');
+  });
+
+  it('gives no events for a session it does not have, and says when there were more than 5,000', async () => {
+    const missing = await view<{ events: unknown[]; others: unknown[] }>(
+      `/api/session?install=${INSTALL}&session=0123456789abcdef`,
+    );
+    expect(missing).toMatchObject({ events: [], others: [] });
+    const long = 'c3'.repeat(16);
+    const session = '00000000000c0de1';
+    const statements = Array.from({ length: 5001 }, (_, seq) =>
+      insertEvent(
+        env.DB,
+        long,
+        {
+          session,
+          seq,
+          at: NOW - 86_400_000 + seq * 1000,
+          client: 'mac',
+          actor: 'person',
+          version: '1.4.0',
+          channel: 'stable',
+          os: 'macos',
+          osVersion: '26.1',
+          sizeClass: 'expanded',
+          kind: 'screen',
+          name: 'home',
+          props: {},
+        },
+        NOW,
+      ),
+    );
+    for (let start = 0; start < statements.length; start += 100) {
+      await env.DB.batch(statements.slice(start, start + 100));
+    }
+    const data = await view<{ events: unknown[]; more: boolean; others: Rows }>(
+      `/api/session?install=${long}&session=${session}`,
+    );
+    expect(data.events).toHaveLength(5000);
+    expect(data.more).toBe(true);
+    // Its row in others has the whole session's count.
+    expect(data.others[0]).toMatchObject({ session, events: 5001 });
+  });
+});
+
 describe('the cache', () => {
   it('keeps an answer 5 minutes, keyed by its URL, after Access', async () => {
     const cache = await caches.open('dashboard-test');
@@ -284,6 +421,14 @@ describe('the cache', () => {
     expect(
       (await get('/api/overview?days=7&client=mac', cached)).headers.get('x-dashboard-cache'),
     ).toBe('hit');
+    // Sessions' answers are cached the same way (PEN-173).
+    for (const path of [
+      '/api/sessions?days=30&page=2',
+      `/api/session?install=${INSTALL}&session=${SESSION}`,
+    ]) {
+      expect((await get(path, cached)).headers.get('x-dashboard-cache'), path).toBeNull();
+      expect((await get(path, cached)).headers.get('x-dashboard-cache'), path).toBe('hit');
+    }
     // Without a token, a cached answer is still 403.
     const ctx = createExecutionContext();
     const anonymous = await handle(new Request(`${ORIGIN}/api/health?days=30`), env, ctx, cached);
