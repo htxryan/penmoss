@@ -34,7 +34,7 @@ async function recorded(page: Page): Promise<Recorded[]> {
   const fake = await page.evaluate(() => window.__penmossFakeAnalytics!);
   return [...fake.events]
     .sort((a, b) => a.id - b.id)
-    .map(({ kind, name, props }) => ({ kind, name, props: props as Record<string, unknown> }));
+    .map(({ kind, name, props }) => ({ kind, name, props: props }));
 }
 
 const layouts = async (page: Page) =>
@@ -81,7 +81,7 @@ test('the main window records its layout as it starts and after each change', as
     .toMatchObject({
       window: 'main',
       sidebar: 'shown',
-      sidebarWidth: expect.any(Number) as number,
+      sidebarWidth: expect.any(Number),
       fullWidth: false,
       themeMode: 'system',
       tabs: '1',
@@ -91,11 +91,9 @@ test('the main window records its layout as it starts and after each change', as
   expect(start.sidebarWidth).toBeGreaterThan(150);
 
   // The sidebar to its rail: the command first, then the layout, with no width.
-  const collapse = await expectLayout(
-    page,
-    () => page.getByTestId('toggle-sidebar').click(),
-    { sidebar: 'rail' },
-  );
+  const collapse = await expectLayout(page, () => page.getByTestId('toggle-sidebar').click(), {
+    sidebar: 'rail',
+  });
   expect(collapse.map((event) => `${event.kind} ${event.name}`)).toEqual([
     'command app.toggleSidebar',
     'app layout',
@@ -138,24 +136,27 @@ test('the main window records its layout as it starts and after each change', as
   expect(full.findIndex((event) => event.kind === 'app')).toBe(full.length - 1);
 
   // A second tab (⌘-click in the tree): two tabs, as a bucket.
-  await expectLayout(
-    page,
-    () => note(page, SECOND).click({ modifiers: ['ControlOrMeta'] }),
-    { tabs: '2–4' },
-  );
+  await expectLayout(page, () => note(page, SECOND).click({ modifiers: ['ControlOrMeta'] }), {
+    tabs: '2–4',
+  });
 
   // The theme to Dark in Settings → Appearance. Settings fills the window: no notes sidebar there,
   // and no note.
   await page.getByTestId('sidebar-settings').click();
-  await page.getByRole('navigation', { name: /settings sections/i }).getByRole('link', {
-    name: 'Appearance',
-  }).click();
+  await page
+    .getByRole('navigation', { name: /settings sections/i })
+    .getByRole('link', {
+      name: 'Appearance',
+    })
+    .click();
   const dark = await expectLayout(
     page,
     () => page.getByTestId('theme-mode').getByText('Dark', { exact: true }).click(),
     { themeMode: 'dark', sidebar: 'hidden', panel: 'none' },
   );
-  const setting = dark.findIndex((event) => event.kind === 'setting' && event.name === 'theme.mode');
+  const setting = dark.findIndex(
+    (event) => event.kind === 'setting' && event.name === 'theme.mode',
+  );
   expect(setting).toBeGreaterThanOrEqual(0);
   expect(setting).toBeLessThan(dark.findIndex((event) => event.kind === 'app'));
 
@@ -167,10 +168,13 @@ test('the main window records its layout as it starts and after each change', as
   }
 
   // Privacy → View Analytics Data lists them, newest first, waiting to be sent.
-  await page.getByRole('navigation', { name: /settings sections/i }).getByRole('link', {
-    name: 'Privacy',
-    exact: true,
-  }).click();
+  await page
+    .getByRole('navigation', { name: /settings sections/i })
+    .getByRole('link', {
+      name: 'Privacy',
+      exact: true,
+    })
+    .click();
   await page.getByRole('link', { name: /View Analytics Data/ }).click();
   await expect(page).toHaveURL(/\/settings\/privacy\/data$/);
   const data = page.getByTestId('analytics-data');

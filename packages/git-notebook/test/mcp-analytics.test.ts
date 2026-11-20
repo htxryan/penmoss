@@ -192,3 +192,17 @@ describe('the local MCP server tells its host of each tool call (PEN-137)', () =
     expect(TOOL_NAMES.length).toBeGreaterThanOrEqual(names.length);
   });
 });
+
+describe('the local MCP server has no window (PEN-174)', () => {
+  it('tells its host only of tool calls, by a tool’s name: never a window or a layout', async () => {
+    const { calls, tool } = await single('codex');
+    await tool('list_tags', {});
+    await tool('search_notes', { query: 'anything' });
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(Object.keys(call).sort()).toEqual(['agentClient', 'result', 'tookMs', 'tool']);
+      expect(isCatalogued('tool', call.tool)).toBe(true);
+      expect(['window', 'layout']).not.toContain(call.tool);
+    }
+  });
+});

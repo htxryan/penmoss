@@ -113,14 +113,7 @@ export type PropSpec =
   | { readonly type: 'enum'; readonly values: readonly (string | number | boolean)[] }
   | {
       readonly type:
-        | 'bool'
-        | 'count'
-        | 'duration'
-        | 'keys'
-        | 'flags'
-        | 'setting'
-        | 'screen'
-        | 'length';
+        'bool' | 'count' | 'duration' | 'keys' | 'flags' | 'setting' | 'screen' | 'length';
     };
 
 const enumOf = (values: readonly (string | number | boolean)[]): PropSpec => ({
@@ -196,6 +189,15 @@ export const NAME_PROP_SPECS: Readonly<Record<string, Readonly<Record<string, Pr
     themeMode: enumOf(THEME_MODES),
     tabs: COUNT,
   },
+};
+
+/**
+ * The clients that may send a name NAME_PROP_SPECS lists: the apps, which have windows. The CLI
+ * and the MCP server never record a window or a layout (PEN-174), so the check refuses one from them.
+ */
+export const NAME_CLIENTS: Readonly<Record<string, readonly string[]>> = {
+  'app.window': ['mac', 'android'],
+  'app.layout': ['mac', 'android'],
 };
 
 function checkOf(spec: PropSpec): Check {
@@ -278,6 +280,12 @@ export function eventProblem(event: unknown): string | null {
   const props = value.props;
   if (!props || typeof props !== 'object' || Array.isArray(props)) return 'props';
   const named = `${kind}.${value.name}`;
+  if (
+    Object.hasOwn(NAME_CLIENTS, named) &&
+    !NAME_CLIENTS[named]!.includes(value.client as string)
+  ) {
+    return 'client';
+  }
   const checks = Object.hasOwn(NAME_PROPS, named) ? NAME_PROPS[named]! : PROPS[kind]!;
   for (const [key, item] of Object.entries(props)) {
     // Own keys only: `constructor` or `toString` must not find Object's own.

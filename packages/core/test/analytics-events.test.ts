@@ -541,9 +541,7 @@ describe('app window and app layout (PEN-174)', () => {
 
   it('refuse a length that is not a whole multiple of 10 from 0 to MAX_LENGTH', () => {
     for (const bad of [1441, -10, 10_010, 1440.5, '1440', true, null, Number.NaN]) {
-      expect(eventProblem(withProps(window, { width: bad })), String(bad)).toBe(
-        'prop width value',
-      );
+      expect(eventProblem(withProps(window, { width: bad })), String(bad)).toBe('prop width value');
       expect(eventProblem(withProps(layout, { sidebarWidth: bad })), String(bad)).toBe(
         'prop sidebarWidth value',
       );
@@ -593,6 +591,19 @@ describe('app window and app layout (PEN-174)', () => {
         expect(Object.keys(PROP_SPECS[kind as EventKind]), prop).not.toContain(prop);
       }
     }
+  });
+
+  it('come only from the apps: the CLI and the MCP server never send them', () => {
+    for (const base of [window, layout]) {
+      expect(eventProblem({ ...base, client: 'android' })).toBeNull();
+      for (const client of ['cli', 'mcp']) {
+        expect(eventProblem({ ...base, client, sizeClass: undefined }), client).toBe('client');
+      }
+    }
+    // The apps' own other events are as before from every client.
+    expect(
+      eventProblem(event({ client: 'cli', kind: 'app', name: 'launch', props: {} })),
+    ).toBeNull();
   });
 
   it('look up a name prop by own key only', () => {

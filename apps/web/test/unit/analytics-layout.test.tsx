@@ -213,9 +213,13 @@ describe('useLayoutPart', () => {
   it('records through the page’s recorder, and the part goes with its component', () => {
     root = createRoot(host);
     act(() => root!.render(<Parts panel="open" />));
-    act(() => vi.advanceTimersByTime(LAYOUT_SETTLE_MS));
+    act(() => {
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    });
     act(() => root!.render(<Parts />));
-    act(() => vi.advanceTimersByTime(LAYOUT_SETTLE_MS));
+    act(() => {
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    });
     expect(layouts().map((event) => event.props)).toEqual([
       { window: 'note', sidebar: 'hidden', panel: 'open', fullWidth: true, themeMode: 'light' },
       { window: 'note', sidebar: 'hidden', panel: 'none', fullWidth: true, themeMode: 'light' },
