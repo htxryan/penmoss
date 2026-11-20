@@ -128,6 +128,12 @@ describe('props in words', () => {
     }
   });
 
+  it("reads a scroll's position as recorded (PEN-175)", () => {
+    expect(propsInWords('scroll', { position: 0.42 }, 'note')).toEqual([
+      { label: 'Position', value: '0.42' },
+    ]);
+  });
+
   it("reads a window's size and a layout in words", () => {
     expect(
       propsInWords(

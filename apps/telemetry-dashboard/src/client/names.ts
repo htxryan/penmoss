@@ -414,6 +414,8 @@ export const PROP_WORDS: Readonly<Record<string, Readonly<Record<string, PropWor
     },
     took: { label: 'Took' },
   },
+  // How far down the area was, a fraction in hundredths (PEN-175), shown as recorded.
+  scroll: { position: { label: 'Position' } },
 };
 
 /**
