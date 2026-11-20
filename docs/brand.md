@@ -48,3 +48,15 @@ These are the logo's own colours. They are not theme tokens, and they do not cha
 `task brand` writes all of these, then renders the Mac PNG with Electron (`apps/desktop/scripts/render-icon.mjs`, under `xvfb-run` on Linux). The web app has no web manifest, `apple-touch-icon` or PNG favicon, so none of those are made.
 
 Before and after screenshots are in [`docs/evidence/logo/`](https://github.com/htxryan/penmoss/tree/f072e31/docs/evidence/logo).
+
+## Design system
+
+Claude designs Penmoss's decks, mock-ups and prototypes from one design system, [Penmoss Design System](https://claude.ai/artifact/XPQB6vQP5Q8zYv7mJNmcCW) (A1658). It holds the app and penmoss.app as two surfaces with one logo and one set of writing rules: the app's `pm-*` tokens and components, the site's `site-*` ones, the logo files above, the brand book, and two checks that set a screen built from the system beside the real one.
+
+Its tokens, type scale, stylesheet and the built-in themes come from the code. When a theme, `apps/web/src/shell/base.css` or `type.css`, a stylesheet the web app loads, `site/src/styles/` or the logo's palette changes, publish them again:
+
+1. Run `task design-system`. It writes `tokens.json`, `tokens.css`, `components/bundle.css` and `themes.md` under `dist/design-system/project/` (`scripts/design-system.mjs`; `task design-system:test` fails when a token the CSS declares is missing from them).
+2. Ask Claude to publish those four files to the design system (its `project/` paths, as they are), and to re-capture any component preview whose markup changed.
+3. When `task brand` changed a logo file, upload the new file to the system's Logos group in place of the old one.
+
+The brand book, writing rules and component previews are edited in the artifact itself.
