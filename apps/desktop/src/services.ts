@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { app, net, safeStorage, shell, systemPreferences, utilityProcess } from 'electron';
 import { nodeNotebooks } from '@penmoss/cli/node';
-import { limitsOf } from '@penmoss/core/analytics';
+import { limitsOf, settingValueProps } from '@penmoss/core/analytics';
 import {
   analyticsBase,
   consentPath,
@@ -108,6 +108,8 @@ export const updates = new Updates({
     if (state.phase === 'checking') void releaseNotes.refresh(state.channel);
     broadcast('updatesChanged', state);
   },
+  // Settings → Updates (PEN-175), once saved: `analytics` is made below, before any change.
+  recordSetting: (name, value) => analytics.record('setting', name, settingValueProps(name, value)),
 });
 /** The CLI's `~/.penmoss` (A992): agents' clones, and search by meaning's model and vectors. */
 const penmossHome = process.env['PENMOSS_HOME'] || join(homedir(), '.penmoss');

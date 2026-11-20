@@ -16,6 +16,7 @@ import {
 import { ariaKeyShortcuts, isApplePlatform } from '@penmoss/editor/keys';
 import { useKeys } from '../commands/hooks';
 import { setTitle } from '@penmoss/model/note';
+import { useScrollArea } from '../analytics/scroll';
 import { useNotes } from '../notes/hooks';
 import { oneLineTitle } from '@penmoss/model/title';
 import { REVEAL, hasTabs, navigate, notePath, openPath } from '../router';
@@ -144,6 +145,10 @@ export function FolderTree({
     setMenu,
   } = selection;
   const treeRef = useRef<HTMLDivElement>(null);
+  // How far down the notebook's tree is (PEN-175), as `scroll sidebar.folders`, where it scrolls
+  // by itself; where the sidebar scrolls as one (A521), its list records `sidebar`.
+  const scroller = useRef<HTMLDivElement>(null);
+  useScrollArea('sidebar.folders', scroller, null);
   const pendingFocus = useRef<string | null>(null);
   const revealed = useRef<string | null>(null);
   /** The open note was just revealed: its row scrolls into view once it shows. */
@@ -651,7 +656,7 @@ export function FolderTree({
   const empty = rows.length === 0 && draft === null;
 
   return (
-    <div className="folders">
+    <div ref={scroller} className="folders">
       {loading ? (
         <p className="list-empty loading" role="status">
           <span className="spinner" aria-hidden="true" />

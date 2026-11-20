@@ -233,6 +233,7 @@ class WikilinkView implements NodeView {
     this.dom.contentEditable = 'false';
     this.dom.draggable = false;
     this.dom.dataset['testid'] = 'wikilink';
+    this.dom.dataset['event'] = 'editor.wikilink.open';
     this.render();
     this.off = services?.subscribe(() => this.render());
   }

@@ -274,6 +274,7 @@ export function ColourPicker({
                 role="slider"
                 tabIndex={0}
                 aria-label="Hue and Saturation"
+                data-event="colour-picker.wheel"
                 aria-valuemin={0}
                 aria-valuemax={359}
                 aria-valuenow={Math.round(draft.h)}
@@ -303,6 +304,7 @@ export function ColourPicker({
                   <input
                     type="range"
                     className="colour-range colour-range-value"
+                    data-event="colour-picker.brightness"
                     min={0}
                     max={100}
                     value={percent(draft.v)}
@@ -317,6 +319,7 @@ export function ColourPicker({
                   <input
                     type="range"
                     className="colour-range colour-range-alpha"
+                    data-event="colour-picker.opacity"
                     min={0}
                     max={100}
                     value={percent(draft.a)}

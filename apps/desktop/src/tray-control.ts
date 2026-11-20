@@ -9,6 +9,7 @@ import { currentHotkey } from './capture-hotkey';
 import { savePreferences } from './preferences';
 import { pinPath, TRAY_ICON, TRAY_TOOLTIP, trayMenuTemplate, type QuickAccessPin } from './tray';
 import { analytics } from './services';
+import { recordSetting } from './setting-events';
 import { deliverToMain, openInMain } from './windows/main-window';
 import { showCapture } from './windows/capture-window';
 
@@ -94,6 +95,8 @@ export function setMenuBarIcon(shown: boolean): boolean {
       return current;
     }
     state.preferences = next;
+    // Recorded once it is saved (PEN-175); a save that failed records nothing.
+    recordSetting('menuBar.icon', shown);
   }
   refreshTray();
   return state.preferences.menuBarIcon !== false;

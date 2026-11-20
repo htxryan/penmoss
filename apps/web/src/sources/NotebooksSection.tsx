@@ -34,6 +34,7 @@ export function NotebooksSection({
     >
       <SectionHead
         name="Notebooks"
+        data-event="sidebar.notebooks.toggle"
         nameId={`${id}-name`}
         collapsed={collapsed}
         onToggle={toggle}

@@ -126,6 +126,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
       {/* The sections' title row, remembered on this device (T51, A934; A988). */}
       <SectionHead
         name="Tags"
+        data-event="sidebar.tags.toggle"
         nameId="tag-pane-heading"
         collapsed={collapsed}
         onToggle={toggleCollapsed}

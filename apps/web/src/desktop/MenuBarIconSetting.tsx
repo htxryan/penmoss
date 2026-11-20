@@ -50,6 +50,7 @@ export function MenuBarIconSetting() {
         checked={shown === true}
         disabled={busy || shown === null}
         aria-describedby={`${id}-help`}
+        data-event="settings.menu-bar-icon"
         data-testid="menu-bar-icon"
         onChange={(event) => void change(event.target.checked)}
       />

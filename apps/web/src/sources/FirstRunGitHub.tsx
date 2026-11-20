@@ -76,13 +76,18 @@ export function GitHubAccess({
     setAsked((now) => now + 1);
   };
   const urlInstead = (
-    <Action testId="first-run-url-instead" onClick={onUrl}>
+    <Action
+      data-event="firstrun.github.paste-a-url-instead"
+      testId="first-run-url-instead"
+      onClick={onUrl}
+    >
       Paste a URL Instead
     </Action>
   );
   const signInButton = (words: string) =>
     device.available ? (
       <Action
+        data-event="firstrun.github.sign-in"
         primary
         icon="logIn"
         busy={device.asking}
@@ -92,7 +97,13 @@ export function GitHubAccess({
         {device.asking ? 'Asking GitHub…' : words}
       </Action>
     ) : (
-      <Action primary icon="refresh" testId="first-run-retry" onClick={again}>
+      <Action
+        data-event="firstrun.github.try-again"
+        primary
+        icon="refresh"
+        testId="first-run-retry"
+        onClick={again}
+      >
         Try Again
       </Action>
     );
@@ -109,6 +120,7 @@ export function GitHubAccess({
         back={back}
         actions={
           <Action
+            data-event="firstrun.continue"
             primary
             testId="first-run-continue"
             onClick={() => {
@@ -152,7 +164,11 @@ export function GitHubAccess({
           back();
         }}
         actions={
-          <Action testId="github-signin-cancel" onClick={device.cancel}>
+          <Action
+            data-event="firstrun.github.cancel"
+            testId="github-signin-cancel"
+            onClick={device.cancel}
+          >
             Cancel
           </Action>
         }
@@ -166,10 +182,21 @@ export function GitHubAccess({
           {waiting.userCode}
         </code>
         <div className="fr-row fr-even">
-          <Action icon="copy" testId="github-signin-copy" onClick={device.copy}>
+          <Action
+            data-event="firstrun.github.copy-code"
+            icon="copy"
+            testId="github-signin-copy"
+            onClick={device.copy}
+          >
             {device.copied ? 'Copied' : 'Copy Code'}
           </Action>
-          <a className="btn" href={waiting.verificationUri} target="_blank" rel="noreferrer">
+          <a
+            data-event="firstrun.github.open-github"
+            className="btn"
+            href={waiting.verificationUri}
+            target="_blank"
+            rel="noreferrer"
+          >
             <Icon name="link" size={14} />
             Open {waiting.verificationUri.replace(/^https?:\/\//, '')}
           </a>
@@ -265,7 +292,11 @@ export function GitHubAccess({
           GitHub.
         </p>
         {device.available ? (
-          <LinkButton testId="first-run-retry" onClick={again}>
+          <LinkButton
+            data-event="firstrun.github.try-again"
+            testId="first-run-retry"
+            onClick={again}
+          >
             Try Again
           </LinkButton>
         ) : null}
@@ -297,14 +328,23 @@ export function GitHubAccess({
         <p className="fr-lead fr-small" data-testid="first-run-gh-hint">
           Prefer Terminal? Run <code>gh auth login</code>, then{' '}
           {device.available ? (
-            <LinkButton testId="first-run-retry" onClick={again}>
+            <LinkButton
+              data-event="firstrun.github.try-again"
+              testId="first-run-retry"
+              onClick={again}
+            >
               Try Again
             </LinkButton>
           ) : (
             'Try Again'
           )}
           .{' '}
-          <a href={FIRST_RUN_DOCS} target="_blank" rel="noreferrer">
+          <a
+            data-event="firstrun.github.learn-more"
+            href={FIRST_RUN_DOCS}
+            target="_blank"
+            rel="noreferrer"
+          >
             Learn More
           </a>
         </p>
@@ -323,7 +363,13 @@ export function GitHubAccess({
       actions={
         <>
           {urlInstead}
-          <Action primary icon="refresh" testId="first-run-retry" onClick={again}>
+          <Action
+            data-event="firstrun.github.try-again"
+            primary
+            icon="refresh"
+            testId="first-run-retry"
+            onClick={again}
+          >
             Try Again
           </Action>
         </>

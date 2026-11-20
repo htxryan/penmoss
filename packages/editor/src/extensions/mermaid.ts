@@ -168,6 +168,7 @@ export class MermaidPreview {
     this.output = document.createElement('div');
     this.output.className = 'pm-diagram-output';
     this.output.title = 'Edit Diagram';
+    this.output.dataset['event'] = 'editor.mermaid.edit';
     this.output.addEventListener('click', (event) => {
       // A click edits the diagram; a link in it (`click A href …`) is never followed.
       event.preventDefault();
@@ -182,6 +183,8 @@ export class MermaidPreview {
     this.toggle = document.createElement('button');
     this.toggle.type = 'button';
     this.toggle.className = 'pm-diagram-toggle';
+    // Edit, or Preview while the source shows: one control either way.
+    this.toggle.dataset['event'] = 'editor.mermaid.toggle';
     this.toggle.addEventListener('mousedown', (event) => event.preventDefault());
     this.toggle.addEventListener('click', () => {
       const editing = this.host.dataset['mode'] === 'edit';

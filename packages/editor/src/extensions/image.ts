@@ -268,6 +268,7 @@ class ImageView implements NodeView {
     this.loadButton = doc.createElement('button');
     this.loadButton.type = 'button';
     this.loadButton.className = 'pm-image-load';
+    this.loadButton.dataset['event'] = 'editor.image.load';
     this.loadButton.textContent = 'Tap to Load';
     this.loadButton.hidden = true;
     this.loadButton.addEventListener('click', (event) => {
@@ -293,6 +294,7 @@ class ImageView implements NodeView {
     this.lightboxButton.className = 'pm-image-lightbox';
     this.lightboxButton.textContent = 'Open in Lightbox';
     this.lightboxButton.dataset['testid'] = 'image-lightbox';
+    this.lightboxButton.dataset['event'] = 'editor.image.lightbox';
     this.lightboxButton.addEventListener('click', (event) => {
       event.preventDefault();
       // The lightbox gives focus back to what had it, so to this button, its opener, even where
@@ -305,6 +307,7 @@ class ImageView implements NodeView {
     this.copyButton.className = 'pm-image-copy';
     this.copyButton.textContent = 'Copy';
     this.copyButton.dataset['testid'] = 'image-copy';
+    this.copyButton.dataset['event'] = 'editor.image.copy';
     this.copyButton.addEventListener('click', (event) => {
       event.preventDefault();
       void this.copyPicture();

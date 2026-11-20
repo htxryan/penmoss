@@ -23,6 +23,8 @@ import {
   type SettingsSection,
 } from '../router';
 import { SidebarSettings } from '../shell/SidebarSettings';
+import { useNarrowWindow } from '../shell/media';
+import { useScrollArea } from '../analytics/scroll';
 import { HistoryNav } from '../shell/HistoryNav';
 import { NoteSettings } from '../notes/NoteSettings';
 import { AiDescriptionsSettings } from '../notes/AiDescriptionsSettings';
@@ -140,6 +142,15 @@ export function SettingsPage({
   const last = desktop() ? lastOpenedNote(list, readOpened(deviceStorage())) : null;
   const back = last ? notePath(last) : '/';
   const pages = SETTINGS_PAGES.filter((page) => shown.includes(page.id));
+  // How far down the page and the list of pages are (PEN-175): `scroll settings` (the window's
+  // own page on a narrow one, where the content does not scroll by itself) and `settings.nav`.
+  const narrow = useNarrowWindow();
+  useScrollArea(
+    'settings',
+    narrow ? 'page' : content,
+    search.query ? 'search' : `${section}/${item ?? ''}`,
+  );
+  useScrollArea('settings.nav', nav, null);
   return (
     <main className="settings-shell" data-testid="app-root">
       <header className="settings-bar">
@@ -199,6 +210,9 @@ export function SettingsPage({
                           <a
                             href={path}
                             data-command={NAV[page.id].command}
+                            // A page with no command of its own records the id Android's list
+                            // records (PEN-175).
+                            data-event={NAV[page.id].command ? undefined : 'settings.nav.section'}
                             aria-current={current ? 'page' : undefined}
                             onClick={linkHandler(path)}
                           >

@@ -316,6 +316,7 @@ export function SearchOverlay({
             <Select
               size="small"
               aria-label="Notebook"
+              data-event="search.filter.notebook"
               data-testid="search-notebook"
               value={filters.notebookId ?? ''}
               onChange={(event) => chooseNotebook(event.target.value || null)}
@@ -333,6 +334,7 @@ export function SearchOverlay({
           <Select
             size="small"
             aria-label="Folder"
+            data-event="search.filter.folder"
             data-testid="search-folder"
             value={filters.folderId ?? ''}
             onChange={(event) => {
@@ -375,6 +377,7 @@ export function SearchOverlay({
           <Select
             size="small"
             aria-label="Tag"
+            data-event="search.filter.tag"
             value={filters.tag ?? ''}
             onChange={(event) => setFilters({ ...filters, tag: event.target.value || null })}
           >
@@ -390,6 +393,7 @@ export function SearchOverlay({
           <Select
             size="small"
             aria-label="Updated"
+            data-event="search.filter.date"
             value={range}
             onChange={(event) => {
               const index = Number(event.target.value);
@@ -441,6 +445,7 @@ export function SearchOverlay({
             key={hit.id}
             {...picker.optionProps(index)}
             className="opt search-hit"
+            data-event="search.result"
             data-sources={hit.sources.join(' ')}
             data-note-id={hit.id}
             onClick={(event) => choose(hit, tabIntentOf(event))}

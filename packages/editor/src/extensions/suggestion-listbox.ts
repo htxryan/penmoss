@@ -18,6 +18,8 @@ export interface SuggestionListboxOptions<T> {
   readonly testId: string;
   /** The list's accessible name. */
   readonly label: string;
+  /** The click id every option records (usage analytics, PEN-175). */
+  readonly event: string;
   /** An option chosen by Enter, Tab or a click. */
   readonly pick: (item: T, index: number) => void;
 }
@@ -118,6 +120,7 @@ export class SuggestionListbox<T> {
         option.setAttribute('role', 'option');
         option.setAttribute('aria-selected', 'false');
         option.dataset['index'] = String(at);
+        option.dataset['event'] = this.options.event;
         fill(option, item, doc);
         return option;
       }),

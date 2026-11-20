@@ -34,7 +34,7 @@ export function PrivacySettings() {
       <SettingsHeader id={`${id}-h`} title={copy('privacy.title')} intro={copy('privacy.lead')} />
       {status ? <PrivacyRows analytics={analytics} status={status} /> : null}
       <p className="privacy-policy">
-        <PrivacyPolicyLink />
+        <PrivacyPolicyLink event="privacy.policy" />
       </p>
     </section>
   );

@@ -23,6 +23,7 @@ import { useFeedback } from '../feedback/service';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { RESERVED_KEYS } from '../notes/service';
 import { readOpened, recentNotes } from '../notes/recent';
+import { NoScrollRecording } from '../analytics/scroll';
 import { desktop } from '../desktop/bridge';
 import { REVEAL, hasTabs, navigate, notePath, openPath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
@@ -122,7 +123,12 @@ export function PreviewCommands({ children }: { children: ReactNode }) {
     center.start();
     return () => center.dispose();
   }, [center]);
-  return <CommandsContext.Provider value={center}>{children}</CommandsContext.Provider>;
+  // A preview's scrolling is not the person's: it records nothing (PEN-175).
+  return (
+    <CommandsContext.Provider value={center}>
+      <NoScrollRecording>{children}</NoScrollRecording>
+    </CommandsContext.Provider>
+  );
 }
 
 /**

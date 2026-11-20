@@ -124,6 +124,7 @@ function marker(view: EditorView, id: string, active: boolean): HTMLElement {
   element.className = active ? 'pm-comment-marker pm-comment-active' : 'pm-comment-marker';
   element.contentEditable = 'false';
   element.dataset['thread'] = id;
+  element.dataset['event'] = 'editor.comment.open';
   element.setAttribute('role', 'button');
   // Reached with Tab and opened with Enter or Space, as a button is.
   element.tabIndex = 0;

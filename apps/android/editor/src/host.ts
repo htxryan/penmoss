@@ -33,6 +33,7 @@
  * T48 adds comment threads (`comments.ts`, `comments-protocol.ts`): the note's threads for the
  * Comments sheet, drawn in the note, and written here as the sheet asks.
  */
+import { fractionOf, realScrollClock, ScrollGate, type ScrollClock } from '@penmoss/core/analytics';
 import { FuzzyMatcher } from '@penmoss/core/fuzzy';
 import { extractLinks } from '@penmoss/core/links';
 import { normaliseTag } from '@penmoss/core/tags';
@@ -167,6 +168,7 @@ import {
   type WebPictureMode,
 } from './protocol';
 import { PageKeys } from './keys';
+import { installClickTracking } from './clicks';
 
 /** The theme editor's sample note (A418): what the web's editor preview shows, as a note. */
 export const PREVIEW_NOTE_ID = 'theme-preview';
@@ -449,6 +451,8 @@ export interface HostOptions {
   readonly textIdleMs?: number;
   /** The clock for new notes' ids and `created` stamps. */
   readonly now?: () => Date;
+  /** The clock the note's scroll gate runs on (PEN-175); tests give a fake one. */
+  readonly scrollClock?: ScrollClock;
 }
 
 interface OpenNote {
@@ -476,6 +480,11 @@ interface OpenNote {
 
 export class EditorHost {
   private current: OpenNote | null = null;
+  /**
+   * How far down the open note is, for usage data (PEN-175): core's gate on the page's own
+   * scroll, sent as `scroll` once it settles; it starts from the top with each note opened.
+   */
+  private readonly scrollGate: ScrollGate;
   private readonly idleMs: number;
   private readonly maxWaitMs: number;
   private readonly textIdleMs: number;
@@ -570,6 +579,12 @@ export class EditorHost {
     this.textIdleMs = options.textIdleMs ?? TEXT_IDLE_MS;
     this.now = options.now ?? (() => new Date());
     this.postBytes = options.postBytes ?? (() => undefined);
+    this.scrollGate = new ScrollGate((position) => {
+      const open = this.current;
+      // The theme preview's sample note is no note of the person's.
+      if (!open || open.noteId === PREVIEW_NOTE_ID) return;
+      this.post({ v: BRIDGE_VERSION, type: 'scroll', noteId: open.noteId, position });
+    }, options.scrollClock ?? realScrollClock);
     this.linked = new LinkedNotes(post, (noteId) => {
       const open = this.current;
       return open && open.noteId === noteId && open.noteId !== PREVIEW_NOTE_ID
@@ -618,6 +633,23 @@ export class EditorHost {
     view?.addEventListener('keydown', this.keys.handleKeyDown, true);
     view?.addEventListener('keyup', this.keys.handleKeyUp, true);
     view?.addEventListener('blur', this.keys.handleBlur);
+    // The note scrolls with the page: whatever moved it, the person or a link to a heading.
+    view?.addEventListener(
+      'scroll',
+      () => {
+        if (!this.current) return;
+        const page = elements.root.ownerDocument.scrollingElement;
+        if (!page) return;
+        this.scrollGate.moved(fractionOf(page.scrollTop, page.scrollHeight, page.clientHeight));
+      },
+      { passive: true },
+    );
+    // The editor's tracked widgets (PEN-175): each use is posted as the Mac's page records it,
+    // never from the theme preview's sample note.
+    installClickTracking(elements.root.ownerDocument, post, () => {
+      const open = this.current;
+      return open !== null && open.noteId !== PREVIEW_NOTE_ID;
+    });
     // The image lightbox (T51, A948) opens over the page from an image's tools or a double tap;
     // the app hears of it, so the back gesture closes it and the note's bars step aside.
     const doc = elements.root.ownerDocument;
@@ -995,6 +1027,7 @@ export class EditorHost {
     // A selection or a delete belongs to the note as it was shown (re-review).
     this.captured = null;
     this.deletion = null;
+    this.scrollGate.stop();
     if (!open) return;
     open.flush();
     open.sendText();
@@ -1021,6 +1054,8 @@ export class EditorHost {
 
   private open(message: Extract<ToEditor, { type: 'open' }>): void {
     this.close();
+    // Another note: its place starts from the top (core's reset keeps the gap).
+    this.scrollGate.reset();
     const { noteId } = message;
     const replica = createYjs14Replica();
     let compacted: Compacted | null;

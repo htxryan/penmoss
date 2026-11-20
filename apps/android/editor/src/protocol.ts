@@ -849,6 +849,18 @@ export type FromEditor =
    * `keys.app`, the note open or null.
    */
   | { readonly v: 1; readonly type: 'command'; readonly noteId: string | null; readonly id: string }
+  /**
+   * How far down the open note is (PEN-175), for usage data's `scroll note`: 0 (the top) to 1
+   * (the bottom) in hundredths, once its scrolling settles, by core's ScrollGate. Nothing else
+   * about the note goes with it; the app checks it and records it only for the note it shows.
+   */
+  | { readonly v: 1; readonly type: 'scroll'; readonly noteId: string; readonly position: number }
+  /**
+   * A tracked control in the note was used (PEN-175): its `data-event` id, the same the Mac's
+   * page records (`editor.callout.fold`), and on or off for a check box. The app records
+   * `click <id>` only when its catalogue lists the id.
+   */
+  | { readonly v: 1; readonly type: 'click'; readonly id: string; readonly state?: 'on' | 'off' }
   | {
       readonly v: 1;
       readonly type: 'error';

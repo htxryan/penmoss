@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useScrollArea } from '../analytics/scroll';
 import { Calendar } from '../journal/Calendar';
 import { QuickAccessSection } from '../notes/QuickAccessSection';
 import { RecentSection } from '../notes/RecentSection';
@@ -53,6 +55,9 @@ export function SidebarBody({
   readonly rail: boolean;
 }) {
   const { activeId } = place;
+  // How far down the list is (PEN-175), as `scroll sidebar`.
+  const list = useRef<HTMLElement>(null);
+  useScrollArea('sidebar', list, null);
   return (
     <>
       <div className="sb-actions">
@@ -64,7 +69,7 @@ export function SidebarBody({
           shownNote={activeId}
         />
       </div>
-      <nav className="sb-list" aria-label="All notes">
+      <nav ref={list} className="sb-list" aria-label="All notes">
         {/* The sections in the person's order, each hidden or shown (T53 item 8, A983). */}
         <SidebarSections
           layout={layout}

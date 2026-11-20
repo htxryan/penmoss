@@ -195,6 +195,7 @@ export class SelectionToolbar {
     this.copyButton.setAttribute('aria-haspopup', 'menu');
     // Opens the menu of T15's copy commands (T20 coverage).
     this.copyButton.dataset['ui'] = 'menu';
+    this.copyButton.dataset['event'] = 'editor.toolbar.copy-as';
     this.copyButton.setAttribute('aria-expanded', 'false');
     this.copyButton.addEventListener('click', () => this.toggleCopyMenu(!this.copyMenuOpen));
     this.copyButton.addEventListener('keydown', (event) => {
@@ -220,6 +221,7 @@ export class SelectionToolbar {
     this.turnButton.setAttribute('aria-haspopup', 'menu');
     // Opens the menu below; each entry is an "Insert: …" command's block (T20 coverage).
     this.turnButton.dataset['ui'] = 'menu';
+    this.turnButton.dataset['event'] = 'editor.toolbar.turn-into';
     this.turnButton.setAttribute('aria-expanded', 'false');
     this.turnButton.addEventListener('click', () => this.toggleTurnMenu(!this.turnMenuOpen));
     this.turnButton.addEventListener('keydown', (event) => {
@@ -242,6 +244,7 @@ export class SelectionToolbar {
       entry.tabIndex = -1;
       entry.dataset['block'] = item.id;
       entry.dataset['ui'] = 'option';
+      entry.dataset['event'] = 'editor.toolbar.turn-into.pick';
       const icon = doc.createElement('span');
       icon.className = 'pm-slash-icon';
       icon.setAttribute('aria-hidden', 'true');
@@ -308,8 +311,11 @@ export class SelectionToolbar {
       return element;
     };
     const apply = formButton('Apply', ICON_CHECK);
+    // The ids Android's link form records (PEN-175).
+    apply.dataset['event'] = 'editor.link.apply';
     apply.addEventListener('click', () => this.applyLink());
     const remove = formButton('Remove', ICON_TRASH, 'Remove Link');
+    remove.dataset['event'] = 'editor.link.remove';
     remove.addEventListener('click', () => {
       this.backToNote();
       this.editor.chain().setTextSelection(this.linkRange()).unsetLink().run();

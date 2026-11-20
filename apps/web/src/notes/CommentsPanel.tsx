@@ -162,6 +162,7 @@ function SendTo({
         id={id}
         ref={field}
         value={current}
+        data-event="comments.send-to"
         data-testid={testId}
         onChange={(event) => {
           const chosen = sessions.find((session) => session.key === event.target.value);

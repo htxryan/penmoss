@@ -52,7 +52,15 @@ const NoUnderline = Extension.create({
 /** The reduced editor's extensions: marks first, in core's order (link outermost). */
 export function feedbackExtensions(): AnyExtension[] {
   return [
-    alignMark(Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }), 'link'),
+    alignMark(
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: { 'data-untracked': 'a link being written, never followed here' },
+      }),
+      'link',
+    ),
     alignMark(Italic, 'italic'),
     alignMark(Bold, 'bold'),
     alignMark(

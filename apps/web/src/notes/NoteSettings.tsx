@@ -62,7 +62,7 @@ export function NoteSettings() {
               data-testid="note-bar-settings"
             >
               {NOTE_BAR_BUTTONS.map((button) => {
-                const { icon, label } = NOTE_BAR_BUTTON_INFO[button];
+                const { icon, label, event } = NOTE_BAR_BUTTON_INFO[button];
                 return (
                   <SettingRow
                     key={button}
@@ -79,6 +79,7 @@ export function NoteSettings() {
                       id={`${id}-bar-${button}`}
                       checked={bar.shows(button)}
                       disabled={!bar.canChange}
+                      data-event={event}
                       data-testid={`display-note-bar-${button}`}
                       onChange={(event) => bar.set(button, event.target.checked)}
                     />

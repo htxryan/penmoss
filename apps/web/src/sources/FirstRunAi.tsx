@@ -25,7 +25,12 @@ export function AiQuestion({ back, onNext }: { back: () => void; onNext: (on: bo
       title="Describe Notes for Agents?"
       back={back}
       actions={
-        <Action primary testId="first-run-continue" onClick={() => onNext(choice === 'on')}>
+        <Action
+          data-event="firstrun.continue"
+          primary
+          testId="first-run-continue"
+          onClick={() => onNext(choice === 'on')}
+        >
           {choice === 'on' ? 'Continue' : 'Start Writing'}
         </Action>
       }
@@ -44,12 +49,14 @@ export function AiQuestion({ back, onNext }: { back: () => void; onNext: (on: bo
             title: 'Turn On for All Notes',
             line: 'Next, pick the AI provider. Any notebook, folder or note can still say Off.',
             testId: 'first-run-ai-on',
+            event: 'firstrun.ai.turn-on-for-all-notes',
           },
           {
             value: 'off',
             title: 'Not Now',
             line: 'It stays off. Settings → AI Descriptions turns it on later.',
             testId: 'first-run-ai-off',
+            event: 'firstrun.ai.not-now',
           },
         ]}
       />
@@ -103,6 +110,7 @@ export function AiProviderStep({ back, onDone }: { back: () => void; onDone: () 
       back={back}
       actions={
         <Action
+          data-event="firstrun.continue"
           primary
           testId="first-run-continue"
           disabled={!ready}
@@ -130,12 +138,14 @@ export function AiProviderStep({ back, onDone }: { back: () => void; onDone: () 
             title: 'Anthropic, With an API Key',
             line: 'Calls go straight to Anthropic and are billed to the key.',
             testId: 'first-run-ai-anthropic',
+            event: 'firstrun.ai-provider.anthropic',
           },
           {
             value: 'claude-code',
             title: 'Claude Code on This Mac',
             line: ccLine,
             testId: 'first-run-ai-claude-code',
+            event: 'firstrun.ai-provider.claude-code',
           },
         ]}
       />

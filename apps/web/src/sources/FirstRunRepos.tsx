@@ -85,7 +85,11 @@ function NameField({
         // Allowed, but agents can't tell two notebooks with one name apart (Ryan's review of #192).
         <span className="fr-warn" role="status" data-testid="notebook-name-clash">
           Another notebook on this Mac is called {twin}.{' '}
-          <LinkButton testId="notebook-name-clash-use" onClick={() => onChange(suggestion)}>
+          <LinkButton
+            data-event="firstrun.name.use-suggestion"
+            testId="notebook-name-clash-use"
+            onClick={() => onChange(suggestion)}
+          >
             Use {suggestion}
           </LinkButton>
         </span>
@@ -160,11 +164,16 @@ export function CreateRepo({
       actions={
         <>
           {failed && owners.length > 1 ? (
-            <Action testId="first-run-change-owner" onClick={() => setChanging(true)}>
+            <Action
+              data-event="firstrun.create.change-owner"
+              testId="first-run-change-owner"
+              onClick={() => setChanging(true)}
+            >
               Change Owner
             </Action>
           ) : null}
           <Action
+            data-event="firstrun.create.make-notebook"
             primary
             form={formId}
             busy={busy}
@@ -216,6 +225,7 @@ export function CreateRepo({
               <span className="fr-invalid-words" role="alert" data-testid="first-run-create-taken">
                 {owner}/{name} already exists.{' '}
                 <LinkButton
+                  data-event="firstrun.create.use-suggestion"
                   testId="first-run-create-suggest"
                   onClick={() => {
                     setRepoName(`${name}-2`);
@@ -234,7 +244,11 @@ export function CreateRepo({
                 {owners.length > 1 && !changing ? (
                   <>
                     {' · '}
-                    <LinkButton testId="first-run-create-change" onClick={() => setChanging(true)}>
+                    <LinkButton
+                      data-event="firstrun.create.change"
+                      testId="first-run-create-change"
+                      onClick={() => setChanging(true)}
+                    >
                       Change
                     </LinkButton>
                   </>
@@ -245,6 +259,7 @@ export function CreateRepo({
               <label className="fr-owner">
                 <span className="fr-hidden">Owner</span>
                 <Select
+                  data-event="firstrun.owner"
                   value={owner}
                   data-testid="first-run-create-owner"
                   onChange={(event) => {
@@ -270,7 +285,11 @@ export function CreateRepo({
       ) : null}
       {failed ? <Problem testId="first-run-create-problem">{problem.message}</Problem> : null}
       {problem?.taken ? (
-        <LinkButton testId="first-run-use-existing" onClick={onUseExisting}>
+        <LinkButton
+          data-event="firstrun.create.use-existing-repo"
+          testId="first-run-use-existing"
+          onClick={onUseExisting}
+        >
           Use Existing Repo
         </LinkButton>
       ) : null}
@@ -324,6 +343,7 @@ export function AccountSwitcher({
         choices.find((each) => hub.login !== null && each.login === hub.login));
   return (
     <Menu
+      data-event="firstrun.account.open"
       label="GitHub Account"
       icon="users"
       className="fr-switcher"
@@ -369,15 +389,30 @@ export function AccountSwitcher({
         );
       })}
       {choices.length > 0 ? <div className="menu-sep" role="separator" /> : null}
-      <MenuItem icon="userPlus" data-testid="first-run-switch-add" onClick={onAdd}>
+      <MenuItem
+        data-event="firstrun.account.add"
+        icon="userPlus"
+        data-testid="first-run-switch-add"
+        onClick={onAdd}
+      >
         Add Another Account…
       </MenuItem>
       {onManage ? (
-        <MenuItem icon="settings" data-testid="first-run-switch-manage" onClick={onManage}>
+        <MenuItem
+          data-event="firstrun.account.manage"
+          icon="settings"
+          data-testid="first-run-switch-manage"
+          onClick={onManage}
+        >
           Manage GitHub Accounts…
         </MenuItem>
       ) : null}
-      <MenuItem icon="refresh" data-testid="first-run-refresh" onClick={onRefresh}>
+      <MenuItem
+        data-event="firstrun.account.refresh"
+        icon="refresh"
+        data-testid="first-run-refresh"
+        onClick={onRefresh}
+      >
         Refresh Repositories
       </MenuItem>
     </Menu>
@@ -584,7 +619,7 @@ export function RepoTree({
           ? 'Signed in through this Mac’s git'
           : 'Signed in to GitHub'}
       {' · '}
-      <LinkButton testId="first-run-refresh" onClick={onRefresh}>
+      <LinkButton data-event="firstrun.list.refresh" testId="first-run-refresh" onClick={onRefresh}>
         Refresh
       </LinkButton>
     </p>
@@ -603,11 +638,20 @@ export function RepoTree({
         back={back}
         actions={
           <>
-            <Action testId="first-run-url-instead" onClick={onUrl}>
+            <Action
+              data-event="firstrun.list.paste-a-url-instead"
+              testId="first-run-url-instead"
+              onClick={onUrl}
+            >
               Paste a URL Instead
             </Action>
             {onCreate ? (
-              <Action primary testId="first-run-create-instead" onClick={onCreate}>
+              <Action
+                data-event="firstrun.list.create-new-repo"
+                primary
+                testId="first-run-create-instead"
+                onClick={onCreate}
+              >
                 Create New Repo
               </Action>
             ) : null}
@@ -730,7 +774,11 @@ export function RepoTree({
                   {repo.empty || (loaded?.state === 'ready' && notebooks.length === 0) ? (
                     <li className="fr-tree-none" data-testid="first-run-no-notebook">
                       <span>No notebook yet</span>
-                      <LinkButton testId="first-run-start-here" onClick={() => onRepo(repo)}>
+                      <LinkButton
+                        data-event="firstrun.list.start-one-here"
+                        testId="first-run-start-here"
+                        onClick={() => onRepo(repo)}
+                      >
                         Start One Here
                       </LinkButton>
                     </li>
@@ -769,6 +817,7 @@ export function RepoTree({
                             </span>
                           ) : (
                             <Action
+                              data-event="firstrun.list.open"
                               primary={isChosen}
                               testId="first-run-notebook-open"
                               onClick={() => onOpen(repo, folder)}
@@ -791,7 +840,11 @@ export function RepoTree({
           Showing the 300 most recently pushed. Paste a URL for others.
         </p>
       ) : null}
-      <LinkButton testId="first-run-url-instead" onClick={onUrl}>
+      <LinkButton
+        data-event="firstrun.list.paste-a-url-instead"
+        testId="first-run-url-instead"
+        onClick={onUrl}
+      >
         Paste a URL Instead
       </LinkButton>
     </Frame>
@@ -853,10 +906,15 @@ export function RepoPicked({
         back={back}
         actions={
           <>
-            <Action testId="first-run-url-instead" onClick={onUrl}>
+            <Action
+              data-event="firstrun.repo.paste-a-url-instead"
+              testId="first-run-url-instead"
+              onClick={onUrl}
+            >
               Paste a URL Instead
             </Action>
             <Action
+              data-event="firstrun.repo.try-again"
               primary
               icon="refresh"
               testId="first-run-retry"
@@ -891,6 +949,7 @@ export function RepoPicked({
         back={back}
         actions={
           <Action
+            data-event="firstrun.continue"
             primary
             testId="first-run-continue"
             onClick={() =>
@@ -943,6 +1002,7 @@ export function RepoPicked({
           </p>
         ) : (
           <Action
+            data-event="firstrun.repo.open"
             primary
             testId="first-run-open"
             onClick={() => onOpen(placeIn(repo, via, only.path), only.notebook.name)}
@@ -973,7 +1033,11 @@ export function RepoPicked({
                   }}
                 />
               </label>
-              <Action form={formId} testId="first-run-another-make">
+              <Action
+                data-event="firstrun.repo.make-notebook"
+                form={formId}
+                testId="first-run-another-make"
+              >
                 Make Notebook
               </Action>
             </span>
@@ -1003,6 +1067,7 @@ export function RepoPicked({
         back={back}
         actions={
           <Action
+            data-event="firstrun.repo.open"
             primary
             disabled={isAdded(picked)}
             testId="first-run-open"
@@ -1037,7 +1102,11 @@ export function RepoPicked({
           ))}
         </div>
         {rootIsNotebook ? null : (
-          <LinkButton testId="first-run-start-another" onClick={onFolder}>
+          <LinkButton
+            data-event="firstrun.repo.start-another"
+            testId="first-run-start-another"
+            onClick={onFolder}
+          >
             Start Another Notebook in a Folder
           </LinkButton>
         )}
@@ -1101,6 +1170,7 @@ export function FolderPick({
       back={back}
       actions={
         <Action
+          data-event="firstrun.continue"
           primary
           disabled={free.length === 0}
           testId="first-run-continue"
@@ -1165,7 +1235,12 @@ export function FolderPick({
             }}
           />
         </label>
-        <Action icon="folderPlus" testId="first-run-new-folder-add" onClick={addFolder}>
+        <Action
+          data-event="firstrun.folder.add-folder"
+          icon="folderPlus"
+          testId="first-run-new-folder-add"
+          onClick={addFolder}
+        >
           Add Folder
         </Action>
       </span>
@@ -1253,6 +1328,7 @@ export function PasteUrl({
       back={back}
       actions={
         <Action
+          data-event="firstrun.continue"
           primary
           form={formId}
           busy={busy}
@@ -1303,7 +1379,13 @@ export function GitMissing({ back }: { back: () => void }) {
       title="Penmoss Needs Git"
       back={back}
       actions={
-        <Action primary icon="refresh" testId="first-run-retry" onClick={back}>
+        <Action
+          data-event="firstrun.git-missing.try-again"
+          primary
+          icon="refresh"
+          testId="first-run-retry"
+          onClick={back}
+        >
           Try Again
         </Action>
       }
@@ -1336,7 +1418,13 @@ export function NameNotebook({
       title="Name Your Notebook"
       back={back}
       actions={
-        <Action primary form={formId} disabled={!name.trim()} testId="first-run-make">
+        <Action
+          data-event="firstrun.name.make-notebook"
+          primary
+          form={formId}
+          disabled={!name.trim()}
+          testId="first-run-make"
+        >
           Make Notebook
         </Action>
       }

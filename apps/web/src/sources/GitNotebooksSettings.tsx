@@ -524,6 +524,7 @@ function PrimaryPicker() {
         id={`${id}-select`}
         value={state.journal.id}
         aria-describedby={`${id}-help`}
+        data-event="settings.git-notebooks.journal"
         data-testid="git-primary-picker"
         disabled={state.all.length < 2}
         onChange={(event) => registry.setJournal(event.currentTarget.value)}
@@ -568,6 +569,7 @@ function BetweenNotebooks() {
             <Switch
               id={`${id}-step`}
               checked={inStep}
+              data-event="settings.git-notebooks.in-step"
               data-testid="git-settings-in-step"
               onChange={(event) => setSettingsInStep(event.target.checked)}
             />
@@ -584,6 +586,7 @@ function BetweenNotebooks() {
             id={`${id}-tags`}
             checked={copies}
             disabled={!canChange}
+            data-event="settings.git-notebooks.copy-tags"
             data-testid="copy-tags-default"
             onChange={(event) => set(event.target.checked)}
           />
@@ -672,6 +675,7 @@ function CopySettingsPanel({
         <Select
           id={`${id}-from`}
           value={source.id}
+          data-event="settings.git-notebooks.copy-settings.from"
           data-testid="git-copy-from"
           onChange={(event) => {
             setFrom(event.currentTarget.value);
@@ -690,6 +694,7 @@ function CopySettingsPanel({
         <Select
           id={`${id}-to`}
           value={target ? target.id : ALL_OTHERS}
+          data-event="settings.git-notebooks.copy-settings.to"
           data-testid="git-copy-to"
           onChange={(event) => {
             setTo(event.currentTarget.value);
@@ -1043,6 +1048,7 @@ function OverviewTab({
               rel="noopener noreferrer"
               className="btn"
               data-ui="item"
+              data-event="settings.git-notebooks.repository-link"
               data-testid="git-repository-link"
             >
               <Icon name="globe" size={14} />
@@ -1275,6 +1281,7 @@ function SyncTab({
           <Select
             id={`${id}-push`}
             value={info.pushDelayS}
+            data-event="settings.git-notebooks.push-after"
             data-testid="git-push-delay"
             onChange={(event) => {
               const value = Number(event.currentTarget.value);
@@ -1302,6 +1309,7 @@ function SyncTab({
           <Select
             id={`${id}-pull`}
             value={info.pullEveryMin}
+            data-event="settings.git-notebooks.pull-every"
             data-testid="git-pull-interval"
             onChange={(event) => {
               const value = Number(event.currentTarget.value);
@@ -1446,6 +1454,7 @@ function GitTab({
         <Switch
           id={`${id}-sign`}
           checked={info.sign}
+          data-event="settings.git-notebooks.sign-commits"
           data-testid="git-sign"
           onChange={(event) =>
             void answer(

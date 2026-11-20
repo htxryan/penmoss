@@ -188,6 +188,9 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
                 {...picker.optionProps(index)}
                 className="opt"
                 data-kind={item.kind}
+                // A command is counted by its run (source: palette); a note opened, by this id.
+                data-command={item.kind === 'command' ? item.command.id : undefined}
+                data-event={item.kind === 'command' ? undefined : 'palette.note'}
                 onClick={(event) => choose(item, tabIntentOf(event))}
               >
                 <span className="oic" aria-hidden="true">

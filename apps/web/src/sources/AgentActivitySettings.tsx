@@ -118,6 +118,7 @@ export function AgentActivitySettings() {
                 aria-label="Notebook"
                 size="small"
                 value={notebook}
+                data-event="settings.agent-activity.filter.notebook"
                 data-testid="agent-activity-notebook"
                 onChange={(event) => setNotebook(event.currentTarget.value)}
               >
@@ -133,6 +134,7 @@ export function AgentActivitySettings() {
               aria-label="Agent"
               size="small"
               value={agents.includes(agent) ? agent : EVERY}
+              data-event="settings.agent-activity.filter.agent"
               data-testid="agent-activity-agent"
               onChange={(event) => setAgent(event.currentTarget.value)}
             >

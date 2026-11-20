@@ -80,6 +80,7 @@ export function NoteActions({
   return (
     <Menu
       label="Note Actions"
+      data-event="note.actions.open"
       icon={bar ? 'more' : 'moreV'}
       iconSize={bar ? 18 : 16}
       testId={bar ? 'note-menu' : 'note-actions'}

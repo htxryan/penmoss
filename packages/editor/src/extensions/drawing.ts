@@ -283,8 +283,10 @@ export class DrawingView implements NodeView {
       const tools = doc.createElement('span');
       tools.className = 'pm-drawing-tools';
       const edit = toolButton(doc, 'Edit Excalidraw Diagram', ICON_PENCIL, 'edit');
+      edit.dataset['event'] = 'editor.drawing.edit';
       edit.addEventListener('click', () => this.open());
       const remove = toolButton(doc, 'Delete Excalidraw Diagram', ICON_TRASH, 'delete');
+      remove.dataset['event'] = 'editor.drawing.delete';
       remove.addEventListener('click', () => this.remove());
       tools.append(edit, remove);
       frame.append(tools);

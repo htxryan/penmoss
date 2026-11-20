@@ -148,15 +148,9 @@ export function Switch({
   'data-event': event,
   ...props
 }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'role'> & {
-  readonly 'data-event'?: string;
+  readonly 'data-event': string;
 }) {
   return (
-    <input
-      {...props}
-      type="checkbox"
-      role="switch"
-      className="lf-switch"
-      data-event={event ?? 'settings.switch'}
-    />
+    <input {...props} type="checkbox" role="switch" className="lf-switch" data-event={event} />
   );
 }

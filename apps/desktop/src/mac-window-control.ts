@@ -5,6 +5,7 @@
 import { BrowserWindow, dialog } from 'electron';
 import { fullScreens, log, preferencesFile, state, windows } from './app-state';
 import { savePreferences } from './preferences';
+import { recordSetting } from './setting-events';
 import { sendEvent } from './ipc';
 import { mayReopen, setKeepOnTop, type MacWindowState } from './mac-window';
 import { appPath } from './security';
@@ -128,6 +129,8 @@ export async function setCompactTitleBar(
     return refuse('Penmoss could not save the setting on this Mac.');
   }
   state.preferences = next;
+  // Recorded once it is saved and before the windows reopen (PEN-175); nothing when it failed.
+  recordSetting('titleBar.compact', compact);
   // After the page has its answer: its window is about to go. Input stays held until then.
   setImmediate(() => {
     try {

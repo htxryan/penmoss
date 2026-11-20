@@ -223,6 +223,7 @@ export function NoteTags({
                     id={`${id}-tag-${index}`}
                     role="option"
                     className="tag-suggestion"
+                    data-event="tags.note.suggestion"
                     aria-selected={index === current}
                     // Keeps focus in the field, so choosing does not close it.
                     onMouseDown={(event) => event.preventDefault()}

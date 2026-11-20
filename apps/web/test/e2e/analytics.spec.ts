@@ -66,9 +66,12 @@ async function expectQuestion(scope: Locator) {
   // The window's size and its layout (PEN-174's ac12, ac13): in view, where the proof holds.
   const versions = scope
     .getByTestId('consent-recorded')
-    .getByText('The app’s and the system’s versions, and the window’s size and layout', {
-      exact: true,
-    });
+    .getByText(
+      'The app’s and the system’s versions, the window’s size and layout, and how far you scroll',
+      {
+        exact: true,
+      },
+    );
   await versions.scrollIntoViewIfNeeded();
   await expect(versions).toBeInViewport();
   await expect(scope.getByTestId('consent-never')).toContainText(

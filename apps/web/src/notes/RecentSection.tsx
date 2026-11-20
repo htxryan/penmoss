@@ -47,6 +47,7 @@ export function RecentSection({
     >
       <SectionHead
         name="Recent Notes"
+        data-event="sidebar.recent.toggle"
         nameId={`${id}-name`}
         collapsed={collapsed}
         onToggle={toggle}

@@ -115,6 +115,7 @@ export function MeaningSettings() {
             checked={on}
             disabled={busy || status === null}
             aria-describedby={`${id}-help`}
+            data-event="settings.meaning.enabled"
             data-testid="meaning-enabled"
             onChange={(event) => set(event.target.checked)}
           />
@@ -173,7 +174,12 @@ export function MeaningSettings() {
                 {status.license ? (
                   <>
                     {' · '}
-                    <a href={status.license.url} target="_blank" rel="noreferrer">
+                    <a
+                      href={status.license.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      data-event="link.meaning-model"
+                    >
                       {status.license.name}
                     </a>
                   </>

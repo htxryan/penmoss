@@ -119,6 +119,7 @@ export class SlashMenu {
       className: 'pm-slash-menu',
       testId: 'slash-menu',
       label: 'Insert block',
+      event: 'editor.slash.pick',
       pick: (item) => this.choose?.(item),
     });
     this.listbox.heading.id = `${this.id}-heading`;

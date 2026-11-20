@@ -104,10 +104,29 @@ export default defineConfig(
     rules: { 'penmoss/no-literal-colours': 'error' },
   },
   {
-    // PEN-137: every clickable control in the page has a data-command or a data-event id, so it
-    // is counted by name (packages/ui/lint/tracked-control.js). The plugin is the one above.
-    files: ['apps/web/src/**/*.tsx'],
-    rules: { 'penmoss/tracked-control': 'error' },
+    // PEN-137, PEN-175: every control in the page has its own data-command or data-event id, or a
+    // data-untracked reason, so it is counted by name (packages/ui/lint/tracked-control.js). The
+    // plugin is the one above. The wrappers draw a control from the id they are given, so each
+    // call names one: `props` are the props that name it; `items`, an array whose each item does.
+    files: ['apps/web/src/**/*.tsx', 'packages/ui/src/**/*.tsx', 'packages/editor/src/**/*.tsx'],
+    rules: {
+      'penmoss/tracked-control': [
+        'error',
+        {
+          wrappers: [
+            { name: 'Menu', props: ['data-event'] },
+            { name: 'MenuItem', props: ['data-event', 'data-command'] },
+            { name: 'Switch', props: ['data-event'] },
+            { name: 'SectionHead', props: ['data-event'] },
+            { name: 'ActionToast', props: ['data-event'] },
+            { name: 'Select', props: ['data-event', 'data-command'] },
+            { name: 'Action', props: ['data-event'] },
+            { name: 'LinkButton', props: ['data-event'] },
+            { name: 'Options', props: ['event'], items: 'items' },
+          ],
+        },
+      ],
+    },
   },
   prettier,
 );

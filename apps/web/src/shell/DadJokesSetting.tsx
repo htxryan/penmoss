@@ -23,6 +23,7 @@ export function DadJokesSetting() {
         checked={on}
         disabled={!canChange}
         aria-describedby={`${id}-help`}
+        data-event="settings.dad-jokes"
         data-testid="dad-jokes"
         onChange={(event) => set(event.target.checked)}
       />

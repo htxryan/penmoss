@@ -58,7 +58,12 @@ export function GitHubSignIn({
         </div>
         <p className="muted" role="status" data-testid="github-signin-waiting">
           Waiting for you to approve Penmoss on GitHub…{' '}
-          <a href={state.verificationUri} target="_blank" rel="noreferrer">
+          <a
+            href={state.verificationUri}
+            target="_blank"
+            rel="noreferrer"
+            data-event="settings.github.sign-in.open-page"
+          >
             Open the Page Again
           </a>
         </p>

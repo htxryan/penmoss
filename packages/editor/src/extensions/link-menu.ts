@@ -138,6 +138,7 @@ export class LinkMenu {
       className: 'pm-slash-menu pm-link-menu',
       testId: 'link-menu',
       label: 'Link to note',
+      event: 'editor.link-menu.pick',
       pick: (option) => this.pick(option),
     });
     // A note renamed or synced while the menu is open shows at once.

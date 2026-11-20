@@ -104,6 +104,7 @@ export function RecentSwitcher({
               // The pointer does not move the highlight: letting go of ⌘ opens it.
               onMouseMove={undefined}
               className="opt"
+              data-event="recent.note"
               onClick={() => {
                 tracked.done();
                 onChoose(note.id);

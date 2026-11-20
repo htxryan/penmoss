@@ -163,6 +163,7 @@ export function SettingUp({
       actions={
         phase.at === 'add-failed' ? (
           <Action
+            data-event="firstrun.setup.retry"
             primary
             icon="refresh"
             testId="first-run-retry"
@@ -172,10 +173,15 @@ export function SettingUp({
           </Action>
         ) : phase.at === 'sync-failed' ? (
           <>
-            <Action testId="first-run-open-anyway" onClick={done}>
+            <Action
+              data-event="firstrun.setup.open-anyway"
+              testId="first-run-open-anyway"
+              onClick={done}
+            >
               Open Anyway
             </Action>
             <Action
+              data-event="firstrun.setup.retry"
               primary
               icon="refresh"
               testId="first-run-retry"
@@ -188,7 +194,7 @@ export function SettingUp({
             </Action>
           </>
         ) : phase.at === 'syncing' && slow ? (
-          <Action testId="first-run-open-now" onClick={done}>
+          <Action data-event="firstrun.setup.open-now" testId="first-run-open-now" onClick={done}>
             Open Now
           </Action>
         ) : undefined

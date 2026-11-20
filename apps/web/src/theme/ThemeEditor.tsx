@@ -242,6 +242,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
             <label key={field.key} className="token-row">
               <span>{field.label}</span>
               <Select
+                data-event="theme-editor.font"
                 value={current.fonts[field.key]}
                 onChange={(event) =>
                   edit({ ...current, fonts: { ...current.fonts, [field.key]: event.target.value } })
@@ -262,6 +263,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
             <span>Note Width</span>
             <input
               type="range"
+              data-event="theme-editor.width"
               min={EDITOR_WIDTH.min}
               max={EDITOR_WIDTH.max}
               step={1}

@@ -119,6 +119,7 @@ export class CodeBlockView implements NodeView {
     // The shared select's small, quiet look (T51 item 13, A941; styles.css `.pm-select`).
     this.select.className = 'pm-code-language pm-select pm-select-sm pm-select-quiet';
     this.select.setAttribute('aria-label', 'Code block language');
+    this.select.dataset['event'] = 'editor.code.language';
     languageOptions(this.select);
     this.select.addEventListener('change', () => this.setLanguage(this.select.value || null));
 
@@ -127,6 +128,7 @@ export class CodeBlockView implements NodeView {
     this.copy.className = 'pm-code-copy';
     this.copy.textContent = 'Copy';
     this.copy.setAttribute('aria-label', 'Copy Code');
+    this.copy.dataset['event'] = 'editor.code.copy';
     this.copy.addEventListener('click', () => this.copyCode());
 
     const actions = document.createElement('div');

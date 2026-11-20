@@ -6,6 +6,7 @@ import type { IpcMainInvokeEvent } from 'electron';
 import type { IpcHandlers } from '../ipc';
 import { NEEDS_A_PERSON } from '../ipc-contract';
 import { gitNotebooks, githubToken } from '../services';
+import { recordSetting } from '../setting-events';
 
 /** Add Notebook's account (A1617): a login, null for one GitHub never named, else none. */
 function accountIn(value: unknown): string | null | undefined {
@@ -39,13 +40,23 @@ export function registerGitIpc(
     });
   });
   ipc.handle('gitRemove', (_call, localId, unpushed) => gitNotebooks.remove(localId, unpushed));
-  ipc.handle('gitUpdate', ({ gesture }, localId, patch) => {
+  ipc.handle('gitUpdate', async ({ gesture }, localId, patch) => {
     // Who commits is the person's to set (#174 review), and so is the notebook's name on every
     // device (Rename, Ryan's review of PR #192): after a click or a key press in the app.
     const personal =
       typeof patch === 'object' && patch !== null && ('author' in patch || 'name' in patch);
     if (personal && !gesture) return NEEDS_A_PERSON;
-    return gitNotebooks.update(localId, patch);
+    const answer = await gitNotebooks.update(localId, patch);
+    // Push After, Pull Every and Sign Commits, once written (PEN-175): only these three, as
+    // the notebook now has them; a rename, a branch or an identity records nothing.
+    if (answer.ok && typeof patch === 'object' && patch !== null) {
+      const asked = patch as Record<string, unknown>;
+      const view = answer.value;
+      if (asked['pushDelayS'] !== undefined) recordSetting('git.pushAfter', view.pushDelayS);
+      if (asked['pullEveryMin'] !== undefined) recordSetting('git.pullEvery', view.pullEveryMin);
+      if (asked['sign'] !== undefined) recordSetting('git.signCommits', view.sign);
+    }
+    return answer;
   });
   ipc.handle('gitToken', (_call, localId, token) => gitNotebooks.setToken(localId, token));
   ipc.handle('gitPurgeCheck', (_call, localId, noteId) => gitNotebooks.purgeCheck(localId, noteId));

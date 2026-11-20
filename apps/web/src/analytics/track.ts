@@ -7,8 +7,7 @@ import {
   KEYS_PATTERN,
   SCREEN_NAMES,
   SETTING_NAMES,
-  countBucket,
-  isSettingWord,
+  settingValueProps,
   themeForEvent,
   type PropValue,
 } from '@penmoss/core/analytics';
@@ -111,30 +110,62 @@ export function resetScreens(): void {
 }
 
 /**
+ * A select or a slider (`<input type="range">`): recorded when its value changes, not when it is
+ * clicked (PEN-175). A slider's `change` comes when it is let go, so a drag records once.
+ */
+function changesOnly(control: Element): boolean {
+  return (
+    control instanceof HTMLSelectElement ||
+    (control instanceof HTMLInputElement && control.type === 'range')
+  );
+}
+
+/**
  * The tracked clicks (PEN-137): one capture-phase listener records the nearest `[data-event]`
  * control's id. A `[data-command]` control is counted once, by its command's run, so a click
  * whose nearest tracked control has a `data-command` records nothing here. A switch or a
- * checkbox also says which way it went (`state: on|off`).
+ * checkbox also says which way it went (`state: on|off`). A select or a slider records
+ * `click <id>` once per change instead (PEN-175), never the value it was given.
  */
 export function installClickTracking(doc: Document): () => void {
+  const tracked = (target: EventTarget | null): { control: Element; id: string } | null => {
+    if (!(target instanceof Element)) return null;
+    const control = target.closest('[data-event], [data-command]');
+    if (!control || control.hasAttribute('data-command')) return null;
+    const native =
+      control instanceof HTMLButtonElement ||
+      control instanceof HTMLSelectElement ||
+      control instanceof HTMLInputElement;
+    if (native && control.disabled) return null;
+    if (control.getAttribute('aria-disabled') === 'true') return null;
+    const id = control.getAttribute('data-event');
+    return id ? { control, id } : null;
+  };
   const onClick = (event: MouseEvent) => {
     try {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const control = target.closest('[data-event], [data-command]');
-      if (!control || control.hasAttribute('data-command')) return;
-      if (control instanceof HTMLButtonElement && control.disabled) return;
-      if (control.getAttribute('aria-disabled') === 'true') return;
-      const id = control.getAttribute('data-event');
-      if (!id) return;
-      const state = clickState(control);
-      record('click', id, state === null ? {} : { state });
+      const found = tracked(event.target);
+      if (!found || changesOnly(found.control)) return;
+      const state = clickState(found.control);
+      record('click', found.id, state === null ? {} : { state });
     } catch {
       // Recording never breaks a click.
     }
   };
+  const onChange = (event: Event) => {
+    try {
+      const found = tracked(event.target);
+      if (!found || !changesOnly(found.control)) return;
+      record('click', found.id, {});
+    } catch {
+      // Recording never breaks a change.
+    }
+  };
   doc.addEventListener('click', onClick, true);
-  return () => doc.removeEventListener('click', onClick, true);
+  doc.addEventListener('change', onChange, true);
+  return () => {
+    doc.removeEventListener('click', onClick, true);
+    doc.removeEventListener('change', onChange, true);
+  };
 }
 
 /** Which way a switch or a checkbox goes with this click, or null for any other control. */
@@ -178,20 +209,12 @@ function settingWord(key: string, value: string): string {
 /**
  * What a setting's change records: its value when that is safe to send, else `changed`. Text is
  * sent only when it is one of the words core lists for that setting (SETTING_VALUES); any
- * other text (a time zone, a template, a font's family) records `changed: true`.
+ * other text (a time zone, a template, a font's family) records `changed: true`. Core's
+ * `settingValueProps`, which the Mac's main process uses too, after a custom theme or font
+ * becomes `custom`.
  */
 export function settingProps(key: string, value: unknown): Record<string, PropValue> {
-  if (typeof value === 'boolean') return { value };
-  if (typeof value === 'number') {
-    if (Number.isInteger(value) && value >= 0 && value <= 10_000_000) return { value };
-    if (Number.isFinite(value) && value >= 0) return { value: countBucket(value) };
-    return { changed: true };
-  }
-  if (typeof value === 'string') {
-    const word = settingWord(key, value);
-    if (isSettingWord(key, word)) return { value: word };
-  }
-  return { changed: true };
+  return settingValueProps(key, typeof value === 'string' ? settingWord(key, value) : value);
 }
 
 /** Records a change to a setting the catalogue lists; any other setting records nothing. */

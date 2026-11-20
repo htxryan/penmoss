@@ -20,6 +20,7 @@ export function RecoveredNotice() {
         <ActionToast
           tone="info"
           testId="folders-recovered"
+          data-event="toast.recovered.dismiss"
           icon={<Icon name="folder" />}
           onDismiss={() => setDismissed(shown.at)}
         >

@@ -43,8 +43,11 @@ function FontField({
   themeStack,
   testId,
   setting,
+  event,
 }: {
   readonly settingKey: FontKey;
+  /** Its select's own tracked id (PEN-175), a literal at the caller. */
+  readonly event: string;
   readonly label: string;
   /** The theme's own font for this, shown for Theme Default. */
   readonly themeStack: string;
@@ -86,6 +89,7 @@ function FontField({
       <span className="font-control">
         <Select
           id={id}
+          data-event={event}
           value={custom ? CUSTOM : stored}
           style={{ fontFamily: shown }}
           onChange={(event) => {
@@ -197,6 +201,7 @@ function NoteSizeField({
           id={id}
           type="range"
           className="font-size-range"
+          data-event="settings.font.size"
           min={NOTE_FONT_SIZE.min}
           max={NOTE_FONT_SIZE.max}
           step={1}
@@ -257,6 +262,7 @@ export function FontSettings({
         themeStack={theme.fonts.ui}
         testId="interface-font"
         setting="interface-font"
+        event="settings.appearance.interface-font"
       />
       <FontField
         settingKey={NOTE_FONT_SETTING}
@@ -264,6 +270,7 @@ export function FontSettings({
         themeStack={theme.fonts.body}
         testId="note-font"
         setting="note-font"
+        event="settings.appearance.note-font"
       />
       <NoteSizeField onDraft={onSizeDraft} />
     </>

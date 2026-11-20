@@ -34,6 +34,7 @@ export function CompactTitleBarSetting() {
         id={id}
         checked={compact}
         disabled={busy}
+        data-event="settings.compact-title-bar"
         data-testid="compact-title-bar"
         onChange={(event) => void change(event.target.checked)}
       />

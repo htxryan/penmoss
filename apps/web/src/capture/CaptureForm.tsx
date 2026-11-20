@@ -152,6 +152,7 @@ export function CaptureForm({
         <label className="capture-into">
           <span>Into</span>
           <Select
+            data-event="capture.notebook"
             data-testid="capture-into"
             value={into ?? ''}
             onChange={(event) => {
