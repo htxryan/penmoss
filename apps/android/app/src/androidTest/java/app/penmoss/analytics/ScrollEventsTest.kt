@@ -68,6 +68,9 @@ class ScrollEventsTest {
     /** The newest event's id before the test: only what the test makes counts. */
     private var since = 0L
 
+    /** Each finger scroll's range before and after, for a failure's message. */
+    private var diag = ""
+
     private fun hold() = SystemClock.sleep(2_500)
 
     @Test
@@ -106,32 +109,45 @@ class ScrollEventsTest {
             val notebook = OnScreen.inFront()
             notebook.tagged("homeMenu")
 
-            // The drawer, long enough to scroll (more notebooks while it is too short), scrolled.
+            // The drawer long enough to scroll: more notebooks while it is too short.
             notebook.tap("homeMenu")
             drawerScrolls(notebook)
-            scrollBy(notebook, "homeDrawerList", 0.6f)
-            val sidebar = until("scroll sidebar") { scrolls("sidebar").firstOrNull() }
-            assertPosition(sidebar)
-            hold()
 
-            // Settings → Appearance, its page scrolled.
+            // Settings → Appearance, its page scrolled by a finger.
             notebook.tap("drawerSettings")
             notebook.tap("section-appearance")
             notebook.tagged("appearanceSettingsPanel")
             scrollBy(notebook, "appearanceSettingsPanel", 0.6f)
-            val settings = until("scroll settings") { scrolls("settings").firstOrNull { it.id > sidebar.id } }
+            val settings = until("scroll settings") { scrolls("settings").firstOrNull() }
             assertPosition(settings)
             hold()
 
-            // A long note with a callout, a code block and a task list, in the real editor page.
+            // Back to the notebook's notes, the drawer pulled in from the edge and scrolled.
+            back()
+            until("Settings") { tag(notebook, "settingsSections") }
+            back()
+            until("the notebook's notes") { tag(notebook, "homeMenu") }
+            SystemClock.sleep(800)
+            dragAcross(notebook)
+            if (tag(notebook, "homeDrawerList") == null) notebook.tap("homeMenu")
+            until("the drawer") { tag(notebook, "homeDrawerList") }
+            SystemClock.sleep(600)
+            scrollBy(notebook, "homeDrawerList", 0.6f)
+            val sidebar = until("scroll sidebar") { scrolls("sidebar").firstOrNull { it.id > settings.id } }
+            assertPosition(sidebar)
+            hold()
+
+            // A long note with a callout, a code block and a task list, in the real editor page,
+            // scrolled a little: the callout's fold stays in view.
             instrumentation.runOnMainSync { GitNotebookActivity.open(inFrontNow()!!, localId, LauncherAction.NewNote) }
             val page = until("the editor page") { editorPage() }
             until("the note open in the page") { js(page, "!!window.penmossEditor?.editor")?.takeIf { it == "true" } }
             js(page, "penmossEditor.editor.editor.commands.insertContent(${LONG_NOTE})")
             until("the note long enough to scroll") { js(page, SCROLLABLE)?.takeIf { it == "true" } }
+            js(page, "document.activeElement?.blur()")
             hold()
-            swipeUp(page)
-            val note = until("scroll note") { scrolls("note").firstOrNull { it.id > settings.id } }
+            swipeUp(page, share = 0.15f)
+            val note = until("scroll note") { scrolls("note").firstOrNull { it.id > sidebar.id } }
             assertPosition(note)
             hold()
 
@@ -140,21 +156,24 @@ class ScrollEventsTest {
             tapAt(x, y)
             val fold = until("click editor.callout.fold") { stored().firstOrNull { it.kind == "click" && it.name == "editor.callout.fold" && it.id > note.id } }
             assertTrue("the fold folded the callout", js(page, "document.querySelector('.pm-callout')?.dataset.open") == "\"false\"")
+            assertEquals("the fold's tap scrolled nothing more", listOf(note), scrolls("note"))
             hold()
 
-            // Analytics Data, from All Notebooks, with the four rows in view.
+            // Analytics Data, from All Notebooks: a finger first, so the large title folds away,
+            // then the fold's row, the newest of the four, at the top, the older three below it.
             context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             val home = OnScreen.inFront()
             home.tap("homeSettingsGear")
             home.tap("section-privacy")
             home.tap("privacyViewData")
             home.text(AnalyticsCopy.text("viewer.title"))
-            val list = home.tagged("viewerList").boundsInWindow.height
-            // The oldest of the four, the drawer's, near the bottom; the newer ones above it.
-            val oldest = home.text("scroll · sidebar")
-            home.reveal(oldest, margin = list - oldest.size.height - list * 0.08f)
-            for (row in listOf(sidebar, settings, note, fold)) {
-                assertTrue("the row ${row.kind} · ${row.name} ${row.text} is on screen", home.has("${row.kind} · ${row.name}") && (row.text == "{}" || home.has(row.text)))
+            scrollBy(home, "viewerList", 0.3f)
+            home.reveal(home.text("click · editor.callout.fold"), margin = 4f)
+            for (row in listOf(fold, note, settings, sidebar)) {
+                assertTrue(
+                    "the row ${row.kind} · ${row.name} ${row.text} is on screen; it shows ${home.texts()}; recorded since: ${stored().map { "${it.kind} ${it.name} ${it.text}" }}",
+                    home.has("${row.kind} · ${row.name}") && (row.text == "{}" || home.has(row.text)),
+                )
             }
             hold()
             assertTrue(home.has("scroll · note"))
@@ -216,7 +235,7 @@ class ScrollEventsTest {
             read()?.let { return it }
             SystemClock.sleep(200)
         } while (SystemClock.uptimeMillis() < deadline)
-        throw AssertionError("no $what; recorded since: ${stored().map { "${it.kind} ${it.name} ${it.text}" }}")
+        throw AssertionError("no $what; diag$diag; recorded since: ${stored().map { "${it.kind} ${it.name} ${it.text}" }}")
     }
 
     private fun inFrontNow(): Activity? =
@@ -234,15 +253,26 @@ class ScrollEventsTest {
         throw AssertionError("the drawer never scrolled")
     }
 
-    /** Scrolls the node tagged [tag] down by [share] of its height, as a person's swipe would. */
+    /** Where the node tagged [tag] is scrolled now, read without scrolling anything to find it. */
+    private fun rangeOf(screen: OnScreen, tag: String): String {
+        val node = screen.nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag }
+        val range = node?.config?.getOrNull(SemanticsProperties.VerticalScrollAxisRange)
+        return "$tag=${range?.value?.invoke()}/${range?.maxValue?.invoke()}"
+    }
+
+    /** A finger drawn up the node tagged [tag], over [share] of its height, as a person scrolls it. */
     private fun scrollBy(screen: OnScreen, tag: String, share: Float) {
-        val node: SemanticsNode = screen.tagged(tag)
-        var ok = false
-        instrumentation.runOnMainSync {
-            ok = node.config.getOrNull(SemanticsActions.ScrollBy)?.action?.invoke(0f, node.boundsInWindow.height * share) == true
-        }
-        check(ok) { "[$tag] did not scroll" }
-        instrumentation.waitForIdleSync()
+        val bounds = screen.tagged(tag).boundsInWindow
+        val window = IntArray(2)
+        instrumentation.runOnMainSync { inFrontNow()?.window?.decorView?.getLocationOnScreen(window) }
+        val x = window[0] + bounds.center.x
+        val from = window[1] + bounds.top + bounds.height * (0.5f + share / 2)
+        val to = from - bounds.height * share
+        val before = rangeOf(screen, tag)
+        drag(x, from, to)
+        SystemClock.sleep(600)
+        val after = rangeOf(screen, tag)
+        diag += " | $before → $after"
     }
 
     // The editor page.
@@ -275,13 +305,39 @@ class ScrollEventsTest {
         return result
     }
 
-    /** A finger drawn up the page, from three quarters of the way down to a quarter. */
-    private fun swipeUp(view: View) {
+    /** A finger drawn up the page from three quarters of the way down, over [share] of its height. */
+    private fun swipeUp(view: View, share: Float = 0.5f) {
         val at = IntArray(2)
         instrumentation.runOnMainSync { view.getLocationOnScreen(at) }
-        val x = at[0] + view.width / 2f
-        val from = at[1] + view.height * 0.75f
-        val to = at[1] + view.height * 0.25f
+        drag(at[0] + view.width / 2f, at[1] + view.height * 0.75f, at[1] + view.height * (0.75f - share))
+    }
+
+    /** The node tagged [tag] on screen now, if it is; nothing is scrolled to find it. */
+    private fun tag(screen: OnScreen, tag: String): SemanticsNode? =
+        screen.nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag }
+
+    /** A finger from the screen's left edge across it, as a person pulls a drawer in. */
+    private fun dragAcross(screen: OnScreen) {
+        val metrics = context.resources.displayMetrics
+        val y = metrics.heightPixels / 2f
+        val down = SystemClock.uptimeMillis()
+        instrumentation.sendPointerSync(MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, 4f, y, 0))
+        for (step in 1..12) {
+            instrumentation.sendPointerSync(MotionEvent.obtain(down, down + step * 20L, MotionEvent.ACTION_MOVE, 4f + metrics.widthPixels * 0.7f * step / 12, y, 0))
+        }
+        instrumentation.sendPointerSync(MotionEvent.obtain(down, down + 300L, MotionEvent.ACTION_UP, 4f + metrics.widthPixels * 0.7f, y, 0))
+        instrumentation.waitForIdleSync()
+        SystemClock.sleep(800)
+        screen.nodes()
+    }
+
+    private fun back() {
+        instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+        instrumentation.waitForIdleSync()
+    }
+
+    /** A finger from [from] to [to] at [x] on the screen, held still before it lifts (no fling). */
+    private fun drag(x: Float, from: Float, to: Float) {
         val down = SystemClock.uptimeMillis()
         instrumentation.sendPointerSync(MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, x, from, 0))
         val steps = 12
@@ -326,7 +382,7 @@ class ScrollEventsTest {
         const val FOLD_RECT = """(() => {
             const fold = document.querySelector('.pm-callout-fold');
             if (!fold) return null;
-            fold.scrollIntoView({ block: 'center' });
+            fold.scrollIntoView({ block: 'nearest' });
             const r = fold.getBoundingClientRect();
             return JSON.stringify([r.left + r.width / 2, r.top + r.height / 2, window.devicePixelRatio]);
         })()"""
@@ -338,11 +394,11 @@ class ScrollEventsTest {
          * more paragraphs, as editor content (ProseMirror JSON) the page inserts.
          */
         val LONG_NOTE: String = buildList {
-            for (i in 1..12) add(paragraph("Line $i of a long note about the garden, the kitchen and the week ahead, written to scroll."))
+            for (i in 1..3) add(paragraph("Line $i of a long note about the garden, the kitchen and the week ahead, written to scroll."))
             add("""{"type":"callout","attrs":{"type":"tip","title":"Fold Me","foldable":true,"collapsed":false},"content":[${paragraph("Inside the callout: what the fold hides.")}]}""")
             add("""{"type":"codeBlock","attrs":{"language":"js"},"content":[{"type":"text","text":"const beans = ['runner', 'broad'];\nconsole.log(beans.length);"}]}""")
             add("""{"type":"taskList","content":[{"type":"taskItem","attrs":{"checked":false},"content":[${paragraph("Water the beans")}]},{"type":"taskItem","attrs":{"checked":true},"content":[${paragraph("Sow the peas")}]}]}""")
-            for (i in 13..40) add(paragraph("Line $i of a long note about the garden, the kitchen and the week ahead, written to scroll."))
+            for (i in 4..50) add(paragraph("Line $i of a long note about the garden, the kitchen and the week ahead, written to scroll."))
         }.joinToString(",", "[", "]")
     }
 }
