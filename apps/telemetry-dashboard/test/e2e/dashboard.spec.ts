@@ -552,15 +552,22 @@ async function appSession(page: Page, dashboard: Dashboard) {
   throw new Error('no Mac session on the first page goes Launch, Home, Palette, New Note');
 }
 
-/** Scrolls so the stretch `title`'s heading is pinned at the top of the window. */
+/**
+ * Scrolls so the stretch `title`'s heading is pinned at the top of the window: the window's top
+ * goes 40px past the stretch's top, so its first row slides under the heading. The page must
+ * reach that far; at 1280×720 the last stretch ends too near the page's foot to, so the desktop
+ * checks pin a stretch with others after it.
+ */
 async function pinStretch(page: Page, title: string) {
   const section = page.locator('section.stretch', {
     has: page.locator('.stretch-title', { hasText: new RegExp(`^${title}`) }),
   });
-  await section.evaluate((node) => {
-    const top = node.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo(0, top + 90);
+  const reached = await section.evaluate((node) => {
+    const top = node.getBoundingClientRect().top + window.scrollY + 40;
+    window.scrollTo(0, top);
+    return Math.abs(window.scrollY - top) < 2;
   });
+  expect(reached, `the page scrolls 40px past the ${title} stretch's top`).toBe(true);
   const heading = section.locator('.stretch-head');
   await expect
     .poll(async () => Math.round((await heading.boundingBox())!.y), { timeout: 5000 })
@@ -735,7 +742,7 @@ test("Sessions: the list, a session's timeline, its install's sessions and a cop
   expect(timelineCsv.length - 1).toBe(await rows.count());
 
   // AC4: scrolled, the heading of the stretch being read stays pinned at the top.
-  await pinStretch(page, 'Note');
+  await pinStretch(page, 'Home');
   await hold(page);
 
   // AC5: the install's sessions, oldest first, the open one marked; an earlier one opens.
@@ -787,9 +794,9 @@ test("Sessions: the list, a session's timeline, its install's sessions and a cop
   await other.close();
   await expect(page.locator('.copied')).toBeEmpty({ timeout: 5000 });
 
-  // The proof ends on the session, the Note stretch's heading pinned over its events.
+  // The proof ends on the session, the Home stretch's heading pinned over its events.
   await page.bringToFront();
-  await pinStretch(page, 'Note');
+  await pinStretch(page, 'Home');
   await page.waitForTimeout(2000);
 });
 
