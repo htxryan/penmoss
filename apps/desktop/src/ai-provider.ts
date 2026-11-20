@@ -72,6 +72,8 @@ export interface AiProvidersOptions {
 
 interface StoredKeys {
   readonly anthropic?: { readonly sealed: string; readonly problem: string | null };
+  /** The first run asked "Describe Notes for Agents?" on this Mac: it asks only once. */
+  readonly asked?: boolean;
 }
 
 /** Plain words for what went wrong; never the key, never the note. */
@@ -117,6 +119,7 @@ export class AiProviders {
               },
             }
           : {};
+      if (parsed.asked === true) this.keys = { ...this.keys, asked: true };
     } catch {
       this.keys = {};
     }
@@ -152,6 +155,7 @@ export class AiProviders {
         keychain: await this.keychain(),
       },
       claudeCode: await this.claudeCodeStatus(),
+      asked: (await this.load()).asked === true,
     };
   }
 
@@ -172,6 +176,13 @@ export class AiProviders {
       anthropic: { sealed, problem: check === 'ok' ? null : WORDS[check] },
     });
     return { ok: true, status: await this.status() };
+  }
+
+  /** The first run asked its question on this Mac; it is not asked again. */
+  async markAsked(): Promise<DesktopAiStatus> {
+    const keys = await this.load();
+    if (keys.asked !== true) await this.keep({ ...keys, asked: true });
+    return this.status();
   }
 
   async removeKey(): Promise<{ ok: true; status: DesktopAiStatus }> {

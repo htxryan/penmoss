@@ -18,6 +18,7 @@ export function registerAiIpc(ipc: IpcHandlers): void {
       : aiProviders.saveKey(value);
   });
   ipc.handle('aiRemoveKey', () => aiProviders.removeKey());
+  ipc.handle('aiAsked', () => aiProviders.markAsked());
   ipc.handle('aiTest', (_call, provider) => aiProviders.test(text(provider, 40) ?? ''));
   ipc.handle('aiDescribe', (_call, provider, model, prompt) => {
     const id = text(provider, 40);

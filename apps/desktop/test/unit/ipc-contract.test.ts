@@ -84,6 +84,7 @@ const POLICY: Record<keyof typeof INVOKE, [Caller, 'none' | 'handler' | { refuse
   aiStatus: ['window', 'none'],
   aiSaveKey: ['main', { refused: NOT_CONFIRMED }],
   aiRemoveKey: ['main', { refused: null }],
+  aiAsked: ['main', 'none'],
   aiTest: ['main', 'none'],
   aiDescribe: ['window', 'none'],
 };

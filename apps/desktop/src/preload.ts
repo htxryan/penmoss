@@ -179,6 +179,7 @@ const appWindow = {
     status: () => invoke('aiStatus'),
     saveKey: (key) => invoke('aiSaveKey', String(key)),
     removeKey: () => invoke('aiRemoveKey'),
+    asked: () => invoke('aiAsked'),
     test: (provider) => invoke('aiTest', String(provider)),
     describe: (provider, model, prompt) =>
       invoke('aiDescribe', String(provider), String(model), String(prompt)),

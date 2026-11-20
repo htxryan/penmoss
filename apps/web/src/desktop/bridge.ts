@@ -521,6 +521,8 @@ export interface DesktopAiStatus {
     readonly state: 'ready' | 'signed-out' | 'missing' | 'unknown';
     readonly version: string | null;
   };
+  /** The first run asked "Describe Notes for Agents?" on this Mac already. */
+  readonly asked: boolean;
 }
 
 /** A describe call's answer: the model's text, or why there is none, in plain words. */
@@ -544,6 +546,8 @@ export interface DesktopAi {
     | null
   >;
   removeKey(): Promise<{ readonly ok: true; readonly status: DesktopAiStatus } | null>;
+  /** The first run asked its question: it is not asked again on this Mac. */
+  asked(): Promise<DesktopAiStatus | null>;
   /** Asks the provider whether it works: the kept key, or Claude Code's sign-in. */
   test(provider: string): Promise<{ readonly ok: boolean; readonly message: string } | null>;
   /** Sends `prompt` to `provider`'s `model` and answers its text. */

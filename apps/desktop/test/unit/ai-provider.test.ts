@@ -123,6 +123,17 @@ describe('the Anthropic key', () => {
     });
   });
 
+  it('remembers that the first run asked, beside the key', async () => {
+    const fake = fakeAnthropic({ status: 200 });
+    expect((await providers(fake.fetch).status()).asked).toBe(false);
+    expect((await providers(fake.fetch).markAsked()).asked).toBe(true);
+    // A new start reads it back, and a key saved later keeps it.
+    const again = providers(fake.fetch);
+    expect((await again.status()).asked).toBe(true);
+    await again.saveKey(KEY);
+    expect((await providers(fake.fetch).status()).asked).toBe(true);
+  });
+
   it('stops after a refused key until it changes', async () => {
     const fake = fakeAnthropic({ status: 401 });
     const ai = providers(fake.fetch);

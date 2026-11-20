@@ -237,12 +237,26 @@ function NotebookSteps({
   const finish = (notebookId: string | null) => {
     if (setUp.current) return;
     setUp.current = { notebookId };
-    // Describe notes for agents? once, on the first run of a Mac that can reach an AI (A1656).
-    if (firstRun && desktop()?.ai) {
-      go({ at: 'ai' });
+    // Describe notes for agents? once, on the first run of a Mac that can reach an AI and has
+    // not been asked (A1656).
+    const ai = firstRun ? desktop()?.ai : undefined;
+    if (!ai) {
+      void lastStep();
       return;
     }
-    void lastStep();
+    void ai
+      .status()
+      .catch(() => null)
+      .then((status) => {
+        if (status && !status.asked) go({ at: 'ai' });
+        else void lastStep();
+      });
+  };
+  /** The AI question is answered: this Mac is not asked again. */
+  const answeredAi = () => {
+    void desktop()
+      ?.ai?.asked()
+      .catch(() => null);
   };
   /** After AI Descriptions' question: the consent question when unanswered, else the app. */
   const lastStep = async () => {
@@ -579,12 +593,27 @@ function NotebookSteps({
       body = (
         <AiQuestion
           back={back}
-          onNext={(on) => (on ? go({ at: 'ai-provider' }) : void lastStep())}
+          onNext={(on) => {
+            if (on) {
+              go({ at: 'ai-provider' });
+              return;
+            }
+            answeredAi();
+            void lastStep();
+          }}
         />
       );
       break;
     case 'ai-provider':
-      body = <AiProviderStep back={back} onDone={() => void lastStep()} />;
+      body = (
+        <AiProviderStep
+          back={back}
+          onDone={() => {
+            answeredAi();
+            void lastStep();
+          }}
+        />
+      );
       break;
     case 'consent':
       body = (

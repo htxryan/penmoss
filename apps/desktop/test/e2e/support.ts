@@ -119,6 +119,14 @@ export function answerAnalytics(home: string, answer: AnalyticsAnswer): void {
   );
 }
 
+/** Writes `userData`'s ai-keys.json saying the first run asked, unless it has one. */
+export function answerAiQuestion(userData: string): void {
+  const file = join(userData, 'ai-keys.json');
+  if (existsSync(file)) return;
+  mkdirSync(userData, { recursive: true });
+  writeFileSync(file, `${JSON.stringify({ asked: true })}\n`, { mode: 0o600 });
+}
+
 export async function launch(
   options: {
     userData?: string;
@@ -141,6 +149,11 @@ export async function launch(
      * as `PENMOSS_ANALYTICS_URL` (an http origin on loopback); without one nothing is sent.
      */
     analytics?: AnalyticsAnswer;
+    /**
+     * AI Descriptions' first-run question (PEN-161): answered before the launch unless a spec
+     * says `ask`, so no spec meets it unasked.
+     */
+    aiQuestion?: 'ask' | 'answered';
     /** More of the app's environment (another git config, T50; the fake GitHub, T57). */
     env?: Readonly<Record<string, string>>;
   } = {},
@@ -153,6 +166,7 @@ export async function launch(
   const home = options.env?.['PENMOSS_HOME'] ?? join(userData, 'penmoss-home');
   const logDir = options.env?.['PENMOSS_LOG_DIR'] ?? join(userData, 'logs');
   answerAnalytics(home, options.analytics ?? 'no');
+  if (options.aiQuestion !== 'ask') answerAiQuestion(userData);
   // Proof mode (the software factory's F7, `task proof:mac`): the main window is recorded.
   const proof = process.env['PENMOSS_PROOF'] === '1';
   const app = await _electron.launch({

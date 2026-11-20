@@ -244,6 +244,7 @@ export interface Invokes {
     | null
   >;
   aiRemoveKey: Call<[], { readonly ok: true; readonly status: DesktopAiStatus } | null>;
+  aiAsked: Call<[], DesktopAiStatus | null>;
   aiTest: Call<[provider: string], { readonly ok: boolean; readonly message: string } | null>;
   aiDescribe: Call<[provider: string, model: string, prompt: string], DesktopAiAnswer | null>;
   analyticsStatus: Call<[], DesktopAnalyticsStatus | null>;
@@ -427,6 +428,7 @@ export const INVOKE = {
     gesture: { refused: TOKEN_NEEDS_A_PERSON },
   },
   aiRemoveKey: { channel: 'penmoss:ai:remove-key', from: 'main', gesture: { refused: null } },
+  aiAsked: { channel: 'penmoss:ai:asked', from: 'main' },
   aiTest: { channel: 'penmoss:ai:test', from: 'main' },
   aiDescribe: { channel: 'penmoss:ai:describe', from: 'window' },
   // Usage analytics and the log file (PEN-137): any main or note window reads them and asks for

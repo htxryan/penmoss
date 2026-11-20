@@ -600,6 +600,7 @@ export function installFakeBridge(config: {
           ai: (() => {
             const listeners = new Set<() => void>();
             let saved = false;
+            let asked = false;
             const calls: string[] = [];
             (window as unknown as { __aiCalls: string[] }).__aiCalls = calls;
             const status = () => ({
@@ -619,6 +620,7 @@ export function installFakeBridge(config: {
               ],
               anthropic: { saved, problem: null, keychain: true },
               claudeCode: { state: 'ready' as const, version: '2.1.328' },
+              asked,
             });
             const changed = () => {
               for (const listener of listeners) listener();
@@ -636,6 +638,10 @@ export function installFakeBridge(config: {
                 saved = true;
                 changed();
                 return Promise.resolve({ ok: true as const, status: status() });
+              },
+              asked: () => {
+                asked = true;
+                return Promise.resolve(status());
               },
               removeKey: () => {
                 saved = false;
