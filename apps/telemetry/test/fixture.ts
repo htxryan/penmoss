@@ -322,8 +322,8 @@ export function bigInstallEvents(now: number): AnalyticsEvent[] {
 /** Adds BIG_INSTALL's sessions to `db`, after seedFixture (its rollups leave them out). */
 export async function seedBigInstall(db: D1Database, now: number): Promise<void> {
   const statements = bigInstallEvents(now).map((event) => {
-    if (!isValidEvent(event))
-      throw new Error(`fixture event ${event.kind}:${event.name} is not valid`);
+    const { kind, name } = event;
+    if (!isValidEvent(event)) throw new Error(`fixture event ${kind}:${name} is not valid`);
     return insertEvent(db, BIG_INSTALL, event, now);
   });
   for (let start = 0; start < statements.length; start += 100) {

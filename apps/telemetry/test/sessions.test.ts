@@ -266,7 +266,7 @@ interface EventRow {
 
 describe('session.sql', () => {
   it('gives one session’s events in seq order, with their props', async () => {
-    const [{ install, events }] = fixtureInstalls(NOW);
+    const { install, events } = fixtureInstalls(NOW)[0]!;
     const session = events.at(-1)!.session;
     const rows = await runQuery<EventRow>(env.DB, 'session', { ...ALL, install, session });
     const own = events.filter((e) => e.session === session);
@@ -287,7 +287,7 @@ describe('session.sql', () => {
     });
     expect(old).toEqual([]);
     // The period and the filters change nothing.
-    const [{ install, events }] = fixtureInstalls(NOW);
+    const { install, events } = fixtureInstalls(NOW)[0]!;
     const session = events[0]!.session;
     const narrow = await runQuery(env.DB, 'session', {
       ...ALL,
@@ -344,7 +344,7 @@ describe('install-sessions.sql', () => {
     });
 
   it('lists the install’s sessions oldest first, ties by session, whatever the filters', async () => {
-    const [{ install, events }] = fixtureInstalls(NOW);
+    const { install, events } = fixtureInstalls(NOW)[0]!;
     const sessions = [
       ...new Set(events.filter((e) => inDays({ ...e, install }, 90)).map((e) => e.session)),
     ];
