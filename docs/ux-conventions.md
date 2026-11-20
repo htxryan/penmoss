@@ -12,7 +12,8 @@ These are the rules every screen follows, on the Mac/web app and on Android. The
 
 ## Words
 
-- **Title Case** for every title, heading, button, menu item, tab and dialog name. Sentences stay in sentence case.
+- **Title Case** for every title, heading, button, menu item, tab and dialog name, and every field label, legend, column heading, confirmation question, status or state name, chip, and filter or funnel value (A1645). Articles, conjunctions and short prepositions stay lower case unless first or last ("Move to Folder", "Keep at Most", "Sign In with GitHub"); a verb's particle is capitalised ("Sign In Again"); "ID", never "Id". Sentences, hints and help text stay in sentence case. The factory checks labels with `tools/factory/sandbox/title-case.cjs`.
+- **People's names for things**, never raw ids, enum values or keys ("Claude Code", not `claude-code`).
 - **British spelling** in the interface: colour, licence, organise.
 - Short action names on buttons, such as **Restore**, **Revert** and **Copy**. The full name goes in the tooltip and the accessible name.
 - An action that opens something more (a dialog, a picker) ends with **…**.
@@ -31,11 +32,32 @@ These are the rules every screen follows, on the Mac/web app and on Android. The
 - **One flow per job.** Adding a notebook later reuses the first-run screens and logic (A1562); the icon and symbol pickers are one component (A1568).
 - Use the shared primitives: buttons, `Switch`, chips, `NotebookBadge`, `ConfirmDialog`, the picker overlay, the focus trap (`apps/web/src/shell/focus-trap.ts`), and `SettingsHeader`.
 
+## Every platform the same
+
+- A feature that reaches the Mac (web) and Android has the same structure, the same order, the same kind of control for each thing (a disclosure on one is a disclosure on the other, not a row that navigates; a button is a button, not a text row) and the same words, except "this Mac" / "this phone" (A1646). A difference the platform forces is named, with its reason, in the plan or a decision.
+- Both share one source for their words and data where one exists: core's copy exported to Android's contracts (`apps/android/contract/`), as analytics' `copy.ts` is.
+
+## Layout
+
+- Nothing overflows or is clipped: a confirmation, chip or long label stays inside its dialog, group or card, at the window and phone widths, and no page scrolls sideways.
+- Answers offered side by side (Share / Don't Share, Keep / Delete) are equal in size and weight unless the design says why one leads.
+
+## Data on screen
+
+- Counts, lists and empty states follow the store live, on every platform: after a delete, a change of setting or a new event, the screen shows what is there now.
+- What one screen shows agrees with the rest of it ("Nothing Recorded Yet" never sits beside a count of 50).
+
+## Usage analytics
+
+- Every new control, screen, dialog, setting, CLI command and MCP tool is recorded by name, on every client it reaches ([`analytics.md`](analytics.md), Adding a tracked control; A1635, A1636). Never record text, titles or other data a person wrote.
+- Its id goes in the catalogue, and the contracts are written again for Android.
+
 ## Settings
 
 - Every page uses `SettingsHeader` (A1560): a large title that shrinks into a pinned bar, with the page's own buttons at its end.
 - A setting kept only on this device carries the laptop icon, whose tooltip says it isn't synced (A1559).
-- A destructive action asks first, in a `ConfirmDialog`.
+- A destructive action (a delete, a reset, a lowered limit that removes records) asks first, in the app's confirm style (`ConfirmDialog`, or the inline confirm block inside its group), naming what goes, on every platform.
+- Every row is findable in Search Settings: it has `data-setting` and an entry in `settings-index.ts`, and Android's index has it too.
 
 ## Interaction
 

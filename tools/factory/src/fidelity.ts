@@ -63,7 +63,26 @@ export function parseReview(
       ...(platform ? { platform } : {}),
     });
   }
-  return { ok: true, rows: [...out, ...proofRows((raw as { proofs?: unknown }).proofs)] };
+  const extra = raw as { proofs?: unknown; code?: unknown };
+  return { ok: true, rows: [...out, ...proofRows(extra.proofs), ...codeRows(extra.code)] };
+}
+
+/**
+ * The reviewer's code review (the penmoss-review skill's checks on the branch's diff): each
+ * problem is a row the builder hears about like any other mismatch.
+ */
+export function codeRows(raw: unknown): FidelityRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((r: unknown) => {
+    if (typeof r !== 'object' || r === null) return [];
+    const c = r as Record<string, unknown>;
+    const note = typeof c['note'] === 'string' ? c['note'].trim() : '';
+    if (!note) return [];
+    const check = typeof c['check'] === 'string' && c['check'].trim() ? c['check'].trim() : 'code';
+    const where =
+      typeof c['where'] === 'string' && c['where'].trim() ? `: ${c['where'].trim()}` : '';
+    return [{ criterion: `Code review (${check})${where}`, verdict: 'mismatch' as const, note }];
+  });
 }
 
 /** The reviewer's verdicts on the proof (A1650). */

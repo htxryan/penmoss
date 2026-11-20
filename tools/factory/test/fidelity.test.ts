@@ -210,3 +210,36 @@ describe('the reviewer on the proof (A1650)', () => {
     expect(rest).toEqual([]);
   });
 });
+
+describe("the reviewer's code review (penmoss-review)", () => {
+  it('sends each problem back as a mismatch, and drops entries with nothing to fix', async () => {
+    const { parseReview } = await import('../src/fidelity.ts');
+    const parsed = parseReview(
+      JSON.stringify({
+        rows: [{ criterion: 'AC1', verdict: 'match', note: '' }],
+        code: [
+          {
+            check: '4. Reuse',
+            where: 'apps/web/src/analytics/Confirm.tsx:12',
+            note: 'Use ConfirmBlock.',
+          },
+          { check: '5. Usage analytics', note: '' },
+          { note: 'The Android screen is never recorded.' },
+        ],
+      }),
+    );
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.rows.slice(1)).toEqual([
+      {
+        criterion: 'Code review (4. Reuse): apps/web/src/analytics/Confirm.tsx:12',
+        verdict: 'mismatch',
+        note: 'Use ConfirmBlock.',
+      },
+      {
+        criterion: 'Code review (code)',
+        verdict: 'mismatch',
+        note: 'The Android screen is never recorded.',
+      },
+    ]);
+  });
+});

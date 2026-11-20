@@ -42,6 +42,9 @@ export const REVIEW_CHECKS = {
   choices: 'answers offered side by side are equal in size and weight unless the plan says why',
   coverage:
     'every acceptance criterion that changes what someone sees has its mockup, one per platform it names',
+  reuse: "each screen uses the app's existing components and flows, named in the plan",
+  analytics:
+    'every new control, screen, dialog, setting, CLI command and MCP tool is recorded by name on each client',
 } as const;
 
 export type ReviewCheck = keyof typeof REVIEW_CHECKS;

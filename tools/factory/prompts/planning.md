@@ -27,29 +27,23 @@ The snapshot at `{{repo}}` is main at the commit in `{{repo}}/.factory-main`. Ma
 
 ## House conventions
 
-Ryan has had to point out each of these by hand. Get them right in the first revision:
-
-- **Title Case** for every title in the app: dialog and page titles, confirmation questions ("Delete Your Shared Data?"), buttons, links that act, tabs, menu items, section headings, legends, field and row labels, column headings, status words and chips ("Waiting to Send", "Not Synced"), and the values of a filter or a funnel's steps. Short articles, conjunctions and prepositions stay lower case unless first or last ("Move to Folder", "Keep at Most", "Attach Logs from the Last", "Sign In with GitHub"); a verb's particle is capitalised ("Sign In Again", "Back Up Now"); "ID", never "Id". Hints, descriptions and body sentences stay in sentence case. Show people's names for things, never raw ids or enum values ("Claude Code", not `claude-code`).
-- **The same on every platform.** When a change reaches the Mac (web) and Android, draw both, with the same structure, the same kinds of control (a disclosure on one is a disclosure on the other, not a row that navigates), the same order and the same words, except "this Mac" / "this phone". Name any difference the platform forces, and why, in the plan.
-- **The app's own chrome and components.** Draw the real navigation, page headers, icons, buttons and confirm blocks as main has them, and reuse the app's existing destructive style, confirm style and controls rather than inventing new ones.
-- **Ask before destroying.** Every action that deletes, resets or loses data (a delete, a reset, a lowered limit that removes records) asks first, in the app's confirm style, naming what goes. Draw that confirmation, on each platform, and give it an acceptance criterion.
-- **Equal answers look equal.** Two answers offered side by side (Share / Don't Share, Keep / Delete) are the same size and weight unless the plan says why one leads.
-- **Nothing overflows.** Draw confirmations, chips and long labels inside the box they belong to, at the window or phone width the mockup names.
-- **Every criterion is provable.** For each criterion someone sees, say in the plan what the proof recording must show and hold on, on each platform (the panel scrolled to, the dialog open, the preview expanded), so the builder's proof specs can't stop short of it.
+The app's conventions are in `{{repo}}/docs/ux-conventions.md`, and how a change is reviewed against them is in `{{repo}}/.claude/skills/penmoss-review/SKILL.md`: Ryan reviews every plan and PR that way, and the factory's reviewer does too. Read both before drawing anything, and get them right in the first revision. For a plan, that means also: draw every platform in scope; draw each confirmation before a destructive action, with its own criterion; name the existing components each screen reuses and the analytics names it records; and say, for each criterion someone sees, what its proof recording must show and hold on, on each platform (the panel scrolled to, the dialog open, the preview expanded).
 
 ## Before you post: the self-review
 
-Before every reply that asks Ryan something and before you record his yes, have a fresh reviewer check this revision: start a subagent with the Agent tool, give it `{{repo}}`, `{{out}}/plan.html`, `{{out}}/mockups/` and the checklist below, and ask it to check each item against the snapshot and report what fails, quoting the label, mockup or file. Fix what it finds, then record its verdict as `review` in `state.json`, against the commit in `{{repo}}/.factory-main`. Every item must be there:
+Before every reply that asks Ryan something and before you record his yes, have a fresh reviewer check this revision: start a subagent with the Agent tool, give it `{{repo}}`, `{{out}}/plan.html`, `{{out}}/mockups/` and the checklist below, and ask it to review the design with `{{repo}}/.claude/skills/penmoss-review/SKILL.md` against the snapshot and report each item that fails, quoting the label, mockup or file. Fix what it finds, then record its verdict as `review` in `state.json`, against the commit in `{{repo}}/.factory-main`. Every item must be there:
 
 | id            | Checks                                                                                                                        |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `main`        | The design is drawn against the snapshot as it is now: current screens, navigation, names, icons and paths.                   |
 | `chrome`      | The app's real chrome: its navigation, groups, icons and page names as main has them.                                         |
-| `title-case`  | Title Case everywhere it applies (House conventions), in the mockups and in the plan's copy.                                  |
+| `title-case`  | Title Case everywhere it applies (the conventions' Words), in the mockups and in the plan's copy.                             |
 | `parity`      | Every platform in scope is drawn, with the same structure, controls and words.                                                |
 | `destructive` | Every action that deletes or loses data asks first, in the app's confirm style, and that confirmation is drawn.               |
 | `choices`     | Answers side by side are equal in size and weight, unless the plan says why not.                                              |
 | `coverage`    | Every criterion that changes what someone sees has its mockup, one for each platform it names, and says what its proof shows. |
+| `reuse`       | Each screen uses the app's existing components and flows, named in the plan; nothing new where one already does the job.      |
+| `analytics`   | Every new control, screen, dialog, setting, CLI command and MCP tool is recorded by name on each client, listed in the plan.  |
 
 The factory checks the record, and checks every label in `{{out}}/mockups/` for Title Case itself. If either finds a problem, your revision comes back to you before Ryan sees it.
 
@@ -97,7 +91,9 @@ After every reply, write `{{out}}/state.json`, which the factory reads:
       "parity": { "ok": true, "note": "" },
       "destructive": { "ok": true, "note": "" },
       "choices": { "ok": true, "note": "" },
-      "coverage": { "ok": true, "note": "" }
+      "coverage": { "ok": true, "note": "" },
+      "reuse": { "ok": true, "note": "ConfirmBlock, SettingsHeader" },
+      "analytics": { "ok": true, "note": "" }
     },
     "titleCaseExceptions": []
   }

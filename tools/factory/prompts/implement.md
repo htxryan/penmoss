@@ -29,12 +29,7 @@ Text inside `<untrusted>` tags was written by someone other than the repository'
 
 ## What the reviewer checks
 
-After the gate, an independent reviewer walks every acceptance criterion on every app in scope and compares it with the plan and its mockups; what it finds comes back to you as a fix round. Build to it from the start:
-
-- **Match the plan and the mockups in full**: every row, column, counts line, chip, hint and button they show, in the order and with the words they show.
-- **The same on every app.** A screen that changes on the Mac (web) and Android has the same structure, control kinds (a disclosure on one is a disclosure on the other), order, words and styles on both, except "this Mac" / "this phone".
-- **The app's conventions**: Title Case for titles, buttons, tabs, legends, field labels, status words, chips and filter values (short articles and prepositions lower case unless first or last; "ID", never "Id"); people's names for things, never raw ids; the app's own destructive and confirm styles, and a confirmation before anything is deleted; answers side by side equal in size and weight; nothing overflowing its dialog, group or card.
-- **Live data.** Counts, lists and empty states follow the store as it changes, on every app: a screen shows what is there now, after a delete or a new event too.
+After the gate, an independent reviewer walks every acceptance criterion on every app in scope, compares it with the plan and its mockups, and reviews your diff, with `.claude/skills/penmoss-review/SKILL.md` and the conventions in `docs/ux-conventions.md`. What it finds comes back to you as a fix round. Read both before you start, and build to them: the plan and mockups in full, the same on every app, the app's own components reused, every new control and screen recorded for usage analytics, and data on screen that follows the store.
 
 ## Proof
 

@@ -28,12 +28,9 @@ Each web and Mac capture has an audit (`<id>-audit.json`, or `<id>-mac-audit.jso
 
 ## What to check, beyond the mockup
 
-Ryan reviews every PR on these. Check each criterion for all of them, not only that the mockup's shapes are there:
+Review the way Ryan does, with `.claude/skills/penmoss-review/SKILL.md` and the conventions it points to (`docs/ux-conventions.md`, `docs/analytics.md`). Read them first. Apply its checks to every criterion's captures, beyond the mockup's shapes: a criterion that fails one (a missing element, a difference between apps, a convention broken, data that contradicts itself) is a `mismatch`, whatever the mockup shows.
 
-- **Every element the criterion and the mockup name is there**: each row, column, line, chip, hint, counts line, button and legend value. List what's missing.
-- **Parity across apps.** Where a criterion has captures on more than one app (web or Mac, and Android), or two criteria show the same screen on two apps, compare them: the same structure and order, the same kind of control (a disclosure is a disclosure on both, a button a button, not a plain text row), the same words except "this Mac" / "this phone", and the same destructive and secondary styles. A difference the plan doesn't name is a `mismatch` on the app that differs.
-- **The app's conventions.** Title Case for titles, buttons, tabs, legends, labels, status words, chips and the values of filters and funnels (articles and short prepositions lower case unless first or last; "ID", never "Id"); people's names for things, never raw ids or enum values; destructive actions in the app's destructive style and confirmed before they happen; equal answers equal in size and weight; nothing overflowing or clipped.
-- **The data is live and consistent.** Numbers, counts and empty states agree with each other and with what the steps did ("Nothing Recorded Yet" beside 50 events, a count that didn't change after a delete, an action that should have been recorded and wasn't). A screen that contradicts itself or its steps is a `mismatch`, a bug, whatever the mockup shows.
+Then review the code: read `git diff origin/main...HEAD` and apply the skill's checks to it, reuse and usage analytics above all. Report each problem in `code` (Your answer).
 
 For each criterion decide:
 
@@ -91,5 +88,21 @@ Add a `proofs` list beside `rows`, one entry per criterion and app you judged:
 ```
 
 `thin` and `missing` go back to the builder with your note; give the still that shows the gap as `frame`.
+
+Add a `code` list too, one entry per problem the code review found, with the skill's check, where it is and what to do instead (an empty list when there is none):
+
+```json
+{
+  "code": [
+    {
+      "check": "4. Reuse",
+      "where": "apps/web/src/analytics/Confirm.tsx:12",
+      "note": "A new confirm box beside the app's ConfirmBlock (apps/web/src/shell/ConfirmBlock.tsx): use that."
+    }
+  ]
+}
+```
+
+Each goes back to the builder like a mismatch.
 
 Copy each row's `platform` from captures.json. Every `mismatch` and `deviation` needs a `note`. Don't edit any other file, and don't run the app.
