@@ -750,4 +750,21 @@ test.describe('Usage data in the policy (PEN-137)', () => {
     await page.goto('/privacy/');
     await expect(page.locator('article')).toContainText('window’s size and layout');
   });
+
+  // PEN-175: where the note, the sidebar and Settings are scrolled is recorded, and the pages say so.
+  test('the usage data page lists Scroll, and both privacy pages name scrolling', async ({
+    page,
+  }) => {
+    await page.goto('/docs/help/usage-data/');
+    const help = page.locator('main');
+    await expect(help.locator('tr').filter({ hasText: '0.42 of the way down' })).toContainText(
+      'Scroll',
+    );
+    await expect(help).toContainText('rounded to hundredths');
+    await expect(help).toContainText('Keep at Most');
+    await page.goto('/docs/help/privacy/');
+    await expect(page.locator('main')).toContainText('how far you scroll');
+    await page.goto('/privacy/');
+    await expect(page.locator('article')).toContainText(/how far you\s+scroll/);
+  });
 });

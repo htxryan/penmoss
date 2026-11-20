@@ -1,7 +1,8 @@
 /**
  * A fixture D1 (PEN-137): five weeks of made-up usage from twelve installs, eight Macs (with the
  * CLI and agents' MCP calls) and four phones, through the first run and everyday use, rolled up as
- * the nightly cron would. Each session's window sizes (PEN-174) come right after its launch. The named-query tests, the dashboard's tests and its Playwright spec
+ * the nightly cron would. Each session's window sizes (PEN-174) come right after its launch, and
+ * where the sidebar and the note came to rest (PEN-175) after the palette and the note. The named-query tests, the dashboard's tests and its Playwright spec
  * all read it. Every event passes core's checks, so nothing here could not have been sent.
  */
 import { isValidEvent, type AnalyticsEvent } from '@penmoss/core/analytics';
@@ -96,6 +97,10 @@ function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
   if (index === 3 && day === 4) {
     drafts.splice(3, 1, { kind: 'command', name: 'app.trash', props: { source: 'palette' } });
   }
+  // Where the sidebar and the note came to rest (PEN-175): Paths skips these, so what comes
+  // after the palette is still the next action.
+  drafts.splice(3, 0, { kind: 'scroll', name: 'sidebar', props: { position: 0.25 } });
+  drafts.push({ kind: 'scroll', name: 'note', props: { position: 0.42 } });
   drafts.push(
     {
       kind: 'command',

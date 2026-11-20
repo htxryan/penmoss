@@ -14,14 +14,17 @@ The Mac app, the `penmoss` CLI, the MCP server agents use, and the Android app r
 | Command  | `note.new`, from a shortcut (`Mod+Alt+N`), the palette, a button or menu                                                                                                                             |
 | Screen   | `settings.privacy`, `note`, `firstrun.github`                                                                                                                                                        |
 | Dialog   | `palette` opened, then closed after 2–5 s                                                                                                                                                            |
-| Click    | `sidebar.quick-access.pin`                                                                                                                                                                           |
+| Click    | `sidebar.quick-access.pin`; every button, link, menu, switch, list and slider by its own name, and a list or slider only says it was changed, never to what                                          |
 | Menu     | `copy` from the menu bar                                                                                                                                                                             |
 | Setting  | `theme.mode` set to `dark`; a text setting only says it changed                                                                                                                                      |
 | CLI      | `search`, with the names of the options used (never their values)                                                                                                                                    |
 | MCP tool | `read_note`, by which agent (`claude-code`), and whether it worked                                                                                                                                   |
 | App      | started, quit, came to the front, went to the back; the window's size each time it opens, resizes or goes full screen, and its layout: sidebar, note panel, Full Width, light or dark, how many tabs |
+| Scroll   | `note` at 0.42 of the way down; the sidebar, its folder tree, Recent Notes and Tags; Settings and its list of pages                                                                                  |
 
 Each event also says whether a person, an agent or a script did it, the app's version and channel, your system and its version (such as macOS 15.1), the window's size class (its size and layout are their own events), and a random analytics ID. Counts are rounded into ranges ("10–49 notes") and window sizes to the nearest 10 pixels, and times into durations ("2–5 s"). Nothing about where a window is or which screen it is on is recorded.
+
+A scroll is recorded once the area has stopped moving for a moment, at most once a second for each area, as how far down it is: from 0 at the top to 1 at the bottom, rounded to hundredths. It says nothing about what is there: no note, heading or length. Scrolling adds events, about one every few seconds while you read a long note; with **Don't Share** that means the record on your device covers fewer days, and **Keep at Most** (5,000 by default) can be raised under [Limits](#limits).
 
 ### Never recorded
 

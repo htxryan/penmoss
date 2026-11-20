@@ -167,6 +167,28 @@ describe('what they say', () => {
     expect(rows.find((row) => row.depth === 3)).toBeDefined();
   });
 
+  it('next skips scroll events, so what follows is the next action (PEN-175)', async () => {
+    const rows = await runQuery<{ depth: number; n1: string; n2: string; n3: string }>(
+      env.DB,
+      'next',
+      ALL,
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect([row.n1, row.n2, row.n3].join(' ')).not.toMatch(/scroll:/);
+    }
+    // A scroll still starts a path when asked for one; the steps after it are actions.
+    const fromScroll = await runQuery<{ depth: number; n1: string }>(env.DB, 'next', {
+      ...ALL,
+      startKind: 'scroll',
+      startName: 'sidebar',
+    });
+    expect(fromScroll.find((row) => row.depth === 0)).toBeDefined();
+    expect(
+      fromScroll.find((row) => row.depth === 1 && row.n1 === 'command:note.new'),
+    ).toBeDefined();
+  });
+
   it('agents splits MCP tools by agent client and counts each result', async () => {
     type AgentRow = Record<'ok' | 'invalid' | 'not_found' | 'conflict' | 'failed', number> & {
       kind: string;
@@ -207,6 +229,8 @@ describe('what they say', () => {
     expect(
       rows.find((row) => row.kind === 'command' && row.name === 'app.palette')?.events,
     ).toBeGreaterThan(0);
+    // Not scroll events (PEN-175), though every session has them.
+    expect(rows.some((row) => row.kind === 'scroll')).toBe(false);
   });
 
   it('freshness says when the newest event arrived and how far the rollup reached', async () => {
@@ -224,6 +248,8 @@ describe('what they say', () => {
     const names = rows.map((row) => `${row.kind}:${row.name}`);
     expect(names).toContain('command:app.graph');
     expect(names).not.toContain('command:app.palette');
+    // A scroll area is not something anyone chooses to use (PEN-175).
+    expect(names.some((name) => name.startsWith('scroll:'))).toBe(false);
   });
 
   it('window-sizes counts installs by main window size, the 10 most per client, then Other', async () => {

@@ -1,5 +1,6 @@
 -- Catalogued names nothing used in the period: commands, controls, dialogs, screens, menus,
--- settings, CLI commands and MCP tools.
+-- settings, CLI commands and MCP tools. Not scroll areas (PEN-175) or other kinds that are not
+-- something a person chooses to use.
 -- Parameters: ?1 days (the period ends today and is this many days long), ?2 client, ?3 actor,
 -- ?4 channel, ?5 version ('' for all), ?6 today (YYYY-MM-DD, UTC).
 SELECT kind, name

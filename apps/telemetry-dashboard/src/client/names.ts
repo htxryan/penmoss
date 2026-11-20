@@ -140,6 +140,17 @@ const DIALOGS: Record<string, string> = {
   shareSheet: 'Share Sheet',
 };
 
+/** The areas a scroll event names (SCROLL_NAMES, PEN-175), as the app calls them. */
+const SCROLL_AREAS: Record<string, string> = {
+  note: 'Note',
+  sidebar: 'Sidebar',
+  'sidebar.folders': 'Sidebar › Folders',
+  'sidebar.recent': 'Sidebar › Recent Notes',
+  'sidebar.tags': 'Sidebar › Tags',
+  settings: 'Settings',
+  'settings.nav': 'Settings › List of Pages',
+};
+
 /** The display name of event `name` of `kind`, without its kind. */
 export function displayName(kind: string, name: string): string {
   switch (kind) {
@@ -166,6 +177,8 @@ export function displayName(kind: string, name: string): string {
       return name.split('.').map(titled).join(' › ');
     case 'cli':
       return `penmoss ${name}`;
+    case 'scroll':
+      return SCROLL_AREAS[name] ?? name.split('.').map(titled).join(' › ');
     default:
       return titled(name);
   }
@@ -200,6 +213,7 @@ export function kindName(event: string): string {
 
 const KINDS: Record<string, string> = {
   command: 'Command',
+  scroll: 'Scroll',
   firstrun: 'First Run',
   cli: 'CLI Command',
   tool: 'MCP Tool',

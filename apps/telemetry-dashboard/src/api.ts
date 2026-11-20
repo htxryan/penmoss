@@ -221,7 +221,9 @@ export async function viewData(
       const seen = new Map(
         (await run('starts', raw)).map((row) => [`${row['kind']}:${row['name']}`, row['events']]),
       );
+      // Not scroll events (PEN-175): starts.sql leaves them out.
       const options = Object.entries(CATALOGUE)
+        .filter(([kind]) => kind !== 'scroll')
         .flatMap(([kind, names]) => names.map((name) => `${kind}:${name}`))
         .map((event) => ({ event, events: Number(seen.get(event) ?? 0) }))
         .sort((a, b) => b.events - a.events);
