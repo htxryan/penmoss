@@ -107,6 +107,8 @@ class TrackedControlsTest {
                     Box(Modifier.clickable {})
                     // untracked: swallows taps over the preview
                     Box(Modifier.clickable {})
+                    Plain("Open", "first-run-open", "folder-open") { go() }
+                    Link("Refresh", "first-run-refresh", "refresh-cw", onClick = refresh)
                 }
                 """.trimIndent(),
             )
@@ -126,6 +128,8 @@ class TrackedControlsTest {
                     "More.kt:5: RangeSlider has no tracked onValueChangeFinished",
                     "More.kt:15: Primary has no event =",
                     "More.kt:17: Options has no event =",
+                    "More.kt:26: Plain has no event =",
+                    "More.kt:27: Link has no event =",
                     "More.kt:10: pointerInput tap gesture has no tracked id or command",
                     "More.kt:22: `// untracked:` needs a reason of three words or more",
                     "More.kt:21: clickable has no tracked id or command",

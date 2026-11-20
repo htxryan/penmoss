@@ -124,6 +124,7 @@ import {
   parseTheme,
   type Theme,
 } from '@penmoss/ui/theme';
+import { installClickListener } from '@penmoss/ui/analytics/clicks';
 import {
   INTERFACE_FONT_SETTING,
   NOTE_FONT_SETTING,
@@ -138,6 +139,7 @@ import { NoteComments, PHONE_AUTHOR } from './comments';
 import type { CommentToEditor } from './comments-protocol';
 import {
   BRIDGE_VERSION,
+  clickMessage,
   MAX_FOLD_KEY,
   MAX_FILE_NAME,
   MAX_FOLDS,
@@ -168,7 +170,6 @@ import {
   type WebPictureMode,
 } from './protocol';
 import { PageKeys } from './keys';
-import { installClickTracking } from './clicks';
 
 /** The theme editor's sample note (A418): what the web's editor preview shows, as a note. */
 export const PREVIEW_NOTE_ID = 'theme-preview';
@@ -644,11 +645,11 @@ export class EditorHost {
       },
       { passive: true },
     );
-    // The editor's tracked widgets (PEN-175): each use is posted as the Mac's page records it,
-    // never from the theme preview's sample note.
-    installClickTracking(elements.root.ownerDocument, post, () => {
+    // The editor's tracked widgets (PEN-175): the Mac's page's own listener (@penmoss/ui), each
+    // use posted for the app to record, never from the theme preview's sample note.
+    installClickListener(elements.root.ownerDocument, (id, state) => {
       const open = this.current;
-      return open !== null && open.noteId !== PREVIEW_NOTE_ID;
+      if (open !== null && open.noteId !== PREVIEW_NOTE_ID) post(clickMessage(id, state));
     });
     // The image lightbox (T51, A948) opens over the page from an image's tools or a double tap;
     // the app hears of it, so the back gesture closes it and the note's bars step aside.

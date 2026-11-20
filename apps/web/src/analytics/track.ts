@@ -12,6 +12,7 @@ import {
   type PropValue,
 } from '@penmoss/core/analytics';
 import { CUSTOM_FONT_PREFIX } from '@penmoss/core/fonts';
+import { installClickListener } from '@penmoss/ui/analytics/clicks';
 import type { Route } from '../router';
 import { record } from './record';
 
@@ -110,75 +111,15 @@ export function resetScreens(): void {
 }
 
 /**
- * A select or a slider (`<input type="range">`): recorded when its value changes, not when it is
- * clicked (PEN-175). A slider's `change` comes when it is let go, so a drag records once.
- */
-function changesOnly(control: Element): boolean {
-  return (
-    control instanceof HTMLSelectElement ||
-    (control instanceof HTMLInputElement && control.type === 'range')
-  );
-}
-
-/**
- * The tracked clicks (PEN-137): one capture-phase listener records the nearest `[data-event]`
- * control's id. A `[data-command]` control is counted once, by its command's run, so a click
- * whose nearest tracked control has a `data-command` records nothing here. A switch or a
- * checkbox also says which way it went (`state: on|off`). A select or a slider records
- * `click <id>` once per change instead (PEN-175), never the value it was given.
+ * The tracked clicks (PEN-137): each use of a `[data-event]` control records `click <id>`, a
+ * switch's or a checkbox's with which way it went (`state: on|off`), a select's or a slider's
+ * once per change, never its value (PEN-175). The listener is @penmoss/ui's, which Android's
+ * editor page installs too, so both record the same controls the same way.
  */
 export function installClickTracking(doc: Document): () => void {
-  const tracked = (target: EventTarget | null): { control: Element; id: string } | null => {
-    if (!(target instanceof Element)) return null;
-    const control = target.closest('[data-event], [data-command]');
-    if (!control || control.hasAttribute('data-command')) return null;
-    const native =
-      control instanceof HTMLButtonElement ||
-      control instanceof HTMLSelectElement ||
-      control instanceof HTMLInputElement;
-    if (native && control.disabled) return null;
-    if (control.getAttribute('aria-disabled') === 'true') return null;
-    const id = control.getAttribute('data-event');
-    return id ? { control, id } : null;
-  };
-  const onClick = (event: MouseEvent) => {
-    try {
-      const found = tracked(event.target);
-      if (!found || changesOnly(found.control)) return;
-      const state = clickState(found.control);
-      record('click', found.id, state === null ? {} : { state });
-    } catch {
-      // Recording never breaks a click.
-    }
-  };
-  const onChange = (event: Event) => {
-    try {
-      const found = tracked(event.target);
-      if (!found || !changesOnly(found.control)) return;
-      record('click', found.id, {});
-    } catch {
-      // Recording never breaks a change.
-    }
-  };
-  doc.addEventListener('click', onClick, true);
-  doc.addEventListener('change', onChange, true);
-  return () => {
-    doc.removeEventListener('click', onClick, true);
-    doc.removeEventListener('change', onChange, true);
-  };
-}
-
-/** Which way a switch or a checkbox goes with this click, or null for any other control. */
-function clickState(control: Element): 'on' | 'off' | null {
-  if (control instanceof HTMLInputElement) {
-    if (control.type !== 'checkbox' && control.type !== 'radio') return null;
-    // A click toggles a checkbox before its listeners run, so this is the new state.
-    return control.checked ? 'on' : 'off';
-  }
-  const checked = control.getAttribute('aria-checked') ?? control.getAttribute('aria-pressed');
-  if (checked === null) return null;
-  // The page re-renders after the click: this is still the old state.
-  return checked === 'true' ? 'off' : 'on';
+  return installClickListener(doc, (id, state) =>
+    record('click', id, state === undefined ? {} : { state }),
+  );
 }
 
 const SETTINGS: ReadonlySet<string> = new Set(SETTING_NAMES);

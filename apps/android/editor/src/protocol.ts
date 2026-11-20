@@ -1246,6 +1246,16 @@ export function parseToEditor(raw: string): ToEditor | null {
   }
 }
 
+/**
+ * The `click` message for one use of a tracked control in the note (PEN-175): its id, and for a
+ * switch or a check box which way it went, as @penmoss/ui's click listener hands them over.
+ */
+export function clickMessage(id: string, state: 'on' | 'off' | undefined): FromEditor {
+  return state === undefined
+    ? { v: BRIDGE_VERSION, type: 'click', id }
+    : { v: BRIDGE_VERSION, type: 'click', id, state };
+}
+
 export function encodeFromEditor(message: FromEditor): string {
   return JSON.stringify(message);
 }

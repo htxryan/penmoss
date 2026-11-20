@@ -2,11 +2,12 @@
  * The editor page's tracked controls (PEN-175, AC5): a use of a widget's `data-event` control in
  * the note posts `{v: 1, type: 'click', id, state?}` for the app to record, as the Mac's page
  * records it; a `data-command` control, a disabled one and the theme preview's note post nothing;
- * a select or a range input posts once when it changes, never its value.
+ * a select or a range input posts once when it changes, never its value. The listener is the
+ * Mac's page's own (@penmoss/ui/analytics/clicks); the host posts each id as `clickMessage`.
  */
+import { installClickListener } from '@penmoss/ui/analytics/clicks';
 import { afterEach, describe, expect, it } from 'vitest';
-import { installClickTracking } from '../src/clicks';
-import type { FromEditor } from '../src/protocol';
+import { clickMessage, type FromEditor } from '../src/protocol';
 
 const removals: Array<() => void> = [];
 afterEach(() => {
@@ -16,7 +17,12 @@ afterEach(() => {
 
 function tracking(active = () => true): FromEditor[] {
   const sent: FromEditor[] = [];
-  removals.push(installClickTracking(document, (message) => sent.push(message), active));
+  // As host.ts installs it: posted only while a note other than the theme preview's is open.
+  removals.push(
+    installClickListener(document, (id, state) => {
+      if (active()) sent.push(clickMessage(id, state));
+    }),
+  );
   return sent;
 }
 
