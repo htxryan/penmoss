@@ -186,7 +186,7 @@ describe('titleBar.compact (mac-window-control.ts)', () => {
 
 describe('capture.hotkey (capture-hotkey.ts)', () => {
   it('is recorded once saved, only as changed', () => {
-    expect(setHotkey('Control+Alt+K')).not.toHaveProperty('error');
+    expect(setHotkey('Control+Shift+F7')).not.toHaveProperty('error');
     expect(mocks.savePreferences).toHaveBeenCalledOnce();
     expect(settings()).toEqual([{ name: 'capture.hotkey', props: { changed: true } }]);
   });
@@ -194,9 +194,9 @@ describe('capture.hotkey (capture-hotkey.ts)', () => {
   it('records nothing when the keys are refused, taken or not saved', () => {
     expect(setHotkey('not keys')).toHaveProperty('error');
     mocks.register.mockReturnValueOnce(false).mockReturnValueOnce(true);
-    expect(setHotkey('Control+Alt+J')).toHaveProperty('error');
+    expect(setHotkey('Control+Shift+F8')).toHaveProperty('error');
     failSave();
-    expect(() => setHotkey('Control+Alt+L')).toThrow('disk full');
+    expect(() => setHotkey('Control+Shift+F9')).toThrow('disk full');
     expect(settings()).toEqual([]);
   });
 });

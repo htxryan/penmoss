@@ -184,7 +184,8 @@ test('the first run’s last step lists how far you scroll under What Is Recorde
 test('scrolling the note, the folder tree and Settings, Note Actions and the menu bar icon reach Analytics Data (ac4, ac8, ac10, ac13)', async () => {
   test.setTimeout(300_000);
   const fake = await endpoint();
-  const launched = await launch({ analytics: 'yes', env: analyticsEnv(fake) });
+  // The Mac's windows, as on a Mac: under xvfb only they have the menu bar icon, and its switch.
+  const launched = await launch({ analytics: 'yes', macWindow: true, env: analyticsEnv(fake) });
   opened.push(launched);
   const { app, page } = launched;
   // Taller than 54rem, so the folder tree scrolls by itself, not the sidebar as one (A521).
