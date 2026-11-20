@@ -26,6 +26,8 @@ object LocalSettings {
         SettingKeys.FULL_WIDTH,
         "metadata.underTitle",
         "metadata.statusBar",
+        // AI Descriptions' provider (PEN-161): each device chooses its own.
+        "ai.provider",
     )
 
     /** The keys, by prefix: the note's title-bar buttons. */
