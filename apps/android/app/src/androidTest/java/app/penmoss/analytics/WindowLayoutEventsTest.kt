@@ -156,6 +156,18 @@ class WindowLayoutEventsTest {
         assertTrue("the row ${row.text} is on screen", screen.has(row.text))
     }
 
+    /**
+     * Scrolls Analytics Data so the [older] row sits near the bottom of the list, with the
+     * [newer] one above it: both in sight, whatever rows were recorded between them.
+     */
+    private fun showRows(screen: OnScreen, older: Stored, newer: Stored) {
+        val node = screen.text(older.text)
+        val list = screen.tagged("viewerList").boundsInWindow.height
+        screen.reveal(node, margin = list - node.size.height - list * 0.08f)
+        assertTrue("the row ${older.text} is on screen", screen.has(older.text))
+        assertTrue("the row ${newer.text} is on screen", screen.has(newer.text))
+    }
+
     @Test
     fun theLauncherRecordsItsSizeAndARotationOnce() {
         ActivityScenario.launch<MainActivity>(allNotebooks()).use { scenario ->
@@ -225,9 +237,9 @@ class WindowLayoutEventsTest {
             turn(landscape = false)
             screen.tagged("homeSettingsGear")
             analyticsData(screen)
-            showRow(screen, turned)
-            assertTrue(screen.has(first.text))
+            showRows(screen, older = first, newer = turned)
             hold()
+            assertTrue(screen.has(first.text))
             assertTrue(screen.has(turned.text))
             ProofShot.take()
         }
