@@ -142,6 +142,8 @@ describe('the layout tracker (PEN-174)', () => {
   it('records each input’s change: sidebar, panel, Full Width, theme mode and tabs', () => {
     const { sent, tracker: target } = tracker();
     appParts(target);
+    // The notes shell: no panel while no note is in it.
+    target.set(owner, 'panel', 'none', 'base');
     vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
     const panel = {};
     const steps: Array<[() => void, Props]> = [
@@ -151,7 +153,7 @@ describe('the layout tracker (PEN-174)', () => {
       [() => target.set(owner, 'fullWidth', true), { fullWidth: true }],
       [() => target.set(owner, 'themeMode', 'dark'), { themeMode: 'dark' }],
       [() => target.set(owner, 'tabs', 2), { tabs: '2–4' }],
-      // The note view goes (Settings, Home): no note, no panel.
+      // The note view goes, and the shell has no note: no panel.
       [() => target.set(panel, 'panel', undefined), { panel: 'none' }],
     ];
     for (const [step, expected] of steps) {
@@ -173,6 +175,110 @@ describe('the layout tracker (PEN-174)', () => {
     target.set(before, 'panel', undefined);
     vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
     expect(sent.at(-1)).toMatchObject({ panel: 'closed' });
+  });
+});
+
+describe('Settings in the main window (PEN-174, Ryan’s review)', () => {
+  /** The notes shell with a wide sidebar, and a note with its panel open. */
+  function shellWithNote(target: LayoutTracker) {
+    const shell = {};
+    const note = {};
+    target.set(shell, 'sidebar', 'shown');
+    target.set(shell, 'sidebarWidth', 262);
+    target.set(shell, 'panel', 'none', 'base');
+    target.set(note, 'panel', 'open');
+    const leave = (noteFirst: boolean) => {
+      const parts = () => {
+        target.set(shell, 'sidebar', undefined);
+        target.set(shell, 'sidebarWidth', undefined);
+        target.set(shell, 'panel', undefined, 'base');
+      };
+      if (noteFirst) target.set(note, 'panel', undefined);
+      parts();
+      if (!noteFirst) target.set(note, 'panel', undefined);
+    };
+    return { leave };
+  }
+
+  for (const noteFirst of [true, false])
+    it(`keeps the sidebar, its width and the panel, and a theme change there records them (${noteFirst ? 'note' : 'shell'} unmounts first)`, () => {
+      const { sent, tracker: target } = tracker();
+      appParts(target);
+      const { leave } = shellWithNote(target);
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+      const shown = {
+        window: 'main',
+        sidebar: 'shown',
+        sidebarWidth: 260,
+        panel: 'open',
+        fullWidth: false,
+        themeMode: 'system',
+      };
+      expect(sent).toEqual([shown]);
+      // Settings fills the window: nothing new is recorded, the layout behind it is unchanged.
+      leave(noteFirst);
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+      expect(sent).toEqual([shown]);
+      // Its Theme setting: the layout still shows the sidebar, its width and the panel.
+      target.set(owner, 'themeMode', 'dark');
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+      expect(sent).toEqual([shown, { ...shown, themeMode: 'dark' }]);
+      target.set(owner, 'fullWidth', true);
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+      expect(sent.at(-1)).toEqual({ ...shown, themeMode: 'dark', fullWidth: true });
+    });
+
+  it('keeps the rail or a closed drawer as it was', () => {
+    const { sent, tracker: target } = tracker();
+    appParts(target);
+    const shell = {};
+    target.set(shell, 'sidebar', 'rail');
+    target.set(shell, 'sidebarWidth', null);
+    target.set(shell, 'panel', 'none', 'base');
+    vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    target.set(shell, 'sidebar', undefined);
+    target.set(shell, 'sidebarWidth', undefined);
+    target.set(shell, 'panel', undefined, 'base');
+    target.set(owner, 'themeMode', 'light');
+    vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    expect(sent.at(-1)).toEqual({
+      window: 'main',
+      sidebar: 'rail',
+      panel: 'none',
+      fullWidth: false,
+      themeMode: 'light',
+    });
+  });
+
+  it('gives the shell’s own parts again when it comes back, with no note in it', () => {
+    const { sent, tracker: target } = tracker();
+    appParts(target);
+    const { leave } = shellWithNote(target);
+    vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    leave(true);
+    const shell = {};
+    target.set(shell, 'sidebar', 'shown');
+    target.set(shell, 'sidebarWidth', 300);
+    target.set(shell, 'panel', 'none', 'base');
+    vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    expect(sent.at(-1)).toMatchObject({ sidebar: 'shown', sidebarWidth: 300, panel: 'none' });
+  });
+
+  it('drops them in a window that has none: a note window’s note going leaves no panel', () => {
+    const { sent, tracker: target } = tracker();
+    appParts(target, 'note');
+    const note = {};
+    target.set(note, 'panel', 'open');
+    vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    target.set(note, 'panel', undefined);
+    vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    expect(sent.at(-1)).toEqual({
+      window: 'note',
+      sidebar: 'hidden',
+      panel: 'none',
+      fullWidth: false,
+      themeMode: 'system',
+    });
   });
 });
 
@@ -203,6 +309,26 @@ describe('useLayoutPart', () => {
     return null;
   }
 
+  /** The main window as App.tsx lays it out: the shell and its note, or Settings in their place. */
+  function MainWindow({
+    screen,
+    theme,
+  }: {
+    screen: 'notes' | 'settings';
+    theme: 'light' | 'dark';
+  }) {
+    useLayoutPart('window', 'main');
+    useLayoutPart('fullWidth', false);
+    useLayoutPart('themeMode', theme);
+    return screen === 'notes' ? <Shell /> : null;
+  }
+  function Shell() {
+    useLayoutPart('sidebar', 'shown');
+    useLayoutPart('sidebarWidth', 254);
+    useLayoutPart('panel', 'none', 'base');
+    return <Panel mode="open" />;
+  }
+
   const layouts = () => {
     flushRecorded();
     return (window.__penmossAnalytics ?? []).filter(
@@ -223,6 +349,33 @@ describe('useLayoutPart', () => {
     expect(layouts().map((event) => event.props)).toEqual([
       { window: 'note', sidebar: 'hidden', panel: 'open', fullWidth: true, themeMode: 'light' },
       { window: 'note', sidebar: 'hidden', panel: 'none', fullWidth: true, themeMode: 'light' },
+    ]);
+  });
+
+  it('opening Settings and changing the theme there still records the sidebar, its width and the panel', () => {
+    root = createRoot(host);
+    act(() => root!.render(<MainWindow screen="notes" theme="light" />));
+    act(() => {
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    });
+    act(() => root!.render(<MainWindow screen="settings" theme="light" />));
+    act(() => {
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    });
+    act(() => root!.render(<MainWindow screen="settings" theme="dark" />));
+    act(() => {
+      vi.advanceTimersByTime(LAYOUT_SETTLE_MS);
+    });
+    const main = {
+      window: 'main',
+      sidebar: 'shown',
+      sidebarWidth: 250,
+      panel: 'open',
+      fullWidth: false,
+    };
+    expect(layouts().map((event) => event.props)).toEqual([
+      { ...main, themeMode: 'light' },
+      { ...main, themeMode: 'dark' },
     ]);
   });
 });

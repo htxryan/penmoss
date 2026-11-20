@@ -8,6 +8,7 @@ import {
 } from './fake-analytics';
 import {
   body,
+  capturePage,
   gitNotebook,
   go,
   holdForProof,
@@ -21,11 +22,12 @@ import {
 // PEN-174 in the Mac app: `app window`, recorded by main. The main window is recorded as it shows,
 // at its size in CSS px rounded to 10 (ac1); a run of resizes records once, 500 ms after the last,
 // and a move records nothing (ac2); full screen on and off record at once (ac3); maximising
-// records once it settles; a note window records its own. Main's check takes them, so they reach
-// the endpoint with their props and nothing about the window's place (ac9). The page's `app
-// layout` goes with them (ac6), and Settings → Privacy → View Analytics Data lists both, ending
-// on the full-screen pair.
+// records once it settles; a note window and Quick Capture record their own. Main's check takes
+// them, so they reach the endpoint with their props and nothing about the window's place (ac9).
+// The page's `app layout` goes with them (ac6), and Settings → Privacy → View Analytics Data
+// lists both: the full-screen pair, then the main, note and Quick Capture rows, where it ends.
 
+const mac = process.platform === 'darwin';
 const RUN = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const NEW_NOTE = process.platform === 'darwin' ? 'Meta+Alt+KeyN' : 'Control+Alt+KeyN';
 
@@ -43,6 +45,7 @@ interface Hooks {
   penmossDesktop: {
     mainWindow(): Electron.BrowserWindow | null;
     noteWindows(): Electron.BrowserWindow[];
+    showCapture(): void;
   };
 }
 
@@ -161,16 +164,25 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
   const off = (await windowEvents(page)).slice(before).at(-1)!;
   expect(off.at - left).toBeLessThan(400);
 
-  // Maximised (zoomed to fill the screen): recorded once it settles, and back.
+  // Maximised (zoomed to fill the screen): recorded once it settles, and back. Linux's xvfb (CI)
+  // has no window manager to maximise a window, so there it stays as it was, and so does the record.
+  const isMaximised = () =>
+    app.evaluate(() => (globalThis as unknown as Hooks).penmossDesktop.mainWindow()!.isMaximized());
   await mainWindow(app, 'maximize');
-  await expect
-    .poll(async () => (await windowEvents(page)).at(-1)?.props.maximised, { timeout: 10_000 })
-    .toBe(true);
-  await mainWindow(app, 'unmaximize');
-  await expect
-    .poll(async () => (await windowEvents(page)).at(-1)?.props.maximised, { timeout: 10_000 })
-    .toBe(false);
-  await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
+  if (mac) await expect.poll(isMaximised, { timeout: 10_000 }).toBe(true);
+  else await page.waitForTimeout(1_500);
+  if (await isMaximised()) {
+    await expect
+      .poll(async () => (await windowEvents(page)).at(-1)?.props.maximised, { timeout: 10_000 })
+      .toBe(true);
+    await mainWindow(app, 'unmaximize');
+    await expect
+      .poll(async () => (await windowEvents(page)).at(-1)?.props.maximised, { timeout: 10_000 })
+      .toBe(false);
+  } else {
+    await page.waitForTimeout(1_000);
+    expect((await windowEvents(page)).map((event) => event.props.maximised)).not.toContain(true);
+  }
 
   // A note window records its own (File → Open in New Window).
   await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
@@ -194,6 +206,8 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
   await expect
     .poll(async () => (await windowEvents(page, 'note')).at(-1)?.props)
     .toMatchObject({ window: 'note', fullScreen: false, maximised: false });
+  // On screen: the note in its own window.
+  await holdForProof(noteWindow);
   // Its page records its layout: no sidebar in a note window, and no tabs.
   await expect
     .poll(async () =>
@@ -202,6 +216,34 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
         .map((event) => event.props.window),
     )
     .toEqual(expect.arrayContaining(['main', 'note']));
+  await noteWindow.close();
+
+  // The main window back to 1280 × 720: one more main row, between the note's and Quick Capture's.
+  await page.bringToFront();
+  const mainRows = (await windowEvents(page)).length;
+  await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
+  const [backWidth = 0] = await app.evaluate(() =>
+    (globalThis as unknown as Hooks).penmossDesktop.mainWindow()!.getContentSize(),
+  );
+  const mainWidth = Math.round(backWidth / 10) * 10;
+  await expect
+    .poll(async () => (await windowEvents(page)).slice(mainRows).at(-1)?.props)
+    .toMatchObject({ window: 'main', width: mainWidth, fullScreen: false, maximised: false });
+
+  // Quick Capture records its own window as it shows (ac1), at its size, and never full screen.
+  await app.evaluate(() => (globalThis as unknown as Hooks).penmossDesktop.showCapture());
+  const capture = await capturePage(app);
+  await expect(capture.getByTestId('capture-text')).toBeVisible();
+  await expect
+    .poll(async () => (await windowEvents(page, 'capture')).at(-1)?.props)
+    .toMatchObject({ window: 'capture', fullScreen: false, maximised: false });
+  const captured = (await windowEvents(page, 'capture')).at(-1)!.props;
+  expect(captured.width as number).toBeGreaterThan(0);
+  expect((captured.width as number) % 10).toBe(0);
+  expect((captured.height as number) % 10).toBe(0);
+  // On screen: Quick Capture over the app.
+  await holdForProof(capture);
+  await capture.keyboard.press('Escape');
 
   // Sent as recorded: main's check took them, and they carry nothing about the window's place.
   await expect
@@ -215,7 +257,15 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
       },
       { timeout: 30_000, intervals: [500, 1000, 2000] },
     )
-    .toEqual(expect.arrayContaining(['window main', 'window note', 'layout main', 'layout note']));
+    .toEqual(
+      expect.arrayContaining([
+        'window main',
+        'window note',
+        'window capture',
+        'layout main',
+        'layout note',
+      ]),
+    );
   for (const event of fake.events().filter((sent) => sent.kind === 'app')) {
     for (const key of Object.keys(event.props))
       expect(['x', 'y', 'display', 'scale']).not.toContain(key);
@@ -224,10 +274,10 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
       expect((event.props.height as number) % 10).toBe(0);
     }
   }
-  await noteWindow.close();
 
-  // Settings → Privacy → View Analytics Data: the window and layout rows, as sent, then the
-  // full-screen pair (ac3): on, and the off row recorded at once after it.
+  // Settings → Privacy → View Analytics Data: the window and layout rows, as sent, the
+  // full-screen pair (ac3): on, and the off row recorded at once after it; then the newest main,
+  // note and Quick Capture rows, where it ends.
   await page.bringToFront();
   await go(page, '/settings/privacy');
   await page.getByRole('link', { name: /View Analytics Data/ }).click();
@@ -258,4 +308,23 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
   await holdForProof(page);
   await expect(onRow).toBeInViewport();
   await expect(offRow).toBeInViewport();
+
+  // The newest `app window` row of each window: Quick Capture's, the main window's, the note's.
+  const windowRowOf = (which: string) =>
+    rows
+      .filter({ hasText: `window: ${which}` })
+      .filter({ hasText: 'fullScreen' })
+      .first();
+  const captureRow = windowRowOf('capture');
+  const mainRow = windowRowOf('main');
+  const noteRow = windowRowOf('note');
+  await expect(captureRow).toContainText('width');
+  await expect(mainRow).toContainText(`width: ${mainWidth}`);
+  await expect(noteRow).toContainText('width');
+  await mainRow.evaluate((row) => row.scrollIntoView({ block: 'center' }));
+  await page.mouse.move(0, 0);
+  await holdForProof(page);
+  await expect(captureRow).toBeInViewport();
+  await expect(mainRow).toBeInViewport();
+  await expect(noteRow).toBeInViewport();
 });

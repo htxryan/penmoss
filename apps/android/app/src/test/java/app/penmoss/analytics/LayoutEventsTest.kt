@@ -41,6 +41,8 @@ class LayoutEventsTest {
         val home = Any()
         val note = Any()
         layout.settings(false, "system")
+        // Home shows no note: no panel.
+        layout.noPanel(home)
         settle.fire()
         layout.drawer(home, true)
         settle.fire()
@@ -56,6 +58,7 @@ class LayoutEventsTest {
         layout.settings(true, "dark")
         settle.fire()
         assertEquals(expected(panel = "open", fullWidth = true, themeMode = "dark"), recorded.last())
+        // Back to Home: its "no panel" is in front again.
         layout.panelGone(note)
         settle.fire()
         assertEquals(expected(fullWidth = true, themeMode = "dark"), recorded.last())
@@ -117,5 +120,54 @@ class LayoutEventsTest {
                 Analytics.install(null)
             }
         }
+    }
+
+    /** Ryan's review: Settings fills the window, and the layout behind it is still the window's. */
+    @Test
+    fun settingsKeepsTheNotesPanelAndAThemeChangeThereRecordsIt() {
+        val home = Any()
+        val note = Any()
+        layout.settings(false, "system")
+        layout.noPanel(home)
+        layout.drawer(home, false)
+        // A note in front with its panel open; Home leaves.
+        layout.panel(note, true)
+        layout.noPanelGone(home)
+        layout.drawerGone(home)
+        settle.fire()
+        assertEquals(expected(panel = "open"), recorded.last())
+        // Settings from the note's menu: the note goes, and nothing new is recorded.
+        layout.panelGone(note)
+        settle.fire()
+        assertEquals(1, recorded.size)
+        // The theme to Dark there: the layout still has the note's panel open.
+        layout.settings(false, "dark")
+        settle.fire()
+        assertEquals(expected(panel = "open", themeMode = "dark"), recorded.last())
+        layout.settings(true, "dark")
+        settle.fire()
+        assertEquals(expected(panel = "open", fullWidth = true, themeMode = "dark"), recorded.last())
+    }
+
+    @Test
+    fun settingsKeepsTheDrawerAsHomeLeftIt() {
+        val home = Any()
+        layout.settings(false, "system")
+        layout.noPanel(home)
+        layout.drawer(home, true)
+        settle.fire()
+        assertEquals(expected(sidebar = "shown"), recorded.last())
+        // Settings from the drawer's row, with the drawer still open as Home goes.
+        layout.drawerGone(home)
+        layout.noPanelGone(home)
+        layout.settings(false, "light")
+        settle.fire()
+        assertEquals(expected(sidebar = "shown", themeMode = "light"), recorded.last())
+        // Back to Home, its drawer closed: Home's own parts again.
+        val again = Any()
+        layout.noPanel(again)
+        layout.drawer(again, false)
+        settle.fire()
+        assertEquals(expected(themeMode = "light"), recorded.last())
     }
 }

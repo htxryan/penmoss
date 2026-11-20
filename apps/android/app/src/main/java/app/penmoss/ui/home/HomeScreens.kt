@@ -289,6 +289,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
     BackHandler(enabled = drawer.isOpen) { drawerScope.launch { drawer.close() } }
     // Shown or hidden, in the layout usage analytics records (PEN-174).
     app.penmoss.analytics.TrackDrawer(drawer.isOpen)
+    app.penmoss.analytics.TrackNoPanel()
     ModalNavigationDrawer(
         drawerState = drawer,
         gesturesEnabled = !ui.reordering,

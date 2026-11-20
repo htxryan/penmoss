@@ -40,7 +40,8 @@ import java.io.File
  * rotation records the swapped size once, and the notebook it opens at the same size records
  * nothing more; Quick Capture's sheet ([CaptureActivity]) records `capture`, and once more when a
  * rotation makes it again; a notebook's own screens record `app layout` after the drawer's
- * `click sidebar.drawer.open` and the note panel's `click note.info`. Each test ends on Settings →
+ * `click sidebar.drawer.open` and the note panel's `click note.info`, and a notebook turned and its
+ * drawer opened and closed shows its window and layout rows together. Each test ends on Settings →
  * Privacy → View Analytics Data with those rows on screen. The phone's own record, answered Don't
  * Share, so nothing leaves it. Run with
  * `task proof:android -- app.penmoss.analytics.WindowLayoutEventsTest`.
@@ -300,6 +301,57 @@ class WindowLayoutEventsTest {
             assertTrue(home.has("click · sidebar.drawer.open"))
             hold()
             assertTrue(home.has(shown.text))
+            ProofShot.take()
+        }
+    }
+
+    /**
+     * Ryan's review: Analytics Data on the phone with a notebook's `app window` rows after a turn,
+     * and its `app layout` rows after the drawer opened and closed, in sight together (ac4, ac5, ac8).
+     */
+    @Test
+    fun aNotebookTurnedAndItsDrawerOpenedAndClosedShowsItsWindowAndLayoutRows() {
+        val name = runBlocking { graph.git.notebooks.entries().first().name }
+        ActivityScenario.launch<MainActivity>(allNotebooks()).use { scenario ->
+            val launcher = OnScreen.of(scenario)
+            until("the launcher's app window") { windows("main").firstOrNull() }
+            launcher.tap(launcher.text(name))
+            val notebook = OnScreen.inFront()
+            notebook.tagged("homeMenu")
+            until("the notebook's app layout") { layouts().firstOrNull() }
+            val upright = sizeOf(inFront(GitNotebookActivity::class.java))
+
+            // Turned, in the notebook: one app window, the sides swapped (ac5).
+            val before = windows("main").size
+            turn(landscape = true)
+            val turned = until("the notebook's landscape app window") { windows("main").drop(before).firstOrNull() }
+            assertEquals(upright.second to upright.first, turned.size())
+            notebook.tagged("homeMenu")
+            hold()
+            turn(landscape = false)
+            val back = until("the notebook's upright app window") { windows("main").drop(before + 1).firstOrNull() }
+            assertEquals(upright, back.size())
+
+            // The drawer opened, then closed: a layout for each, sidebar shown, then hidden (ac8).
+            notebook.tap("homeMenu")
+            notebook.tagged("drawerSettings")
+            val shown = until("the layout with the drawer shown") { layouts().lastOrNull()?.takeIf { it.id > back.id && it.props.str("sidebar") == "shown" } }
+            hold()
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            val hidden = until("the layout with the drawer hidden again") { layouts().lastOrNull()?.takeIf { it.id > shown.id && it.props.str("sidebar") == "hidden" } }
+            assertTrue(stored().any { it.kind == "click" && it.name == "sidebar.drawer.open" && it.id < shown.id })
+
+            // Analytics Data, from All Notebooks: the turned window's row near the bottom, and the
+            // drawer's two layout rows above it, all in sight.
+            context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            val home = OnScreen.inFront()
+            analyticsData(home)
+            showRows(home, older = turned, newer = hidden)
+            assertTrue("the drawer-shown layout row is on screen", home.has(shown.text))
+            assertTrue("the upright window row is on screen", home.has(back.text))
+            hold()
+            assertTrue(home.has(turned.text))
+            assertTrue(home.has(hidden.text))
             ProofShot.take()
         }
     }

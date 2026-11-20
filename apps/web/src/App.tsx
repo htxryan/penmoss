@@ -317,6 +317,8 @@ function NotesShell({
   const sidebarShown = phone ? drawerOpen : !rail;
   useLayoutPart('sidebar', sidebarShown ? 'shown' : rail ? 'rail' : 'hidden');
   useLayoutPart('sidebarWidth', useRenderedWidth(sidebar, sidebarShown));
+  // No panel while no note is in the shell; Settings in its place keeps the last one (PEN-174).
+  useLayoutPart('panel', 'none', 'base');
   const onSidebarKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'Escape' || !drawerOpen || event.defaultPrevented) return;
     event.preventDefault();

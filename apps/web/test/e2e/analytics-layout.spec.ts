@@ -140,9 +140,14 @@ test('the main window records its layout as it starts and after each change', as
     tabs: '2–4',
   });
 
-  // The theme to Dark in Settings → Appearance. Settings fills the window: no notes sidebar there,
-  // and no note.
+  // The theme to Dark in Settings → Appearance. Settings fills the window, but the window's
+  // layout behind it is unchanged: opening it records no layout, and the theme's layout still
+  // has the sidebar at its width and the note's panel as they were.
+  const beforeSettings = (await layouts(page)).length;
   await page.getByTestId('sidebar-settings').click();
+  await expect(page).toHaveURL(/\/settings/);
+  await page.waitForTimeout(800);
+  expect(await layouts(page)).toHaveLength(beforeSettings);
   await page
     .getByRole('navigation', { name: /settings sections/i })
     .getByRole('link', {
@@ -152,7 +157,7 @@ test('the main window records its layout as it starts and after each change', as
   const dark = await expectLayout(
     page,
     () => page.getByTestId('theme-mode').getByText('Dark', { exact: true }).click(),
-    { themeMode: 'dark', sidebar: 'hidden', panel: 'none' },
+    { themeMode: 'dark', sidebar: 'shown', sidebarWidth: wider, panel: 'closed', tabs: '2–4' },
   );
   const setting = dark.findIndex(
     (event) => event.kind === 'setting' && event.name === 'theme.mode',

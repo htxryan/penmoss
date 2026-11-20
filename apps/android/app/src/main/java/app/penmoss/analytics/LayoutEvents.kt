@@ -22,26 +22,36 @@ import kotlinx.coroutines.flow.map
  *
  * The launcher's screens (the first run, the consent question, All Notebooks) have no drawer,
  * panel or note, so they record no layout.
+ *
+ * While a screen without a drawer or a note fills the window (Settings, a folder, a tag), the
+ * layout keeps the drawer and the panel as they were when the last screen that had them went:
+ * they are still the window's layout behind it (Ryan's review of PEN-174). Home has no note in
+ * front, so it gives "no panel" ([noPanel]) until a note screen gives its own.
  */
 class LayoutEvents(
     private val settle: Settle = Settle.main(),
     private val record: (Map<String, Any?>) -> Boolean = { Analytics.record("app", "layout", it) },
     private val session: () -> String? = { Analytics.service?.session },
 ) {
-    private var drawer: Any? = null
+    private var drawer: Pair<Any, Boolean>? = null
     private var panel: Pair<Any, Boolean>? = null
+    private var noPanel: Any? = null
+    private var keptSidebar = "hidden"
+    private var keptPanel = "none"
     private var fullWidth: Boolean? = null
     private var themeMode: String? = null
 
     /** The drawer of the screen that [owner] is: open or closed. */
     fun drawer(owner: Any, open: Boolean) {
-        drawer = if (open) owner else drawer.takeUnless { it === owner }
+        drawer = owner to open
         changed()
     }
 
-    /** [owner]'s screen went: its drawer with it. */
+    /** [owner]'s screen went: the window keeps its drawer as it was until another gives one. */
     fun drawerGone(owner: Any) {
-        if (drawer === owner) drawer = null
+        if (drawer?.first !== owner) return
+        keptSidebar = sidebar()
+        drawer = null
         changed()
     }
 
@@ -53,7 +63,23 @@ class LayoutEvents(
 
     /** [owner]'s note left the screen; another note that came in front keeps its own. */
     fun panelGone(owner: Any) {
-        if (panel?.first === owner) panel = null
+        if (panel?.first !== owner) return
+        if (noPanel == null) keptPanel = panel()
+        panel = null
+        changed()
+    }
+
+    /** [owner] is a screen that shows no note (Home): no panel, unless a note screen gives one. */
+    fun noPanel(owner: Any) {
+        noPanel = owner
+        changed()
+    }
+
+    /** [owner], a screen with no note, went. */
+    fun noPanelGone(owner: Any) {
+        if (noPanel !== owner) return
+        if (panel == null) keptPanel = panel()
+        noPanel = null
         changed()
     }
 
@@ -72,15 +98,19 @@ class LayoutEvents(
         val mode = themeMode ?: return null
         return mapOf(
             "window" to WINDOW,
-            "sidebar" to if (drawer != null) "shown" else "hidden",
-            "panel" to when (panel?.second) {
-                true -> "open"
-                false -> "closed"
-                null -> "none"
-            },
+            "sidebar" to sidebar(),
+            "panel" to panel(),
             "fullWidth" to full,
             "themeMode" to mode,
         )
+    }
+
+    private fun sidebar(): String = drawer?.let { if (it.second) "shown" else "hidden" } ?: keptSidebar
+
+    private fun panel(): String = when {
+        panel != null -> if (panel!!.second) "open" else "closed"
+        noPanel != null -> "none"
+        else -> keptPanel
     }
 
     private fun changed() {
@@ -124,6 +154,15 @@ fun TrackDrawer(open: Boolean) {
     val owner = remember { Any() }
     LaunchedEffect(layout, open) { layout.drawer(owner, open) }
     DisposableEffect(layout) { onDispose { layout.drawerGone(owner) } }
+}
+
+/** A screen that shows no note (Home): no panel while it is in front; gone with the screen. */
+@Composable
+fun TrackNoPanel() {
+    val layout = LocalLayoutEvents.current ?: return
+    val owner = remember { Any() }
+    LaunchedEffect(layout) { layout.noPanel(owner) }
+    DisposableEffect(layout) { onDispose { layout.noPanelGone(owner) } }
 }
 
 /** The note on screen's panel, open or closed, for the layout; gone with the note screen. */
