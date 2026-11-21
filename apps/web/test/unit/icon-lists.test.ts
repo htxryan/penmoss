@@ -9,6 +9,7 @@ import { NOTE_BAR_BUTTONS, NOTE_BAR_BUTTON_INFO, noteBarShows } from '../../src/
 import { PHONE_FORMAT_BUTTONS } from '../../src/notes/phone-format-buttons';
 import { PRIVACY_DATA_ICON, SETTINGS_PAGES } from '../../src/pages/settings-index';
 import { SHORTCUTS } from '../../src/shell/sidebar-shortcuts';
+import { PREVIEW_TABS } from '../../src/theme/preview-tabs';
 
 describe('the app icon lists', () => {
   it('gives each Settings page the icon its nav entry has always drawn', () => {
@@ -35,6 +36,13 @@ describe('the app icon lists', () => {
   it('gives each Settings section its own icon (A902)', () => {
     const icons = [...SETTINGS_PAGES.map((page) => page.icon), PRIVACY_DATA_ICON];
     expect(new Set(icons).size).toBe(icons.length);
+  });
+
+  it("keeps Appearance's, Sidebar's and Note's Settings and Preview tabs", () => {
+    expect(PREVIEW_TABS.map((t) => [t.tab, t.label, t.icon])).toEqual([
+      ['settings', 'Settings', 'settings'],
+      ['preview', 'Preview', 'eye'],
+    ]);
   });
 
   it("keeps the sidebar's shortcuts, the phone's formatting bar and the note's bar", () => {

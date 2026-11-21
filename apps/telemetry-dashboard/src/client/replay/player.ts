@@ -107,6 +107,20 @@ const SCROLL_WORDS: Readonly<Record<string, string>> = {
   'settings.nav': 'List of Pages',
 };
 
+/**
+ * Where the player opens and Play starts again: the last event of the session's first moment, the
+ * events the timeline lists at its first Since Start (the launch, the window, the layout…), so the
+ * first frame is drawn at the recorded window's size and layout, as the timeline's first rows say.
+ */
+export function openingIndex(replay: Pick<Replay, 'times'>): number {
+  const { times } = replay;
+  if (times.length === 0) return -1;
+  const first = sinceStart(times[0]!);
+  let i = 0;
+  while (i + 1 < times.length && sinceStart(times[i + 1]!) === first) i++;
+  return i;
+}
+
 /** What the frame shows, in words: the frame's words for a screen reader, and what tests read. */
 export function recordedLines(
   replay: Replay,
@@ -128,7 +142,10 @@ export function recordedLines(
   const onSettings = screen?.startsWith('settings') ?? false;
   lines.push({
     label: 'Screen',
-    value: screen ? displayName('screen', screen) : 'Before Any Screen',
+    // The app opens on Home, so that's what's drawn before the first screen event.
+    ...(screen
+      ? { value: displayName('screen', screen) }
+      : { value: 'Home', sub: 'Before Any Screen' }),
   });
   lines.push({
     label: 'Window',
@@ -317,7 +334,9 @@ export function createPlayer(
   // The controls, in the card's .tools bar.
   let playing = false;
   let speed: (typeof SPEEDS)[number] = 1;
-  let t = timeline.current >= 0 ? replay.times[timeline.current]! : 0;
+  const opening = openingIndex(replay);
+  const openingTime = opening >= 0 ? replay.times[opening]! : 0;
+  let t = timeline.current >= 0 ? replay.times[timeline.current]! : openingTime;
   let pinnedIndex: number | undefined = timeline.current >= 0 ? timeline.current : undefined;
   let ended = false;
   const play = parts.button('Play', () => (playing ? pause() : start()));
@@ -509,7 +528,7 @@ export function createPlayer(
   };
   function start() {
     if (ended || t >= replay.duration) {
-      t = 0;
+      t = openingTime;
       pinnedIndex = undefined;
       ended = false;
     }

@@ -90,7 +90,13 @@ export interface Frame {
   readonly current: number;
   readonly client: string;
   readonly sizeClass: SizeClass;
-  readonly window: { readonly width: number; readonly height: number; readonly recorded: boolean };
+  readonly window: {
+    readonly width: number;
+    readonly height: number;
+    /** In full screen, the Mac draws no traffic lights, so no compact title bar (A722). */
+    readonly fullScreen: boolean;
+    readonly recorded: boolean;
+  };
   readonly layout: {
     readonly sidebar: SidebarState;
     /** In CSS px (dp on Android); null when the sidebar isn't shown. */
@@ -128,7 +134,7 @@ interface NoteState {
 }
 
 interface State {
-  window: { width: number; height: number } | null;
+  window: { width: number; height: number; fullScreen: boolean } | null;
   layout: {
     sidebar: SidebarState;
     sidebarWidth: number | null;
@@ -300,7 +306,8 @@ export function createReplay(events: readonly ReplayEvent[]): Replay {
         if (event.name === 'window') {
           const width = num(props, 'width') ?? 0;
           const height = num(props, 'height') ?? 0;
-          if (width > 0 && height > 0) state.window = { width, height };
+          if (width > 0 && height > 0)
+            state.window = { width, height, fullScreen: props['fullScreen'] === true };
         } else if (event.name === 'layout') {
           const before = state.layout;
           const sidebar =
@@ -583,7 +590,7 @@ export function createReplay(events: readonly ReplayEvent[]): Replay {
       sizeClass,
       window: state.window
         ? { ...state.window, recorded: true }
-        : { ...SIZE_CLASS_WINDOWS[sizeClass], recorded: false },
+        : { ...SIZE_CLASS_WINDOWS[sizeClass], fullScreen: false, recorded: false },
       layout: recordedLayout
         ? {
             ...recordedLayout,

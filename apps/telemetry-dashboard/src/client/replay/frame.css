@@ -105,14 +105,6 @@ body {
   border-radius: 6px;
 }
 
-.pf-preview {
-  height: 12rem;
-  margin-bottom: 1rem;
-  border: 1px solid var(--pm-border);
-  border-radius: 8px;
-  background: color-mix(in oklab, var(--pm-muted) 8%, transparent);
-}
-
 .pf-field {
   display: flex;
   flex: 1;

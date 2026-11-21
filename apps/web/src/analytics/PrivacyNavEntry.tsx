@@ -1,6 +1,6 @@
 /**
- * Analytics Data's entry in Settings' nav (PEN-137, ac36): under Privacy, set in, as a notebook's
- * page sits under All Notebooks (NotebookNavEntries). `aria-current="page"` while it is open.
+ * Analytics Data's entry in Settings' nav (PEN-137, ac36): under Privacy, set in so its icon sits
+ * under the start of Privacy's label (privacy.css). `aria-current="page"` while it is open.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { PRIVACY_DATA_ICON } from '../pages/settings-index';

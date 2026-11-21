@@ -2,7 +2,7 @@
 // Playback's words (PEN-178): the As Recorded list says in words what the frame shows, and the
 // card's notices say when a session was recorded before what it lacks.
 import { describe, expect, it } from 'vitest';
-import { notices, recordedLines } from '../../src/client/replay/player';
+import { notices, openingIndex, recordedLines } from '../../src/client/replay/player';
 import { createReplay } from '../../src/client/replay/state';
 import { FIXTURE_SESSIONS, timelineEvents } from '../fixtures/sessions';
 
@@ -17,11 +17,25 @@ const words = (replay: typeof mac, t: number, variant: 'light' | 'dark' = 'light
     ]),
   );
 
+describe('Opening', () => {
+  it("opens on the last event of the session's first moment", () => {
+    // Launch, the window and the layout are all at 0:00: it opens on the layout.
+    expect(openingIndex(mac)).toBe(2);
+    expect(words(mac, mac.times[openingIndex(mac)]!)).toMatchObject({
+      Event: 'Layout (app:layout · 3 of 81)',
+      Window: '1,440 × 900',
+    });
+    expect(openingIndex(android)).toBe(2);
+    expect(openingIndex({ times: [] })).toBe(-1);
+    expect(openingIndex({ times: [0, 1500] })).toBe(0);
+  });
+});
+
 describe('As Recorded', () => {
   it('says what the frame shows, and what was not recorded', () => {
     expect(words(mac, 0, 'dark')).toEqual({
       Event: 'Launch (app:launch · 1 of 81)',
-      Screen: 'Before Any Screen',
+      Screen: 'Home (Before Any Screen)',
       Window: '1,280 × 800 (Not Recorded)',
       Sidebar: 'Shown, 272 px (Not Recorded)',
       Theme: 'Penmoss, System (Drawn Dark) (Theme Not Recorded)',

@@ -37,6 +37,8 @@ const UNSTYLED = new Set<string>([
   'sb-recent', // RecentSection's
   'sb-section-body', // a notebook's section body (SidebarSections)
   'palette', // the pickers' dialog (Palette, SearchOverlay)
+  'tag-item', // a Tags row's item (TagPane)
+  'theme-card-name', // a theme card's name (AppearanceSettings' ThemeCard)
 ]);
 
 /** The app's TypeScript sources, where an unstyled class must still be written. */
@@ -78,7 +80,7 @@ function frames(): Frame[] {
   }
   out.push({
     ...base,
-    window: { width: 1440, height: 900, recorded: true },
+    window: { width: 1440, height: 900, fullScreen: false, recorded: true },
     layout: { ...base.layout, sidebar: 'hidden' },
   });
   return out;
@@ -103,6 +105,7 @@ describe("the frame's markup", () => {
           'data-type',
           'data-callout-type',
           'data-pinned',
+          'data-collapsed',
         ]) {
           if (element.hasAttribute(attr)) attributes.add(`${attr}=${element.getAttribute(attr)}`);
         }
@@ -129,12 +132,16 @@ describe("the frame's markup", () => {
     attributes.delete('data-panel=closed');
     for (const pair of attributes) {
       const [attr, value] = pair.split('=') as [string, string];
+      // A rule on the attribute alone (`[data-collapsed]`) matches whatever its value.
       const found =
-        value === ''
-          ? new RegExp(`\\[${attr}\\]`).test(appCss)
-          : new RegExp(`\\[${attr}=['"]?${escapeRe(value)}['"]?\\]`).test(appCss);
+        new RegExp(`\\[${attr}\\]`).test(appCss) ||
+        (value !== '' && new RegExp(`\\[${attr}=['"]?${escapeRe(value)}['"]?\\]`).test(appCss));
       if (!found) missingAttributes.push(pair);
     }
     expect(missingAttributes, 'attribute selectors the frame relies on').toEqual([]);
+  });
+
+  it("sets the Mac's compact title bar the app's stylesheet keys on (A722)", () => {
+    expect(appCss).toMatch(/:root\[data-titlebar='compact'\]/);
   });
 });

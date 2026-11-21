@@ -201,6 +201,25 @@ test.describe('an install with a notebook and no answer (ac8)', () => {
 test.describe('Settings → Privacy', () => {
   test.use({ analytics: { consent: 'no', events: 255 } });
 
+  test("sets Analytics Data in under Privacy, its icon under the start of Privacy's label", async ({
+    page,
+  }) => {
+    await page.goto('/settings/privacy');
+    const mac = nav(page).getByRole('group', { name: /This Mac/ });
+    const privacy = mac.getByRole('link', { name: 'Privacy', exact: true });
+    const data = mac.getByTestId('settings-privacy-data-entry');
+    await expect(data).toBeVisible();
+    await data.scrollIntoViewIfNeeded();
+    const label = (await privacy.locator('.bold-steady').boundingBox())!;
+    const privacyIcon = (await privacy.locator('svg').boundingBox())!;
+    const icon = (await data.locator('svg').boundingBox())!;
+    // Ryan's review of PEN-178: lined up with Privacy's label, not halfway to it.
+    expect(Math.abs(icon.x - label.x)).toBeLessThanOrEqual(1);
+    expect(icon.x).toBeGreaterThan(privacyIcon.x + privacyIcon.width);
+    await holdForProof(page, 2000);
+    await expect(data).toBeInViewport();
+  });
+
   test('is last in This Mac with its shield, its rows in order and Advanced closed (ac2)', async ({
     page,
   }) => {

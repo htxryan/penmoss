@@ -1238,6 +1238,12 @@ test.describe('Playback, drawn at twice the pixels', () => {
     await expect(iframe).toHaveAttribute('tabindex', '-1');
     await pb.card.evaluate((node) => node.scrollIntoView({ block: 'start' }));
     await expect(pb.frame.locator('.notes-app')).toBeVisible();
+    // It opens on the session's first moment, as the timeline lists it: the recorded window and
+    // layout, that row marked.
+    await expect(pb.line('Event')).toContainText('app:layout · 3 of 81');
+    await expect(pb.line('Window')).toHaveText('1,440 × 900');
+    await expect(pb.line('Screen')).toHaveText('HomeBefore Any Screen');
+    await expect(timelineRow(page, 2)).toHaveAttribute('aria-current', 'true');
     await showCard(page);
 
     // AC5, AC10: a row chosen, and the frame and the list go to it: the note opened, its title,
@@ -1315,6 +1321,17 @@ test.describe('Playback, drawn at twice the pixels', () => {
     await expect
       .poll(() => pb.frame.locator('.settings-content').evaluate((node) => node.scrollTop))
       .toBeGreaterThan(0);
+    // The page is drawn at its real height and order (the Settings and Preview tabs, Mode, the
+    // theme cards, Customize, Text, Window), so 0.42 lands where it does in the app: at 1,440 ×
+    // 900 the app's Text heading is then about two thirds of the way down the window (0.72 in
+    // the web app, about 0.68 on the Mac, whose Window group makes the page longer).
+    await expect(pb.frame.locator('.lf-tabs .lf-tab[aria-selected="true"]')).toHaveText('Settings');
+    await expect(pb.frame.locator('.theme-grid .theme-card')).toHaveCount(8);
+    const textTop = await pb.frame
+      .locator('.lf-sub-name', { hasText: /^Text$/ })
+      .evaluate((node) => node.getBoundingClientRect().top / window.innerHeight);
+    expect(textTop).toBeGreaterThan(0.55);
+    expect(textTop).toBeLessThan(0.8);
     await showCard(page);
 
     // AC14: playing across the long pause skips it, the time keeping the session's.

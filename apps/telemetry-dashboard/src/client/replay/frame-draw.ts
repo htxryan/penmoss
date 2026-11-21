@@ -13,6 +13,7 @@
  */
 import { BUILT_IN_THEMES, PENMOSS, applyThemeTo } from '@penmoss/ui/theme';
 import { SHORTCUTS } from '@penmoss/web/src/shell/sidebar-shortcuts';
+import { PREVIEW_TABS } from '@penmoss/web/src/theme/preview-tabs';
 import { PHONE_FORMAT_BUTTONS } from '@penmoss/web/src/notes/phone-format-buttons';
 import {
   NOTE_BAR_BUTTONS,
@@ -185,6 +186,18 @@ function noteTitle(note: FrameNote | null): string {
 }
 
 /** A sidebar section's head: its toggle, open or not. */
+/** The sidebar's lorem tags: each name's length and its count of notes. */
+const TAG_ROWS: readonly (readonly [number, number])[] = [
+  [6, 12],
+  [9, 7],
+  [5, 5],
+  [11, 4],
+  [7, 3],
+  [8, 3],
+  [4, 2],
+  [10, 1],
+];
+
 const sectionHead = (draw: Draw, name: string, open: boolean, tools = '') =>
   h(
     'header',
@@ -310,7 +323,28 @@ function sidebar(draw: Draw, navInTitleBar: boolean): string {
     h(
       'div',
       { class: 'sb-part', 'data-section': 'quickAccess' },
-      h('section', { class: 'sb-section sb-quick' }, sectionHead(draw, 'Quick Access', false)),
+      // Open, as the app opens it, with lorem pinned notes.
+      h(
+        'section',
+        { class: 'sb-section sb-quick' },
+        sectionHead(draw, 'Quick Access', true),
+        h(
+          'ul',
+          { class: 'sb-quick-list', role: 'list' },
+          ...[loremName('pinned:1', 12), loremName('pinned:2', 9)].map((title) =>
+            h(
+              'li',
+              {},
+              h(
+                'a',
+                { class: 'sb-item', tabindex: -1 },
+                icon(draw, 'file'),
+                h('span', { class: 'label' }, h('span', { class: 'sb-item-title' }, text(title))),
+              ),
+            ),
+          ),
+        ),
+      ),
     ),
     h(
       'div',
@@ -389,12 +423,43 @@ function sidebar(draw: Draw, navInTitleBar: boolean): string {
     h(
       'div',
       { class: 'sb-part', 'data-section': 'calendar' },
-      h('section', { class: 'calendar' }, sectionHead(draw, 'Calendar', false)),
+      h(
+        'section',
+        { class: 'calendar', 'data-collapsed': 'true' },
+        sectionHead(draw, 'Calendar', false),
+      ),
     ),
+    // Open, as the app opens it, with lorem tags, so a recorded scroll of Tags has rows to move.
     h(
       'div',
       { class: 'sb-part', 'data-section': 'tags' },
-      h('section', { class: 'tag-pane' }, sectionHead(draw, 'Tags', false)),
+      h(
+        'section',
+        { class: 'tag-pane' },
+        sectionHead(draw, 'Tags', true),
+        h(
+          'ul',
+          { class: 'tag-tree', role: 'list' },
+          ...TAG_ROWS.map(([length, count], i) =>
+            h(
+              'li',
+              { class: 'tag-item' },
+              h(
+                'div',
+                { class: 'tag-row', 'data-pf-vars': vars({ '--depth': '0' }) },
+                h('span', { class: 'twisty', 'data-empty': '', 'aria-hidden': 'true' }),
+                h(
+                  'button',
+                  { type: 'button', class: 'tag-name', tabindex: -1 },
+                  h('span', { class: 'tag-hash', 'aria-hidden': 'true' }, '#'),
+                  h('span', { class: 'tag-label' }, text(loremName(`tag:${i + 1}`, length))),
+                  h('span', { class: 'count' }, String(count)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     ),
   );
   const feedback = iconButton(draw, 'feedback', 'Send Feedback', {}, 18);
@@ -1033,38 +1098,60 @@ function settingsScreen(draw: Draw): string {
     if (last && last.name === entry.group) last.rows = [...last.rows, entry];
     else groups.push({ name: entry.group, rows: [entry] });
   }
+  const settingRow = (row: (typeof entries)[number]) =>
+    h(
+      'div',
+      { class: 'lf-row', 'data-setting': row.id },
+      h(
+        'div',
+        { class: 'lf-row-text' },
+        h('span', { class: 'lf-row-label' }, text(row.label)),
+        row.help ? h('span', { class: 'lf-row-help' }, text(row.help)) : '',
+      ),
+      h(
+        'div',
+        { class: 'lf-row-control' },
+        h('span', { class: 'pf-control', 'aria-hidden': 'true' }),
+      ),
+    );
   const content = groups.map((group) =>
     [
       group.name
         ? h('div', { class: 'lf-sub' }, h('h3', { class: 'lf-sub-name' }, text(group.name)))
         : '',
-      // Appearance's previews (the theme cards) as a block of their real height.
+      // Appearance's Theme group as AppearanceSettings lays it out: Mode, then the theme cards,
+      // then Customize, so the page is its real height and a recorded scroll lands where it did.
       page === 'appearance' && group.name === 'Theme'
-        ? h('div', { class: 'pf-preview', 'aria-hidden': 'true' })
-        : '',
-      h(
-        'div',
-        { class: 'lf-group', role: 'group' },
-        ...group.rows.map((row) =>
-          h(
-            'div',
-            { class: 'lf-row', 'data-setting': row.id },
-            h(
-              'div',
-              { class: 'lf-row-text' },
-              h('span', { class: 'lf-row-label' }, text(row.label)),
-              row.help ? h('span', { class: 'lf-row-help' }, text(row.help)) : '',
-            ),
-            h(
-              'div',
-              { class: 'lf-row-control' },
-              h('span', { class: 'pf-control', 'aria-hidden': 'true' }),
-            ),
-          ),
-        ),
-      ),
+        ? appearanceTheme(draw, group.rows.filter((row) => row.label === 'Mode').map(settingRow))
+        : h('div', { class: 'lf-group', role: 'group' }, ...group.rows.map(settingRow)),
     ].join(''),
   );
+  // Appearance, Sidebar and Note have Settings and Preview tabs (PreviewTabs, A1633), Settings shown.
+  const controls = PREVIEW_TAB_PAGES.has(page)
+    ? h(
+        'div',
+        { class: 'lf-tabs', role: 'tablist', 'aria-label': title },
+        ...PREVIEW_TABS.map(({ tab, label, icon: name }) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              role: 'tab',
+              class: 'lf-tab',
+              'aria-selected': String(tab === 'settings'),
+              tabindex: -1,
+            },
+            icon(draw, name),
+            text(label),
+          ),
+        ),
+      ) +
+      h(
+        'div',
+        { class: 'lf-tabpanel', role: 'tabpanel' },
+        h('div', { class: 'lf-controls' }, ...content),
+      )
+    : h('div', { class: 'lf-controls' }, ...content);
   const scrolled = (frame.scroll['settings'] ?? 0) > 0;
   const search = frame.settingsSearch;
   return h(
@@ -1132,11 +1219,104 @@ function settingsScreen(draw: Draw): string {
                 h('h1', { class: 'settings-head-title' }, text(title)),
               ),
             ),
-            h('div', { class: 'lf-controls' }, ...content),
+            controls,
           ),
         ),
       ),
     ),
+  );
+}
+
+/** The Settings pages with Settings and Preview tabs (PreviewTabs.tsx's callers). */
+const PREVIEW_TAB_PAGES = new Set(['appearance', 'sidebar', 'note']);
+
+/**
+ * Appearance's Theme group: the Mode row, the built-in themes' cards as ThemeCard draws them (the
+ * one drawn checked), then Customize. Hand-written markup, under O1's exception.
+ */
+function appearanceTheme(draw: Draw, modeRows: readonly string[]): string {
+  const shown = themeOf(draw.frame);
+  return (
+    h('div', { class: 'lf-group', role: 'group' }, ...modeRows) +
+    h(
+      'div',
+      { class: 'theme-grid', role: 'radiogroup', 'aria-label': 'Theme', 'data-setting': 'theme' },
+      ...BUILT_IN_THEMES.map((theme) =>
+        h(
+          'label',
+          { class: 'theme-card', 'data-theme-id': theme.id },
+          h('input', {
+            type: 'radio',
+            value: theme.id,
+            checked: theme.id === shown.id ? true : undefined,
+            tabindex: -1,
+            disabled: true,
+          }),
+          h(
+            'span',
+            { class: 'theme-swatch', 'aria-hidden': 'true' },
+            ...(['light', 'dark'] as const).map((variant) => {
+              const c = theme[variant];
+              return h(
+                'span',
+                {
+                  class: 'sw-half',
+                  'data-pf-vars': vars({
+                    '--sw-bg': c.bg,
+                    '--sw-sidebar': c.sidebar,
+                    '--sw-fg': c.fg,
+                    '--sw-muted': c.muted,
+                    '--sw-border': c.border,
+                    '--sw-accent': c.accent,
+                    '--sw-k': c.codeKeyword,
+                    '--sw-s': c.codeString,
+                    '--sw-f': c.codeFunction,
+                  }),
+                },
+                h('span', { class: 'sw-side' }),
+                h(
+                  'span',
+                  { class: 'sw-main' },
+                  h('span', { class: 'sw-line sw-title' }),
+                  h('span', { class: 'sw-line sw-text' }),
+                  h('span', { class: 'sw-line sw-text short' }),
+                  h(
+                    'span',
+                    { class: 'sw-code' },
+                    h('span', { class: 'sw-k' }),
+                    h('span', { class: 'sw-s' }),
+                    h('span', { class: 'sw-f' }),
+                  ),
+                  h('span', { class: 'sw-button' }),
+                ),
+              );
+            }),
+          ),
+          h(
+            'span',
+            { class: 'theme-card-foot' },
+            h(
+              'span',
+              { class: 'theme-card-name' },
+              text(theme.name),
+              h('span', { class: 'theme-card-note' }, text(theme.description)),
+            ),
+            theme.id === shown.id ? icon(draw, 'check') : '',
+          ),
+        ),
+      ),
+    ) +
+    h(
+      'div',
+      { class: 'lf-actions', 'data-setting': 'customize-theme' },
+      h(
+        'button',
+        { type: 'button', class: 'btn', tabindex: -1 },
+        icon(draw, 'brush', 14),
+        text(`Customize ${shown.name}…`),
+      ),
+      h('span', { class: 'lf-help' }, 'Edits a copy, which syncs to your other devices.'),
+    )
   );
 }
 
@@ -1429,9 +1609,10 @@ export function themeOf(frame: Frame) {
 const AREAS: Readonly<Record<string, string>> = {
   note: '[data-pf-area="note"]',
   sidebar: '.sb-list',
-  'sidebar.folders': '.sb-part[data-section="notebooks"] .sb-section-body',
-  'sidebar.recent': '.sb-recent .sb-quick-list',
-  'sidebar.tags': '.tag-pane',
+  // The elements the app's useScrollArea watches (sidebar-layout.tsx, NotebooksSection.tsx).
+  'sidebar.folders': '.sb-notebooks-body',
+  'sidebar.recent': '.sb-part[data-section="recent"]',
+  'sidebar.tags': '.sb-part[data-section="tags"]',
   settings: '[data-pf-area="settings"]',
   'settings.nav': '[data-pf-area="settings.nav"]',
 };
@@ -1442,6 +1623,13 @@ let drawn = '';
 export function drawFrame(doc: Document, message: FrameMessage, data: FrameData): void {
   const { frame, variant } = message;
   applyThemeTo(doc.documentElement, themeOf(frame), variant);
+  // Every Mac window has the compact title bar out of full screen (A722): the app's own
+  // titlebar.css then leaves the traffic lights' room and hides the name in the sidebar's head.
+  if (frame.client === 'mac' && !frame.window.fullScreen) {
+    doc.documentElement.dataset['titlebar'] = 'compact';
+  } else {
+    delete doc.documentElement.dataset['titlebar'];
+  }
   const markup = frameMarkup(frame, data);
   const root = doc.getElementById('root') ?? doc.body;
   if (markup !== drawn || root.dataset['pfDrawn'] !== '1') {

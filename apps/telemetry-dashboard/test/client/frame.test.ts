@@ -5,6 +5,7 @@
 // the index.
 import { SETTINGS_INDEX, SETTINGS_PAGES } from '@penmoss/web/src/pages/settings-index';
 import { SHORTCUTS } from '@penmoss/web/src/shell/sidebar-shortcuts';
+import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { frameData, type FrameData } from '../../src/client/replay/frame-data';
 import { drawFrame, frameMarkup } from '../../src/client/replay/frame-draw';
@@ -52,6 +53,29 @@ describe('the note view', () => {
     expect(iconsIn(root, '.note-rail')).toEqual(['info', 'comment', 'history', 'graph']);
     expect(document.documentElement.getAttribute('data-theme')).toBe('penmoss');
     expect(document.documentElement.getAttribute('data-mode')).toBe('light');
+  });
+
+  it('draws Quick Access and Tags open and Calendar collapsed, as the app opens them', () => {
+    const root = draw(mac.frameAt(5000));
+    const open = (section: string) =>
+      root
+        .querySelector(`.sb-part[data-section="${section}"] .sb-section-toggle`)
+        ?.getAttribute('aria-expanded');
+    expect(open('quickAccess')).toBe('true');
+    expect(open('tags')).toBe('true');
+    expect(open('calendar')).toBe('false');
+    expect(root.querySelectorAll('.sb-quick .sb-quick-list li').length).toBeGreaterThan(0);
+    expect(root.querySelectorAll('.tag-pane .tag-tree .tag-row').length).toBeGreaterThan(4);
+  });
+
+  it('gives a Mac window the compact title bar, but not in full screen or on Android', () => {
+    const frame = mac.frameAt(5000);
+    draw(frame);
+    expect(document.documentElement.dataset['titlebar']).toBe('compact');
+    draw({ ...frame, window: { ...frame.window, fullScreen: true } });
+    expect(document.documentElement.dataset['titlebar']).toBeUndefined();
+    draw(android.frameAt(1000));
+    expect(document.documentElement.dataset['titlebar']).toBeUndefined();
   });
 
   it('draws every block as lorem of its kind and length', () => {
@@ -140,10 +164,30 @@ describe('the other screens', () => {
     );
     expect(root.querySelector('.settings-head-title')?.textContent).toBe('Appearance');
     expect(
-      [...root.querySelectorAll('.lf-row')].map((row) => row.getAttribute('data-setting')),
+      [...root.querySelectorAll('.lf-controls [data-setting]')].map((row) =>
+        row.getAttribute('data-setting'),
+      ),
     ).toEqual(
       SETTINGS_INDEX.filter((entry) => entry.section === 'appearance').map((entry) => entry.id),
     );
+    // As AppearanceSettings lays it out: the Settings and Preview tabs, Settings shown; then Mode,
+    // the built-in themes' cards (the drawn one checked) and Customize, before Text.
+    expect(
+      [...root.querySelectorAll('.lf-tabs .lf-tab')].map((tab) => [
+        tab.textContent,
+        tab.getAttribute('aria-selected'),
+      ]),
+    ).toEqual([
+      ['Settings', 'true'],
+      ['Preview', 'false'],
+    ]);
+    expect(iconsIn(root, '.lf-tabs')).toEqual(['settings', 'eye']);
+    expect(root.querySelector('.lf-tabpanel > .lf-controls')).not.toBeNull();
+    expect(root.querySelectorAll('.theme-grid .theme-card')).toHaveLength(BUILT_IN_THEMES.length);
+    expect(
+      root.querySelector('.theme-card:has(input:checked)')?.getAttribute('data-theme-id'),
+    ).toBe('penmoss');
+    expect(root.querySelector('.lf-actions .btn')?.textContent).toBe('Customize Penmoss…');
     expect(root.querySelector('.settings-head-bar')?.hasAttribute('data-pinned')).toBe(true);
   });
 

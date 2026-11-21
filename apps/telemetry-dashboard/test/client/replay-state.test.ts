@@ -30,8 +30,8 @@ describe('the recorded fixtures', () => {
 
 describe('the window and the layout', () => {
   it('draws the recorded main window, or the size class’s before one is recorded', () => {
-    expect(at(0).window).toEqual({ width: 1280, height: 800, recorded: false });
-    expect(at(0.3).window).toEqual({ width: 1440, height: 900, recorded: true });
+    expect(at(0).window).toEqual({ width: 1280, height: 800, fullScreen: false, recorded: false });
+    expect(at(0.3).window).toEqual({ width: 1440, height: 900, fullScreen: false, recorded: true });
     expect(at(0.3).sizeClass).toBe('expanded');
   });
 
@@ -279,7 +279,7 @@ describe('older and thinner sessions', () => {
     expect(frame.screen).toBe('note');
     expect(frame.placeholders).toBe(true);
     expect(frame.note).toMatchObject({ blocks: null, title: null });
-    expect(frame.window).toEqual({ width: 1280, height: 800, recorded: false });
+    expect(frame.window).toEqual({ width: 1280, height: 800, fullScreen: false, recorded: false });
     expect(frame.layout).toMatchObject({ sidebar: 'shown', panel: 'closed', recorded: false });
   });
 
@@ -288,7 +288,7 @@ describe('older and thinner sessions', () => {
     expect(android.beforeDetail).toBe(false);
     expect(android.beforeLayout).toBe(false);
     const home = android.frameAt(1000);
-    expect(home.window).toEqual({ width: 410, height: 920, recorded: true });
+    expect(home.window).toEqual({ width: 410, height: 920, fullScreen: false, recorded: true });
     expect(home.layout).toMatchObject({ sidebar: 'hidden', tabs: null });
     expect(android.frameAt(3000).layout.sidebar).toBe('shown');
     expect(tokens(android.frameAt(10_000))).toEqual([
