@@ -1,17 +1,7 @@
-import { Icon, type IconName } from '@penmoss/ui/icons';
+import { Icon } from '@penmoss/ui/icons';
 import type { PointerEvent } from 'react';
 import { useCommands } from '../commands/hooks';
-
-const BUTTONS: ReadonlyArray<{ readonly command: string; readonly icon: IconName }> = [
-  { command: 'editor.bold', icon: 'bold' },
-  { command: 'editor.italic', icon: 'italic' },
-  { command: 'editor.bulletList', icon: 'list' },
-  { command: 'editor.taskList', icon: 'checklist' },
-  { command: 'editor.code', icon: 'code' },
-  { command: 'editor.link', icon: 'link' },
-  { command: 'editor.undo', icon: 'undo' },
-  { command: 'editor.redo', icon: 'redo' },
-];
+import { PHONE_FORMAT_BUTTONS } from './phone-format-buttons';
 
 // Keeps the caret (and the on-screen keyboard) in the note while a button is pressed.
 const keepFocus = (event: PointerEvent) => event.preventDefault();
@@ -27,7 +17,7 @@ export function PhoneFormatBar() {
   const commands = useCommands();
   return (
     <div className="phone-format" role="toolbar" aria-label="Formatting">
-      {BUTTONS.map(({ command, icon }) => {
+      {PHONE_FORMAT_BUTTONS.map(({ command, icon }) => {
         const title = commands.definitions.get(command)?.title ?? command;
         return (
           <button

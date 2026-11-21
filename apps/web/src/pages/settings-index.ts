@@ -6,6 +6,7 @@
  * The pages and their groups in the nav are here too, so a result can say where it is.
  */
 import { analyticsCopy } from '@penmoss/core/analytics';
+import type { IconName } from '@penmoss/ui/icons';
 import type { SettingsSection } from '../router';
 
 /** The nav's groups (PEN-146), each naming its scope once. */
@@ -24,28 +25,45 @@ export const SETTINGS_GROUPS: ReadonlyArray<{
   { id: 'mac', label: 'This Mac', scope: 'Not Synced' },
 ];
 
-/** Each section's name in the nav and its group, in the nav's order. */
+/**
+ * Each section's name in the nav, its group and its icon, in the nav's order. One icon per
+ * section, the same on the phone (A902); the nav draws it, and so does the usage dashboard's
+ * session player (PEN-178), which reads it from here.
+ */
 export const SETTINGS_PAGES: ReadonlyArray<{
   readonly id: SettingsSection;
   readonly label: string;
   readonly group: SettingsGroup;
+  readonly icon: IconName;
 }> = [
-  { id: 'appearance', label: 'Appearance', group: 'look' },
-  { id: 'sidebar', label: 'Sidebar', group: 'look' },
-  { id: 'note', label: 'Note', group: 'look' },
-  { id: 'symbols', label: 'Symbols', group: 'look' },
-  { id: 'journal', label: 'Daily Notes', group: 'writing' },
-  { id: 'quick-capture', label: 'Quick Capture', group: 'writing' },
-  { id: 'shortcuts', label: 'Keyboard Shortcuts', group: 'writing' },
-  { id: 'ai-descriptions', label: 'AI Descriptions', group: 'writing' },
-  { id: 'git-notebooks', label: 'All Notebooks', group: 'notebooks' },
-  { id: 'agents', label: 'Agents', group: 'agents' },
-  { id: 'agent-activity', label: 'Agent Activity', group: 'agents' },
-  { id: 'meaning', label: 'Semantic Search', group: 'mac' },
-  { id: 'github', label: 'GitHub', group: 'mac' },
-  { id: 'updates', label: 'Updates', group: 'mac' },
-  { id: 'privacy', label: 'Privacy', group: 'mac' },
+  { id: 'appearance', label: 'Appearance', group: 'look', icon: 'palette' },
+  // Display became Sidebar (PEN-146).
+  { id: 'sidebar', label: 'Sidebar', group: 'look', icon: 'panelL' },
+  { id: 'note', label: 'Note', group: 'look', icon: 'file' },
+  // T44 (A743): how notes look, beside Note.
+  { id: 'symbols', label: 'Symbols', group: 'look', icon: 'star' },
+  { id: 'journal', label: 'Daily Notes', group: 'writing', icon: 'journal' },
+  { id: 'quick-capture', label: 'Quick Capture', group: 'writing', icon: 'inbox' },
+  { id: 'shortcuts', label: 'Keyboard Shortcuts', group: 'writing', icon: 'keyboard' },
+  // PEN-161: a short description of each note, for agents.
+  { id: 'ai-descriptions', label: 'AI Descriptions', group: 'writing', icon: 'sparkle' },
+  // T50 (A856): git notebooks on this Mac.
+  { id: 'git-notebooks', label: 'All Notebooks', group: 'notebooks', icon: 'terminal' },
+  // The agents that reach them, and the penmoss command (Ryan's feedback, 5 Nov 2026; A1098).
+  { id: 'agents', label: 'Agents', group: 'agents', icon: 'agentRef' },
+  { id: 'agent-activity', label: 'Agent Activity', group: 'agents', icon: 'history' },
+  // Search by meaning on this Mac (T78, A1158): the Mac app's.
+  { id: 'meaning', label: 'Semantic Search', group: 'mac', icon: 'search' },
+  // Status became GitHub (PEN-146): the sign-in Send Feedback and Add Notebook use.
+  { id: 'github', label: 'GitHub', group: 'mac', icon: 'key' },
+  // Auto-Update (T64 item 2, A1112): the Mac app's.
+  { id: 'updates', label: 'Updates', group: 'mac', icon: 'refresh' },
+  // Usage analytics and the logs (PEN-137): the Mac app's.
+  { id: 'privacy', label: 'Privacy', group: 'mac', icon: 'shield' },
 ];
+
+/** Analytics Data's icon, its entry set in under Privacy (PEN-137, PrivacyNavEntry). */
+export const PRIVACY_DATA_ICON: IconName = 'checklist';
 
 export const pageLabel = (section: SettingsSection): string =>
   SETTINGS_PAGES.find((page) => page.id === section)?.label ?? section;

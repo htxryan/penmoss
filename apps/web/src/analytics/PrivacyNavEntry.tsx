@@ -3,6 +3,7 @@
  * page sits under All Notebooks (NotebookNavEntries). `aria-current="page"` while it is open.
  */
 import { Icon } from '@penmoss/ui/icons';
+import { PRIVACY_DATA_ICON } from '../pages/settings-index';
 import { linkHandler, PRIVACY_DATA_PATH } from '../router';
 import { copy } from './status';
 import './privacy.css';
@@ -19,7 +20,7 @@ export function PrivacyNavEntry({ current }: { readonly current: boolean }) {
       aria-current={current ? 'page' : undefined}
       onClick={linkHandler(PRIVACY_DATA_PATH)}
     >
-      <Icon name="checklist" />
+      <Icon name={PRIVACY_DATA_ICON} />
       {/* As wide as its bold self, as the other entries are (A988). */}
       <span className="bold-steady" data-label={label}>
         {label}
