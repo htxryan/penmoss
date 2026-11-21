@@ -138,9 +138,6 @@ class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
 
     fun tap(tag: String) = tap(tagged(tag))
 
-    /** Whether a laid-out node is tagged [tag] now. */
-    fun hasTag(tag: String): Boolean = nodes().any { it.config.getOrNull(SemanticsProperties.TestTag) == tag }
-
     /**
      * Taps [tag], a control that opens another screen, until [arrived] holds. The app opens a
      * screen only from the one that has settled in front (A387), so a tap made while that one
@@ -159,8 +156,14 @@ class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
         }
     }
 
-    /** Opens [tag]'s screen, known by the node tagged [then] on it (see [open]). */
-    fun open(tag: String, then: String) = open(tag) { hasTag(then) }
+    /**
+     * Opens [tag]'s screen, known by the node tagged [then] on it (see [open]), which may sit
+     * below the fold: it is looked for as [tagged] does, the list scrolled to find it.
+     */
+    fun open(tag: String, then: String) {
+        val since = SystemClock.uptimeMillis()
+        open(tag) { seek(since) { it.config.getOrNull(SemanticsProperties.TestTag) == then } != null }
+    }
 
     /** From Home: the gear, Privacy, then View Analytics Data, known by its title. */
     fun openAnalyticsData() {

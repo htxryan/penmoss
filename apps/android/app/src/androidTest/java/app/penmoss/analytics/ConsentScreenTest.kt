@@ -129,7 +129,10 @@ class ConsentScreenTest {
                 val screen = OnScreen(scenario)
                 screen.tap("consent-dont-share")
                 screen.text("Home of Notebooks")
-                assertEquals(3L, runBlocking { phone.store.counts()[EventState.LOCAL] })
+                // The answer moves the pending events to local off the main thread: waited for.
+                val local = { runBlocking { phone.store.counts()[EventState.LOCAL] } }
+                screen.waitFor("the 3 pending events kept on the phone (local: ${local()})", timeoutMs = 10_000) { local().takeIf { it == 3L } }
+                assertEquals(3L, local())
                 // The next time the app opens: straight to Home.
                 scenario.onActivity { activity ->
                     activity.setContent { PenmossTheme { ConsentGate(phone.service, openUrl = {}) { Text("Home of Notebooks Again") } } }
