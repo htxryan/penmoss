@@ -63,6 +63,7 @@ export function ThemePicker({ themes, currentId, onChoose, onClose }: ThemePicke
     <PickerOverlay testId="theme-picker" className="palette" label="Switch Theme" onClose={onClose}>
       <div className="dlg-search">
         <PickerField
+          dialog="themePicker"
           picker={picker}
           aria-label="Switch Theme"
           placeholder="Choose a theme…"

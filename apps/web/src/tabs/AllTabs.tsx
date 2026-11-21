@@ -84,6 +84,7 @@ export function AllTabs({
       style={{ visibility: 'hidden' }}
     >
       <PickerField
+        dialog="allTabs"
         picker={picker}
         className="all-tabs-filter"
         placeholder="Filter Tabs"

@@ -16,6 +16,11 @@
  * offline, a 5xx or a timeout keeps them and backs off up to an hour; a 4xx refuses the batch.
  * Turning sharing off aborts a batch in flight.
  *
+ * Session detail (PEN-177): an event from the page may name a note or a folder by its real id in
+ * `refs`; main swaps each for its ref (HMAC-SHA256 under this install's ref key, 16 hex
+ * characters, `@penmoss/core/analytics/node`'s ref-key) before it checks and stores the event.
+ * The key lives in `~/.penmoss/analytics-key`, never leaves main, and is made again with the ID.
+ *
  * No Electron here: `services.ts` wires it to the app, and the tests run it as it is.
  */
 import { unwatchFile, watchFile, type Stats } from 'node:fs';
@@ -57,6 +62,10 @@ import {
   Backoff,
   forgetShared,
   readConsentFile,
+  readRefKey,
+  refKeyPathFor,
+  refOf,
+  renewRefKey,
   sendNext,
   updateConsentFile,
   type SendOutcome,
@@ -112,6 +121,12 @@ export interface AnalyticsOptions {
   readonly timeoutMs?: number;
 }
 
+/** The real ids a page's event names (PEN-177), swapped for refs here. */
+export interface PageEventRefs {
+  readonly note?: string;
+  readonly folder?: string;
+}
+
 /** An event from the page, before main stamps it (the page's `PageEvent`). */
 export interface PageEventInput {
   readonly kind: EventKind;
@@ -119,6 +134,23 @@ export interface PageEventInput {
   readonly props?: Props;
   readonly at: number;
   readonly sizeClass?: AnalyticsEvent['sizeClass'];
+  readonly refs?: PageEventRefs;
+}
+
+/** The longest id a page may name (a note's ULID, a folder's id or path). */
+const MAX_REF_ID = 1024;
+
+/** The ids a page named, checked: strings of a sensible length only. */
+function parseRefs(value: unknown): PageEventRefs | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const { note, folder } = value as Record<string, unknown>;
+  const id = (item: unknown) =>
+    typeof item === 'string' && item.length > 0 && item.length <= MAX_REF_ID ? item : undefined;
+  const refs = {
+    ...(id(note) ? { note: id(note)! } : {}),
+    ...(id(folder) ? { folder: id(folder)! } : {}),
+  };
+  return refs.note || refs.folder ? refs : undefined;
 }
 
 /** At most this many events in one message from a page. */
@@ -134,11 +166,12 @@ export function parsePageEvents(value: unknown): PageEventInput[] {
   const events: PageEventInput[] = [];
   for (const item of value.slice(0, MAX_PAGE_EVENTS) as unknown[]) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
-    const { kind, name, props, at, sizeClass } = item as Record<string, unknown>;
+    const { kind, name, props, at, sizeClass, refs } = item as Record<string, unknown>;
     if (typeof kind !== 'string' || typeof name !== 'string') continue;
     if (props !== undefined && (!props || typeof props !== 'object' || Array.isArray(props))) {
       continue;
     }
+    const named = parseRefs(refs);
     events.push({
       kind: kind as EventKind,
       name,
@@ -147,6 +180,7 @@ export function parsePageEvents(value: unknown): PageEventInput[] {
       ...(typeof sizeClass === 'string'
         ? { sizeClass: sizeClass as AnalyticsEvent['sizeClass'] }
         : {}),
+      ...(named ? { refs: named } : {}),
     });
   }
   return events;
@@ -280,6 +314,8 @@ export class Analytics {
   private stopped = false;
   private quitRecorded = false;
   private lastDelay = 0;
+  /** The ref key (PEN-177) and the install it was read for; read again when the ID changes. */
+  private refKey: { readonly install: string; readonly key: string } | null = null;
 
   constructor(private readonly options: AnalyticsOptions) {
     this.session = options.session ?? newSessionId();
@@ -384,6 +420,45 @@ export class Analytics {
     return this.keep({ kind, name, props, sizeClass });
   }
 
+  /** Where the ref key lives: beside the consent file. */
+  private get refKeyPath(): string {
+    return refKeyPathFor(this.options.consentPath);
+  }
+
+  /** This install's ref key, made on first use. */
+  private key(): string {
+    if (this.refKey?.install !== this.file.install) {
+      this.refKey = { install: this.file.install, key: readRefKey(this.refKeyPath) };
+    }
+    return this.refKey.key;
+  }
+
+  /** A note's or folder's ref on this install (PEN-177): what the stored events hold. */
+  refOf(type: 'note' | 'folder', id: string): string {
+    return refOf(this.key(), type, id);
+  }
+
+  /** The page's props with its named ids swapped for refs; the ids go no further. */
+  private withRefs(input: PageEventInput): Props {
+    const props = input.props ?? {};
+    if (!input.refs) return props;
+    return {
+      ...props,
+      ...(input.refs.note ? { note: this.refOf('note', input.refs.note) } : {}),
+      ...(input.refs.folder ? { folder: this.refOf('folder', input.refs.folder) } : {}),
+    };
+  }
+
+  /** A new ref key with a new ID: the same note gets a different ref from then on. */
+  private renewKey(): void {
+    this.refKey = null;
+    try {
+      renewRefKey(this.refKeyPath);
+    } catch {
+      // A home that cannot be written: the next read makes one for this run.
+    }
+  }
+
   /** The page's events: stamped, checked and stored in the order they came; how many kept. */
   recordPage(value: unknown): number {
     const events = parsePageEvents(value);
@@ -404,7 +479,7 @@ export class Analytics {
         ...(input.sizeClass ? { sizeClass: input.sizeClass } : {}),
         kind: input.kind,
         name: input.name,
-        props: input.props ?? {},
+        props: this.withRefs(input),
       };
       if (eventProblem(event) !== null) continue;
       this.seq += 1;
@@ -471,6 +546,7 @@ export class Analytics {
   /** Reset My Analytics ID: a new ID, and what was not sent stays here, Not Shared. */
   async resetId(): Promise<AnalyticsStatus> {
     this.abortSend();
+    this.renewKey();
     this.write(withNewId);
     await this.options.store.unsentToLocal();
     return this.changed();
@@ -490,6 +566,7 @@ export class Analytics {
     });
     this.log(`analytics forget: ${outcome}`);
     if (outcome === 'ok' && this.file.install === install) {
+      this.renewKey();
       this.write(withNewId);
       await this.options.store.unsentToLocal();
       await this.changed();

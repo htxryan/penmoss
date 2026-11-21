@@ -140,6 +140,7 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
       <div className="dlg-search">
         <PickerField
           picker={picker}
+          dialog={mode === 'all' ? 'palette' : mode === 'newTab' ? 'newTab' : 'quickOpen'}
           aria-label={label}
           placeholder={
             mode === 'all'

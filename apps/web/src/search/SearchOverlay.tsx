@@ -301,6 +301,7 @@ export function SearchOverlay({
           <Icon name="search" />
         </span>
         <PickerField
+          dialog="search"
           picker={picker}
           type="search"
           aria-label="Search notes"

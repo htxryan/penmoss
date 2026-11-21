@@ -46,6 +46,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useTrackedDialog, type TrackedDialog } from '../analytics/dialog';
+import { useTypedLength } from '../analytics/typed';
 import { record } from '../analytics/record';
 import { useCommands } from '../commands/hooks';
 import { desktop } from '../desktop/bridge';
@@ -182,6 +183,9 @@ function FeedbackForm({
   const [problems, setProblems] = useState<Problems>({});
   const [imageError, setImageError] = useState<string | null>(null);
   const [linkHref, setLinkHref] = useState<string | null>(null);
+  // What is typed in the title and a link's address, by length only (PEN-177).
+  const typedTitle = useTypedLength('feedback', 'title', title);
+  const typedLink = useTypedLength('feedback', 'url', linkHref ?? '');
   /** Which formats the selection has, for the toolbar's pressed states (read on each change). */
   const [active, setActive] = useState<ReadonlySet<string>>(new Set());
   const dialog = useRef<HTMLDivElement>(null);
@@ -571,6 +575,7 @@ function FeedbackForm({
                   id={`${id}-title`}
                   className="feedback-title"
                   data-testid="feedback-title"
+                  {...typedTitle}
                   value={title}
                   maxLength={FEEDBACK_LIMITS.titleMax}
                   autoComplete="off"
@@ -657,6 +662,7 @@ function FeedbackForm({
                       autoFocus
                       placeholder="https://"
                       value={linkHref}
+                      {...typedLink}
                       data-testid="feedback-link-href"
                       onChange={(event) => setLinkHref(event.target.value)}
                       onKeyDown={(event) => {

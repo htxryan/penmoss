@@ -2,6 +2,7 @@ import { normaliseTag, tagMatches } from '@penmoss/core/tags';
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useMemo, useState } from 'react';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
+import { useTypedLength } from '../analytics/typed';
 import {
   deleteCount,
   filterKey,
@@ -77,6 +78,9 @@ export function MergeDialog({
     initialTarget ?? (single ? null : mostNotes(sources, rows)),
   );
   const [typed, setTyped] = useState('');
+  // Typed lengths only (PEN-177): the tag search and the new name, in the confirm dialog.
+  const typedQuery = useTypedLength('confirm', 'query', query);
+  const typedName = useTypedLength('confirm', 'name', typed);
   const newId = useId();
 
   // Single: any tag but the one merged and those inside it (they would move into themselves).
@@ -149,6 +153,7 @@ export function MergeDialog({
                 aria-label="Find a Tag"
                 placeholder="Find a tag"
                 value={query}
+                {...typedQuery}
                 autoFocus={!initialTarget}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -214,6 +219,7 @@ export function MergeDialog({
               aria-label="New Name"
               placeholder="Or type a new name"
               value={typed}
+              {...typedName}
               onChange={(event) => setTyped(event.target.value)}
             />
           </label>

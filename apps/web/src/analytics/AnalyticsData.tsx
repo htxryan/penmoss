@@ -8,6 +8,7 @@
  */
 import {
   countsLine,
+  propsLine,
   STATE_LABELS,
   type ClientFilter,
   type Cursor,
@@ -61,11 +62,12 @@ function timeOf(at: number): string {
   });
 }
 
-/** An event's props as one line: `source: key, keys: Mod+K`. */
+/**
+ * An event's props as one line, `source: key, keys: Mod+K`, a list over 12 items cut to its first
+ * 12 and `… +N` (core's propsLine, PEN-177); Copy as JSON keeps every item.
+ */
 function propsOf(event: StoredEvent): string {
-  return Object.entries(event.props)
-    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : String(value)}`)
-    .join(', ');
+  return propsLine(event.props);
 }
 
 /** The summary under the title: where, how long, the ID, and whether it is shared. */

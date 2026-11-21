@@ -228,7 +228,7 @@ export function installFakeBridge(config: {
     const DAY = 86_400_000;
     const DEFAULTS: Record<string, number> = {
       'events.days': 7,
-      'events.max': 5000,
+      'events.max': 200_000,
       'logs.fileKb': 1024,
       'logs.files': 2,
       'logs.days': 7,

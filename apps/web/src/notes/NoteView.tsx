@@ -50,6 +50,7 @@ import { AppBar } from '../shell/AppBar';
 import { deviceStorage } from '../shell/device-pref';
 import { useNarrowWindow } from '../shell/media';
 import { TitleBarLead } from '../shell/title-lead';
+import { useNoteUsage } from '../analytics/note-usage';
 import { NoteActions, type NotePanelTab } from './NoteActions';
 import { NoteTopBar } from './NoteTopBar';
 import { NoteSidePanel } from './NoteSidePanel';
@@ -325,6 +326,8 @@ export function NoteView({
   useTabScroll(tabPage, scrollRef, ready, heading !== null);
   // How far down the note is (PEN-175), as `scroll note`; a preview's is not the person's.
   useScrollArea(preview ? null : 'note', scrollRef, id);
+  // The note's shape and typing, by block position and length (PEN-177); not a preview's.
+  useNoteUsage(preview ? null : editor, id, titleRef);
 
   // A link to a heading (`[[Note#Heading]]`) scrolls to it once the note shows.
   useEffect(() => {

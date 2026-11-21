@@ -41,7 +41,10 @@ async function expectEqualAnswers(scope: Locator) {
       const style = getComputedStyle(element);
       return [style.borderColor, style.borderWidth, style.fontWeight, style.backgroundColor];
     });
-  expect(await look(share)).toEqual(await look(dont));
+  // A hover leaving runs its transition: the two are compared once it has ended.
+  await expect
+    .poll(async () => JSON.stringify(await look(share)) === JSON.stringify(await look(dont)))
+    .toBe(true);
   const row = (await scope.locator('.consent-answers').boundingBox())!;
   const shareBox = (await share.boundingBox())!;
   const dontBox = (await dont.boundingBox())!;
@@ -74,6 +77,11 @@ async function expectQuestion(scope: Locator) {
     );
   await versions.scrollIntoViewIfNeeded();
   await expect(versions).toBeInViewport();
+  // Session detail (PEN-177's AC20): core's one line, after the CLI's.
+  const shape = scope
+    .getByTestId('consent-recorded')
+    .getByText('The shape of your notes and how much you type, never the words', { exact: true });
+  await expect(shape).toBeVisible();
   await expect(scope.getByTestId('consent-never')).toContainText(
     'What you write: notes, titles, tags, links and searches',
   );
@@ -313,9 +321,13 @@ test.describe('Settings → Privacy', () => {
     await expect(days).toContainText('days');
     await expect(days.getByTestId('privacy-limit-range')).toHaveText('1–360 days');
     await expect(days.getByTestId('privacy-limit-default')).toHaveCount(0);
-    // How much each may take (core's estimate: 5,000 events, 2 files of 1 MB).
+    // Keep at Most's default and range (PEN-177's AC16), digits grouped.
+    const most = advanced.locator('[data-setting="keep-at-most"]');
+    await expect(most.getByRole('textbox')).toHaveValue('200,000');
+    await expect(most.getByTestId('privacy-limit-range')).toHaveText('500–2,000,000 events');
+    // How much each may take (core's estimate: 200,000 events, 2 files of 1 MB).
     await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-      /^About [\d.]+ MB of events at most on this Mac$/,
+      'About 95 MB of events at most on this Mac',
     );
     await expect(advanced.getByTestId('privacy-space-logs')).toHaveText(
       'Up to 2 MB of logs on this Mac (at most 400 MB)',

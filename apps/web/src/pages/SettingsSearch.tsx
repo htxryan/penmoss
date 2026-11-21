@@ -10,6 +10,7 @@ import { isPlainLeftClick, settingsPath } from '../router';
 import type { SettingEntry, SettingMatch } from './settings-index';
 import type { SettingsSearchState } from './settings-search';
 import { SettingsHeader } from './SettingsHeader';
+import { useTypedLength } from '../analytics/typed';
 
 export function SettingsSearch({
   search,
@@ -19,6 +20,8 @@ export function SettingsSearch({
   onOpen: (entry: SettingEntry) => void;
 }) {
   const { query, setQuery, results, input, listId } = search;
+  // What is typed here, by length only (PEN-177): Settings' own field, not a dialog's.
+  const typed = useTypedLength('settingsSearch', 'query', query);
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       const first = results[0];
@@ -49,6 +52,7 @@ export function SettingsSearch({
         autoComplete="off"
         spellCheck={false}
         value={query}
+        {...typed}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={onKeyDown}
         data-testid="settings-search"
