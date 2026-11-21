@@ -357,12 +357,17 @@ export function redactText(text: string, names: readonly string[] = []): string 
   return out.replace(QUOTED, REDACTED);
 }
 
+/** A usage analytics ref key's shape (PEN-177): 64 hex characters, never in a report. */
+const REF_KEY = /\b[0-9a-f]{64}\b/gi;
+
 /**
- * `text` with Penmoss and GitHub tokens and bearer credentials removed: the filer's last check on
- * everything it posts to GitHub (A791), the description and title included.
+ * `text` with Penmoss and GitHub tokens, bearer credentials and anything shaped like the analytics
+ * ref key (PEN-177) removed: the filer's last check on everything it posts to GitHub (A791), the
+ * description and title included.
  */
 export function redactSecrets(text: string): string {
   return text
+    .replace(REF_KEY, '[key removed]')
     .replace(TOKEN, '[token removed]')
     .replace(GITHUB_TOKEN, '[token removed]')
     .replace(BEARER, 'Bearer [token removed]');

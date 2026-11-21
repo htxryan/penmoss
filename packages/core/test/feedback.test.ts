@@ -332,4 +332,14 @@ describe('redactSecrets (the Worker posts no token)', () => {
     ).toBe('[token removed] and [token removed]');
     expect(redactSecrets('ghp_short stays')).toBe('ghp_short stays');
   });
+
+  it('removes anything shaped like the analytics ref key, never in a report (PEN-177)', () => {
+    const key = '0123456789abcdef'.repeat(4);
+    expect(redactSecrets(`key ${key} here`)).toBe('key [key removed] here');
+    expect(
+      contextWithoutSecrets({ groups: [fieldGroup('sync', [['Key', key]])] }).groups[0]!.rows,
+    ).toEqual([['Key', '[key removed]']]);
+    // A commit's 40 characters are not a key.
+    expect(redactSecrets('a'.repeat(40))).toBe('a'.repeat(40));
+  });
 });
