@@ -165,7 +165,7 @@ const list = (props: Readonly<Record<string, PropValue>>, key: string): readonly
 /** The lower bound of a count bucket ("2–4" → 2, "5000+" → 5000), or null. */
 export function bucketFloor(bucket: string | null): number | null {
   if (bucket === null) return null;
-  const match = /^\d+/.exec(bucket);
+  const match = bucket.match(/^\d+/);
   return match ? Number(match[0]) : null;
 }
 

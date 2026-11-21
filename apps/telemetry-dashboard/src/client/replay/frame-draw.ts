@@ -548,7 +548,7 @@ function blockText(seed: string, length: number | null, marks: Marks): string {
 
 /** A table's text spread over its cells, the first row its header. */
 function table(token: string, seed: string, length: number, marks: Marks): string {
-  const match = /^table\.(\d+)x(\d+)/.exec(token);
+  const match = token.match(/^table\.(\d+)x(\d+)/);
   const rows = Math.min(30, Number(match?.[1] ?? 1));
   const cols = Math.min(12, Number(match?.[2] ?? 1));
   const cells = rows * cols;
@@ -580,7 +580,7 @@ function table(token: string, seed: string, length: number, marks: Marks): strin
 
 /** One block that isn't a list item, as the editor draws it. */
 function block(token: string, seed: string, length: number | null, marks: Marks): string {
-  const kind = /^[a-z]+/.exec(token)?.[0] ?? 'other';
+  const kind = token.match(/^[a-z]+/)?.[0] ?? 'other';
   const inner = () => blockText(seed, length, marks);
   switch (kind) {
     case 'p':
@@ -722,7 +722,7 @@ function noteBody(note: FrameNote): string {
   let run: ListItem[] = [];
   blocks.forEach((b, i) => {
     const marks = marksOf(i, b.length);
-    const item = /^li\.([bnt])\.(\d)/.exec(b.token);
+    const item = b.token.match(/^li\.([bnt])\.(\d)/);
     if (item) {
       run.push({
         list: item[1] as ListItem['list'],
