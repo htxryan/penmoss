@@ -33,6 +33,7 @@ import app.penmoss.ui.keys.LauncherAction
 import app.penmoss.ui.settings.PrivacyActions
 import app.penmoss.ui.settings.PrivacyScreen
 import app.penmoss.ui.settings.PrivacyUi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -207,16 +208,18 @@ class SessionDetailTest {
             home.tap("section-privacy")
             home.tap("privacyViewData")
             home.text(AnalyticsCopy.text("viewer.title"))
-            val typing = home.waitFor("a typing row") { home.nodes().firstOrNull { "note · typing" in it.texts() } }
-            home.reveal(typing, margin = 48f)
-            assertTrue("the typing row is in view; it shows ${home.texts()}", inView(home, "note · typing"))
-            // The long note's shape (a note open's, or a splice's inserted blocks), cut to "… +N".
-            val cut = home.waitFor("the cut list") { home.texts().firstOrNull { "… +" in it } }
-            assertTrue(cut, Regex("(shape|inserted): (\\S+ ){12}… \\+\\d+").containsMatchIn(cut))
-            home.reveal(home.text(cut), margin = 48f)
-            assertTrue("the cut row is in view", inView(home, cut))
-            assertTrue("the typing row is in view too", inView(home, "note · typing"))
+            // Newest first, the rows recorded after the typing (Home, Settings, and the note page
+            // made again for the smaller text) come before it, so the list is scrolled to them:
+            // the splice's row, its inserted blocks cut to "… +N", brought to the list's foot,
+            // with the typing rows recorded after it just above.
+            val splice = seek(home, "the splice's cut row") { node -> node.texts().any { "inserted: " in it && "… +" in it } }
+            val cut = splice.texts().first { "inserted: " in it && "… +" in it }
+            assertTrue(cut, Regex("inserted: (\\S+ ){12}… \\+\\d+").containsMatchIn(cut))
+            val list = checkNotNull(tag(home, "viewerList")) { "no list" }.boundsInWindow
+            home.reveal(splice, margin = maxOf(48f, list.height - splice.size.height - 24f))
+            home.waitFor("the cut row and a typing row in view") { true.takeIf { inView(home, cut) && inView(home, "note · typing") } }
             hold()
+            assertTrue("the typing row is in view too", inView(home, "note · typing"))
             assertTrue(inView(home, cut))
             ProofShot.take()
         }
@@ -263,6 +266,9 @@ class SessionDetailTest {
             val (page, noteId) = newNote(localId)
             js(page, "penmossEditor.editor.editor.commands.insertContent('Rows of beans.')")
             setTitle(page, TREE_NOTE)
+            val store = graph.git.graph(localId).store
+            // The app has the title before the note is left, as the list shows it.
+            until("the title stored") { runBlocking { store.noteTitle(noteId) }?.takeIf { it == TREE_NOTE } }
             js(page, "document.activeElement?.blur()")
             SystemClock.sleep(1_500)
             back()
@@ -303,7 +309,12 @@ class SessionDetailTest {
 
             // The note opened from the list, at the top level: no folder.
             until("the notebook's notes again") { tag(home, "homeMenu") }
-            val row = home.waitFor("the note's row") { home.nodes().firstOrNull { TREE_NOTE in it.texts() } }
+            // The note's row, the list scrolled to it if it sits below the first screen; if it
+            // isn't there, what the phone holds for the notebook's notes says why.
+            val row = runCatching { home.text(TREE_NOTE) }.getOrElse { missing ->
+                val held = runBlocking { store.observeList().first() }.map { (if (it.id == noteId) "this note " else "") + "“${it.title}”" }
+                throw AssertionError("no row for the note; the notebook's notes, as the phone holds them: $held", missing)
+            }
             home.reveal(row, margin = 200f)
             home.tap(home.text(TREE_NOTE))
             val open = until("tree open") { stored().firstOrNull { it.kind == "tree" && it.name == "open" } }
@@ -510,16 +521,19 @@ class SessionDetailTest {
      * The row [text] in Analytics Data's list, a page down at a time: the list makes only the rows
      * on screen, so a row further down is found by bringing the lowest one shown to the top.
      */
-    private fun seek(screen: OnScreen, text: String): SemanticsNode {
+    private fun seek(screen: OnScreen, text: String): SemanticsNode = seek(screen, text) { text in it.texts() }
+
+    /** The first row in Analytics Data's list that [match]es, found as [seek] finds one by its text. */
+    private fun seek(screen: OnScreen, what: String, match: (SemanticsNode) -> Boolean): SemanticsNode {
         repeat(40) {
-            screen.nodes().firstOrNull { text in it.texts() }?.let { return it }
+            screen.nodes().firstOrNull(match)?.let { return it }
             val list = tag(screen, "viewerList")?.boundsInWindow ?: return@repeat
             val lowest = screen.nodes()
                 .filter { it.texts().isNotEmpty() && it.boundsInWindow.height > 0f && it.boundsInWindow.top >= list.top && it.boundsInWindow.bottom <= list.bottom }
                 .maxByOrNull { it.boundsInWindow.top }
             if (lowest != null) screen.reveal(lowest, margin = 0f) else SystemClock.sleep(300)
         }
-        return screen.waitFor("the row $text") { screen.nodes().firstOrNull { text in it.texts() } }
+        return screen.waitFor("the row $what") { screen.nodes().firstOrNull(match) }
     }
 
     /** Whether [node] shows whole on screen: below the page's top bar, and not cut at the bottom. */

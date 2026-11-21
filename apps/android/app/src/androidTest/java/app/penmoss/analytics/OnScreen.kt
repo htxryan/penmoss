@@ -41,11 +41,14 @@ class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
 
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
-    /** Every laid-out node now. */
+    /**
+     * Every laid-out node now. A lazy list's row composed ahead of a scroll but not placed yet
+     * (prefetched) is left out: it reports bounds at the list's top, though nothing shows there.
+     */
     fun nodes(): List<SemanticsNode> {
         instrumentation.waitForIdleSync()
         var found = emptyList<SemanticsNode>()
-        onActivity { activity -> found = ScreenTree.nodes(activity.window.decorView).filter { it.boundsInWindow.width > 0f } }
+        onActivity { activity -> found = ScreenTree.nodes(activity.window.decorView).filter { it.boundsInWindow.width > 0f && it.layoutInfo.isPlaced } }
         return found
     }
 
@@ -68,7 +71,8 @@ class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
         nodes().firstOrNull(match)?.let { return it }
         // A moment first for what is still loading, then go looking for it.
         if (SystemClock.uptimeMillis() - since < SEEK_AFTER_MS) return null
-        val hidden = allNodes().firstOrNull(match)
+        // Placed off screen (a scrolled column's), never a lazy row only prefetched (see [nodes]).
+        val hidden = allNodes().firstOrNull { match(it) && it.layoutInfo.isPlaced }
         if (hidden != null) {
             reveal(hidden)
             return nodes().firstOrNull(match)
