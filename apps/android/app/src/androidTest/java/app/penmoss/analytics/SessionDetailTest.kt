@@ -111,6 +111,10 @@ class SessionDetailTest {
                 scenario.onActivity { activity ->
                     activity.setContent { PenmossTheme { ConsentGate(phone.service, openUrl = {}) { Text("Home of Notebooks") } } }
                 }
+                // The same activity: the first run's step is gone once the gate has drawn.
+                screen.waitFor("the gate, with no step bar") {
+                    true.takeIf { !screen.has(AnalyticsCopy.text("consent.lastStep.label")) }
+                }
                 screen.text(AnalyticsCopy.text("consent.title"))
                 assertFalse(screen.has(AnalyticsCopy.text("consent.lastStep.label")))
                 screen.reveal(screen.tagged("consent-recorded"), margin = 120f)
@@ -205,12 +209,14 @@ class SessionDetailTest {
             val typing = home.waitFor("a typing row") { home.nodes().firstOrNull { "note · typing" in it.texts() } }
             home.reveal(typing, margin = 48f)
             assertTrue("the typing row is in view; it shows ${home.texts()}", inView(home, "note · typing"))
-            val cut = home.waitFor("the cut list") { home.texts().firstOrNull { "inserted: " in it && "… +" in it } }
-            assertTrue(cut, Regex("inserted: (\\S+ ){12}… \\+\\d+").containsMatchIn(cut))
-            home.reveal(home.text("note · blocks"), margin = 48f)
-            assertTrue("the splice's row is in view", inView(home, "note · blocks"))
+            // The long note's shape (a note open's, or a splice's inserted blocks), cut to "… +N".
+            val cut = home.waitFor("the cut list") { home.texts().firstOrNull { "… +" in it } }
+            assertTrue(cut, Regex("(shape|inserted): (\\S+ ){12}… \\+\\d+").containsMatchIn(cut))
+            home.reveal(home.text(cut), margin = 48f)
+            assertTrue("the cut row is in view", inView(home, cut))
+            assertTrue("the typing row is in view too", inView(home, "note · typing"))
             hold()
-            assertTrue(inView(home, "note · blocks"))
+            assertTrue(inView(home, cut))
             ProofShot.take()
         }
     }
@@ -230,7 +236,12 @@ class SessionDetailTest {
             val typed = until("input search") { stored().firstOrNull { it.kind == "input" && it.name == "search" } }
             assertEquals("""{"field":"query","chars":12}""", typed.text)
             assertFalse(stored().any { "garden" in it.text })
-            notebook.text("garden beans")
+            // The words stay in the field, on screen only.
+            notebook.waitFor("the words in the field") {
+                true.takeIf {
+                    notebook.tagged("searchField").config.getOrNull(SemanticsProperties.EditableText)?.text == "garden beans"
+                }
+            }
             hold()
             ProofShot.take()
         }
@@ -305,12 +316,16 @@ class SessionDetailTest {
                 }
                 val screen = OnScreen(scenario)
                 screen.tap("privacyAdvanced")
-                screen.reveal(screen.text("Usage Record"), margin = 40f)
-                screen.text("200,000")
+                // Keep at Most's field, its digits grouped, with its range and the space line.
+                val most = { screen.tagged("limit-events.max").config.getOrNull(SemanticsProperties.EditableText)?.text }
+                screen.reveal(screen.tagged("limit-events.max"), margin = 200f)
+                screen.waitFor("Keep at Most at 200,000") { true.takeIf { most() == "200,000" } }
                 screen.text("500–2,000,000 events")
-                screen.text("About 95 MB of events at most on this phone")
+                screen.reveal(screen.text("About 95 MB of events at most on this phone"), margin = 120f)
+                val range = screen.text("500–2,000,000 events").boundsInWindow
+                assertTrue("Keep at Most is in view", range.height > 0f && range.top >= 0f)
                 hold()
-                assertTrue(screen.has("200,000"))
+                assertEquals("200,000", most())
                 ProofShot.take()
             }
         }

@@ -440,7 +440,7 @@ class NoteEditorControllerTest {
                 val stored = harness.store.page(null, null, 10).sortedBy { it.seq }
                 assertEquals(listOf("note" to "typing"), stored.map { it.kind to it.name })
                 val ref = app.penmoss.analytics.AnalyticsRefs.refOf(key, "note", "n")
-                assertEquals("""{"block":3,"typed":12,"deleted":2,"note":"$ref"}""", stored.single().props)
+                assertEquals("""{"note":"$ref","block":3,"typed":12,"deleted":2}""", stored.single().props)
                 assertTrue(!stored.single().props.contains("\"n\""))
             } finally {
                 app.penmoss.analytics.Analytics.install(null)

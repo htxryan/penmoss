@@ -124,7 +124,8 @@ class AnalyticsService(
     fun recordWithRefs(kind: String, name: String, props: Map<String, Any?>, refs: Map<String, Pair<String, String?>>): Boolean {
         val key = state.value?.refKey?.takeIf(AnalyticsRefs.KEY::matches) ?: return false
         val named = refs.mapNotNull { (prop, ref) -> ref.second?.let { id -> prop to AnalyticsRefs.refOf(key, ref.first, id) } }.toMap()
-        return record(kind, name, props + named)
+        // The refs first, as the Mac's main writes them: what the event is about reads first.
+        return record(kind, name, named + props.filterKeys { it !in named })
     }
 
     private fun flushSoon(delayMs: Long) {
