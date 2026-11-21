@@ -107,6 +107,12 @@ async function checkCard(page: Page, title: string): Promise<void> {
   await expect(tip).toBeHidden();
   // Table: opens and closes under the chart.
   const toggle = card.getByRole('button', { name: `Table: ${title}` });
+  // Table and Download CSV are equal in the card's foot (PEN-182).
+  const tableBox = (await toggle.boundingBox())!;
+  const csvBox = (await card
+    .getByRole('button', { name: `Download CSV: ${title}` })
+    .boundingBox())!;
+  expect(Math.abs(tableBox.width - csvBox.width)).toBeLessThanOrEqual(1);
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   const table = card.getByRole('table');

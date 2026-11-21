@@ -104,7 +104,7 @@ test('links notes by id through [[ completion, follows renames, and lists backli
   await expect(linked.getByRole('link', { name: BETA })).toBeVisible();
   await expect(linked).toContainText(`See ${ALPHA} and the beta note today.`);
 
-  // Unlinked mentions: Beta mentions Gamma's title without linking it.
+  // Unlinked Mentions: Beta mentions Gamma's title without linking it.
   await openNote(page, GAMMA);
   await expect(page.getByTestId('unlinked-mentions').getByRole('link', { name: BETA })).toBeVisible(
     {

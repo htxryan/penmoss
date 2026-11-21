@@ -75,7 +75,7 @@ export function Backlinks(props: BacklinksProps) {
       </h2>
       {note ? <p className="bl-note">{note}</p> : null}
       <h3 className="bl-group">
-        Linked mentions <span className="bl-count">{count}</span>
+        Linked Mentions <span className="bl-count">{count}</span>
       </h3>
       {count === 0 ? (
         <p className="bl-empty">
@@ -104,7 +104,7 @@ export function Backlinks(props: BacklinksProps) {
         </ul>
       )}
       <h3 className="bl-group">
-        Unlinked mentions <span className="bl-count">{unlinked.length}</span>
+        Unlinked Mentions <span className="bl-count">{unlinked.length}</span>
       </h3>
       {unlinked.length === 0 ? (
         <p className="bl-empty">{loading ? '' : 'No other notes mention this title.'}</p>

@@ -473,6 +473,8 @@ function card(spec: CardSpec): HTMLElement {
     section.append(tools);
     return section;
   }
+  // Table and Download CSV fill the foot, equal, as a bar's controls do (PEN-182).
+  tools.classList.add('table-tools');
   const table = spec.table ?? { columns: [], rows: [] };
   const tableHolder = document.createElement('div');
   tableHolder.className = spec.tall ? 'table-holder tall' : 'table-holder';

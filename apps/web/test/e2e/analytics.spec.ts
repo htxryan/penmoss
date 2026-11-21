@@ -201,21 +201,17 @@ test.describe('an install with a notebook and no answer (ac8)', () => {
 test.describe('Settings → Privacy', () => {
   test.use({ analytics: { consent: 'no', events: 255 } });
 
-  test("sets Analytics Data in under Privacy, its icon under the start of Privacy's label", async ({
-    page,
-  }) => {
+  test('puts Analytics Data under Privacy, flush with the other entries', async ({ page }) => {
     await page.goto('/settings/privacy');
     const mac = nav(page).getByRole('group', { name: /This Mac/ });
     const privacy = mac.getByRole('link', { name: 'Privacy', exact: true });
     const data = mac.getByTestId('settings-privacy-data-entry');
     await expect(data).toBeVisible();
     await data.scrollIntoViewIfNeeded();
-    const label = (await privacy.locator('.bold-steady').boundingBox())!;
     const privacyIcon = (await privacy.locator('svg').boundingBox())!;
     const icon = (await data.locator('svg').boundingBox())!;
-    // Ryan's review of PEN-178: lined up with Privacy's label, not halfway to it.
-    expect(Math.abs(icon.x - label.x)).toBeLessThanOrEqual(1);
-    expect(icon.x).toBeGreaterThan(privacyIcon.x + privacyIcon.width);
+    // Ryan, 21 Nov 2026: flush with the other entries, its icon in their column.
+    expect(Math.abs(icon.x - privacyIcon.x)).toBeLessThanOrEqual(1);
     await holdForProof(page, 2000);
     await expect(data).toBeInViewport();
   });
@@ -654,6 +650,10 @@ test.describe('Analytics Data (ac36)', () => {
     const total = Number(/of (\d+)/.exec((await showing.textContent())!)![1]);
     expect(total).toBeGreaterThanOrEqual(255);
     await expect(data.getByRole('button', { name: 'Later' })).toBeDisabled();
+    // Later and Earlier are an equal pair (PEN-182).
+    const later = (await data.getByRole('button', { name: 'Later' }).boundingBox())!;
+    const earlier = (await data.getByRole('button', { name: 'Earlier' }).boundingBox())!;
+    expect(Math.abs(later.width - earlier.width)).toBeLessThanOrEqual(1);
 
     // Sent: a set nothing new joins while the test runs (new events wait to be sent).
     const sent = (await fake(page)).events.filter((event) => event.state === 'sent').length;

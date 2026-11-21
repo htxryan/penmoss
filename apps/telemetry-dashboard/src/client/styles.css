@@ -555,6 +555,15 @@ th.num {
   border-bottom-left-radius: 8px;
 }
 
+/* A card's Table and Download CSV: equal, filling the foot (docs/ux-conventions.md, PEN-182). */
+.table-tools > button {
+  flex: 1 1 0;
+}
+
+.table-tools > button:last-child {
+  border-right: 0;
+}
+
 .picker {
   display: flex;
   flex-wrap: wrap;

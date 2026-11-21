@@ -28,8 +28,8 @@ Penmoss keeps track of the note a link points to, not just its title. When you r
 
 The note panel's **Metadata** tab (⌘⌥⇧I) lists the notes that link to this one:
 
-- **Linked mentions:** notes with a link or an embed of this note; embeds are marked **Embeds**.
-- **Unlinked mentions:** notes that mention its title without a link.
+- **Linked Mentions:** notes with a link or an embed of this note; embeds are marked **Embeds**.
+- **Unlinked Mentions:** notes that mention its title without a link.
 
 ## The local graph
 

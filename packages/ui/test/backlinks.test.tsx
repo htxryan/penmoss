@@ -45,11 +45,11 @@ describe('Backlinks', () => {
       />,
     );
 
-    expect(html).toContain('Linked mentions <span class="bl-count">1</span>');
+    expect(html).toContain('Linked Mentions <span class="bl-count">1</span>');
     expect(html).toContain('Started the <mark>Garden plan</mark>');
     expect(html).toContain('<span class="bl-link">Seeds</span>');
     expect(html).toContain('href="/notes/a"');
-    expect(html).toContain('Unlinked mentions <span class="bl-count">1</span>');
+    expect(html).toContain('Unlinked Mentions <span class="bl-count">1</span>');
     expect(html).toContain('>Untitled</a>');
     expect(html).toContain('<mark>garden plan</mark>');
   });

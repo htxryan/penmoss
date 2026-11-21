@@ -45,8 +45,8 @@ describe('App', () => {
   it('shows the note’s backlinks beside it (T16)', () => {
     const html = render('/notes/01JB7Q3V6M8K2T9RZ4XN5C1HPD');
     expect(html).toContain('data-testid="backlinks"');
-    expect(html).toContain('Linked mentions');
-    expect(html).toContain('Unlinked mentions');
+    expect(html).toContain('Linked Mentions');
+    expect(html).toContain('Unlinked Mentions');
   });
 
   // T45 (D37, A710): a note in a window of its own.

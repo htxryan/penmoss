@@ -279,6 +279,17 @@ test.describe('in the Mac window, in Quanta with two notes', () => {
     await compact(page);
     await openNote(page, 'Alpha');
     const edge = page.getByTestId('sidebar-resizer');
+    // The resize strip stays inside the sidebar's box (PEN-182); its grip reaches past the edge.
+    const strip = await box(page, '[data-testid="sidebar-resizer"]');
+    const side = await box(page, '.sidebar');
+    expect(strip.x + strip.width).toBeLessThanOrEqual(side.x + side.width + 0.5);
+    const outside = { x: side.x + side.width + 2, y: strip.y + strip.height / 2 };
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('data-testid'),
+        outside,
+      ),
+    ).toBe('sidebar-resizer');
     await edge.focus();
     // The narrowest (Home), then a rem at a time up to 18rem.
     await page.keyboard.press('Home');
