@@ -258,15 +258,40 @@ test('a note’s shape and typing are recorded by ref, shown in Analytics Data; 
   await expect(typingRow.locator('td:nth-child(5)')).toHaveText(
     new RegExp(`^note: ${ref}, (block: \\d+|title: true), typed: \\d+, deleted: \\d+$`),
   );
-  // Each name whole on one line beside the long props, which wrap instead.
-  const lines = await rows.locator('td:nth-child(4)').evaluateAll((cells) =>
+  // Each name beside the long props, which wrap instead: session detail's names and every name of
+  // up to 29 characters whole on one line. Settings holds the table to 710 pixels, so a longer one
+  // (the first run's `firstrun.goal.start-a-new-notebook`) breaks, but only after a dot or a
+  // hyphen, never inside a word, and nothing scrolls sideways (as analytics.spec.ts on the web).
+  const names = await rows.locator('td:nth-child(4)').evaluateAll((cells) =>
     cells.map((cell) => {
-      const range = document.createRange();
-      range.selectNodeContents(cell);
-      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+      const text = cell.textContent ?? '';
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      const tops: number[] = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (let index = 0; index < (node.textContent ?? '').length; index += 1) {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          tops.push(Math.round(range.getBoundingClientRect().top));
+        }
+      }
+      const breaks = tops.flatMap((top, index) =>
+        index > 0 && top > tops[index - 1]! ? [text.slice(0, index)] : [],
+      );
+      return { text, breaks };
     }),
   );
-  expect(lines.filter((count) => count !== 1)).toEqual([]);
+  expect(names.length).toBeGreaterThan(5);
+  expect(names.filter(({ text, breaks }) => text.length <= 29 && breaks.length > 0)).toEqual([]);
+  expect(names.flatMap(({ breaks }) => breaks).filter((before) => !/[.-]$/.test(before))).toEqual(
+    [],
+  );
+  expect(
+    await data.evaluate((element) => {
+      const wrap = element.querySelector<HTMLElement>('.privacy-table-wrap')!;
+      return wrap.scrollWidth - wrap.clientWidth;
+    }),
+  ).toBe(0);
   await openRow.scrollIntoViewIfNeeded();
   await page.mouse.move(0, 0);
   await holdForProof(page);
