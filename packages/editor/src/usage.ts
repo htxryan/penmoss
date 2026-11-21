@@ -20,6 +20,11 @@
  *   with `remote: true`, and never move the cursor or the selection.
  * - The cursor and a non-empty selection settle through core's SettleGate (300 ms, at most one
  *   a second, a repeat dropped); a cursor moved by typing is marked, not recorded.
+ * - The shape is recorded once the note's content has loaded, never from the empty placeholder
+ *   an editor shows before it: a note whose text arrives after the editor mounts (the Mac reads
+ *   it from disk) waits for the first document that isn't the placeholder, and that change is
+ *   the open, not a splice. A note that is really empty is recorded as the person first edits it
+ *   (its open, then the edit), or as it closes.
  *
  * Only the blocks a keystroke touches are worked on: block counts are cached per node, and each
  * top-level block's tokens by node, so a 2,000-block note costs a keystroke well under 1 ms
@@ -298,6 +303,14 @@ interface Selected {
 const sameSelection = (a: Selected, b: Selected) =>
   a.block === b.block && a.chars === b.chars && a.span === b.span;
 
+/** Whether `doc` is the empty placeholder an editor shows before its note's content is in. */
+function isPlaceholder(doc: PMNode): boolean {
+  if (doc.childCount === 0) return true;
+  if (doc.childCount > 1) return false;
+  const only = doc.firstChild!;
+  return only.type.name === 'paragraph' && only.content.size === 0;
+}
+
 /** A burst's key: `l` (this editor) or `r` (remote), then the block's position, `-` past the cap, or `t` the title. */
 type BurstKey = string;
 
@@ -309,6 +322,8 @@ export class NoteUsage {
   private shown = 0;
   private prefix: number[] = [];
   private opened = false;
+  /** `open()` was called on the empty placeholder: how the open is sent once the content is in. */
+  private waiting: 'open' | 'switch' | null = null;
   private readonly typing: TypingGate<BurstKey>;
   private readonly cursor: SettleGate<CursorAt>;
   private readonly selection: SettleGate<Selected>;
@@ -365,18 +380,39 @@ export class NoteUsage {
     this.cursor.reset();
     this.selection.reset();
     this.opened = true;
+    const doc = this.editor.state.doc;
+    if (isPlaceholder(doc)) {
+      // Not loaded yet, or really empty: the first change, or the close, says which.
+      this.waiting = how;
+      this.tokens = blockTokens(doc);
+      this.prefix = prefixOf(doc);
+      this.shown = this.tokens.length;
+      return;
+    }
+    this.waiting = null;
     this.sendShape(how);
   }
 
-  private sendShape(how: 'open' | 'switch' | 'resync'): void {
-    const doc = this.editor.state.doc;
+  /** Sends the open that waits for the note's content, of `doc` (the editor's now by default). */
+  private sendWaiting(doc: PMNode = this.editor.state.doc, titleChars?: number): void {
+    const how = this.waiting;
+    if (!how) return;
+    this.waiting = null;
+    this.sendShape(how, doc, titleChars);
+  }
+
+  private sendShape(
+    how: 'open' | 'switch' | 'resync',
+    doc: PMNode = this.editor.state.doc,
+    titleChars = this.options.titleLength?.() ?? 0,
+  ): void {
     this.tokens = blockTokens(doc);
     this.prefix = prefixOf(doc);
     const { shape, more } = capShape(this.tokens);
     this.shown = shape.length;
     this.emit('open', {
       how,
-      titleChars: clampUsage('chars', this.options.titleLength?.() ?? 0),
+      titleChars: clampUsage('chars', titleChars),
       shape,
       ...(more ? { more: true } : {}),
     });
@@ -385,6 +421,8 @@ export class NoteUsage {
   /** The title changed from `before` to `after`, by typing here. */
   title(before: string, after: string): void {
     if (!this.opened) return;
+    // An edit here: the note is shown as it is, empty or not, from before this change.
+    this.sendWaiting(this.editor.state.doc, before.length);
     const { typed, deleted } = textChange(before, after);
     this.typing.add('lt', typed, deleted);
     this.cursor.mark('title');
@@ -392,7 +430,7 @@ export class NoteUsage {
 
   /** The caret went into the title. */
   titleFocused(): void {
-    if (this.opened) this.cursor.moved('title');
+    if (this.opened && !this.waiting) this.cursor.moved('title');
   }
 
   /** Sends what waits now: the note is switched away from, closes, or the page hides. */
@@ -402,8 +440,9 @@ export class NoteUsage {
     this.selection.flush();
   }
 
-  /** Stops listening; what waits is sent first. */
+  /** Stops listening; what waits is sent first, an empty note's open too. */
   destroy(): void {
+    this.sendWaiting();
     this.flush();
     this.cursor.stop();
     this.selection.stop();
@@ -418,6 +457,18 @@ export class NoteUsage {
   /** One dispatch's transactions, in order. */
   transactions(transactions: readonly Transaction[]): void {
     if (!this.opened) return;
+    if (this.waiting) {
+      const first = transactions.find((tr) => tr.docChanged);
+      // Only the caret moved in the placeholder: nothing to record until there is a note.
+      if (!first) return;
+      if (isRemoteTransaction(first)) {
+        // The note's content arrived (from disk, sync or another window): that is its open.
+        if (!isPlaceholder(this.editor.state.doc)) this.sendWaiting();
+        return;
+      }
+      // The person edits a note that is really empty: its open, then the edit.
+      this.sendWaiting(first.before);
+    }
     let docChanged = false;
     let local = false;
     for (const tr of transactions) {

@@ -1301,7 +1301,8 @@ export class EditorHost {
         open.usage = attachNoteUsage(editor, {
           record: (name, props: Props) =>
             this.post({ v: BRIDGE_VERSION, type: 'usage', noteId, name, props }),
-          titleLength: () => title.value.length,
+          // The note's own title, which the field may not show yet as the content arrives.
+          titleLength: () => readTitle(replica.doc).length,
           ...(this.usageClock ? { clock: this.usageClock } : {}),
         });
         cleanups.push(() => open.usage?.destroy());

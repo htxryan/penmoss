@@ -257,6 +257,117 @@ describe('remote changes (AC12)', () => {
   });
 });
 
+describe('the open waits for the note’s content (AC5)', () => {
+  /** An editor on an empty replica, as the Mac mounts one before the note's text is read from disk. */
+  function loadingEditor() {
+    const element = document.createElement('div');
+    document.body.append(element);
+    const here = createYjs14Replica();
+    const disk = createYjs14Replica();
+    const mine = createCollabEditor({ element, extensions: noteExtensions(), replica: here });
+    const stored = createCollabEditor({
+      element: document.createElement('div'),
+      extensions: noteExtensions(),
+      replica: disk,
+    });
+    stored.editor.commands.setContent({
+      type: 'doc',
+      content: [h(1, 'Seeds'), p('Row one'), p('Row two'), ul(li('beans'))],
+    });
+    disk.doc.get('title').insert(0, 'Garden');
+    const clock = new FakeClock();
+    const events: Recorded[] = [];
+    const usage = attachNoteUsage(mine.editor, {
+      record: (name, props: Props) => events.push({ name, props, at: clock.now() }),
+      titleLength: () => here.doc.get('title').toString().length,
+      clock,
+    });
+    const arrive = () =>
+      here.applyUpdate(disk.encodeStateAsUpdate(here.encodeStateVector()), 'pull');
+    const done = () => {
+      usage.destroy();
+      mine.destroy();
+      stored.destroy();
+      element.remove();
+    };
+    return { mine, usage, clock, events, arrive, done };
+  }
+
+  it('records the shape once the content arrives after mount, not the empty placeholder', () => {
+    const { mine, usage, clock, events, arrive, done } = loadingEditor();
+    usage.open('open');
+    // Mounted, the text not read yet: nothing, and a click in the blank editor records nothing.
+    const view = mine.editor.view;
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+    clock.advance(2000);
+    expect(events).toEqual([]);
+    arrive();
+    expect(events.map((event) => event.name)).toEqual(['open']);
+    expect(events[0]!.props).toEqual({
+      how: 'open',
+      titleChars: 6,
+      // The editor's trailing paragraph after a list is in the note too.
+      shape: ['h1:5', 'p:7', 'p:7', 'li.b.1:5', 'p:0'],
+    });
+    // From then on, typing and splices follow from that shape.
+    select(view, inside(view.state.doc, 1, 7));
+    type(view, '!!');
+    press(view, 'Enter');
+    clock.advance(2000);
+    expect(named(events, 'open')).toHaveLength(1);
+    expect(replay(events)).toEqual(blockTokens(view.state.doc));
+    expectValid(events);
+    done();
+  });
+
+  it('keeps how a tab switched to was shown', () => {
+    const { usage, events, arrive, done } = loadingEditor();
+    usage.open('switch');
+    arrive();
+    expect(named(events, 'open').map((event) => event.props['how'])).toEqual(['switch']);
+    done();
+  });
+
+  it('records a note that is really empty as the person first types in it, then the typing', () => {
+    const { collab, clock, events, usage } = usageEditor([p()]);
+    expect(events).toEqual([]);
+    const view = collab.editor.view;
+    select(view, 1);
+    type(view, 'abc');
+    clock.advance(1500);
+    expect(events.map((event) => event.name)).toEqual(['open', 'typing']);
+    expect(events[0]!.props).toEqual({ how: 'open', titleChars: 7, shape: ['p:0'] });
+    expect(events[1]!.props).toEqual({ block: 0, typed: 3, deleted: 0 });
+    expect(replay(events)).toEqual(blockTokens(view.state.doc));
+    usage.destroy();
+    expect(named(events, 'open')).toHaveLength(1);
+  });
+
+  it('records a new note’s open with the title as it was before its first character', () => {
+    const harness = usageEditor([p()]);
+    harness.usage.titleFocused();
+    harness.clock.advance(1000);
+    expect(harness.events).toEqual([]);
+    harness.title = 'G';
+    harness.usage.title('', 'G');
+    harness.clock.advance(1000);
+    expect(harness.events.map((event) => [event.name, event.props])).toEqual([
+      ['open', { how: 'open', titleChars: 0, shape: ['p:0'] }],
+      ['typing', { title: true, typed: 1, deleted: 0 }],
+    ]);
+  });
+
+  it('records an empty note shown and left untouched as it closes', () => {
+    const { events, usage } = usageEditor([p()]);
+    usage.flush();
+    expect(events).toEqual([]);
+    usage.destroy();
+    expect(events.map((event) => [event.name, event.props])).toEqual([
+      ['open', { how: 'open', titleChars: 7, shape: ['p:0'] }],
+    ]);
+  });
+});
+
 describe('limits and clamping (AC7, AC7b)', () => {
   it('resyncs when all of a 6,000-block note is deleted', () => {
     const blocks = Array.from({ length: 6000 }, (_, i) => p(`line ${i}`));

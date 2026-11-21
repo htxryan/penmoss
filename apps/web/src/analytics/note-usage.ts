@@ -1,13 +1,16 @@
 /**
  * Session detail for the note on screen (PEN-177): the editor's NoteUsage (`@penmoss/editor`)
  * while the note shows, recording `note open` (or `switch`, when a kept editor shows again in a
- * tab), typing bursts, splices, the cursor and the selection, and the title's typing. Each event
+ * tab), typing bursts, splices, the cursor and the selection, and the title's typing. The open
+ * waits for the note's content when the editor first shows the empty placeholder (the Mac reads
+ * a note from disk after the editor mounts): the editor's NoteUsage sends it then. Each event
  * names the note and its folder by their real ids in `refs`, which the Mac's main process swaps
  * for refs; no prop holds an id, a title or a word.
  */
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { attachNoteUsage, type NoteUsage } from '@penmoss/editor';
 import type { CollabEditor } from '@penmoss/editor/collab';
+import { readTitle } from '@penmoss/model/note';
 import { useWorkspaceState } from '../workspace/hooks';
 import { flushRecorded, record } from './record';
 
@@ -45,7 +48,8 @@ export function useNoteUsage(
             note: noteId,
             ...(folderRef.current ? { folder: folderRef.current } : {}),
           }),
-        titleLength: () => titleRef.current?.value.length ?? 0,
+        // The note's own title, which the field may not show yet as the content arrives.
+        titleLength: () => readTitle(collab.replica.doc).length,
       });
       usage.open(opened.has(collab) ? 'switch' : 'open');
       opened.add(collab);
