@@ -148,10 +148,7 @@ class WindowLayoutEventsTest {
 
     /** From All Notebooks: the gear, Privacy, View Analytics Data. */
     private fun analyticsData(screen: OnScreen) {
-        screen.tap("homeSettingsGear")
-        screen.tap("section-privacy")
-        screen.tap("privacyViewData")
-        screen.text(AnalyticsCopy.text("viewer.title"))
+        screen.openAnalyticsData()
     }
 
     /** Scrolls Analytics Data so [row]'s props sit halfway down, the newer rows above them in sight. */
