@@ -410,7 +410,8 @@
 
 /*
  * In a narrow window, the cells sit closer and the time goes over two lines, its date above, so
- * the row keeps its room and the table doesn't scroll sideways.
+ * the row keeps its room and the table doesn't scroll sideways. An event's state goes over two
+ * lines too ("Waiting / to Send"), since its chip is the widest of the short columns.
  */
 @container privacy-table (max-width: 600px) {
   .privacy-table th,
@@ -418,7 +419,8 @@
     padding-inline: 0.3rem;
   }
 
-  .privacy-table-time {
+  .privacy-table-time,
+  .privacy-table .chip.privacy-state {
     white-space: normal;
   }
 }
@@ -426,19 +428,16 @@
 /*
  * A name stays whole (PEN-177): its column is measured in its own font's characters, so a name
  * of up to 29 characters never breaks whatever the font (the Mac's is wider than a percentage
- * allows for), and only the props beside it wrap, however long they are. A longer name, or any
- * name in a narrow window, breaks only between its words, after a dot or a hyphen
- * (AnalyticsData.tsx), so the table doesn't scroll sideways.
+ * allows for), and only the props beside it wrap, however long they are. The column gives up
+ * those 30 characters as the table narrows: it is never wider than the table's own width less
+ * 30rem, the room the other columns need at their narrowest, so the columns always fit side by
+ * side. Below that a column is as wide as its longest word, and a longer name, or any name in a
+ * narrow table, breaks only between its words, after a dot or a hyphen (AnalyticsData.tsx), so
+ * the table never scrolls sideways.
  */
 .privacy-table-name {
-  width: 30ch;
+  width: min(30ch, calc(100cqi - 30rem));
   font-family: var(--pm-mono);
-}
-
-@container privacy-table (max-width: 680px) {
-  .privacy-table-name {
-    width: auto;
-  }
 }
 
 .privacy-table-props {
