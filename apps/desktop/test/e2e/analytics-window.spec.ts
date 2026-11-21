@@ -25,7 +25,8 @@ import {
 // records once it settles; a note window and Quick Capture record their own. Main's check takes
 // them, so they reach the endpoint with their props and nothing about the window's place (ac9).
 // The page's `app layout` goes with them (ac6), and Settings → Privacy → View Analytics Data
-// lists both: the full-screen pair, then the main, note and Quick Capture rows, where it ends.
+// lists both: the full-screen pair, the Quick Capture and main rows, then the note window's row
+// further down, where it ends.
 
 const mac = process.platform === 'darwin';
 const RUN = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -285,8 +286,8 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
   }
 
   // Settings → Privacy → View Analytics Data: the window and layout rows, as sent, the
-  // full-screen pair (ac3): on, and the off row recorded at once after it; then the newest main,
-  // note and Quick Capture rows, where it ends.
+  // full-screen pair (ac3): on, and the off row recorded at once after it; then the newest Quick
+  // Capture and main rows, and the note window's, scrolled to in turn, where it ends.
   await page.bringToFront();
   await go(page, '/settings/privacy');
   await page.getByRole('link', { name: /View Analytics Data/ }).click();
@@ -330,10 +331,41 @@ test('the Mac records each window’s size: as it shows, once a resize settles, 
   await expect(captureRow).toContainText('width');
   await expect(mainRow).toContainText(`width: ${mainWidth}`);
   await expect(noteRow).toContainText('width');
+  // Newest first: Quick Capture's, then the main window's, then the note window's further down,
+  // below the note's own session detail (its open, typing and cursor rows, PEN-177).
+  const indexOf = (which: string) =>
+    rows.evaluateAll(
+      (all, wanted) =>
+        all.findIndex(
+          (row) =>
+            row.textContent?.includes(`window: ${wanted}`) &&
+            row.textContent.includes('fullScreen'),
+        ),
+      which,
+    );
+  const [captureAt, mainAt, noteAt] = [
+    await indexOf('capture'),
+    await indexOf('main'),
+    await indexOf('note'),
+  ];
+  expect(captureAt).toBeGreaterThanOrEqual(0);
+  expect(mainAt).toBeGreaterThan(captureAt);
+  expect(noteAt).toBeGreaterThan(mainAt);
+  // The table fits the window: nothing scrolls sideways, however long a name is.
+  expect(
+    await data.evaluate((element) => {
+      const wrap = element.querySelector<HTMLElement>('.privacy-table-wrap')!;
+      return wrap.scrollWidth - wrap.clientWidth;
+    }),
+  ).toBe(0);
   await mainRow.evaluate((row) => row.scrollIntoView({ block: 'center' }));
   await page.mouse.move(0, 0);
   await holdForProof(page);
   await expect(captureRow).toBeInViewport();
   await expect(mainRow).toBeInViewport();
+  // Then the note window's row, scrolled to and held, where it ends.
+  await noteRow.evaluate((row) => row.scrollIntoView({ block: 'center' }));
+  await page.mouse.move(0, 0);
+  await holdForProof(page);
   await expect(noteRow).toBeInViewport();
 });

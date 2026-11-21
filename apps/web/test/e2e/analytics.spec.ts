@@ -454,7 +454,9 @@ test.describe('Analytics Data (ac36)', () => {
     permissions: ['clipboard-read', 'clipboard-write'],
   });
 
-  test('keeps each name whole beside long props, which wrap (PEN-177)', async ({ page }) => {
+  test('keeps each name whole beside long props, which wrap, and never scrolls sideways (PEN-177)', async ({
+    page,
+  }) => {
     const errors = collectErrors(page);
     await page.setViewportSize({ width: 1100, height: 720 });
     await page.goto('/settings/privacy/data');
@@ -480,6 +482,19 @@ test.describe('Analytics Data (ac36)', () => {
             at,
           },
           { kind: 'tree', name: 'collapse', props: { folder: ref, depth: 2, source: 'key' }, at },
+          {
+            kind: 'click',
+            name: 'privacy.data.filter-client',
+            props: { source: 'pointer' },
+            at,
+          },
+          // The catalogue's longest name, which can only break between its words.
+          {
+            kind: 'click',
+            name: 'settings.git-notebooks.signing-key.new-ed25519',
+            props: { source: 'pointer' },
+            at,
+          },
           {
             kind: 'note',
             name: 'open',
@@ -508,9 +523,55 @@ test.describe('Analytics Data (ac36)', () => {
           return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
         }),
       );
+    /** Where a cell's text breaks onto its next line: the text before each break. */
+    const breaksOf = (cell: Locator) =>
+      cell.evaluate((element) => {
+        const text = element.textContent ?? '';
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const tops: number[] = [];
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          for (let index = 0; index < (node.textContent ?? '').length; index += 1) {
+            const range = document.createRange();
+            range.setStart(node, index);
+            range.setEnd(node, index + 1);
+            tops.push(Math.round(range.getBoundingClientRect().top));
+          }
+        }
+        return tops.flatMap((top, index) =>
+          index > 0 && top > tops[index - 1]! ? [text.slice(0, index)] : [],
+        );
+      });
+    const longest = rows
+      .filter({ hasText: 'settings.git-notebooks.signing-key.new-ed25519' })
+      .locator('td:nth-child(4)');
+    const whole = rows.filter({ hasText: 'privacy.data.filter-client' }).locator('td:nth-child(4)');
+    // At every width the Mac's window takes, from its narrowest (480) up: nothing scrolls sideways,
+    // and a name breaks, if it must, only after a dot or a hyphen, never inside a word.
+    for (const width of [480, 560, 640, 720, 800, 900, 1000, 1100, 1200, 1280]) {
+      await page.setViewportSize({ width, height: 720 });
+      const sideways = await data.evaluate((element) => {
+        const wrap = element.querySelector<HTMLElement>('.privacy-table-wrap')!;
+        const root = document.documentElement;
+        return {
+          table: wrap.scrollWidth - wrap.clientWidth,
+          page: root.scrollWidth - root.clientWidth,
+        };
+      });
+      expect({ width, ...sideways }).toEqual({ width, table: 0, page: 0 });
+      for (const cell of [longest, whole]) {
+        for (const before of await breaksOf(cell)) expect(before).toMatch(/[.-]$/);
+      }
+    }
+    // At the proof's width, every name of up to 29 characters is whole on one line; the longest
+    // breaks between its words.
+    await page.setViewportSize({ width: 1100, height: 720 });
+    await expect(whole).toHaveText('privacy.data.filter-client');
+    expect(await linesOf(whole)).toEqual([1]);
+    expect((await breaksOf(longest)).length).toBeGreaterThan(0);
+    const nameTexts = await rows.locator('td:nth-child(4)').allTextContents();
     const names = await linesOf(rows.locator('td:nth-child(4)'));
-    expect(names.length).toBeGreaterThanOrEqual(4);
-    expect(names.every((lines) => lines === 1)).toBe(true);
+    expect(names.length).toBeGreaterThanOrEqual(5);
+    expect(nameTexts.filter((name, index) => name.length <= 29 && names[index] !== 1)).toEqual([]);
     await expect(open.locator('td:nth-child(4)')).toHaveText('open');
     // The props beside it wrap instead.
     const [props] = await linesOf(open.locator('td:nth-child(5)'));

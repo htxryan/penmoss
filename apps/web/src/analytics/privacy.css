@@ -373,6 +373,7 @@
 .privacy-table-wrap {
   margin-top: 1rem;
   overflow-x: auto;
+  container: privacy-table / inline-size;
   border: 1px solid var(--pm-border);
   background: var(--pm-raised);
 }
@@ -407,10 +408,30 @@
   white-space: nowrap;
 }
 
-/* A name stays whole (PEN-177): only the props beside it wrap, however long they are. */
+/*
+ * In a narrow window, the cells sit closer and the time goes over two lines, its date above, so
+ * the row keeps its room and the table doesn't scroll sideways.
+ */
+@container privacy-table (max-width: 600px) {
+  .privacy-table th,
+  .privacy-table td {
+    padding-inline: 0.3rem;
+  }
+
+  .privacy-table-time {
+    white-space: normal;
+  }
+}
+
+/*
+ * A name stays whole (PEN-177): its column takes a fair share of the row, so a name of up to
+ * about 29 characters never breaks, and only the props beside it wrap, however long they are. A
+ * longer name, or any name in a narrow window, breaks only between its words, after a dot or a
+ * hyphen (AnalyticsData.tsx), so the table doesn't scroll sideways.
+ */
 .privacy-table-name {
+  width: 30%;
   font-family: var(--pm-mono);
-  white-space: nowrap;
 }
 
 .privacy-table-props {
