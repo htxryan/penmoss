@@ -1,5 +1,10 @@
 package app.penmoss.ui.folders
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
@@ -593,13 +598,17 @@ internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
         }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null, 0))
+        // Left however it is (its Back, the system Back or a predictive back): `tree collapse`.
+        val leaving = folderId?.let { rememberFolderLeaving(nav, entry, it, contents.depth) }
         FolderScreen(
             title = contents.name,
             folders = contents.folders,
             notes = contents.notes,
             // Where in the tree (PEN-177): this folder is at its depth, what it holds one deeper.
             onBack = {
-                if (folderId != null) TreeEvents.collapse(folderId, contents.depth)
+                if (entry.lifecycle.currentState == Lifecycle.State.RESUMED && nav.currentBackStackEntry == entry) {
+                    leaving?.byBar = true
+                }
                 nav.leave(entry)
             },
             onFolder = {
@@ -630,6 +639,42 @@ internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
 }
 
 /** A folder's screen: its name, rows, sort order and path from the top (T40 P4). */
+/** A folder page being watched for its leaving (PEN-177): where it is, and whether its own Back left it. */
+private class FolderLeaving(val folderId: String, var depth: Int) {
+    /** Its top bar's Back was tapped (`click`); otherwise the system Back left it (`key`). */
+    var byBar = false
+}
+
+/** The folder pages watched, by their entry; an entry gone is let go with it. */
+private val watchedFolders = java.util.WeakHashMap<NavBackStackEntry, FolderLeaving>()
+
+/**
+ * Records `tree collapse` for the folder page [entry] once it is left, however it is left
+ * (PEN-177): its top bar's Back (`click`), or the system Back, its gesture or a predictive back
+ * once it commits (`key`). The page is left when its entry is destroyed while no longer on the
+ * back stack: a page opened over it keeps it there, and the activity going (a rotation) destroys
+ * it while still on the stack, so neither is a collapse.
+ */
+@Composable
+private fun rememberFolderLeaving(nav: NavController, entry: NavBackStackEntry, folderId: String, depth: Int): FolderLeaving {
+    val leaving = remember(entry) {
+        watchedFolders.getOrPut(entry) {
+            val watch = FolderLeaving(folderId, depth)
+            entry.lifecycle.addObserver(object : LifecycleEventObserver {
+                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                    if (event != Lifecycle.Event.ON_DESTROY) return
+                    source.lifecycle.removeObserver(this)
+                    if (nav.currentBackStack.value.any { it.id == entry.id }) return
+                    TreeEvents.collapse(watch.folderId, watch.depth, if (watch.byBar) "click" else "key")
+                }
+            })
+            watch
+        }
+    }
+    leaving.depth = depth
+    return leaving
+}
+
 private data class FolderView(
     val name: String,
     val folders: List<FolderItem>,

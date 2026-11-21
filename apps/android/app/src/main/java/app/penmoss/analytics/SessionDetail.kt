@@ -133,10 +133,11 @@ object AnalyticsRefs {
 }
 
 /**
- * The notes list's folder tree (PEN-177), as the Mac's sidebar tree records it: a folder opened
- * (`tree expand`) or left by its Back (`tree collapse`), and a note opened from it (`tree open`),
- * each by ref and depth (0 for the notebook's top level), with how. The rows' own clicks
- * (`note-list.folder`, …) stay; these say where in the tree it was.
+ * The notes list's folder tree (PEN-177), as the Mac's sidebar tree records it: a folder's page
+ * opened from the notes list (`tree expand`), that page left however it is left (`tree collapse`:
+ * its top bar's Back is `click`, the system Back, its gesture or a predictive back is `key`), and a
+ * note opened from the list (`tree open`), each by ref and depth (0 for the notebook's top level).
+ * The rows' own clicks (`note-list.folder`, …) stay; these say where in the tree it was.
  */
 object TreeEvents {
     fun expand(folderId: String, depth: Int, source: String = "click"): Boolean = folder("expand", folderId, depth, source)

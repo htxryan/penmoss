@@ -60,7 +60,8 @@ import java.util.concurrent.TimeUnit
  *   blocks` (AC5); typing records `note typing` bursts with counts only (AC8); both by the note's
  *   ref, 16 hex characters, never its id, title or path (AC1, AC2).
  * - Search records the length typed in it, never the words (AC14).
- * - The notes list's tree records a folder opened and left, and a note opened from it, by refs (AC15).
+ * - The notes list's tree records a folder opened and left (by its Back or the system Back), and a
+ *   note opened from it, by refs; Analytics Data shows the rows (AC15).
  * - Analytics Data shows the new rows as key: value, a long list cut to "… +N" (AC21); Advanced's
  *   Keep at Most reads "200,000" (AC16); Delete My Shared Data asks first (AC23).
  *
@@ -269,19 +270,36 @@ class SessionDetailTest {
             until("the notebook's notes") { tag(home, "homeMenu") }
             val key = runBlocking { analytics.stateNow().refKey }
 
-            // The folder opened from the list, then left by its Back.
-            val folder = home.waitFor("the folder's row") { home.nodes().firstOrNull { FOLDER in it.texts() } }
-            home.reveal(folder, margin = 200f)
-            home.tap(home.text(FOLDER))
-            val expand = until("tree expand") { stored().firstOrNull { it.kind == "tree" && it.name == "expand" } }
+            // The folder opened from the list, then left by its top bar's Back.
+            val openFolder = {
+                until("the notebook's notes") { tag(home, "homeMenu") }
+                val folder = home.waitFor("the folder's row") { home.nodes().firstOrNull { FOLDER in it.texts() } }
+                home.reveal(folder, margin = 200f)
+                home.tap(home.text(FOLDER))
+            }
+            val trees = { name: String -> stored().filter { it.kind == "tree" && it.name == name } }
+            openFolder()
+            val expand = until("tree expand") { trees("expand").firstOrNull() }
             assertEquals(AnalyticsRefs.refOf(key, "folder", folderId), expand.props.getValue("folder").jsonPrimitive.content)
             assertEquals(0, expand.props.getValue("depth").jsonPrimitive.int)
             assertEquals("click", expand.props.getValue("source").jsonPrimitive.content)
             SystemClock.sleep(1_500)
-            val back = home.waitFor("Back") { home.nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Back") == true } }
-            home.tap(back)
-            val collapse = until("tree collapse") { stored().firstOrNull { it.kind == "tree" && it.name == "collapse" } }
+            val bar = home.waitFor("Back") { home.nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Back") == true } }
+            home.tap(bar)
+            val collapse = until("tree collapse") { trees("collapse").firstOrNull() }
             assertEquals(expand.props.getValue("folder"), collapse.props.getValue("folder"))
+            assertEquals(0, collapse.props.getValue("depth").jsonPrimitive.int)
+            assertEquals("click", collapse.props.getValue("source").jsonPrimitive.content)
+
+            // Opened again, then left by the system Back: a collapse too, by `key`.
+            openFolder()
+            until("tree expand again") { trees("expand").getOrNull(1) }
+            SystemClock.sleep(1_500)
+            back()
+            val leftByBack = until("tree collapse by the system Back") { trees("collapse").getOrNull(1) }
+            assertEquals(expand.props.getValue("folder"), leftByBack.props.getValue("folder"))
+            assertEquals("key", leftByBack.props.getValue("source").jsonPrimitive.content)
+            assertEquals("one collapse each time it was left", 2, trees("collapse").size)
 
             // The note opened from the list, at the top level: no folder.
             until("the notebook's notes again") { tag(home, "homeMenu") }
@@ -294,7 +312,22 @@ class SessionDetailTest {
             assertEquals(0, open.props.getValue("depth").jsonPrimitive.int)
             for (event in stored()) assertFalse(event.text, event.text.contains(folderId) || event.text.contains(FOLDER) || event.text.contains(noteId))
             until("the note open") { editorPage() }
+            SystemClock.sleep(1_500)
+
+            // Analytics Data: the tree's open, collapse and expand rows, newest first, on screen.
+            smallerText()
+            context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            val viewer = OnScreen.inFront()
+            viewer.tap("homeSettingsGear")
+            viewer.tap("section-privacy")
+            viewer.tap("privacyViewData")
+            viewer.text(AnalyticsCopy.text("viewer.title"))
+            val rows = listOf("tree · open", "tree · collapse", "tree · expand")
+            val newest = seek(viewer, "tree · open")
+            viewer.reveal(newest, margin = 48f)
+            viewer.waitFor("the tree's rows in view") { true.takeIf { rows.all { inView(viewer, it) } } }
             hold()
+            for (row in rows) assertTrue("$row is in view; it shows ${viewer.texts()}", inView(viewer, row))
             ProofShot.take()
         }
     }
@@ -316,16 +349,20 @@ class SessionDetailTest {
                 }
                 val screen = OnScreen(scenario)
                 screen.tap("privacyAdvanced")
-                // Keep at Most's field, its digits grouped, with its range and the space line.
+                // Keep at Most's field, its digits grouped, with its range and the space line below
+                // it: the field brought a little under the top bar, so all three show whole.
                 val most = { screen.tagged("limit-events.max").config.getOrNull(SemanticsProperties.EditableText)?.text }
-                screen.reveal(screen.tagged("limit-events.max"), margin = 200f)
                 screen.waitFor("Keep at Most at 200,000") { true.takeIf { most() == "200,000" } }
-                screen.text("500–2,000,000 events")
-                screen.reveal(screen.text("About 95 MB of events at most on this phone"), margin = 120f)
-                val range = screen.text("500–2,000,000 events").boundsInWindow
-                assertTrue("Keep at Most is in view", range.height > 0f && range.top >= 0f)
+                screen.reveal(screen.tagged("limit-events.max"), margin = 160f)
+                val space = "About 95 MB of events at most on this phone"
+                val whole = {
+                    listOf(screen.tagged("limit-events.max"), screen.text("500–2,000,000 events"), screen.text(space))
+                        .all { shownWhole(screen, it) }
+                }
+                screen.waitFor("Keep at Most, its range and the space line, whole below the top bar") { true.takeIf { whole() } }
                 hold()
                 assertEquals("200,000", most())
+                assertTrue("still whole below the top bar", whole())
                 ProofShot.take()
             }
         }
@@ -467,6 +504,29 @@ class SessionDetailTest {
         val node = screen.nodes().firstOrNull { text in it.texts() } ?: return false
         val at = node.boundsInWindow
         return at.height > 0f && at.top >= list.top && at.bottom <= list.bottom
+    }
+
+    /**
+     * The row [text] in Analytics Data's list, a page down at a time: the list makes only the rows
+     * on screen, so a row further down is found by bringing the lowest one shown to the top.
+     */
+    private fun seek(screen: OnScreen, text: String): SemanticsNode {
+        repeat(40) {
+            screen.nodes().firstOrNull { text in it.texts() }?.let { return it }
+            val list = tag(screen, "viewerList")?.boundsInWindow ?: return@repeat
+            val lowest = screen.nodes()
+                .filter { it.texts().isNotEmpty() && it.boundsInWindow.height > 0f && it.boundsInWindow.top >= list.top && it.boundsInWindow.bottom <= list.bottom }
+                .maxByOrNull { it.boundsInWindow.top }
+            if (lowest != null) screen.reveal(lowest, margin = 0f) else SystemClock.sleep(300)
+        }
+        return screen.waitFor("the row $text") { screen.nodes().firstOrNull { text in it.texts() } }
+    }
+
+    /** Whether [node] shows whole on screen: below the page's top bar, and not cut at the bottom. */
+    private fun shownWhole(screen: OnScreen, node: SemanticsNode): Boolean {
+        val bar = tag(screen, "sectionTopBar")?.boundsInWindow?.bottom ?: 0f
+        val at = node.boundsInWindow
+        return at.height > 0f && at.height >= node.size.height - 1f && at.top >= bar
     }
 
     /** The system's font size before [smallerText], put back after each test. */
