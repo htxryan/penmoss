@@ -57,7 +57,14 @@ class AnalyticsService(
 ) {
     val session: String = AnalyticsFormat.newSessionId()
     private val seq = AtomicLong(0)
-    private val buffer = ArrayList<AnalyticsEvent>()
+    private val buffer = ArrayList<Buffered>()
+
+    /**
+     * An event waiting to be stored, with the notes and folders it names that still want their refs
+     * (PEN-177): recorded before the answer was read, so before the key was known. Their props
+     * hold [PLACEHOLDER_REF] until [flush] reads the key.
+     */
+    private class Buffered(val event: AnalyticsEvent, val refs: Map<String, Pair<String, String>> = emptyMap())
     private val flushing = Mutex()
     private val sending = Mutex()
     private var flushJob: Job? = null
@@ -81,7 +88,14 @@ class AnalyticsService(
     suspend fun stateNow(): ConsentState = state.filterNotNull().first()
 
     /** Records one event; false when it was dropped. */
-    fun record(kind: String, name: String, props: Map<String, Any?> = emptyMap()): Boolean = try {
+    fun record(kind: String, name: String, props: Map<String, Any?> = emptyMap()): Boolean = keep(kind, name, props, emptyMap())
+
+    /**
+     * Checks and buffers one event. [refs] are the props still to be named by their refs at
+     * [flush]: their values in [props] are [PLACEHOLDER_REF], so the catalogue checks the event as
+     * it will be stored.
+     */
+    private fun keep(kind: String, name: String, props: Map<String, Any?>, refs: Map<String, Pair<String, String>>): Boolean = try {
         val client = fields()
         val json = JsonObject(props.mapNotNull { (key, value) -> jsonOf(value)?.let { key to it } }.toMap())
         val draft = AnalyticsEvent(
@@ -106,7 +120,7 @@ class AnalyticsService(
         } else {
             val size = synchronized(buffer) {
                 // seq rises in the order events are kept.
-                buffer += draft.copy(seq = seq.getAndIncrement())
+                buffer += Buffered(draft.copy(seq = seq.getAndIncrement()), refs)
                 buffer.size
             }
             if (size >= FLUSH_AT) flushSoon(0) else flushSoon(FLUSH_MS)
@@ -118,14 +132,23 @@ class AnalyticsService(
 
     /**
      * Records an event of session detail (PEN-177) naming notes or folders: each of [refs] (a prop,
-     * to its type and real id) is recorded as its ref under this install's key, never the id. Dropped
-     * while the answer is not read yet, so no event goes without its refs.
+     * to its type and real id) is recorded as its ref under this install's key, never the id. One
+     * recorded before the answer is read (the key with it) is buffered like any other, and named
+     * when it is stored: none is dropped for want of its key, so a replay never misses a step.
      */
     fun recordWithRefs(kind: String, name: String, props: Map<String, Any?>, refs: Map<String, Pair<String, String?>>): Boolean {
-        val key = state.value?.refKey?.takeIf(AnalyticsRefs.KEY::matches) ?: return false
-        val named = refs.mapNotNull { (prop, ref) -> ref.second?.let { id -> prop to AnalyticsRefs.refOf(key, ref.first, id) } }.toMap()
+        val wanted = refs.mapNotNull { (prop, ref) -> ref.second?.let { id -> prop to (ref.first to id) } }.toMap()
+        val key = state.value?.refKey?.takeIf(AnalyticsRefs.KEY::matches)
+        val named = wanted.mapValues { (_, ref) -> if (key == null) PLACEHOLDER_REF else AnalyticsRefs.refOf(key, ref.first, ref.second) }
         // The refs first, as the Mac's main writes them: what the event is about reads first.
-        return record(kind, name, named + props.filterKeys { it !in named })
+        return keep(kind, name, named + props.filterKeys { it !in named }, if (key == null) wanted else emptyMap())
+    }
+
+    /** [event] with each of [refs] named by its ref under [key]. */
+    private fun named(event: AnalyticsEvent, refs: Map<String, Pair<String, String>>, key: String): AnalyticsEvent {
+        if (refs.isEmpty()) return event
+        val props = JsonObject(event.props.mapValues { (prop, value) -> refs[prop]?.let { JsonPrimitive(AnalyticsRefs.refOf(key, it.first, it.second)) } ?: value })
+        return event.copy(props = props)
     }
 
     private fun flushSoon(delayMs: Long) {
@@ -143,8 +166,11 @@ class AnalyticsService(
         flushing.withLock {
             val taken = synchronized(buffer) { buffer.toList().also { buffer.clear() } }
             if (taken.isEmpty()) return
-            val state = stateNow().stateNow
-            store.insert(taken.map { it to state })
+            val read = stateNow()
+            val state = read.stateNow
+            // The answer is read, and the key with it (ConsentStore makes it with the ID).
+            val key = if (taken.any { it.refs.isNotEmpty() }) read.refKey.takeIf(AnalyticsRefs.KEY::matches) ?: consent.now().refKey else ""
+            store.insert(taken.map { named(it.event, it.refs, key) to state })
             if (state == EventState.WAITING && (store.counts()[EventState.WAITING] ?: 0) >= AnalyticsFormat.SEND_AT_WAITING) schedule(0)
         }
     }
@@ -259,6 +285,9 @@ class AnalyticsService(
 
     companion object {
         const val FLUSH_MS = 1_000L
+
+        /** A ref's stand-in while the key is not read yet; never stored. */
+        private const val PLACEHOLDER_REF = "0000000000000000"
         const val FLUSH_AT = 100
         const val PRUNE_EVERY_MS = 60 * 60_000L
         private const val MAX_BATCHES_PER_RUN = 50

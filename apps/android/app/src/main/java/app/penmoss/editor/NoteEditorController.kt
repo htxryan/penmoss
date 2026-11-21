@@ -254,6 +254,20 @@ class NoteEditorController(
     private var opened = false
     private var openStarted = false
 
+    /**
+     * Whether the note screen is resumed, so the note is on screen (PEN-177): what the page says
+     * of its usage (session detail and its scroll) is recorded only then. A page made again while
+     * the screen is behind another (its activity re-made for a change of font size behind
+     * Settings) would otherwise record an open and a cursor for a note no one sees.
+     */
+    private var screenShown = false
+
+    /** The screen was shown at least once: what the page sends as it goes (its last bursts) is kept. */
+    private var everShown = false
+
+    /** The page's usage while the screen is not shown, oldest first: recorded once it is. */
+    private val heldUsage = ArrayList<FromEditor>()
+
     /** Between reading the stored content and sending it: exchanges meanwhile are held (S7). */
     private var opening = false
 
@@ -541,19 +555,10 @@ class NoteEditorController(
             // A key for one of the app's commands (T40 P9): only those the screen said it runs.
             // How far down the note is (PEN-175): only for the note shown, checked by the bridge
             // and again by the catalogue; nothing else about the note goes with it.
-            is FromEditor.Scroll -> if (message.noteId == noteId) {
-                Analytics.record("scroll", "note", ScrollEvents.propsOf(message.position))
-            }
+            is FromEditor.Scroll -> if (message.noteId == noteId) usage(message)
             // Session detail (PEN-177): the page's note event, for the note shown only, with the
             // note's and its folder's refs, which only the app can make; the catalogue checks it.
-            is FromEditor.Usage -> if (message.noteId == noteId) {
-                app.penmoss.analytics.Analytics.recordWithRefs(
-                    "note",
-                    message.name,
-                    message.props,
-                    mapOf("note" to ("note" to noteId), "folder" to ("folder" to usageFolder)),
-                )
-            }
+            is FromEditor.Usage -> if (message.noteId == noteId) usage(message)
             is FromEditor.Command -> if (keys?.app?.contains(message.id) == true && (message.noteId == null || message.noteId == noteId)) {
                 onCommand(message.id)
             }
@@ -719,6 +724,62 @@ class NoteEditorController(
         _notices.tryEmit(message)
     }
 
+    /**
+     * The note screen was resumed ([shown]) or paused (PEN-177). Once shown, the usage the page
+     * sent meanwhile is recorded, in order.
+     */
+    fun screenShown(shown: Boolean) {
+        val release = synchronized(heldUsage) {
+            screenShown = shown
+            if (!shown) return
+            everShown = true
+            heldUsage.toList().also { heldUsage.clear() }
+        }
+        release.forEach(::recordUsage)
+    }
+
+    /** The page's usage: recorded while the screen is shown, held otherwise. */
+    private fun usage(message: FromEditor) {
+        synchronized(heldUsage) {
+            if (!screenShown) {
+                // A note open starts the note's shape again: what came before it is moot.
+                if (message is FromEditor.Usage && message.name == "open") heldUsage.clear()
+                if (heldUsage.size >= MAX_HELD_USAGE) heldUsage.removeAt(0)
+                heldUsage += message
+                return
+            }
+        }
+        recordUsage(message)
+    }
+
+    private fun recordUsage(message: FromEditor) {
+        when (message) {
+            is FromEditor.Scroll -> Analytics.record("scroll", "note", ScrollEvents.propsOf(message.position))
+            is FromEditor.Usage -> Analytics.recordWithRefs(
+                "note",
+                message.name,
+                message.props,
+                mapOf("note" to ("note" to noteId), "folder" to ("folder" to usageFolder)),
+            )
+            else -> Unit
+        }
+    }
+
+    /**
+     * The screen goes: a page that was shown sends its last bursts as it closes, kept so the
+     * replay adds up; one never shown (made again behind another screen) recorded nothing, and
+     * what it held goes.
+     */
+    private fun endUsage() {
+        val release = synchronized(heldUsage) {
+            val held = if (everShown) heldUsage.toList() else emptyList()
+            heldUsage.clear()
+            screenShown = false
+            held
+        }
+        release.forEach(::recordUsage)
+    }
+
     /** The app is pausing: have the page send the edits it is batching. */
     fun flush() {
         if (opened) send(BridgeProtocol.encode(ToEditor.Flush(noteId)))
@@ -770,6 +831,7 @@ class NoteEditorController(
         pageAlive = false
         jobs.forEach { it.cancel() }
         publishHeld()
+        endUsage()
     }
 
     /** The editor's renderer crashed or was killed: the stored edits are safe; the page is not. */
@@ -960,6 +1022,9 @@ class NoteEditorController(
         /** Far longer than the page takes to make a period's note, even on a slow phone. */
         const val PERIODIC_WAIT_MS = 20_000L
         const val CLOSE_TIMEOUT_MS = 1_000L
+
+        /** The most usage held while the screen is not shown (PEN-177); the oldest goes first. */
+        private const val MAX_HELD_USAGE = 1_000
 
         /** Between quiescence checks while waiting for a flush to be stored. */
         const val FLUSH_QUIET_MS = 50L

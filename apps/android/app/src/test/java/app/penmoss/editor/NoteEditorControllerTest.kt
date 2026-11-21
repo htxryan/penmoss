@@ -400,6 +400,7 @@ class NoteEditorControllerTest {
             app.penmoss.analytics.Analytics.install(harness.service)
             try {
                 val controller = controller()
+                controller.screenShown(true)
                 page(controller, FromEditor.Scroll("n", 0.42))
                 page(controller, FromEditor.Scroll("other-note", 0.9))
                 page(controller, FromEditor.Scroll("n", 1.0))
@@ -426,6 +427,7 @@ class NoteEditorControllerTest {
             try {
                 val key = harness.service.stateNow().refKey
                 val controller = controller()
+                controller.screenShown(true)
                 val props = kotlinx.serialization.json.buildJsonObject {
                     put("block", kotlinx.serialization.json.JsonPrimitive(3))
                     put("typed", kotlinx.serialization.json.JsonPrimitive(12))
@@ -442,6 +444,59 @@ class NoteEditorControllerTest {
                 val ref = app.penmoss.analytics.AnalyticsRefs.refOf(key, "note", "n")
                 assertEquals("""{"note":"$ref","block":3,"typed":12,"deleted":2}""", stored.single().props)
                 assertTrue(!stored.single().props.contains("\"n\""))
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
+    /**
+     * PEN-177: the page's usage is recorded only while the note screen is shown. A page made again
+     * behind another screen (its activity re-made for a change of font size behind Settings)
+     * records no open or cursor; it is held, recorded once the screen is shown, and dropped if the
+     * screen goes without ever being shown.
+     */
+    @Test
+    fun recordsTheNotesUsageOnlyWhileItsScreenIsShown() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                val open = kotlinx.serialization.json.buildJsonObject {
+                    put("how", kotlinx.serialization.json.JsonPrimitive("open"))
+                    put("titleChars", kotlinx.serialization.json.JsonPrimitive(5))
+                    put("shape", kotlinx.serialization.json.JsonArray(listOf(kotlinx.serialization.json.JsonPrimitive("p:12"))))
+                }
+                val cursor = kotlinx.serialization.json.buildJsonObject { put("block", kotlinx.serialization.json.JsonPrimitive(0)) }
+                val stored = suspend {
+                    harness.service.flush()
+                    harness.store.page(null, null, 50).sortedBy { it.seq }.map { it.kind to it.name }
+                }
+
+                // Made behind Settings, never shown, then gone: nothing recorded.
+                val behind = controller()
+                page(behind, FromEditor.Usage("n", "open", open))
+                page(behind, FromEditor.Usage("n", "cursor", cursor))
+                page(behind, FromEditor.Scroll("n", 0.5))
+                assertEquals(emptyList<Pair<String, String>>(), stored())
+                behind.close()
+                assertEquals(emptyList<Pair<String, String>>(), stored())
+
+                // Made behind it, then shown: the open and the cursor once it shows, in order.
+                val later = controller()
+                page(later, FromEditor.Usage("n", "cursor", cursor))
+                page(later, FromEditor.Usage("n", "open", open))
+                page(later, FromEditor.Usage("n", "cursor", cursor))
+                assertEquals(emptyList<Pair<String, String>>(), stored())
+                later.screenShown(true)
+                // What came before the open is moot: the open starts the shape again.
+                assertEquals(listOf("note" to "open", "note" to "cursor"), stored())
+
+                // Shown, then paused: the bursts it sends as it goes are kept when it closes.
+                later.screenShown(false)
+                page(later, FromEditor.Usage("n", "cursor", kotlinx.serialization.json.buildJsonObject { put("block", kotlinx.serialization.json.JsonPrimitive(1)) }))
+                assertEquals(2, stored().size)
+                later.close()
+                assertEquals(listOf("note" to "open", "note" to "cursor", "note" to "cursor"), stored())
             } finally {
                 app.penmoss.analytics.Analytics.install(null)
             }

@@ -61,6 +61,8 @@ import java.util.concurrent.TimeUnit
  *   blocks` (AC5); typing records `note typing` bursts with counts only (AC8); both by the note's
  *   ref, 16 hex characters, never its id, title or path (AC1, AC2).
  * - Search records the length typed in it, never the words (AC14).
+ * - A note's page made again behind Settings (a change of font size) records no open or cursor
+ *   until the note is shown again.
  * - The notes list's tree records a folder opened and left (by its Back or the system Back), and a
  *   note opened from it, by refs; Analytics Data shows the rows (AC15).
  * - Analytics Data shows the new rows as key: value, a long list cut to "… +N" (AC21); Advanced's
@@ -142,10 +144,10 @@ class SessionDetailTest {
             val (page, noteId) = newNote(localId)
             js(page, "penmossEditor.editor.editor.commands.insertContent($SHAPED_NOTE)")
             setTitle(page, TITLE)
-            val opened = until("note open") { notes("open").firstOrNull() }
+            val opened = until("note open") { notesOf(noteId, "open").firstOrNull() }
             val ref = opened.props.getValue("note").jsonPrimitive.content
             assertTrue(ref, SessionDetail.REF.matches(ref))
-            val blocks = until("note blocks") { notes("blocks").firstOrNull() }
+            val blocks = until("note blocks") { notesOf(noteId, "blocks").firstOrNull() }
             assertEquals(ref, blocks.props.getValue("note").jsonPrimitive.content)
             // The note shown again: its shape, every block in order, by the same ref (AC2).
             js(page, "document.activeElement?.blur()")
@@ -154,7 +156,7 @@ class SessionDetailTest {
             until("the notebook's notes") { tag(OnScreen.inFront(), "homeMenu") }
             instrumentation.runOnMainSync { GitNotebookActivity.open(inFrontNow()!!, localId, note = noteId) }
             until("the note again") { editorPage()?.takeIf { js(it, "window.penmossEditor?.openNoteId") == "\"$noteId\"" } }
-            val again = until("note open again") { notes("open").firstOrNull { it.id > blocks.id } }
+            val again = until("note open again") { notesOf(noteId, "open").firstOrNull { it.id > blocks.id } }
             assertEquals(ref, again.props.getValue("note").jsonPrimitive.content)
             val shape = (again.props.getValue("shape") as JsonArray).map { it.jsonPrimitive.content }
             for (token in shape) assertTrue(token, SessionDetail.BLOCK.matches(token))
@@ -162,7 +164,9 @@ class SessionDetailTest {
             assertEquals(TITLE.length, again.props.getValue("titleChars").jsonPrimitive.int)
             noIdTitleOrPath(noteId)
             hold()
-            ProofShot.take()
+
+            // Analytics Data: the shaped note's open row, its blocks as tokens, ended on.
+            endOnRow("note · open") { "how: open" in it && "titleChars: ${TITLE.length}" in it && "h1:11" in it && "li.b.1:5" in it }
         }
     }
 
@@ -179,7 +183,7 @@ class SessionDetailTest {
             val (page, noteId) = newNote(localId)
             // A long note first, so its splice's list of blocks is cut in the viewer.
             js(page, "penmossEditor.editor.editor.commands.insertContent($LONG_NOTE)")
-            until("note blocks") { notes("blocks").firstOrNull() }
+            until("note blocks") { notesOf(noteId, "blocks").firstOrNull() }
             // Forty characters over about three seconds, at the end of the note.
             js(page, "penmossEditor.editor.editor.commands.focus('end')")
             repeat(40) {
@@ -187,7 +191,7 @@ class SessionDetailTest {
                 SystemClock.sleep(75)
             }
             val bursts = until("forty characters in bursts") {
-                notes("typing").takeIf { rows -> rows.sumOf { it.props.getValue("typed").jsonPrimitive.int } >= 40 }
+                notesOf(noteId, "typing").takeIf { rows -> rows.sumOf { it.props.getValue("typed").jsonPrimitive.int } >= 40 }
             }
             assertEquals(40, bursts.sumOf { it.props.getValue("typed").jsonPrimitive.int })
             assertTrue("${bursts.size} bursts", bursts.size in 2..10)
@@ -195,7 +199,10 @@ class SessionDetailTest {
                 assertTrue(burst.text, burst.props.keys.all { it in setOf("note", "block", "typed", "deleted") })
                 assertFalse("no character recorded: ${burst.text}", burst.text.contains("q\""))
             }
-            val refs = notes(null).map { it.props.getValue("note").jsonPrimitive.content }.toSet()
+            // From this note's first event on (a note an earlier test left may show a moment as
+            // the notebook opens, before it), every note event is this note's, by one ref.
+            val firstOfNote = notesOf(noteId, null).first().id
+            val refs = notes(null).filter { it.id >= firstOfNote }.map { it.props.getValue("note").jsonPrimitive.content }.toSet()
             assertEquals("one note, one ref", 1, refs.size)
             noIdTitleOrPath(noteId)
             hold()
@@ -208,8 +215,9 @@ class SessionDetailTest {
             home.tap("section-privacy")
             home.tap("privacyViewData")
             home.text(AnalyticsCopy.text("viewer.title"))
-            // Newest first, the rows recorded after the typing (Home, Settings, and the note page
-            // made again for the smaller text) come before it, so the list is scrolled to them:
+            // Newest first, the rows recorded after the typing (Home and Settings; the note page
+            // made again behind them for the smaller text records nothing) come before it, so the
+            // list is scrolled to them:
             // the splice's row, its inserted blocks cut to "… +N", brought to the list's foot,
             // with the typing rows recorded after it just above.
             val splice = seek(home, "the splice's cut row") { node -> node.texts().any { "inserted: " in it && "… +" in it } }
@@ -221,6 +229,52 @@ class SessionDetailTest {
             hold()
             assertTrue("the typing row is in view too", inView(home, "note · typing"))
             assertTrue(inView(home, cut))
+            ProofShot.take()
+        }
+    }
+
+    // Review round 2: the note's page made again behind Settings records no open.
+
+    @Test
+    fun noteBehindSettingsRecordsNoOpen() {
+        ready()
+        val localId = runBlocking { graph.git.notebooks.entries().first().localId }
+        ActivityScenario.launch<MainActivity>(allNotebooks()).use { scenario ->
+            val launcher = OnScreen.of(scenario)
+            launcher.tap(launcher.text(runBlocking { graph.git.notebooks.entries().first().name }))
+            OnScreen.inFront().tagged("homeMenu")
+            val (page, noteId) = newNote(localId)
+            js(page, "penmossEditor.editor.editor.commands.insertContent($SHAPED_NOTE)")
+            val first = until("note open") { notesOf(noteId, "open").firstOrNull() }
+            js(page, "document.activeElement?.blur()")
+            SystemClock.sleep(1_500)
+
+            // Settings in front, the note's screen behind it.
+            context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            val settings = OnScreen.inFront()
+            settings.tap("homeSettingsGear")
+            settings.tap("section-privacy")
+            settings.tagged("privacyViewData")
+            SystemClock.sleep(1_500)
+            val mark = stored().lastOrNull()?.id ?: since
+            val behind = { stored().filter { it.id > mark && it.kind == "note" && it.name in setOf("open", "cursor") } }
+
+            // A change of font size: the note's activity is made again behind Settings.
+            smallerText()
+            SystemClock.sleep(6_000)
+            assertEquals("no note open or cursor while the note is behind Settings", emptyList<String>(), behind().map { "${it.name} ${it.text}" })
+            // Settings is still in front, made again for the font size too.
+            OnScreen.inFront().tagged("privacyViewData")
+            assertEquals(emptyList<String>(), behind().map { "${it.name} ${it.text}" })
+
+            // Shown again: its open is recorded then, by the same ref.
+            instrumentation.runOnMainSync { GitNotebookActivity.open(inFrontNow()!!, localId, note = noteId) }
+            until("the note again") { editorPage()?.takeIf { js(it, "window.penmossEditor?.openNoteId") == "\"$noteId\"" } }
+            val ref = first.props.getValue("note")
+            val again = until("note open once shown") { behind().firstOrNull { it.name == "open" && it.props["note"] == ref } }
+            assertEquals(first.props.getValue("note"), again.props.getValue("note"))
+            noIdTitleOrPath(noteId)
+            hold()
             ProofShot.take()
         }
     }
@@ -247,7 +301,9 @@ class SessionDetailTest {
                 }
             }
             hold()
-            ProofShot.take()
+
+            // Analytics Data: the search's row, its length and never its words, ended on.
+            endOnRow("input · search") { it == "field: query, chars: 12" }
         }
     }
 
@@ -262,13 +318,15 @@ class SessionDetailTest {
             val launcher = OnScreen.of(scenario)
             launcher.tap(launcher.text(runBlocking { graph.git.notebooks.entries().first().name }))
             OnScreen.inFront().tagged("homeMenu")
-            // A note at the top level, titled, so the list shows it.
-            val (page, noteId) = newNote(localId)
-            js(page, "penmossEditor.editor.editor.commands.insertContent('Rows of beans.')")
-            setTitle(page, TREE_NOTE)
+            // A note at the top level made with its title, so the list shows it: the editor page
+            // makes it as it makes a link's new note (its title in the note itself, never typed),
+            // and the app stores it (NoteStore.addLocalNote). This test is about the tree.
+            val (page, scratchId) = newNote(localId)
+            val made = js(page, "penmossEditor.createNote(${Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(scratchId))}, ${Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(TREE_NOTE))})")
+            val noteId = JSONTokener(checkNotNull(made) { "no note made" }).nextValue() as? String ?: throw AssertionError("no note made: $made")
             val store = graph.git.graph(localId).store
-            // The app has the title before the note is left, as the list shows it.
-            until("the title stored") { runBlocking { store.noteTitle(noteId) }?.takeIf { it == TREE_NOTE } }
+            until("the titled note stored") { runBlocking { store.noteTitle(noteId) }?.takeIf { it == TREE_NOTE } }
+            // The keyboard down first, so Back leaves the note.
             js(page, "document.activeElement?.blur()")
             SystemClock.sleep(1_500)
             back()
@@ -334,9 +392,12 @@ class SessionDetailTest {
             viewer.tap("privacyViewData")
             viewer.text(AnalyticsCopy.text("viewer.title"))
             val rows = listOf("tree · open", "tree · collapse", "tree · expand")
-            val newest = seek(viewer, "tree · open")
-            viewer.reveal(newest, margin = 48f)
-            viewer.waitFor("the tree's rows in view") { true.takeIf { rows.all { inView(viewer, it) } } }
+            viewer.reveal(seek(viewer, "tree · open"), margin = 48f)
+            // The list pages in its rows as it nears its end: brought up again until the older
+            // rows below the open are loaded and placed under it.
+            viewer.waitFor("the tree's rows in view") {
+                if (rows.all { inView(viewer, it) }) true else null.also { viewer.reveal(seek(viewer, "tree · open"), margin = 48f) }
+            }
             hold()
             for (row in rows) assertTrue("$row is in view; it shows ${viewer.texts()}", inView(viewer, row))
             ProofShot.take()
@@ -437,6 +498,16 @@ class SessionDetailTest {
     /** The `note` events since the test began ([name], or all of them). */
     private fun notes(name: String?) = stored().filter { it.kind == "note" && (name == null || it.name == name) }
 
+    /**
+     * The `note` events since the test began about [noteId], by its ref: a note an earlier test
+     * left open in the same notebook's activity may show a moment as this one opens, and records
+     * its own.
+     */
+    private fun notesOf(noteId: String, name: String?): List<Stored> {
+        val ref = AnalyticsRefs.refOf(runBlocking { analytics.stateNow().refKey }, "note", noteId)
+        return notes(name).filter { it.props["note"]?.jsonPrimitive?.content == ref }
+    }
+
     /** No event since the test began holds the note's id, its title or a path. */
     private fun noIdTitleOrPath(noteId: String) {
         for (event in stored()) {
@@ -534,6 +605,34 @@ class SessionDetailTest {
             if (lowest != null) screen.reveal(lowest, margin = 0f) else SystemClock.sleep(300)
         }
         return screen.waitFor("the row $what") { screen.nodes().firstOrNull(match) }
+    }
+
+    /**
+     * Settings → Privacy → View Analytics Data, scrolled to the row headed [headline] whose props
+     * line [matches], held with both on screen, and ended on: the proof's last screenshot.
+     */
+    private fun endOnRow(headline: String, matches: (String) -> Boolean) {
+        context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val viewer = OnScreen.inFront()
+        viewer.tap("homeSettingsGear")
+        viewer.tap("section-privacy")
+        viewer.tap("privacyViewData")
+        viewer.text(AnalyticsCopy.text("viewer.title"))
+        val props = seek(viewer, "the $headline row") { node -> node.texts().any(matches) }
+        val line = props.texts().first(matches)
+        // The props line a little below the list's top, so its headline shows above it.
+        viewer.reveal(props, margin = 160f)
+        val heading = {
+            val at = viewer.nodes().firstOrNull { line in it.texts() }?.boundsInWindow
+            at != null && viewer.nodes().any { node ->
+                headline in node.texts() && node.boundsInWindow.let { it.height > 0f && it.bottom <= at.top + 1f && at.top - it.bottom < 120f }
+            }
+        }
+        viewer.waitFor("the $headline row in view") { true.takeIf { inView(viewer, line) && heading() } }
+        hold()
+        assertTrue("$line is in view; it shows ${viewer.texts()}", inView(viewer, line))
+        assertTrue("$headline heads it", heading())
+        ProofShot.take()
     }
 
     /** Whether [node] shows whole on screen: below the page's top bar, and not cut at the bottom. */
