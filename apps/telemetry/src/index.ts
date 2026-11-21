@@ -13,7 +13,8 @@ export default {
   async scheduled(controller: ScheduledController, env: TelemetryEnv): Promise<void> {
     const report = await nightly(env.DB, controller.scheduledTime);
     console.log(
-      `nightly: rolled ${report.rolled.length} days, pruned ${report.prunedEvents} events and ` +
+      `nightly: rolled ${report.rolled.length} days, pruned ${report.prunedDetail} session ` +
+        `detail events (${report.prunedForSize} for size), ${report.prunedEvents} events and ` +
         `${report.prunedRollups} rollup rows, catalogue ${report.catalogue} names`,
     );
   },

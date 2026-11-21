@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // PEN-174's ac15 on screen: the built site's Usage Data help page and both privacy pages say the
-// window's size and layout are recorded; PEN-175's AC11: they list scrolling too. apps/web's Playwright config runs it as its `site`
+// window's size and layout are recorded; PEN-175's AC11: they list scrolling too; PEN-177's AC24 and AC25: session detail. apps/web's Playwright config runs it as its `site`
 // project, so the software factory's web proof (`task proof:web`) can record it; it builds the
 // site and serves site/dist itself, on a port the system picks. site.spec.ts checks the same
 // words under wrangler dev (`task site:test`), whose config leaves this folder out.
@@ -59,6 +59,10 @@ function serve(): Promise<Server> {
 
 let server: Server;
 let base: string;
+
+// One worker runs this file's tests in order: each worker's beforeAll builds the site into one
+// site/dist, and two building at once fail on Astro's data store.
+test.describe.configure({ mode: 'default' });
 
 test.beforeAll(async () => {
   test.setTimeout(240_000);
@@ -141,4 +145,53 @@ test('the Usage Data help page lists Scroll with an example and the rounding, an
   await expect(scroll).toContainText('folder tree, Recent Notes and Tags');
   await expect(scroll).toContainText('Settings and its list of pages');
   await expect(scroll).toBeInViewport();
+});
+
+test('the Usage Data help page lists Note, Input and Tree with examples and the new limits, and both privacy pages describe session detail (PEN-177)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  // Usage Data (AC24): What is recorded's new rows, the note shape and keyed IDs paragraph,
+  // the server's 90 days, then the limits table's Keep at Most.
+  await page.goto(`${base}/docs/help/usage-data/`);
+  const main = page.locator('main');
+  const note = main.locator('tr').filter({ hasText: /^\s*Note\b/ });
+  await show(page, note);
+  await expect(note).toContainText('h1:12 p:182 li.t.2:31 table.4x3:96 hr');
+  for (const [kind, words] of [
+    ['Input', 'never the characters themselves'],
+    ['Tree', 'to show the open note'],
+  ] as const) {
+    const row = main.locator('tr').filter({ hasText: new RegExp(`^\\s*${kind}\\b`) });
+    await expect(row).toContainText(words);
+    await expect(row).toBeInViewport();
+  }
+  await show(page, main.getByText(/A note and a folder are named by a keyed ID/));
+  await expect(main).toContainText('which are exact (never the words)');
+  await show(page, main.getByText(/note, input and tree events for 90 days/).first());
+  const keep = main.locator('tr').filter({ hasText: 'events.max' });
+  await show(page, keep);
+  await expect(keep).toContainText('200,000');
+  await expect(keep).toContainText('500–2,000,000');
+
+  // penmoss.app/privacy (AC25): the Usage data section's session detail, then its 90 days.
+  await page.goto(`${base}/privacy/`);
+  const policy = page.locator('article');
+  await show(
+    page,
+    policy.getByText(/the shape of your notes and how much you type, never\s+the words/),
+  );
+  await expect(policy).toContainText(/at most 200,000\s+events/);
+  await show(page, policy.getByText(/note, input and tree events\s+for 90 days/).first());
+
+  // The docs' Privacy and security page: its Usage data section, held to the end.
+  await page.goto(`${base}/docs/help/privacy/`);
+  const docs = page.locator('main');
+  await show(page, docs.getByText(/Inside a note, and the sidebar tree/));
+  await expect(docs).toContainText('The words you type are never recorded.');
+  const choices = docs.getByText(/a new key for its keyed IDs/);
+  await show(page, choices);
+  await expect(choices).toBeInViewport();
 });

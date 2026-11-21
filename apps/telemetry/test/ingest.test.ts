@@ -4,7 +4,7 @@
  * the answers are 202, 400, 404, 413, 429 and 503 as the clients expect. Forget deletes an
  * install's rows.
  */
-import type { AnalyticsEvent } from '@penmoss/core/analytics';
+import { capShape, MAX_BATCH_BYTES, type AnalyticsEvent } from '@penmoss/core/analytics';
 import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { handle } from '../src/ingest';
@@ -239,27 +239,128 @@ describe('POST /v1/batch', () => {
     expect(response.status).toBe(413);
   });
 
-  it('answers 429 with Retry-After past 30 batches a minute from one install', async () => {
+  it('limits batches to 60 a minute per install and 240 per address (PEN-177)', () => {
+    const limit = (name: string) =>
+      new RegExp(`"name": "${name}"[^}]*"limit": (\\d+), "period": 60`).exec(
+        env.TEST_WRANGLER,
+      )?.[1];
+    expect(limit('INSTALL_LIMIT')).toBe('60');
+    expect(limit('IP_LIMIT')).toBe('240');
+    expect(limit('FORGET_LIMIT')).toBe('5');
+  });
+
+  it('answers 429 with Retry-After past 60 batches a minute from one install', async () => {
     const install = newInstall();
     const statuses: number[] = [];
-    for (let seq = 0; seq < 31; seq++) {
+    for (let seq = 0; seq < 60; seq++) {
       statuses.push((await post('/v1/batch', { v: 1, install, events: [event({ seq })] })).status);
     }
-    expect(statuses.slice(0, 30).every((status) => status === 202)).toBe(true);
+    expect(statuses.every((status) => status === 202)).toBe(true);
     const limited = await post('/v1/batch', { v: 1, install, events: [event({ seq: 99 })] });
     expect(limited.status).toBe(429);
     expect(limited.headers.get('retry-after')).toBe('60');
-    expect(await eventCount(install)).toBe(30);
+    expect(await eventCount(install)).toBe(60);
   });
 
-  it('answers 429 past 120 requests a minute from one address', async () => {
+  it('answers 429 past 240 requests a minute from one address', async () => {
     const ip = newIp();
-    let last = 0;
-    for (let i = 0; i < 121; i++) {
+    const statuses: number[] = [];
+    for (let i = 0; i < 241; i++) {
       // Not a batch: the address is limited before the body is read.
-      last = (await post('/v1/batch', '{}', ip)).status;
+      statuses.push((await post('/v1/batch', '{}', ip)).status);
     }
-    expect(last).toBe(429);
+    expect(statuses.slice(0, 240).every((status) => status !== 429)).toBe(true);
+    expect(statuses.at(-1)).toBe(429);
+  });
+
+  it('takes session detail from the apps, the largest note open within 64 KB, and refuses the rest (PEN-177)', async () => {
+    const install = newInstall();
+    const NOTE = '0123456789abcdef';
+    // The largest note open: 5,000 tokens or 32 KB of them, whichever comes first.
+    const { shape } = capShape(Array.from({ length: 6000 }, () => 'table.999x999:1000000'));
+    const largest = (seq: number) =>
+      event({
+        seq,
+        kind: 'note',
+        name: 'open',
+        props: {
+          note: NOTE,
+          folder: 'fedcba9876543210',
+          how: 'open',
+          titleChars: 40,
+          shape,
+          more: true,
+        },
+      });
+    const detail = (
+      seq: number,
+      kind: string,
+      name: string,
+      props: Record<string, unknown>,
+      more = {},
+    ) =>
+      event({
+        seq,
+        kind: kind as AnalyticsEvent['kind'],
+        name,
+        props: props as AnalyticsEvent['props'],
+        ...more,
+      });
+    const body = {
+      v: 1,
+      install,
+      events: [
+        largest(0),
+        detail(1, 'note', 'typing', { note: NOTE, block: 2, typed: 14, deleted: 3 }),
+        detail(
+          2,
+          'input',
+          'palette',
+          { field: 'query', chars: 7 },
+          { client: 'android', os: 'android' },
+        ),
+        detail(3, 'tree', 'expand', { folder: NOTE, depth: 1, source: 'click' }),
+        // Wrong on purpose: a real id, a word in a token, a prop of another name, an index too big,
+        // and the CLI and the MCP server.
+        detail(4, 'note', 'cursor', { note: '01JB7Q3V6M8K2T9RZ4XN5C1HPD', block: 1 }),
+        detail(5, 'note', 'blocks', { note: NOTE, block: 1, removed: 0, inserted: ['p:hello'] }),
+        detail(6, 'note', 'cursor', { note: NOTE, block: 1, typed: 3 }),
+        detail(7, 'note', 'select', { note: NOTE, block: 5001, chars: 3, span: 1 }),
+        detail(
+          8,
+          'input',
+          'search',
+          { field: 'query', chars: 3 },
+          { client: 'cli', actor: 'agent', sizeClass: undefined },
+        ),
+        detail(
+          9,
+          'tree',
+          'open',
+          { note: NOTE, depth: 0, source: 'click' },
+          { client: 'mcp', actor: 'agent', sizeClass: undefined },
+        ),
+      ],
+    };
+    expect(new TextEncoder().encode(JSON.stringify(body)).length).toBeLessThanOrEqual(
+      MAX_BATCH_BYTES,
+    );
+    const response = await post('/v1/batch', body);
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ accepted: 4, dropped: 6, refused: [4, 5, 6, 7, 8, 9] });
+    const written = await rows(
+      'SELECT kind, name, props FROM events WHERE install = ?1 ORDER BY seq',
+      install,
+    );
+    expect(written.map(({ kind, name }) => `${String(kind)} ${String(name)}`)).toEqual([
+      'note open',
+      'note typing',
+      'input palette',
+      'tree expand',
+    ]);
+    expect((JSON.parse(String(written[0]!['props'])) as { shape: string[] }).shape).toHaveLength(
+      shape.length,
+    );
   });
 
   it('answers 503 when D1 refuses the write, so the client keeps the batch', async () => {
@@ -316,6 +417,56 @@ describe('POST /v1/forget', () => {
       { forgets: number },
     ];
     expect(forgets).toBeGreaterThan(0);
+  });
+
+  it('deletes session detail too: every kind an install shared (PEN-177)', async () => {
+    const install = newInstall();
+    const NOTE = '0123456789abcdef';
+    const events = [
+      event({
+        seq: 0,
+        kind: 'note',
+        name: 'open',
+        props: { note: NOTE, how: 'open', titleChars: 3, shape: ['p:3'] },
+      }),
+      event({
+        seq: 1,
+        kind: 'note',
+        name: 'typing',
+        props: { note: NOTE, block: 0, typed: 1, deleted: 0 },
+      }),
+      event({
+        seq: 2,
+        kind: 'note',
+        name: 'blocks',
+        props: { note: NOTE, block: 1, removed: 0, inserted: ['hr'] },
+      }),
+      event({ seq: 3, kind: 'note', name: 'cursor', props: { note: NOTE, block: 0 } }),
+      event({
+        seq: 4,
+        kind: 'note',
+        name: 'select',
+        props: { note: NOTE, block: 0, chars: 2, span: 1 },
+      }),
+      event({ seq: 5, kind: 'input', name: 'quickOpen', props: { field: 'query', chars: 2 } }),
+      event({
+        seq: 6,
+        kind: 'tree',
+        name: 'collapse',
+        props: { folder: NOTE, depth: 0, source: 'key' },
+      }),
+      event({
+        seq: 7,
+        kind: 'tree',
+        name: 'open',
+        props: { note: NOTE, folder: NOTE, depth: 1, source: 'click' },
+      }),
+    ];
+    const sent = await post('/v1/batch', { v: 1, install, events });
+    expect(await sent.json()).toMatchObject({ accepted: 8, dropped: 0 });
+    expect(await eventCount(install)).toBe(8);
+    expect((await post('/v1/forget', { v: 1, install })).status).toBe(200);
+    expect(await eventCount(install)).toBe(0);
   });
 
   it('answers 400 to anything but a forget, and 429 past 5 a minute from one address', async () => {

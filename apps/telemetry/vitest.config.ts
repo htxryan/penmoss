@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin';
 import { defineConfig, type Plugin } from 'vitest/config';
 import { sharedTest } from '../../scripts/vitest-shared.mjs';
@@ -18,7 +19,11 @@ export default defineConfig(async () => ({
       wrangler: { configPath: './wrangler.jsonc' },
       remoteBindings: false,
       miniflare: {
-        bindings: { TEST_MIGRATIONS: await readD1Migrations('./migrations') },
+        bindings: {
+          TEST_MIGRATIONS: await readD1Migrations('./migrations'),
+          // The config as written, so a test reads the rate limits it sets (PEN-177).
+          TEST_WRANGLER: readFileSync('./wrangler.jsonc', 'utf8'),
+        },
       },
     }),
   ],

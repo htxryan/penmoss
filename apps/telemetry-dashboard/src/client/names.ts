@@ -179,6 +179,9 @@ export function displayName(kind: string, name: string): string {
       return `penmoss ${name}`;
     case 'scroll':
       return SCROLL_AREAS[name] ?? name.split('.').map(titled).join(' › ');
+    // Session detail (PEN-177): an input is named by the dialog its field is in.
+    case 'input':
+      return name === 'settingsSearch' ? 'Search Settings' : (DIALOGS[name] ?? titled(name));
     default:
       return titled(name);
   }
@@ -214,6 +217,9 @@ export function kindName(event: string): string {
 const KINDS: Record<string, string> = {
   command: 'Command',
   scroll: 'Scroll',
+  note: 'Note',
+  input: 'Input',
+  tree: 'Sidebar Tree',
   firstrun: 'First Run',
   cli: 'CLI Command',
   tool: 'MCP Tool',
@@ -308,6 +314,18 @@ interface PropWords {
 
 const YES_NO = { true: 'Yes', false: 'No' };
 const each = (value: PropValue) => (Array.isArray(value) ? value : [value]).map(String);
+
+/** A list shown cut as the apps' viewers cut it (core's propsLine, PEN-177): 12, then … +N. */
+const SHOWN = 12;
+const cutList = (value: PropValue) => {
+  const items = each(value);
+  const more = items.length - SHOWN;
+  const shown = items.slice(0, SHOWN).join(' ');
+  return more > 0 ? `${shown} … +${more}` : shown;
+};
+/** A note's or folder's ref (PEN-177), as recorded: a keyed hash, never its name. */
+const REF_WORDS: PropWords = { label: 'Ref' };
+const TREE_SOURCE_LABELS = { click: 'Click', key: 'Key', reveal: 'Reveal' };
 
 /** Which window an `app window` or `app layout` event is about. */
 const WINDOW_LABELS: Readonly<Record<string, string>> = {
@@ -416,6 +434,23 @@ export const PROP_WORDS: Readonly<Record<string, Readonly<Record<string, PropWor
   },
   // How far down the area was, a fraction in hundredths (PEN-175), shown as recorded.
   scroll: { position: { label: 'Position' } },
+  // Session detail (PEN-177): each note and tree name has its own props (NAME_PROP_WORDS).
+  note: {},
+  input: {
+    field: {
+      label: 'Field',
+      values: {
+        query: 'Query',
+        name: 'Name',
+        title: 'Title',
+        body: 'Body',
+        url: 'URL',
+        other: 'Other',
+      },
+    },
+    chars: { label: 'Characters' },
+  },
+  tree: {},
 };
 
 /**
@@ -438,6 +473,57 @@ export const NAME_PROP_WORDS: Readonly<Record<string, Readonly<Record<string, Pr
     fullWidth: { label: 'Full Width', values: YES_NO },
     themeMode: { label: 'Theme Mode', values: { light: 'Light', dark: 'Dark', system: 'System' } },
     tabs: { label: 'Tabs' },
+  },
+  // Session detail (PEN-177): refs, block positions and exact lengths, shown as recorded.
+  'note.open': {
+    note: { ...REF_WORDS, label: 'Note' },
+    folder: { ...REF_WORDS, label: 'Folder' },
+    how: { label: 'How', values: { open: 'Open', switch: 'Switch', resync: 'Resync' } },
+    titleChars: { label: 'Title Length' },
+    shape: { label: 'Shape', word: cutList },
+    more: { label: 'More', values: YES_NO },
+  },
+  'note.typing': {
+    note: { ...REF_WORDS, label: 'Note' },
+    block: { label: 'Block' },
+    title: { label: 'Title', values: YES_NO },
+    typed: { label: 'Typed' },
+    deleted: { label: 'Deleted' },
+    remote: { label: 'Remote', values: YES_NO },
+  },
+  'note.blocks': {
+    note: { ...REF_WORDS, label: 'Note' },
+    block: { label: 'Block' },
+    removed: { label: 'Removed' },
+    inserted: { label: 'Inserted', word: cutList },
+    remote: { label: 'Remote', values: YES_NO },
+  },
+  'note.cursor': {
+    note: { ...REF_WORDS, label: 'Note' },
+    block: { label: 'Block' },
+    title: { label: 'Title', values: YES_NO },
+  },
+  'note.select': {
+    note: { ...REF_WORDS, label: 'Note' },
+    block: { label: 'Block' },
+    chars: { label: 'Characters' },
+    span: { label: 'Blocks Spanned' },
+  },
+  'tree.expand': {
+    folder: { ...REF_WORDS, label: 'Folder' },
+    depth: { label: 'Depth' },
+    source: { label: 'Source', values: TREE_SOURCE_LABELS },
+  },
+  'tree.collapse': {
+    folder: { ...REF_WORDS, label: 'Folder' },
+    depth: { label: 'Depth' },
+    source: { label: 'Source', values: TREE_SOURCE_LABELS },
+  },
+  'tree.open': {
+    note: { ...REF_WORDS, label: 'Note' },
+    folder: { ...REF_WORDS, label: 'Folder' },
+    depth: { label: 'Depth' },
+    source: { label: 'Source', values: { click: 'Click', key: 'Key' } },
   },
 };
 

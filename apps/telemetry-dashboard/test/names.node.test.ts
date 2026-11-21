@@ -128,6 +128,31 @@ describe('props in words', () => {
     }
   });
 
+  it('reads session detail in words, a long shape cut after 12 tokens (PEN-177)', () => {
+    expect(kindName('note:open')).toBe('Note');
+    expect(kindName('tree:expand')).toBe('Sidebar Tree');
+    expect(displayName('input', 'quickOpen')).toBe('Quick Open');
+    expect(displayName('input', 'settingsSearch')).toBe('Search Settings');
+    const shape = Array.from({ length: 20 }, (_, i) => `p:${i}`);
+    expect(propsInWords('note', { note: '0123456789abcdef', shape, more: true }, 'open')).toEqual([
+      { label: 'Note', value: '0123456789abcdef' },
+      { label: 'Shape', value: 'p:0 p:1 p:2 p:3 p:4 p:5 p:6 p:7 p:8 p:9 p:10 p:11 … +8' },
+      { label: 'More', value: 'Yes' },
+    ]);
+    expect(
+      propsInWords('note', { note: '0123456789abcdef', block: 3, typed: 14, deleted: 2 }, 'typing'),
+    ).toEqual([
+      { label: 'Note', value: '0123456789abcdef' },
+      { label: 'Block', value: '3' },
+      { label: 'Typed', value: '14' },
+      { label: 'Deleted', value: '2' },
+    ]);
+    expect(propsInWords('input', { field: 'query', chars: 7 }, 'palette')).toEqual([
+      { label: 'Field', value: 'Query' },
+      { label: 'Characters', value: '7' },
+    ]);
+  });
+
   it("reads a scroll's position as recorded (PEN-175)", () => {
     expect(propsInWords('scroll', { position: 0.42 }, 'note')).toEqual([
       { label: 'Position', value: '0.42' },

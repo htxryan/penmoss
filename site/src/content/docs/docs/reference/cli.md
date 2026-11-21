@@ -160,7 +160,7 @@ penmoss analytics limits set events.days 30
 ```
 
 - **`on`** and **`off`** answer as **Share Usage Data** and **Don't Share** do. As your first answer, `on` shares what was recorded before it and `off` keeps it here; later, `on` shares from then on. The CLI never asks.
-- **`reset`** gives this machine a new analytics ID; what was not sent yet stays here. **`forget`** asks Penmoss's server to delete everything shared under your ID, then gives a new one. Offline, or if the server refuses, it exits 1 and nothing changes.
+- **`reset`** gives this machine a new analytics ID and a new key for the keyed IDs that name notes and folders; what was not sent yet stays here. **`forget`** asks Penmoss's server to delete everything shared under your ID, then gives a new one and a new key. Offline, or if the server refuses, it exits 1 and nothing changes.
 - **`show`** lists the record newest first, 100 events at a time. Its last line gives the command for the earlier ones (`--before <id>`). `--client app|cli|mcp` and `--state pending|waiting|sent|local|refused` filter it, and `--json` prints one event a line.
 - **`limits`** lists `events.days`, `events.max`, `logs.fileKb`, `logs.files`, `logs.days`, `report.hours`, `report.lines` and `report.kb` with their values, defaults and ranges, the same as **Settings → Privacy → Advanced**. `limits set <key> <value>` refuses a value out of range ("Between 1 and 360", exit 2). Lowering `events.days` or `events.max` deletes the events outside the new limit at once.
 - **`DO_NOT_TRACK=1`** or **`PENMOSS_ANALYTICS=off`** keeps what that shell records on this machine, whatever your answer.
