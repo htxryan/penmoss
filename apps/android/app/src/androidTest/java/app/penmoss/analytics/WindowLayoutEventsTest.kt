@@ -89,13 +89,14 @@ class WindowLayoutEventsTest {
         added.notebook.localId
     }
 
+    /** A stored event; [text] is its props as Analytics Data shows them (`key: value`, [SessionDetail.propsLine]). */
     private data class Stored(val id: Long, val kind: String, val name: String, val text: String, val props: JsonObject)
 
     /** The events since the test began, oldest first. */
     private fun stored(): List<Stored> = runBlocking {
         analytics.flush()
         analytics.store.page(null, null, 500).filter { it.id > since }.reversed()
-            .map { Stored(it.id, it.kind, it.name, it.props, Json.parseToJsonElement(it.props) as JsonObject) }
+            .map { (Json.parseToJsonElement(it.props) as JsonObject).let { props -> Stored(it.id, it.kind, it.name, SessionDetail.propsLine(props), props) } }
     }
 
     private fun windows(which: String) = stored().filter { it.kind == "app" && it.name == "window" && it.props.str("window") == which }
