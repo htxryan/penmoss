@@ -16,12 +16,14 @@ import java.io.File
  * Options and Link (an `event =`). A control that only swallows taps (a preview's shield) says
  * so with an `// untracked: <why>` comment, the why three words or more, on its line or the one
  * above. Every dialog and sheet is tracked by name (`rememberTrackedDialog`) where it is
- * composed. Each id written as a literal is listed with where it is, for the catalogue check.
+ * composed. A text field inside a dialog or sheet records the length typed in it
+ * (`Modifier.typedLength`, PEN-177) or says why not with an `// untracked:` reason. Each id
+ * written as a literal is listed with where it is, for the catalogue check.
  */
 object ControlScan {
     data class Use(val kind: String, val name: String, val where: String)
 
-    data class Result(val problems: List<String>, val uses: List<Use>, val controls: Int, val dialogs: Int)
+    data class Result(val problems: List<String>, val uses: List<Use>, val controls: Int, val dialogs: Int, val fields: Int = 0)
 
     private const val QUALIFIED = "(?<![\\w.])(?:[a-z][a-z0-9_]*\\.)*"
 
@@ -41,6 +43,10 @@ object ControlScan {
     private val MODIFIERS = Regex("\\.(clickable|combinedClickable|toggleable|triStateToggleable|selectable)\\b")
 
     private val DIALOGS = Regex(QUALIFIED + "(AlertDialog|BasicAlertDialog|Dialog|ModalBottomSheet|DatePickerDialog|TimePickerDialog)\\s*\\(")
+
+    /** Text fields (PEN-177): in a dialog or sheet, each records its typed length (`typedLength`). */
+    private val TEXT_FIELDS = Regex(QUALIFIED + "(OutlinedTextField|TextField|BasicTextField)\\s*\\(")
+    private val TYPED_LENGTH = Regex("\\btypedLength\\s*\\(")
 
     /** Sliders: recorded when let go, by a tracked `onValueChangeFinished` (PEN-175), never their value. */
     private val SLIDERS = Regex(QUALIFIED + "(Slider|RangeSlider)\\s*\\(")
@@ -103,6 +109,7 @@ object ControlScan {
         val uses = ArrayList<Use>()
         var controls = 0
         var dialogs = 0
+        var fields = 0
         val files = root.walkTopDown().filter { it.isFile && it.extension == "kt" }.sortedBy { it.path }.toList()
         for (file in files) {
             val text = file.readText()
@@ -173,6 +180,7 @@ object ControlScan {
                 check(at, text.substring(at, end + 1), match.groupValues[1])
             }
             val tracked = DIALOG_CALLS.findAll(text).filter { source.code(it.range.first) }.map { it.range.first }.toList()
+            val dialogSpans = ArrayList<IntRange>()
             for (match in DIALOGS.findAll(text)) {
                 val at = match.range.first
                 if (!source.code(at) || source.declared(at)) continue
@@ -182,9 +190,18 @@ object ControlScan {
                 var end = close
                 val next = source.skipSpace(close + 1)
                 if (next < text.length && text[next] == '{') end = source.close(next) ?: close
+                dialogSpans += at..end
                 val line = source.line(at)
                 val near = tracked.any { it in at..end || (it < at && line - source.line(it) <= DIALOG_REACH) }
                 if (!near && !source.exempt(at)) problems += "${where(at)}: ${match.groupValues[1]} is not tracked by name (rememberTrackedDialog)"
+            }
+
+            calls(TEXT_FIELDS) { at, args, what ->
+                if (dialogSpans.none { at in it }) return@calls
+                fields++
+                if (!TYPED_LENGTH.containsMatchIn(args) && !source.exempt(at)) {
+                    problems += "${where(at)}: $what in a dialog records no typed length (typedLength)"
+                }
             }
 
             // The ids written as literals: a tracked call's first argument, a wrapper's `event =`,
@@ -208,8 +225,12 @@ object ControlScan {
             for (match in DIALOG_CALLS.findAll(text)) {
                 if (source.code(match.range.first) && !source.declared(match.range.first)) literals("dialog", match.range.last + 1)
             }
+            // A typed length's dialog is an `input` name (PEN-177).
+            for (match in TYPED_LENGTH.findAll(text)) {
+                if (source.code(match.range.first) && !source.declared(match.range.first)) literals("input", match.range.last + 1)
+            }
         }
-        return Result(problems, uses, controls, dialogs)
+        return Result(problems, uses, controls, dialogs, fields)
     }
 
     /** Kotlin source with what is code told from strings and comments. */

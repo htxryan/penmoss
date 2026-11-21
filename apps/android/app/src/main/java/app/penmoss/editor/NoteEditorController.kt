@@ -246,6 +246,11 @@ class NoteEditorController(
 
     private var pageReady = false
     private var contentReady = false
+
+    /** The note's folder (PEN-177), for session detail's `folder` ref; null at the top level. */
+    @Volatile
+    private var usageFolder: String? = null
+
     private var opened = false
     private var openStarted = false
 
@@ -312,7 +317,10 @@ class NoteEditorController(
 
     /** Reads the note, fetching it when the phone does not hold it, and opens it once the page is ready. */
     private suspend fun load() {
-        store.note(noteId)?.title?.let { title -> _state.update { it.copy(title = title) } }
+        val row = store.note(noteId)
+        row?.title?.let { title -> _state.update { it.copy(title = title) } }
+        // The folder session detail names by its ref (PEN-177); null at the top level.
+        usageFolder = row?.folderId
         // The period's note: made by the page with the synced time zone and template (T40 P5),
         // offline too; a note held already is just opened (the page rebuilds the same bytes).
         if (periodic != null) {
@@ -535,6 +543,16 @@ class NoteEditorController(
             // and again by the catalogue; nothing else about the note goes with it.
             is FromEditor.Scroll -> if (message.noteId == noteId) {
                 Analytics.record("scroll", "note", ScrollEvents.propsOf(message.position))
+            }
+            // Session detail (PEN-177): the page's note event, for the note shown only, with the
+            // note's and its folder's refs, which only the app can make; the catalogue checks it.
+            is FromEditor.Usage -> if (message.noteId == noteId) {
+                app.penmoss.analytics.Analytics.recordWithRefs(
+                    "note",
+                    message.name,
+                    message.props,
+                    mapOf("note" to ("note" to noteId), "folder" to ("folder" to usageFolder)),
+                )
             }
             is FromEditor.Command -> if (keys?.app?.contains(message.id) == true && (message.noteId == null || message.noteId == noteId)) {
                 onCommand(message.id)

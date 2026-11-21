@@ -31,6 +31,7 @@ import app.penmoss.analytics.AnalyticsCopy
 import app.penmoss.analytics.AnalyticsFormat
 import app.penmoss.analytics.EventEntity
 import app.penmoss.analytics.EventState
+import app.penmoss.analytics.SessionDetail
 import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.TrackedScreen
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -147,12 +148,18 @@ private fun EventRow(event: EventEntity) {
         overlineContent = { Text(eventTime(event.at)) },
         headlineContent = { Text("${event.kind} · ${event.name}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (event.props == "{}") null else {
-            { Text(event.props, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
+            // As the Mac's viewer writes them (PEN-177, core's propsLine): key: value, a long list cut.
+            { Text(propsText(event.props), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
         },
         trailingContent = { StateChip(event.eventState) },
         modifier = Modifier.testTag("viewerEvent"),
     )
 }
+
+/** An event's stored props as one line ([SessionDetail.propsLine]); what isn't JSON, as it is. */
+internal fun propsText(props: String): String =
+    runCatching { SessionDetail.propsLine(kotlinx.serialization.json.Json.parseToJsonElement(props) as kotlinx.serialization.json.JsonObject) }
+        .getOrDefault(props)
 
 /** Penmoss's `warnBg` and `success` tokens (packages/ui/src/theme/builtins.ts), light and dark. */
 private val WARN_BG_LIGHT = Color(0xFFFBEFC9)

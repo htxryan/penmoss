@@ -485,6 +485,14 @@ sealed interface FromEditor {
      */
     data class Click(val id: String, val state: String? = null) : FromEditor
 
+    /**
+     * Session detail (PEN-177): one `note` event of the open note from core's NoteUsage (`open`,
+     * `typing`, `blocks`, `cursor` or `select`), its props by block position and length only.
+     * The app adds the note's and folder's refs and its catalogue checks each prop; the bridge
+     * checks the shape, and refuses a page that sends refs of its own.
+     */
+    data class Usage(val noteId: String, val name: String, val props: JsonObject) : FromEditor
+
     /** [request] is the [ToEditor.CreatePeriodic] this error answers, when it answers one (T40 P9, N7). */
     data class Error(val noteId: String?, val message: String, val request: String? = null) : FromEditor
 }
@@ -498,6 +506,9 @@ object BridgeProtocol {
 
     /** A tracked control's id (PEN-175), the catalogue's shape for a click: `area.thing`, lower case, 2 to 5 parts. */
     val CLICK_ID = Regex("^[a-z][a-z0-9-]*(\\.[a-z0-9-]+){1,4}$")
+
+    /** The names of a `usage` message (PEN-177): core's NOTE_NAMES. */
+    val USAGE_NAMES = setOf("open", "typing", "blocks", "cursor", "select")
 
     /** A request's tag (T40 P9): the app's own short id. */
     val REQUEST_ID = Regex("^[A-Za-z0-9_-]{1,64}$")
@@ -851,6 +862,11 @@ object BridgeProtocol {
                 put("id", message.id)
                 message.state?.let { put("state", it) }
             }
+            is FromEditor.Usage -> {
+                type("usage", message.noteId)
+                put("name", message.name)
+                put("props", message.props)
+            }
         }
     }.toString()
 
@@ -1007,6 +1023,12 @@ object BridgeProtocol {
             "openTag" -> FromEditor.OpenTag(
                 noteId,
                 value.string("tag")?.takeIf { it.length <= MAX_TAG_CHARS && app.penmoss.engine.notes.Tags.normalise(it) == it } ?: return null,
+            )
+            // One of NoteUsage's names, with an object of props that names no note or folder.
+            "usage" -> FromEditor.Usage(
+                noteId,
+                value.string("name")?.takeIf { it in USAGE_NAMES } ?: return null,
+                (value["props"] as? JsonObject)?.takeIf { "note" !in it && "folder" !in it } ?: return null,
             )
             // A number from 0 to 1 in whole hundredths, never a string or a boolean.
             "scroll" -> FromEditor.Scroll(

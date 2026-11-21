@@ -33,7 +33,13 @@
  * T48 adds comment threads (`comments.ts`, `comments-protocol.ts`): the note's threads for the
  * Comments sheet, drawn in the note, and written here as the sheet asks.
  */
-import { fractionOf, realScrollClock, ScrollGate, type ScrollClock } from '@penmoss/core/analytics';
+import {
+  fractionOf,
+  realScrollClock,
+  ScrollGate,
+  type Props,
+  type ScrollClock,
+} from '@penmoss/core/analytics';
 import { FuzzyMatcher } from '@penmoss/core/fuzzy';
 import { extractLinks } from '@penmoss/core/links';
 import { normaliseTag } from '@penmoss/core/tags';
@@ -70,6 +76,7 @@ import {
   canHaveSymbols,
   canTurnInto,
   closeSymbolPicker,
+  attachNoteUsage,
   createCollabEditor,
   EDITOR_COMMANDS,
   filterBlockItems,
@@ -96,6 +103,7 @@ import {
   type NoteCandidate,
   type SymbolSource,
   openLightboxNow,
+  type NoteUsage,
 } from '@penmoss/editor';
 import { formatCombo } from '@penmoss/editor/keys';
 import { noteFields } from '@penmoss/model/note-fields';
@@ -454,6 +462,8 @@ export interface HostOptions {
   readonly now?: () => Date;
   /** The clock the note's scroll gate runs on (PEN-175); tests give a fake one. */
   readonly scrollClock?: ScrollClock;
+  /** The clock session detail's gates run on (PEN-177); tests give a fake one. */
+  readonly usageClock?: ScrollClock;
 }
 
 interface OpenNote {
@@ -477,6 +487,8 @@ interface OpenNote {
   sourceOff: (() => void) | null;
   /** The note's comment threads (T48), once its editor is made. */
   comments?: NoteComments;
+  /** Session detail (PEN-177): the note's shape, typing and cursor, by block, never a word. */
+  usage?: NoteUsage;
 }
 
 export class EditorHost {
@@ -486,6 +498,7 @@ export class EditorHost {
    * scroll, sent as `scroll` once it settles; it starts from the top with each note opened.
    */
   private readonly scrollGate: ScrollGate;
+  private readonly usageClock: ScrollClock | null;
   private readonly idleMs: number;
   private readonly maxWaitMs: number;
   private readonly textIdleMs: number;
@@ -580,6 +593,7 @@ export class EditorHost {
     this.textIdleMs = options.textIdleMs ?? TEXT_IDLE_MS;
     this.now = options.now ?? (() => new Date());
     this.postBytes = options.postBytes ?? (() => undefined);
+    this.usageClock = options.usageClock ?? null;
     this.scrollGate = new ScrollGate((position) => {
       const open = this.current;
       // The theme preview's sample note is no note of the person's.
@@ -614,6 +628,18 @@ export class EditorHost {
     });
     // Through HTMLElement: the input/textarea union loses addEventListener's typed events.
     const titleElement: HTMLElement = elements.title;
+    // The title's typing, for session detail (PEN-177): how many characters went in and out,
+    // read after the cleaning above; a title rewritten from elsewhere is no typing here.
+    let titleBefore: string | null = null;
+    titleElement.addEventListener('beforeinput', () => {
+      titleBefore ??= elements.title.value;
+    });
+    titleElement.addEventListener('input', () => {
+      const before = titleBefore;
+      titleBefore = null;
+      if (before !== null) this.current?.usage?.title(before, elements.title.value);
+    });
+    titleElement.addEventListener('focus', () => this.current?.usage?.titleFocused());
     // The bar goes while the caret is in the title, and comes back when it leaves (A554).
     titleElement.addEventListener('focus', () => this.scheduleState());
     titleElement.addEventListener('blur', () => this.scheduleState());
@@ -678,6 +704,7 @@ export class EditorHost {
   flush(): void {
     this.current?.flush();
     this.current?.sendText();
+    this.current?.usage?.flush();
   }
 
   /** The open note's editor, for tests and diagnostics. */
@@ -1030,6 +1057,8 @@ export class EditorHost {
     this.deletion = null;
     this.scrollGate.stop();
     if (!open) return;
+    // Session detail's waiting burst goes before the note's last edits (PEN-177).
+    open.usage?.flush();
     open.flush();
     open.sendText();
     open.teardown();
@@ -1266,6 +1295,17 @@ export class EditorHost {
         flush: () => open.flush(),
       });
       cleanups.push(() => open.comments?.destroy());
+      // Session detail (PEN-177), never for the theme preview's sample note: the app adds the
+      // note's and its folder's refs, which only it can make.
+      if (noteId !== PREVIEW_NOTE_ID) {
+        open.usage = attachNoteUsage(editor, {
+          record: (name, props: Props) =>
+            this.post({ v: BRIDGE_VERSION, type: 'usage', noteId, name, props }),
+          titleLength: () => title.value.length,
+          ...(this.usageClock ? { clock: this.usageClock } : {}),
+        });
+        cleanups.push(() => open.usage?.destroy());
+      }
     } catch (error) {
       if (!(error instanceof UnsupportedContentError)) {
         this.close();
@@ -1284,6 +1324,8 @@ export class EditorHost {
       compactedPending,
     });
     this.post({ v: BRIDGE_VERSION, type: 'tags', noteId, tags: lastTags });
+    // The note shows: its shape, once (PEN-177).
+    open.usage?.open('open');
     sendInfo();
     // And its comment threads (T48), drawn in the note and listed for the Comments sheet.
     open.comments?.start();

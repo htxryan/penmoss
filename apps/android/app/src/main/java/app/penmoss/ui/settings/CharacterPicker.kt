@@ -50,6 +50,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.engine.settings.CharacterEntry
 import app.penmoss.engine.settings.Characters
 import app.penmoss.engine.settings.GlyphSearch
@@ -173,7 +174,7 @@ fun CharacterPicker(
                     label = { Text("Search Symbols and Emoji") },
                     placeholder = { Text("A name, a word, or paste one") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("character-search"),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("character-search").typedLength("symbolPicker", "query", query),
                 )
                 val said = pastedProblem
                     ?: if (pasted.isNotEmpty() && cells.isEmpty()) "No characters match “$pasted”." else null

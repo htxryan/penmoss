@@ -15,6 +15,7 @@
  * this file's tests and the Kotlin `BridgeProtocol` tests both check it.
  */
 
+import type { Props } from '@penmoss/core/analytics';
 import { MAX_SYMBOLS, readSymbolList, type LineSymbol } from '@penmoss/core/line-symbols';
 import {
   fontSettingProblem,
@@ -861,6 +862,18 @@ export type FromEditor =
    * `click <id>` only when its catalogue lists the id.
    */
   | { readonly v: 1; readonly type: 'click'; readonly id: string; readonly state?: 'on' | 'off' }
+  /**
+   * Session detail (PEN-177): one `note <name>` event from core's NoteUsage, its props by block
+   * position and length only (never a word, never the note's id). The app adds the note's and
+   * its folder's refs, and its catalogue checks every prop.
+   */
+  | {
+      readonly v: 1;
+      readonly type: 'usage';
+      readonly noteId: string;
+      readonly name: 'open' | 'typing' | 'blocks' | 'cursor' | 'select';
+      readonly props: Props;
+    }
   | {
       readonly v: 1;
       readonly type: 'error';

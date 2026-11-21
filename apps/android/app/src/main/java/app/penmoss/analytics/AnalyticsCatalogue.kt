@@ -101,6 +101,8 @@ class AnalyticsCatalogue(
             "tool" -> mapOf("agentClient" to oneOf(AGENT_CLIENTS), "result" to oneOf(listOf("ok", "invalid", "notFound", "conflict", "failed")), "took" to TOOK)
             // PEN-175: the area is the event's name; how far down it is, in hundredths.
             "scroll" -> mapOf("position" to FRACTION)
+            // PEN-177: an input's name is the dialog its field is in; each note and tree name has its own props.
+            "input" -> mapOf("field" to oneOf(SessionDetail.INPUT_FIELDS), "chars" to CHARS)
             else -> emptyMap()
         }
     }
@@ -148,8 +150,33 @@ class AnalyticsCatalogue(
             number != null && number.isFinite() && number in 0.0..1.0 && abs(number * 100 - (number * 100).roundToLong()) < 1e-9
         }
 
+        /** A whole number, never a string, a boolean or a fraction, from 0 to [max]. */
+        private fun whole(max: Long): (JsonElement) -> Boolean = { value ->
+            val primitive = value as? JsonPrimitive
+            primitive != null && !primitive.isString && primitive.booleanOrNull == null && !primitive.content.contains('.') &&
+                !primitive.content.contains('e', ignoreCase = true) && primitive.longOrNull?.let { it in 0..max } == true
+        }
+
+        /** A note's or folder's ref (PEN-177): 16 lower-case hex characters. */
+        private val REF: (JsonElement) -> Boolean = { value -> value.string()?.let(SessionDetail.REF::matches) == true }
+
+        /** A block's position, a count of blocks or a depth (PEN-177): 0 to MAX_INDEX. */
+        private val INDEX = whole(SessionDetail.MAX_INDEX.toLong())
+
+        /** A length in characters (PEN-177): 0 to MAX_CHARS, exact. */
+        private val CHARS = whole(SessionDetail.MAX_CHARS.toLong())
+
+        /** A note's shape (PEN-177): block tokens within both caps. */
+        private val SHAPE: (JsonElement) -> Boolean = { value -> SessionDetail.isShape(value) }
+        private val TRUE: (JsonElement) -> Boolean = { value -> value is JsonPrimitive && !value.isString && value.booleanOrNull == true }
+
         /** Core's KIND_CLIENTS: the clients that may send a kind; a kind not listed comes from any. */
-        val KIND_CLIENTS: Map<String, Set<String>> = mapOf("scroll" to setOf("mac", "android"))
+        val KIND_CLIENTS: Map<String, Set<String>> = mapOf(
+            "scroll" to setOf("mac", "android"),
+            "note" to setOf("mac", "android"),
+            "input" to setOf("mac", "android"),
+            "tree" to setOf("mac", "android"),
+        )
 
         val WINDOWS = listOf("main", "note", "capture")
         val SIDEBAR_STATES = listOf("shown", "rail", "hidden")
@@ -174,6 +201,22 @@ class AnalyticsCatalogue(
                 "themeMode" to oneOf(THEME_MODES),
                 "tabs" to COUNT,
             ),
+            // PEN-177: session detail, by refs and block positions, never a word.
+            "note.open" to mapOf(
+                "note" to REF,
+                "folder" to REF,
+                "how" to oneOf(listOf("open", "switch", "resync")),
+                "titleChars" to CHARS,
+                "shape" to SHAPE,
+                "more" to TRUE,
+            ),
+            "note.typing" to mapOf("note" to REF, "block" to INDEX, "title" to TRUE, "typed" to CHARS, "deleted" to CHARS, "remote" to TRUE),
+            "note.blocks" to mapOf("note" to REF, "block" to INDEX, "removed" to INDEX, "inserted" to SHAPE, "remote" to TRUE),
+            "note.cursor" to mapOf("note" to REF, "block" to INDEX, "title" to TRUE),
+            "note.select" to mapOf("note" to REF, "block" to INDEX, "chars" to CHARS, "span" to INDEX),
+            "tree.expand" to mapOf("folder" to REF, "depth" to INDEX, "source" to oneOf(listOf("click", "key", "reveal"))),
+            "tree.collapse" to mapOf("folder" to REF, "depth" to INDEX, "source" to oneOf(listOf("click", "key", "reveal"))),
+            "tree.open" to mapOf("note" to REF, "folder" to REF, "depth" to INDEX, "source" to oneOf(listOf("click", "key"))),
         )
         const val MAX_FLAGS = 16
         const val MAX_SETTING_NUMBER = 10_000_000L

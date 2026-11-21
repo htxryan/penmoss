@@ -34,6 +34,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -210,7 +211,7 @@ fun SearchScreen(
                     TextField(
                         value = query,
                         onValueChange = onQuery,
-                        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("searchField"),
+                        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("searchField").typedLength("search", "query", query),
                         placeholder = { Text("Search notes") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

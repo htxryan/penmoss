@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.ui.common.OutlinedTextField
@@ -269,7 +270,7 @@ fun RenameTagDialog(
                     },
                     label = { Text("New name for #$from") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("tagRenameField"),
+                    modifier = Modifier.fillMaxWidth().testTag("tagRenameField").typedLength("tagRename", "name", value),
                 )
                 if (merge && check is TagRenameCheck.Ready) {
                     Text("#${check.to} exists: its notes and these will share it.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium)

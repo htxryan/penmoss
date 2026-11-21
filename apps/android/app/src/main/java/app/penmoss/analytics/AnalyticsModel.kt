@@ -58,7 +58,7 @@ object AnalyticsFormat {
     val CHANNELS = listOf("stable", "alpha", "dev")
     val OSES = listOf("macos", "android", "linux", "windows", "other")
     val SIZE_CLASSES = listOf("compact", "medium", "expanded")
-    val KINDS = listOf("app", "command", "screen", "dialog", "click", "menu", "setting", "firstrun", "feedback", "sync", "cli", "tool", "scroll")
+    val KINDS = listOf("app", "command", "screen", "dialog", "click", "menu", "setting", "firstrun", "feedback", "sync", "cli", "tool", "scroll", "note", "input", "tree")
 
     val COUNT_BUCKETS = listOf("0", "1", "2–4", "5–9", "10–49", "50–99", "100–499", "500–999", "1000–4999", "5000+")
     private val COUNT_EDGES = listOf(5000 to "5000+", 1000 to "1000–4999", 500 to "500–999", 100 to "100–499", 50 to "50–99", 10 to "10–49", 5 to "5–9", 2 to "2–4", 1 to "1")
@@ -213,7 +213,7 @@ data class Limits(val values: Map<String, Int>) {
 
         val SPECS = listOf(
             LimitSpec(EVENTS_DAYS, 7, 1, 360, "days", "usage"),
-            LimitSpec(EVENTS_MAX, 5000, 500, 800_000, "events", "usage"),
+            LimitSpec(EVENTS_MAX, 200_000, 500, 2_000_000, "events", "usage"),
             LimitSpec(LOGS_FILE_KB, 1024, 256, 81_920, "KB", "logs"),
             LimitSpec(LOGS_FILES, 2, 1, 5, "files", "logs"),
             LimitSpec(LOGS_DAYS, 7, 1, 360, "days", "logs"),
@@ -226,8 +226,8 @@ data class Limits(val values: Map<String, Int>) {
 
         fun spec(key: String): LimitSpec = SPECS.first { it.key == key }
 
-        /** About how many bytes one stored event takes with its indexes. */
-        const val EVENT_BYTES = 400L
+        /** About how many bytes one stored event takes with its indexes (PEN-177: a note's open averages about 4 KB). */
+        const val EVENT_BYTES = 500L
 
         val DEFAULTS = Limits(SPECS.associate { it.key to it.default })
 

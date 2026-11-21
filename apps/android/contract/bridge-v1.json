@@ -1,5 +1,5 @@
 {
-  "$comment": "Every message of the Android editor bridge, version 1 (T32, A282; T33 added messages, A300, A309, A311; T38 added create, setTag, created and tags; T43 added the notebook of open, create and copyConflicts (A766), removed again with the rest of T43 on Android since a git notebook has no notebooks inside it (A912); T40 P1 added width, P1b preview; T40 P4 added focusTitle; T40 P5 added createPeriodic, createdPeriodic and periodicNav; T40 P8 added copy, clipboard, insertPlain, source, blocks, insert, turnInto, block, folds and counts, the table and heading 4–6 commands, and the state's table, code and block fields; the P8 reviews added captureSelection, undoDelete, and source and blockDeleted from the page; part two added file, fileStored, insertFiles, fileInfo, openFile and webPictures; T40 P7 added noteContent both ways, noteChanged, showHeading, watchNote, noteInfo, and openNote's heading; T40 P9 added keys and command, a createPeriodic request tag its error echoes, and each period target's period; T44 added symbols, symbol, and the state's symbols and canSymbol; T48 added commentDraft both ways, commentCreate, commentReply, commentEdit, commentDelete, commentDeleteThread, commentStatus, commentTarget and commentActive, and comments and commentOpen from the page; its review added commentAuthor, who the phone writes as, a removed first comment's removed, A784, and the failed delivery state with its reason; T51 added fonts, A944, and lightbox and closeLightbox, A948; T60 put the agent writer in place of the token in a thread's target, added the gone reason, A1062, commentSessions, A1077, and commentSent, A1078; PEN-161 added setDescription, setAiDescription and answerDescription, and noteInfo's description, descriptionBy, ai and descriptionAsks; PEN-175 added scroll, how far down the note is, and click, a tracked control in the note used, for usage data). Checked by apps/android/editor/test/contract.test.ts and the Kotlin BridgeProtocolTest; invalidFromEditor holds messages the page must never send, which the app refuses. Updates are base64 Yjs bytes that Kotlin never reads. A real `theme` carries the whole theme /sync/tree resolved (A305); the example names a built-in only.",
+  "$comment": "Every message of the Android editor bridge, version 1 (T32, A282; T33 added messages, A300, A309, A311; T38 added create, setTag, created and tags; T43 added the notebook of open, create and copyConflicts (A766), removed again with the rest of T43 on Android since a git notebook has no notebooks inside it (A912); T40 P1 added width, P1b preview; T40 P4 added focusTitle; T40 P5 added createPeriodic, createdPeriodic and periodicNav; T40 P8 added copy, clipboard, insertPlain, source, blocks, insert, turnInto, block, folds and counts, the table and heading 4–6 commands, and the state's table, code and block fields; the P8 reviews added captureSelection, undoDelete, and source and blockDeleted from the page; part two added file, fileStored, insertFiles, fileInfo, openFile and webPictures; T40 P7 added noteContent both ways, noteChanged, showHeading, watchNote, noteInfo, and openNote's heading; T40 P9 added keys and command, a createPeriodic request tag its error echoes, and each period target's period; T44 added symbols, symbol, and the state's symbols and canSymbol; T48 added commentDraft both ways, commentCreate, commentReply, commentEdit, commentDelete, commentDeleteThread, commentStatus, commentTarget and commentActive, and comments and commentOpen from the page; its review added commentAuthor, who the phone writes as, a removed first comment's removed, A784, and the failed delivery state with its reason; T51 added fonts, A944, and lightbox and closeLightbox, A948; T60 put the agent writer in place of the token in a thread's target, added the gone reason, A1062, commentSessions, A1077, and commentSent, A1078; PEN-161 added setDescription, setAiDescription and answerDescription, and noteInfo's description, descriptionBy, ai and descriptionAsks; PEN-175 added scroll, how far down the note is, and click, a tracked control in the note used, for usage data; PEN-177 added usage, one event of session detail: a note's shape, typing, splices, cursor and selection by block position and length, never a word or an id). Checked by apps/android/editor/test/contract.test.ts and the Kotlin BridgeProtocolTest; invalidFromEditor holds messages the page must never send, which the app refuses. Updates are base64 Yjs bytes that Kotlin never reads. A real `theme` carries the whole theme /sync/tree resolved (A305); the example names a built-in only.",
   "formatCommands": [
     "bold",
     "italic",
@@ -1274,6 +1274,71 @@
     },
     {
       "v": 1,
+      "type": "usage",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "name": "open",
+      "props": {
+        "how": "open",
+        "titleChars": 12,
+        "shape": ["h1:12", "p:182", "li.t.2:31", "table.4x3:96", "hr"]
+      }
+    },
+    {
+      "v": 1,
+      "type": "usage",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "name": "typing",
+      "props": {
+        "block": 3,
+        "typed": 12,
+        "deleted": 2
+      }
+    },
+    {
+      "v": 1,
+      "type": "usage",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "name": "typing",
+      "props": {
+        "title": true,
+        "typed": 1,
+        "deleted": 0,
+        "remote": true
+      }
+    },
+    {
+      "v": 1,
+      "type": "usage",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "name": "blocks",
+      "props": {
+        "block": 2,
+        "removed": 1,
+        "inserted": ["p:4", "h2:9"]
+      }
+    },
+    {
+      "v": 1,
+      "type": "usage",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "name": "cursor",
+      "props": {
+        "block": 5
+      }
+    },
+    {
+      "v": 1,
+      "type": "usage",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "name": "select",
+      "props": {
+        "block": 0,
+        "chars": 40,
+        "span": 2
+      }
+    },
+    {
+      "v": 1,
       "type": "click",
       "id": "editor.callout.fold"
     },
@@ -1710,6 +1775,13 @@
     "{\"v\":1,\"type\":\"scroll\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"position\":true}",
     "{\"v\":1,\"type\":\"scroll\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
     "{\"v\":1,\"type\":\"scroll\",\"noteId\":\"../etc\",\"position\":0.5}",
+    "{\"v\":1,\"type\":\"usage\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"name\":\"close\",\"props\":{}}",
+    "{\"v\":1,\"type\":\"usage\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"name\":\"typing\"}",
+    "{\"v\":1,\"type\":\"usage\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"name\":\"typing\",\"props\":[]}",
+    "{\"v\":1,\"type\":\"usage\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"name\":\"open\",\"props\":{\"note\":\"0123456789abcdef\"}}",
+    "{\"v\":1,\"type\":\"usage\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"name\":\"open\",\"props\":{\"folder\":\"0123456789abcdef\"}}",
+    "{\"v\":1,\"type\":\"usage\",\"noteId\":\"../etc\",\"name\":\"cursor\",\"props\":{\"block\":1}}",
+    "{\"v\":1,\"type\":\"usage\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"name\":7,\"props\":{}}",
     "{\"v\":1,\"type\":\"lightbox\",\"open\":\"true\"}",
     "{\"v\":1,\"type\":\"created\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB4\",\"note\":{\"id\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"title\":\"\",\"update\":\"AAA=\"}}",
     "{\"v\":1,\"type\":\"created\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB4\"}",

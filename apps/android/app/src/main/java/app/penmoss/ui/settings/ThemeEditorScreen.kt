@@ -87,6 +87,7 @@ import app.penmoss.analytics.Analytics
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedId
+import app.penmoss.analytics.typedLength
 import app.penmoss.engine.settings.Colour
 import app.penmoss.engine.settings.Contrast
 import app.penmoss.engine.settings.ContrastCheck
@@ -489,7 +490,7 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
                 isError = !Colour.isHex(hexText),
                 supportingText = { if (!Colour.isHex(hexText)) Text("A colour is # and six hex digits, like #2e3440.") },
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("colourHex"),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("colourHex").typedLength("colourPicker", "other", hexText),
             )
             Text("This Theme’s Colours", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
             FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

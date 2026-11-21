@@ -51,6 +51,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.engine.settings.LucideIcon
 import app.penmoss.engine.settings.NotebookBadges
 import app.penmoss.ui.common.IconButton
@@ -158,7 +159,7 @@ fun IconPicker(current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit
                     label = { Text("Search Icons") },
                     placeholder = { Text("A name or a word") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("icon-search"),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("icon-search").typedLength("iconPicker", "query", query),
                 )
                 val said = when {
                     icons == null -> "Loading icons…"

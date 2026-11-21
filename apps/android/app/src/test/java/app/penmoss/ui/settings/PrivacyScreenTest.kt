@@ -136,7 +136,7 @@ class PrivacyScreenTest {
         compose.onNodeWithTag("privacyAdvanced").performScrollTo().performClick()
         for (title in listOf("Usage Record", "Bug Reports")) compose.onNodeWithText(title).performScrollTo().assertIsDisplayed()
         for (spec in Limits.SPECS) compose.onNodeWithTag("limit-${spec.key}").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("About 1.9 MB of events at most on this phone").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("About 95 MB of events at most on this phone").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Up to 2 MB of logs on this phone (at most 400 MB)").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("A bug report attaches the last 24 hours, at most 300 lines and 16 KB.").performScrollTo().assertIsDisplayed()
 

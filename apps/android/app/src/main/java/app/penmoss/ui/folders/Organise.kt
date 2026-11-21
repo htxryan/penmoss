@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
@@ -211,7 +212,7 @@ fun TagSheet(
                         typed = it
                         error = null
                     },
-                    modifier = Modifier.weight(1f).testTag("tagField"),
+                    modifier = Modifier.weight(1f).testTag("tagField").typedLength("tag", "name", typed),
                     label = { Text("Add a tag") },
                     placeholder = { Text("tag or area/tag") },
                     singleLine = true,

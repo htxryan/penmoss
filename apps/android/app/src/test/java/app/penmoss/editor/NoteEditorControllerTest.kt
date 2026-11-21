@@ -415,6 +415,39 @@ class NoteEditorControllerTest {
         }
     }
 
+    /**
+     * PEN-177: the page's `usage` is recorded as `note <name>` with the note's ref added, never
+     * its id, for the note shown only; a page sending a ref of its own is refused by the bridge.
+     */
+    @Test
+    fun recordsTheNoteShownsSessionDetailByRef() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                val key = harness.service.stateNow().refKey
+                val controller = controller()
+                val props = kotlinx.serialization.json.buildJsonObject {
+                    put("block", kotlinx.serialization.json.JsonPrimitive(3))
+                    put("typed", kotlinx.serialization.json.JsonPrimitive(12))
+                    put("deleted", kotlinx.serialization.json.JsonPrimitive(2))
+                }
+                page(controller, FromEditor.Usage("n", "typing", props))
+                page(controller, FromEditor.Usage("other-note", "typing", props))
+                runBlocking(thread) {
+                    controller.onPageMessage("""{"v":1,"type":"usage","noteId":"n","name":"cursor","props":{"note":"0123456789abcdef","block":1}}""")
+                }
+                harness.service.flush()
+                val stored = harness.store.page(null, null, 10).sortedBy { it.seq }
+                assertEquals(listOf("note" to "typing"), stored.map { it.kind to it.name })
+                val ref = app.penmoss.analytics.AnalyticsRefs.refOf(key, "note", "n")
+                assertEquals("""{"block":3,"typed":12,"deleted":2,"note":"$ref"}""", stored.single().props)
+                assertTrue(!stored.single().props.contains("\"n\""))
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
     private fun syncedAt(epoch: String, update: String) = runBlocking {
         val content = store.content("n")
         store.saveExchange(Exchange.decide(content, Exchange.entry(content), BatchNoteReply("n", epoch, update, "SV-$update", null)))

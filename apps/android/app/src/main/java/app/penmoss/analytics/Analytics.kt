@@ -116,6 +116,17 @@ class AnalyticsService(
         false
     }
 
+    /**
+     * Records an event of session detail (PEN-177) naming notes or folders: each of [refs] (a prop,
+     * to its type and real id) is recorded as its ref under this install's key, never the id. Dropped
+     * while the answer is not read yet, so no event goes without its refs.
+     */
+    fun recordWithRefs(kind: String, name: String, props: Map<String, Any?>, refs: Map<String, Pair<String, String?>>): Boolean {
+        val key = state.value?.refKey?.takeIf(AnalyticsRefs.KEY::matches) ?: return false
+        val named = refs.mapNotNull { (prop, ref) -> ref.second?.let { id -> prop to AnalyticsRefs.refOf(key, ref.first, id) } }.toMap()
+        return record(kind, name, props + named)
+    }
+
     private fun flushSoon(delayMs: Long) {
         synchronized(buffer) {
             if (delayMs > 0 && flushJob?.isActive == true) return
@@ -257,6 +268,8 @@ class AnalyticsService(
          */
         fun jsonOf(value: Any?): JsonElement? = when (value) {
             null -> null
+            // A prop from the editor page (PEN-177), as it came; the catalogue checks it.
+            is JsonElement -> value
             is String -> JsonPrimitive(value)
             is Boolean -> JsonPrimitive(value)
             is Int -> JsonPrimitive(value)
@@ -287,6 +300,10 @@ object Analytics {
     /** Records one event (kind, catalogue name, typed props); false when dropped or not installed. */
     fun record(kind: String, name: String, props: Map<String, Any?> = emptyMap()): Boolean =
         service?.record(kind, name, props) ?: false
+
+    /** An event naming notes or folders (PEN-177): [refs] maps a prop to its type and real id. */
+    fun recordWithRefs(kind: String, name: String, props: Map<String, Any?>, refs: Map<String, Pair<String, String?>>): Boolean =
+        service?.recordWithRefs(kind, name, props, refs) ?: false
 
     /** A tracked control was used (`Modifier.tracked`): its id, and on/off for a switch. */
     fun click(id: String, on: Boolean? = null): Boolean =

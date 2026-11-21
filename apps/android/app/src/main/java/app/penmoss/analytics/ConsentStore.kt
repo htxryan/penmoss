@@ -16,7 +16,9 @@ import java.io.File
 /**
  * The person's answer (PEN-137, O3), as core's `ConsentFile` is the Mac's: the answer (null until
  * given), the anonymous install ID, when it was answered and by which version, since when sharing
- * has been on, and the limits that differ from their defaults. A DataStore file of its own under
+ * has been on, the limits that differ from their defaults, and the ref key (PEN-177: 64 hex
+ * characters that name notes and folders by a keyed hash, made with the install ID and made again
+ * with each new one; never sent, shown or logged). A DataStore file of its own under
  * `filesDir/datastore/`, which Auto Backup and device transfer leave out (every file of the app is
  * left out, `data_extraction_rules.xml`). Never in the synced settings or a notebook.
  */
@@ -27,6 +29,8 @@ data class ConsentState(
     val askedVersion: String? = null,
     val sharingSince: Long? = null,
     val limits: Limits = Limits.DEFAULTS,
+    /** The ref key (PEN-177), or "" until it is made. */
+    val refKey: String = "",
 ) {
     val answered: Boolean get() = consent != null
     val sharing: Boolean get() = consent == ConsentAnswer.YES
@@ -45,11 +49,15 @@ class ConsentStore(private val store: DataStore<Preferences>) {
 
     suspend fun now(): ConsentState = ensureInstall(state.first())
 
-    /** A state with an install ID: one is made, and kept, the first time. */
+    /** A state with an install ID and a ref key: each is made, and kept, the first time. */
     private suspend fun ensureInstall(state: ConsentState): ConsentState {
-        if (AnalyticsFormat.INSTALL.matches(state.install)) return state
+        if (AnalyticsFormat.INSTALL.matches(state.install) && AnalyticsRefs.KEY.matches(state.refKey)) return state
         val id = AnalyticsFormat.newInstallId()
-        store.edit { if (!AnalyticsFormat.INSTALL.matches(it[INSTALL].orEmpty())) it[INSTALL] = id }
+        val key = AnalyticsRefs.newKey()
+        store.edit {
+            if (!AnalyticsFormat.INSTALL.matches(it[INSTALL].orEmpty())) it[INSTALL] = id
+            if (!AnalyticsRefs.KEY.matches(it[REF_KEY].orEmpty())) it[REF_KEY] = key
+        }
         return read(store.data.first())
     }
 
@@ -68,10 +76,14 @@ class ConsentStore(private val store: DataStore<Preferences>) {
         return now()
     }
 
-    /** A new install ID (Reset My Analytics ID, or after Delete My Shared Data). */
+    /** A new install ID and a new ref key, in one step (Reset My Analytics ID, or after Delete My Shared Data). */
     suspend fun resetId(): ConsentState {
         val id = AnalyticsFormat.newInstallId()
-        store.edit { it[INSTALL] = id }
+        val key = AnalyticsRefs.newKey()
+        store.edit {
+            it[INSTALL] = id
+            it[REF_KEY] = key
+        }
         return now()
     }
 
@@ -94,6 +106,7 @@ class ConsentStore(private val store: DataStore<Preferences>) {
             askedVersion = prefs[ASKED_VERSION],
             sharingSince = if (consent == ConsentAnswer.YES) prefs[SHARING_SINCE] else null,
             limits = Limits.of(Limits.KEYS.associateWith { prefs[limitKey(it)] }),
+            refKey = prefs[REF_KEY]?.takeIf(AnalyticsRefs.KEY::matches).orEmpty(),
         )
     }
 
@@ -106,6 +119,7 @@ class ConsentStore(private val store: DataStore<Preferences>) {
         private val ANSWERED_AT = longPreferencesKey("answeredAt")
         private val ASKED_VERSION = stringPreferencesKey("askedVersion")
         private val SHARING_SINCE = longPreferencesKey("sharingSince")
+        private val REF_KEY = stringPreferencesKey("refKey")
 
         private fun limitKey(key: String) = intPreferencesKey("limits.$key")
 

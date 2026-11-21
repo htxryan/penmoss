@@ -4,8 +4,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import app.penmoss.analytics.TreeEvents
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.ui.keys.FolderCommands
 import app.penmoss.ui.home.FolderScreen
 import kotlinx.coroutines.Dispatchers
@@ -199,7 +201,7 @@ fun FolderNameDialog(title: String, initial: String = "", onConfirm: (String) ->
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                modifier = Modifier.fillMaxWidth().testTag("folderNameField"),
+                modifier = Modifier.fillMaxWidth().testTag("folderNameField").typedLength("folderName", "name", name),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
@@ -587,16 +589,27 @@ internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
                     notes = filed,
                     sortMode = folder?.sortMode ?: "manual",
                     subtitle = Items.pathText(above.map { it.name }).takeIf { above.isNotEmpty() },
+                    depth = above.size,
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
-        }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null))
+        }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null, 0))
         FolderScreen(
             title = contents.name,
             folders = contents.folders,
             notes = contents.notes,
-            onBack = { nav.leave(entry) },
-            onFolder = { nav.open("folder/$it") },
-            onOpen = root::openNote,
+            // Where in the tree (PEN-177): this folder is at its depth, what it holds one deeper.
+            onBack = {
+                if (folderId != null) TreeEvents.collapse(folderId, contents.depth)
+                nav.leave(entry)
+            },
+            onFolder = {
+                TreeEvents.expand(it, contents.depth + 1)
+                nav.open("folder/$it")
+            },
+            onOpen = {
+                TreeEvents.open(it, folderId, contents.depth + 1)
+                root.openNote(it)
+            },
             onNewNote = { root.newNote(folderId) },
             onNewNoteIn = { root.choosing = Choosing.NewNote(folderId) },
             onNoteLongPress = root::startSelection,
@@ -623,5 +636,7 @@ private data class FolderView(
     val notes: List<NoteItem>,
     val sortMode: String,
     val subtitle: String?,
+    /** How deep the folder is: 0 at the notebook's top level (PEN-177). */
+    val depth: Int,
 )
 
