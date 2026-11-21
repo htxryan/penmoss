@@ -24,6 +24,9 @@ class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
         /** How long a finder waits for its node to appear before it scrolls to look for it. */
         private const val SEEK_AFTER_MS = 1_000L
 
+        /** How long [open] waits for its screen before it taps again. */
+        private const val OPEN_RETAP_MS = 2_000L
+
         /** The screen of [scenario]'s activity, whichever kind it is (the app's own activities). */
         fun <A : Activity> of(scenario: ActivityScenario<A>) = OnScreen { block -> scenario.onActivity { block(it) } }
 
@@ -134,6 +137,40 @@ class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
     }
 
     fun tap(tag: String) = tap(tagged(tag))
+
+    /**
+     * Taps [tag], a control that opens another screen, until [arrived] holds. The app opens a
+     * screen only from the one that has settled in front (A387), so a tap made while that one
+     * still slides in does nothing: a slow phone (CI's emulator) needs it made again.
+     */
+    fun open(tag: String, arrived: () -> Boolean) {
+        tap(tag)
+        waitFor("the screen [$tag] opens") {
+            val again = SystemClock.uptimeMillis() + OPEN_RETAP_MS
+            while (SystemClock.uptimeMillis() < again) {
+                if (arrived()) return@waitFor true
+                SystemClock.sleep(100)
+            }
+            nodes().firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag }?.let { tap(it) }
+            null
+        }
+    }
+
+    /**
+     * Opens [tag]'s screen, known by the node tagged [then] on it (see [open]), which may sit
+     * below the fold: it is looked for as [tagged] does, the list scrolled to find it.
+     */
+    fun open(tag: String, then: String) {
+        val since = SystemClock.uptimeMillis()
+        open(tag) { seek(since) { it.config.getOrNull(SemanticsProperties.TestTag) == then } != null }
+    }
+
+    /** From Home: the gear, Privacy, then View Analytics Data, known by its title. */
+    fun openAnalyticsData() {
+        open("homeSettingsGear", then = "section-privacy")
+        open("section-privacy", then = "privacyViewData")
+        open("privacyViewData") { has(AnalyticsCopy.text("viewer.title")) }
+    }
 
     /** Types [value] into the field [tag] and presses its Done. */
     fun type(tag: String, value: String) {

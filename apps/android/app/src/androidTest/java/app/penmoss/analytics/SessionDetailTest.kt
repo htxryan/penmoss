@@ -211,10 +211,7 @@ class SessionDetailTest {
             smallerText()
             context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             val home = OnScreen.inFront()
-            home.tap("homeSettingsGear")
-            home.tap("section-privacy")
-            home.tap("privacyViewData")
-            home.text(AnalyticsCopy.text("viewer.title"))
+            home.openAnalyticsData()
             // Newest first, the rows recorded after the typing (Home and Settings; the note page
             // made again behind them for the smaller text records nothing) come before it, so the
             // list is scrolled to them:
@@ -252,9 +249,8 @@ class SessionDetailTest {
             // Settings in front, the note's screen behind it.
             context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             val settings = OnScreen.inFront()
-            settings.tap("homeSettingsGear")
-            settings.tap("section-privacy")
-            settings.tagged("privacyViewData")
+            settings.open("homeSettingsGear", then = "section-privacy")
+            settings.open("section-privacy", then = "privacyViewData")
             SystemClock.sleep(1_500)
             val mark = stored().lastOrNull()?.id ?: since
             val behind = { stored().filter { it.id > mark && it.kind == "note" && it.name in setOf("open", "cursor") } }
@@ -387,10 +383,7 @@ class SessionDetailTest {
             smallerText()
             context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             val viewer = OnScreen.inFront()
-            viewer.tap("homeSettingsGear")
-            viewer.tap("section-privacy")
-            viewer.tap("privacyViewData")
-            viewer.text(AnalyticsCopy.text("viewer.title"))
+            viewer.openAnalyticsData()
             val rows = listOf("tree · open", "tree · collapse", "tree · expand")
             viewer.reveal(seek(viewer, "tree · open"), margin = 48f)
             // The list pages in its rows as it nears its end: brought up again until the older
@@ -614,10 +607,7 @@ class SessionDetailTest {
     private fun endOnRow(headline: String, matches: (String) -> Boolean) {
         context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         val viewer = OnScreen.inFront()
-        viewer.tap("homeSettingsGear")
-        viewer.tap("section-privacy")
-        viewer.tap("privacyViewData")
-        viewer.text(AnalyticsCopy.text("viewer.title"))
+        viewer.openAnalyticsData()
         val props = seek(viewer, "the $headline row") { node -> node.texts().any(matches) }
         val line = props.texts().first(matches)
         // The props line a little below the list's top, so its headline shows above it.
