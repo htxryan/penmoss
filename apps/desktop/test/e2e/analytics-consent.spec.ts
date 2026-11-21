@@ -69,9 +69,9 @@ async function expectEqualAnswers(scope: Locator) {
       return [style.borderColor, style.borderWidth, style.fontWeight, style.backgroundColor];
     });
   // A hover leaving runs its transition: the two are compared once it has ended.
-  await expect
-    .poll(async () => JSON.stringify(await look(share)) === JSON.stringify(await look(dont)))
-    .toBe(true);
+  await expect(async () => {
+    expect(await look(share)).toEqual(await look(dont));
+  }).toPass();
   const row = (await scope.locator('.consent-answers').boundingBox())!;
   const shareBox = (await share.boundingBox())!;
   const dontBox = (await dont.boundingBox())!;

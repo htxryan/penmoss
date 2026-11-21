@@ -477,7 +477,7 @@ class SessionDetailTest {
             android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).bufferedReader().use { it.readText().trim() }
         }
 
-    /** Display → Font Size a step smaller, so more rows fit (put back after). */
+    /** Display → Font Size a step smaller, so more rows show on screen; put back after. */
     private fun smallerText() {
         fontScale = shell("settings get system font_scale")
         shell("settings put system font_scale 0.85")
