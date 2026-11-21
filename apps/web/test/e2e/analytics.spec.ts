@@ -488,6 +488,13 @@ test.describe('Analytics Data (ac36)', () => {
             props: { source: 'pointer' },
             at,
           },
+          // A name of 28 characters with a hyphen, which the Mac's font once broke after its hyphen.
+          {
+            kind: 'click',
+            name: 'firstrun.welcome.get-started',
+            props: { source: 'pointer' },
+            at,
+          },
           // The catalogue's longest name, which can only break between its words.
           {
             kind: 'click',
@@ -547,7 +554,7 @@ test.describe('Analytics Data (ac36)', () => {
     const whole = rows.filter({ hasText: 'privacy.data.filter-client' }).locator('td:nth-child(4)');
     // At every width the Mac's window takes, from its narrowest (480) up: nothing scrolls sideways,
     // and a name breaks, if it must, only after a dot or a hyphen, never inside a word.
-    for (const width of [480, 560, 640, 720, 800, 900, 1000, 1100, 1200, 1280]) {
+    for (let width = 480; width <= 1280; width += 20) {
       await page.setViewportSize({ width, height: 720 });
       const sideways = await data.evaluate((element) => {
         const wrap = element.querySelector<HTMLElement>('.privacy-table-wrap')!;
@@ -562,16 +569,22 @@ test.describe('Analytics Data (ac36)', () => {
         for (const before of await breaksOf(cell)) expect(before).toMatch(/[.-]$/);
       }
     }
-    // At the proof's width, every name of up to 29 characters is whole on one line; the longest
-    // breaks between its words.
-    await page.setViewportSize({ width: 1100, height: 720 });
-    await expect(whole).toHaveText('privacy.data.filter-client');
-    expect(await linesOf(whole)).toEqual([1]);
-    expect((await breaksOf(longest)).length).toBeGreaterThan(0);
-    const nameTexts = await rows.locator('td:nth-child(4)').allTextContents();
-    const names = await linesOf(rows.locator('td:nth-child(4)'));
-    expect(names.length).toBeGreaterThanOrEqual(5);
-    expect(nameTexts.filter((name, index) => name.length <= 29 && names[index] !== 1)).toEqual([]);
+    // At the proofs' widths (the Mac's window is 1280), every name of up to 29 characters is whole
+    // on one line, measured in the name's own font; the longest breaks between its words.
+    for (const width of [1280, 1100]) {
+      await page.setViewportSize({ width, height: 720 });
+      await expect(whole).toHaveText('privacy.data.filter-client');
+      expect(await linesOf(whole)).toEqual([1]);
+      expect((await breaksOf(longest)).length).toBeGreaterThan(0);
+      const nameTexts = await rows.locator('td:nth-child(4)').allTextContents();
+      const names = await linesOf(rows.locator('td:nth-child(4)'));
+      expect(names.length).toBeGreaterThanOrEqual(6);
+      expect(nameTexts).toContain('firstrun.welcome.get-started');
+      expect({
+        width,
+        broken: nameTexts.filter((name, index) => name.length <= 29 && names[index] !== 1),
+      }).toEqual({ width, broken: [] });
+    }
     await expect(open.locator('td:nth-child(4)')).toHaveText('open');
     // The props beside it wrap instead.
     const [props] = await linesOf(open.locator('td:nth-child(5)'));

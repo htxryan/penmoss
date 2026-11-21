@@ -424,14 +424,21 @@
 }
 
 /*
- * A name stays whole (PEN-177): its column takes a fair share of the row, so a name of up to
- * about 29 characters never breaks, and only the props beside it wrap, however long they are. A
- * longer name, or any name in a narrow window, breaks only between its words, after a dot or a
- * hyphen (AnalyticsData.tsx), so the table doesn't scroll sideways.
+ * A name stays whole (PEN-177): its column is measured in its own font's characters, so a name
+ * of up to 29 characters never breaks whatever the font (the Mac's is wider than a percentage
+ * allows for), and only the props beside it wrap, however long they are. A longer name, or any
+ * name in a narrow window, breaks only between its words, after a dot or a hyphen
+ * (AnalyticsData.tsx), so the table doesn't scroll sideways.
  */
 .privacy-table-name {
-  width: 30%;
+  width: 30ch;
   font-family: var(--pm-mono);
+}
+
+@container privacy-table (max-width: 680px) {
+  .privacy-table-name {
+    width: auto;
+  }
 }
 
 .privacy-table-props {
