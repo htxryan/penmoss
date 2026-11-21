@@ -51,7 +51,14 @@ describe('the secret scan', () => {
       "const comment = { token: '01JD2Z7Q8R4T6Y8W0E2R4T6YT1' };",
       'const anchor = { key: "0123456789abcdef01234567" };',
       "const shortcut = { key: 'Alt+Shift+KeyH' };",
+      `const refs = { key: "${'0123456789abcdef'.repeat(4)}" };`,
     ].join('\n');
     assert.equal(scan('fixtures', `${text}\n`), 0);
+  });
+
+  it('still fails on a ref key that is not the fake one (PEN-177)', () => {
+    // Built at run time, so this file itself holds no key-shaped string.
+    const key = ['f3a91c07d26e48b5a0c9e1d7', 'b46f2a83c5e09d1b7a4f6c28e3b05d9a1c7f4e62'].join('');
+    assert.equal(scan('refkey', `const refs = { key: "${key}" };\n`), 1);
   });
 });

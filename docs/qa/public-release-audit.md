@@ -20,6 +20,7 @@ Each is allowed in `.gitleaks.toml` by its shape, never by file, so a real secre
 
 - ULIDs (note, comment and submission ids) in tests and the Android bridge contract;
 - two fake 12-byte comment-anchor keys (`0123…`, `89ab…`) in the bridge contract and its tests;
+- the fake analytics ref key (`0123456789abcdef`, repeated up to 64 characters) in the analytics contract and its tests (PEN-177);
 - keyboard shortcut strings (`Alt+Shift+…`) in the E2E key helpers and the editor's drag handle;
 - the repository's own name passed as an argument in a feedback test;
 - the relay's PEM parser, which matches the text of a private key header (no key is in the file).
