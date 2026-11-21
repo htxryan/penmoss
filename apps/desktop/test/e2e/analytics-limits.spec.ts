@@ -69,11 +69,11 @@ test('Advanced opens in place; a limit out of range is refused, a lowering that 
   await expect(days.getByTestId('privacy-limit-default')).toHaveCount(0);
   const most = advanced.locator('[data-setting="keep-at-most"]');
   const mostField = most.getByRole('textbox');
-  await expect(mostField).toHaveValue('5,000');
-  await expect(most.getByTestId('privacy-limit-range')).toHaveText('500–800,000 events');
+  await expect(mostField).toHaveValue('200,000');
+  await expect(most.getByTestId('privacy-limit-range')).toHaveText('500–2,000,000 events');
   // How much each group may take, and Reset to Defaults at the foot.
   await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-    /^About [\d.]+ [KM]B of events at most on this Mac$/,
+    'About 95 MB of events at most on this Mac',
   );
   await expect(advanced.getByTestId('privacy-space-logs')).toHaveText(
     'Up to 2 MB of logs on this Mac (at most 400 MB)',
@@ -129,27 +129,28 @@ test('Advanced opens in place; a limit out of range is refused, a lowering that 
   // Cancel puts the old value back; nothing is deleted.
   await confirm.getByRole('button', { name: 'Cancel' }).click();
   await expect(confirm).toHaveCount(0);
-  await expect(mostField).toHaveValue('5,000');
-  expect((await analyticsStatus(page)).limits['events.max']).toBe(5000);
+  await expect(mostField).toHaveValue('200,000');
+  expect((await analyticsStatus(page)).limits['events.max']).toBe(200_000);
   expect(await recordTotal(page)).toBeGreaterThanOrEqual(total);
   // Escape cancels too.
   await ask();
   await page.keyboard.press('Escape');
   await expect(confirm).toHaveCount(0);
-  await expect(mostField).toHaveValue('5,000');
-  expect((await analyticsStatus(page)).limits['events.max']).toBe(5000);
+  await expect(mostField).toHaveValue('200,000');
+  expect((await analyticsStatus(page)).limits['events.max']).toBe(200_000);
 
   // Delete saves it, and the record keeps only the newest 500.
   await ask();
   await confirm.getByRole('button', { name: 'Delete' }).click();
   await expect(confirm).toHaveCount(0);
   await expect(mostField).toHaveValue('500');
-  await expect(most.getByTestId('privacy-limit-default')).toHaveText('Default: 5,000');
+  await expect(most.getByTestId('privacy-limit-default')).toHaveText('Default: 200,000');
   await expect.poll(async () => (await analyticsStatus(page)).limits['events.max']).toBe(500);
   // What this page records meanwhile (clicks, the setting) joins after the prune.
   await expect.poll(() => recordTotal(page)).toBeLessThanOrEqual(520);
+  // 500 events of about 500 bytes each (core's EVENT_BYTES).
   await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-    /^About [\d.]+ [KM]B of events at most on this Mac$/,
+    'About 244 KB of events at most on this Mac',
   );
   await most.scrollIntoViewIfNeeded();
   await holdForProof(page);

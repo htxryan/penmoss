@@ -442,10 +442,11 @@ export class Analytics {
   private withRefs(input: PageEventInput): Props {
     const props = input.props ?? {};
     if (!input.refs) return props;
+    // The refs first: what the event is about reads first in the viewers.
     return {
-      ...props,
       ...(input.refs.note ? { note: this.refOf('note', input.refs.note) } : {}),
       ...(input.refs.folder ? { folder: this.refOf('folder', input.refs.folder) } : {}),
+      ...props,
     };
   }
 
