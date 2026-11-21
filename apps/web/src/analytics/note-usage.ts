@@ -37,7 +37,7 @@ export function useNoteUsage(
   useEffect(() => {
     if (!collab) return;
     const title = titleRef.current;
-    let usage: NoteUsage | null = null;
+    let usage: NoteUsage;
     try {
       usage = attachNoteUsage(collab.editor, {
         record: (name, props) =>

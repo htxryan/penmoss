@@ -83,7 +83,7 @@ interface Recorded {
   readonly kind: string;
   readonly name: string;
   readonly props: Props;
-  readonly refs?: { readonly note?: string; readonly folder?: string };
+  readonly refs?: { readonly note?: string | undefined; readonly folder?: string | undefined };
 }
 
 /** The page's session detail so far, oldest first. */
