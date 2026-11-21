@@ -22,7 +22,7 @@ Under the changes are four buttons. Each shows an icon and one word, and its ful
 - **Revert** (Revert This Edit) undoes only what that version changed and keeps every edit made since. It works on any version, yours or an agent's, except a move to Trash or back out of it, which Trash undoes. If a later edit changed the same lines, it says so.
 - **Copy** (Copy Text) copies the note's text as it was in that version.
 
-On Android, **Version History** is a tab of the note's panel, laid out as the Mac's: a **Now** row with **Save Version** and ⓘ (how versions are made), then the versions by day, one line each with who, when, what and the lines added and removed. Tap a version to open its own screen: when and who made it, its changes with line numbers (or the whole version, with the page button at the top), and **Restore**, **Revert** and **Copy** at the foot. **Versions** at the top, or Back, returns to the list.
+On Android, **Version History** is the note panel's **History** tab, as on the Mac, and **Version History** in the note's ⋮ menu opens it. It is laid out as the Mac's: a **Now** row with **Save Version** and ⓘ (how versions are made), then the versions by day, one line each with who, when, what and the lines added and removed. Tap a version to open its own screen: when and who made it, its changes with line numbers (or the whole version, with the page button at the top), and **Restore**, **Revert** and **Copy** at the foot. **Versions** at the top, or Back, returns to the list.
 
 On the Mac, Restore and Revert first ask for Touch ID or your password. On Android they ask for your fingerprint, face or screen lock.
 

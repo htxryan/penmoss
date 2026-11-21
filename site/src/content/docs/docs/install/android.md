@@ -57,7 +57,7 @@ Under **Notebooks**, each notebook has a row with its sync state; tap it for the
 **All Notebooks** lists them all, with **+ Add Notebook** (the first run's steps, from **Create or Open Notebook**), and:
 
 - **Between Notebooks:** **Primary Notebook** first (where Today, This Week and captures go on this phone, and where your app settings are kept), then **Keep Settings in Step** (each change to the Primary Notebook's settings goes to your other notebooks a moment later; this phone's choice), **Copy Tags When Copying Notes**, and **Copy Settings…**: pick **From** and **To** and choose **Copy Settings** to replace the other notebook's settings, once. Quick Access stays as it is. Keep Settings in Step and Copy Settings… show with two notebooks or more.
-- **Commits from This Phone:** the name and email the phone commits as, and its signing key.
+- **Commit Identity:** the name and email the phone commits as, and its signing key.
 - **Background Sync:** the last background sync and the next.
 
 The phone syncs over HTTPS with a token; SSH remotes are not supported.

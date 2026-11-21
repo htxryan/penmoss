@@ -52,4 +52,10 @@ class NotePanelTest {
         compose.onNodeWithTag("notePanel").assertExists()
         compose.runOnIdle { assertEquals(false, page!!.hasFocus()) }
     }
+
+    /** The tabs' names are the Mac's (`apps/web/src/notes/panel-tabs.ts`, PEN-10): History, not Version History. */
+    @Test
+    fun theTabsAreNamedAsTheMacNamesThem() {
+        assertEquals(listOf("Metadata", "Comments", "History", "Local Graph"), PanelTab.entries.map { it.label })
+    }
 }

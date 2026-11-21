@@ -186,7 +186,7 @@ Open Settings from the **☰** menu. Each screen's title is large at the top and
 | Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                                          |
 | Writing       | AI Descriptions    | Describe Notes, when, the AI provider (Anthropic with a key, or Not Set Up), the model and the prompt ([AI Descriptions](/docs/ai-descriptions/))          |
 | Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks))                         |
-| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits from This Phone**, the signing key and background sync                         |
+| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commit Identity**, the signing key and background sync                                 |
 | Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                                                      |
 | This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                                               |
 | This Phone    | GitHub             | Your GitHub accounts (**Add Account**, or a token), and what they are used for, such as **Send Feedback**                                                  |

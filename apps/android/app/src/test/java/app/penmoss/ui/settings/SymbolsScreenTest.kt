@@ -337,7 +337,8 @@ class SymbolsScreenTest {
     fun aFullListOffersNoMoreAndTheShortcutsAreOneTapAway() {
         screen((1..9).map { LineSymbol("!".repeat(it), "Slot $it", "accent") })
         compose.onNodeWithTag("symbol-add").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithTag("symbol-shortcuts").performScrollTo().performClick()
+        // The Mac's words (PEN-10): Change Their Shortcuts, which opens Keyboard Shortcuts.
+        compose.onNodeWithTag("symbol-shortcuts").performScrollTo().assertTextEquals("Change Their Shortcuts").performClick()
         assertEquals(1, shortcuts)
     }
 

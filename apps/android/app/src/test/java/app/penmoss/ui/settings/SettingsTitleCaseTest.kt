@@ -230,7 +230,7 @@ class SettingsTitleCaseTest {
         // Enough was read: every screen gave labels, and the ones this change cased are among them.
         val names = read.map { it.third }.toSet()
         for (screen in screens.map { it.first }) assertTrue("nothing read on $screen", read.any { it.first == screen })
-        for (name in listOf("Load Pictures from the Web", "Commits from This Phone", "Wi-Fi Only", "Page Background", "Share Usage Data", "Full Width", "Advanced")) {
+        for (name in listOf("Load Pictures from the Web", "Commit Identity", "Wi-Fi Only", "Page Background", "Share Usage Data", "Full Width", "Advanced")) {
             assertTrue("\"$name\" was not read: ${names.sorted()}", name in names)
         }
     }

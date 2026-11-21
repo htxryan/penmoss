@@ -384,7 +384,7 @@ private fun GitTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions
             { authorEmail = it.trim() },
             Modifier.fillMaxWidth().testTag("gitAuthorEmail-$id"),
             label = { Text("Commit Email for This Notebook") },
-            supportingText = { Text("Blank: Commits from This Phone, on All Notebooks. A GitHub no-reply address (…@users.noreply.github.com) keeps yours private.") },
+            supportingText = { Text("Blank: Commit Identity, on All Notebooks. A GitHub no-reply address (…@users.noreply.github.com) keeps yours private.") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         )

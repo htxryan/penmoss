@@ -57,7 +57,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Keep Settings in Step", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "The primary notebook’s changes go to the others", "between notebooks", "sync settings", "same settings"),
     entry("Copy Tags When Copying Notes", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Copy to Notebook’s starting choice", "between notebooks"),
     entry("Copy Settings…", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "From one notebook to another, once", "between notebooks", "same settings", "duplicate settings"),
-    entry("Commits from This Phone", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Your commit name, email and signing key", "git identity", "author", "email", "signing key", "ssh"),
+    entry("Commit Identity", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "The name and email commits are made with", "commits from this phone", "author", "commit name", "commit email", "signing", "git config", "git identity", "email", "signing key", "ssh"),
     entry("Background Sync", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "About every 15 minutes while the app is closed", "battery", "doze"),
     entry("Agent Activity", "Agent Activity", SettingsRoutes.AGENT_ACTIVITY, "What agents changed, with Undo", "agents", "undo", "mcp", "cli"),
     entry("Files and Pictures in Notes", "Storage", SettingsRoutes.STORAGE, "The space they take on this phone", "attachments", "space", "disk"),

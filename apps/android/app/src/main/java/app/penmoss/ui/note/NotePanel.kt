@@ -95,7 +95,7 @@ import app.penmoss.ui.trash.titleOf
 enum class PanelTab(val label: String, val icon: ImageVector, val tag: String) {
     METADATA("Metadata", SettingsIcons.Info, "panelMetadata"),
     COMMENTS("Comments", SettingsIcons.Comment, "panelComments"),
-    HISTORY("Version History", SettingsIcons.History, "panelHistory"),
+    HISTORY("History", SettingsIcons.History, "panelHistory"),
     GRAPH("Local Graph", SettingsIcons.Graph, "panelGraph"),
 }
 

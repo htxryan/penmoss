@@ -220,7 +220,7 @@ fun SymbolsScreen(
                 enabled = enabled && custom,
                 modifier = Modifier.settingRow("restore-default-symbols").testTag("symbol-reset"),
             ) { Text("Restore Defaults") }
-            TextButton(onClick = trackedClick("settings.symbols.shortcuts-link", onShortcuts), modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Keys…") }
+            TextButton(onClick = trackedClick("settings.symbols.shortcuts-link", onShortcuts), modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Shortcuts") }
         }
         Text(
             said ?: "A glyph is a symbol or emoji without letters, digits or markdown characters.",
