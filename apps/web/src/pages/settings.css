@@ -19,6 +19,11 @@
 }
 
 .settings-nav {
+  /* An entry's padding, its icon and the gap after it: Analytics Data's entry is set in by them. */
+  --settings-nav-pad: 0.6rem;
+  --settings-nav-icon: 16px;
+  --settings-nav-gap: 0.6rem;
+
   position: sticky;
   top: 1rem;
   display: grid;
@@ -28,9 +33,9 @@
 .settings-nav a {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--settings-nav-gap);
   min-height: var(--pm-control);
-  padding: 0 0.6rem;
+  padding: 0 var(--settings-nav-pad);
   border-radius: 0;
   color: var(--pm-muted);
   font-size: var(--pm-text-item);

@@ -1,0 +1,226 @@
+{
+  "about": "An Android session: a phone window, the drawer, a note shape and typing, Settings, a share sheet.",
+  "install": "c0ffee00c0ffee00c0ffee00c0ffee02",
+  "session": "5e55100000000002",
+  "start": "-44d",
+  "client": {
+    "actor": "person",
+    "version": "1.3.2",
+    "channel": "stable",
+    "client": "android",
+    "os": "android",
+    "osVersion": "16",
+    "sizeClass": "compact"
+  },
+  "events": [
+    {
+      "seq": 0,
+      "at": 0,
+      "kind": "app",
+      "name": "launch",
+      "props": {
+        "notebooks": "1",
+        "notes": "10–49",
+        "agents": false
+      }
+    },
+    {
+      "seq": 1,
+      "at": 300,
+      "kind": "app",
+      "name": "window",
+      "props": {
+        "window": "main",
+        "width": 410,
+        "height": 920
+      }
+    },
+    {
+      "seq": 2,
+      "at": 400,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "hidden",
+        "panel": "none",
+        "fullWidth": false,
+        "themeMode": "system"
+      }
+    },
+    {
+      "seq": 3,
+      "at": 1000,
+      "kind": "screen",
+      "name": "home",
+      "props": {}
+    },
+    {
+      "seq": 4,
+      "at": 3000,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "shown",
+        "sidebarWidth": 300,
+        "panel": "none",
+        "fullWidth": false,
+        "themeMode": "system"
+      }
+    },
+    {
+      "seq": 5,
+      "at": 4000,
+      "kind": "scroll",
+      "name": "sidebar",
+      "props": {
+        "position": 0.1
+      }
+    },
+    {
+      "seq": 6,
+      "at": 5000,
+      "kind": "tree",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "depth": 1,
+        "source": "click"
+      }
+    },
+    {
+      "seq": 7,
+      "at": 5200,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "hidden",
+        "panel": "closed",
+        "fullWidth": false,
+        "themeMode": "system"
+      }
+    },
+    {
+      "seq": 8,
+      "at": 5300,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "home"
+      }
+    },
+    {
+      "seq": 9,
+      "at": 5800,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "how": "open",
+        "titleChars": 18,
+        "shape": ["h1:18", "p:140", "li.t.1:20", "li.t.1:16", "p:60"]
+      }
+    },
+    {
+      "seq": 10,
+      "at": 8000,
+      "kind": "note",
+      "name": "cursor",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 1
+      }
+    },
+    {
+      "seq": 11,
+      "at": 9000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 1,
+        "typed": 8,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 12,
+      "at": 10000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 1,
+        "typed": 6,
+        "deleted": 1
+      }
+    },
+    {
+      "seq": 13,
+      "at": 14000,
+      "kind": "screen",
+      "name": "settings.appearance",
+      "props": {
+        "from": "note"
+      }
+    },
+    {
+      "seq": 14,
+      "at": 18000,
+      "kind": "scroll",
+      "name": "settings",
+      "props": {
+        "position": 0.3
+      }
+    },
+    {
+      "seq": 15,
+      "at": 22000,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "settings.appearance"
+      }
+    },
+    {
+      "seq": 16,
+      "at": 22400,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "how": "open",
+        "titleChars": 18,
+        "shape": ["h1:18", "p:153", "li.t.1:20", "li.t.1:16", "p:60"]
+      }
+    },
+    {
+      "seq": 17,
+      "at": 26000,
+      "kind": "dialog",
+      "name": "shareSheet",
+      "props": {
+        "action": "open"
+      }
+    },
+    {
+      "seq": 18,
+      "at": 29000,
+      "kind": "dialog",
+      "name": "shareSheet",
+      "props": {
+        "action": "cancel",
+        "open": "2–5s"
+      }
+    },
+    {
+      "seq": 19,
+      "at": 40000,
+      "kind": "app",
+      "name": "background",
+      "props": {}
+    }
+  ]
+}

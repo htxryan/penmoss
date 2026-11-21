@@ -38,6 +38,8 @@ const ROUTES = [
   '/index.html',
   '/app.js',
   '/app.css',
+  '/player',
+  '/player.js',
   '/api/overview',
   '/api/health?days=7',
   '/nope',
@@ -125,6 +127,33 @@ describe('with a valid Access token', () => {
     const api = await call('/api/health?days=7', token);
     expect(api.status).toBe(200);
     expect(await api.json()).toMatchObject({ view: 'health', filters: { days: 7 } });
+  });
+
+  // PEN-178: a session's Playback frames /player, the page's own frame, and nothing else may.
+  it('lets the page frame /player alone, from its own origin', async () => {
+    const token = await signer.sign();
+    const page = await call('/', token);
+    expect(page.headers.get('content-security-policy')).toContain("frame-src 'self'");
+    expect(page.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
+    expect(page.headers.get('x-frame-options')).toBe('DENY');
+    const frame = await call('/player', token);
+    expect(frame.status).toBe(200);
+    expect(await frame.text()).toContain('<script type="module" src="/player.js"></script>');
+    const csp = frame.headers.get('content-security-policy')!;
+    expect(csp).toContain("frame-ancestors 'self'");
+    expect(csp).not.toContain("frame-ancestors 'none'");
+    expect(csp).toContain("style-src 'self'");
+    expect(frame.headers.get('x-frame-options')).toBe('SAMEORIGIN');
+    // Its script and stylesheet are files like any other: never framed.
+    for (const path of ['/player.js', '/player.css']) {
+      const file = await call(path, token);
+      expect(file.status, path).toBe(200);
+      expect(file.headers.get('x-frame-options'), path).toBe('DENY');
+    }
+    // player.html is reached only without its extension (wrangler's auto-trailing-slash).
+    const named = await call('/player.html', token, { redirect: 'manual' });
+    expect(named.status).toBeGreaterThanOrEqual(300);
+    expect(named.status).toBeLessThan(400);
   });
 
   it('allows only GET and HEAD', async () => {

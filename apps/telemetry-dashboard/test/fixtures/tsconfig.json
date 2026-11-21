@@ -1,0 +1,9 @@
+{
+  // The recorded sessions for Playback (PEN-178), read by the page's tests and the Playwright seed.
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["."]
+}

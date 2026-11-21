@@ -13,6 +13,7 @@ import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { ports } from '../../../../scripts/ports.mjs';
 import { TEST_AUD, TEST_TEAM, createSigner } from '../signer';
+import { FIXTURE_SESSIONS, analyticsEvents, startOf } from '../fixtures/sessions';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const app = join(here, '..', '..');
@@ -94,6 +95,24 @@ export async function startDashboard(): Promise<Dashboard> {
   await seedFixture(db, now);
   // An install with more sessions than Sessions' side list holds, all older than 30 days.
   await seedBigInstall(db, now);
+  // Playback's recorded sessions (PEN-178, test/fixtures, shared with the player's unit tests),
+  // 43 to 46 days back: outside every 30-day view, inside a session page's 90 days.
+  const { insertEvent } = (await import(join(app, '..', 'telemetry', 'src', 'ingest.ts'))) as {
+    insertEvent: (
+      database: typeof db,
+      install: string,
+      event: unknown,
+      now: number,
+    ) => ReturnType<typeof db.prepare>;
+  };
+  for (const fixture of Object.values(FIXTURE_SESSIONS)) {
+    const statements = analyticsEvents(fixture, startOf(fixture, now)).map((event) =>
+      insertEvent(db, fixture.install, event, now),
+    );
+    for (let start = 0; start < statements.length; start += 100) {
+      await db.batch(statements.slice(start, start + 100));
+    }
+  }
   return {
     url: ready.toString().replace(/\/$/, ''),
     token: await signer.sign({ exp: Math.floor(Date.now() / 1000) + 4 * 3600 }),

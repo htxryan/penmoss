@@ -9,16 +9,13 @@
  * Both panels stay mounted, the one not shown `hidden`, so a preview keeps its state (the note it
  * shows, its scale) and the page's settings stay findable by Search Settings.
  */
-import { Icon, type IconName } from '@penmoss/ui/icons';
+import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { PREVIEW_TABS, type PreviewTab } from './preview-tabs';
 
-type Tab = 'settings' | 'preview';
+type Tab = PreviewTab;
 
-const TABS: ReadonlyArray<{ readonly tab: Tab; readonly label: string; readonly icon: IconName }> =
-  [
-    { tab: 'settings', label: 'Settings', icon: 'settings' },
-    { tab: 'preview', label: 'Preview', icon: 'eye' },
-  ];
+const TABS = PREVIEW_TABS;
 
 export function PreviewTabs({
   name,

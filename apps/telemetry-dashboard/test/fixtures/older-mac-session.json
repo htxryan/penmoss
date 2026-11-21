@@ -1,0 +1,117 @@
+{
+  "about": "A Mac session from before PEN-174, PEN-175 and PEN-177: no window, layout, scroll or note events.",
+  "install": "c0ffee00c0ffee00c0ffee00c0ffee01",
+  "session": "5e55100000000000",
+  "start": "-46d",
+  "client": {
+    "actor": "person",
+    "version": "1.3.2",
+    "channel": "stable",
+    "client": "mac",
+    "os": "macos",
+    "osVersion": "26.1",
+    "sizeClass": "expanded"
+  },
+  "events": [
+    {
+      "seq": 0,
+      "at": 0,
+      "kind": "app",
+      "name": "launch",
+      "props": {
+        "notebooks": "1",
+        "notes": "10–49",
+        "agents": false
+      }
+    },
+    {
+      "seq": 1,
+      "at": 1000,
+      "kind": "screen",
+      "name": "home",
+      "props": {}
+    },
+    {
+      "seq": 2,
+      "at": 6000,
+      "kind": "command",
+      "name": "app.palette",
+      "props": {
+        "source": "key",
+        "keys": "Mod+K"
+      }
+    },
+    {
+      "seq": 3,
+      "at": 6100,
+      "kind": "dialog",
+      "name": "palette",
+      "props": {
+        "action": "open"
+      }
+    },
+    {
+      "seq": 4,
+      "at": 9000,
+      "kind": "dialog",
+      "name": "palette",
+      "props": {
+        "action": "done",
+        "open": "2–5s"
+      }
+    },
+    {
+      "seq": 5,
+      "at": 9100,
+      "kind": "command",
+      "name": "note.new",
+      "props": {
+        "source": "palette"
+      }
+    },
+    {
+      "seq": 6,
+      "at": 9400,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "home"
+      }
+    },
+    {
+      "seq": 7,
+      "at": 40000,
+      "kind": "command",
+      "name": "app.settings",
+      "props": {
+        "source": "key",
+        "keys": "Mod+,"
+      }
+    },
+    {
+      "seq": 8,
+      "at": 40200,
+      "kind": "screen",
+      "name": "settings.appearance",
+      "props": {
+        "from": "note"
+      }
+    },
+    {
+      "seq": 9,
+      "at": 52000,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "settings.appearance"
+      }
+    },
+    {
+      "seq": 10,
+      "at": 70000,
+      "kind": "app",
+      "name": "quit",
+      "props": {}
+    }
+  ]
+}

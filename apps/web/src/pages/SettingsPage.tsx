@@ -1,4 +1,4 @@
-import { Icon, type IconName } from '@penmoss/ui/icons';
+import { Icon } from '@penmoss/ui/icons';
 import { deviceStorage } from '../shell/device-pref';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ShortcutsSettings } from '../commands/ShortcutsSettings';
@@ -41,34 +41,27 @@ import { SettingsHomeProvider } from './SettingsHeader';
 import { SettingsSearch, SettingsSearchResults } from './SettingsSearch';
 import { revealSetting, useSettingsSearch } from './settings-search';
 
-/** Each section's icon (one per section, the same on the phone, A902) and its command. */
-const NAV: Readonly<
-  Record<SettingsSection, { readonly icon: IconName; readonly command?: string }>
-> = {
-  appearance: { icon: 'palette', command: 'app.appearance' },
-  // Display became Sidebar (PEN-146); `app.display` opens it.
-  sidebar: { icon: 'panelL', command: 'app.display' },
-  note: { icon: 'file' },
-  // T44 (A743): how notes look, beside Note.
-  symbols: { icon: 'star', command: 'app.symbols' },
-  journal: { icon: 'journal', command: 'journal.settings' },
-  'quick-capture': { icon: 'inbox' },
-  shortcuts: { icon: 'keyboard', command: 'app.shortcuts' },
-  // PEN-161: a short description of each note, for agents.
-  'ai-descriptions': { icon: 'sparkle' },
-  // T50 (A856): git notebooks on this Mac.
-  'git-notebooks': { icon: 'terminal', command: 'app.gitNotebooks' },
-  // The agents that reach them, and the penmoss command (Ryan's feedback, 5 Nov 2026; A1098).
-  agents: { icon: 'agentRef' },
-  'agent-activity': { icon: 'history' },
-  // Search by meaning on this Mac (T78, A1158): the Mac app's.
-  meaning: { icon: 'search' },
-  // Status became GitHub (PEN-146): the sign-in Send Feedback and Add Notebook use.
-  github: { icon: 'key', command: 'app.status' },
-  // Auto-Update (T64 item 2, A1112): the Mac app's.
-  updates: { icon: 'refresh', command: 'app.checkForUpdates' },
-  // Usage analytics and the logs (PEN-137): the Mac app's.
-  privacy: { icon: 'shield', command: 'app.privacy' },
+/**
+ * Each section's command, when it has one (its icon is in SETTINGS_PAGES, one per section, A902).
+ * Display became Sidebar (PEN-146), and `app.display` opens it; Status became GitHub, opened by
+ * `app.status`.
+ */
+const NAV: Readonly<Record<SettingsSection, { readonly command?: string }>> = {
+  appearance: { command: 'app.appearance' },
+  sidebar: { command: 'app.display' },
+  note: {},
+  symbols: { command: 'app.symbols' },
+  journal: { command: 'journal.settings' },
+  'quick-capture': {},
+  shortcuts: { command: 'app.shortcuts' },
+  'ai-descriptions': {},
+  'git-notebooks': { command: 'app.gitNotebooks' },
+  agents: {},
+  'agent-activity': {},
+  meaning: {},
+  github: { command: 'app.status' },
+  updates: { command: 'app.checkForUpdates' },
+  privacy: { command: 'app.privacy' },
 };
 
 /**
@@ -216,7 +209,7 @@ export function SettingsPage({
                             aria-current={current ? 'page' : undefined}
                             onClick={linkHandler(path)}
                           >
-                            <Icon name={NAV[page.id].icon} />
+                            <Icon name={page.icon} />
                             {/* As wide as its bold self, so the phone's tabs keep still (A988). */}
                             <span className="bold-steady" data-label={page.label}>
                               {page.label}

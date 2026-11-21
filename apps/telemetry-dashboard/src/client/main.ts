@@ -44,6 +44,7 @@ import {
 } from './names';
 import { node } from './dom';
 import { createTimeline, timesOf, type TimelineEvent } from './timeline';
+import { createPlayer, type Player } from './replay/player';
 
 type Row = Record<string, string | number | null>;
 /** A link in a table's cell (a session's start). */
@@ -81,7 +82,10 @@ interface CardSpec {
   readonly legend?: readonly LegendItem[];
   /** 'line' keys for line charts, boxes for the rest. */
   readonly legendShape?: 'line' | 'box';
-  readonly table: TableSpec;
+  /** Its table, behind Table and Download CSV; a card with `controls` has none. */
+  readonly table?: TableSpec;
+  /** The card's own controls in its foot, in place of Table and Download CSV (Playback). */
+  readonly controls?: readonly HTMLElement[];
   readonly empty?: boolean;
   /** Across the whole view, not one column. */
   readonly wide?: boolean;
@@ -310,6 +314,15 @@ const distinct = (rows: readonly Row[], key: string) => [
 const resizers = new Set<() => void>();
 new ResizeObserver(() => resizers.forEach((draw) => draw())).observe(document.documentElement);
 
+/** A session page's Playback (PEN-178), stopped when the view is drawn again. */
+let player: Player | null = null;
+/** Clears what the last view left running: its charts' redraws and its player. */
+function clearView(): void {
+  resizers.clear();
+  player?.dispose();
+  player = null;
+}
+
 /** Rows as CSV text. */
 function csvText(rows: readonly (readonly (string | number)[])[]): string {
   const cell = (value: string | number) => {
@@ -453,12 +466,18 @@ function card(spec: CardSpec): HTMLElement {
     resizers.add(redraw);
     requestAnimationFrame(redraw);
   }
+  const tools = document.createElement('footer');
+  tools.className = 'tools';
+  if (spec.controls) {
+    tools.append(...spec.controls);
+    section.append(tools);
+    return section;
+  }
+  const table = spec.table ?? { columns: [], rows: [] };
   const tableHolder = document.createElement('div');
   tableHolder.className = spec.tall ? 'table-holder tall' : 'table-holder';
   tableHolder.hidden = drawn;
-  tableHolder.append(tableElement(spec.table, spec.title));
-  const tools = document.createElement('footer');
-  tools.className = 'tools';
+  tableHolder.append(tableElement(table, spec.title));
   if (drawn) {
     const toggle = button(
       'Table',
@@ -476,7 +495,7 @@ function card(spec: CardSpec): HTMLElement {
     button(
       'Download CSV',
       () => {
-        const text = spec.csv ? csvText(spec.csv()) : csvOf(spec.table);
+        const text = spec.csv ? csvText(spec.csv()) : csvOf(table);
         const blob = new Blob([text], { type: 'text/csv' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
@@ -1622,6 +1641,33 @@ function sessionPage(answer: Answer): Rendered {
   });
   sideCard.classList.add('side');
 
+  // Playback (PEN-178): only an app's session has a window to draw. The card and the timeline
+  // share one box, in which the card sticks while it plays.
+  const play = node('div', 'session-play');
+  if (first.client === 'mac' || first.client === 'android') {
+    player = createPlayer(
+      events,
+      timeline,
+      play,
+      {
+        button,
+        card: (body, controls, note) =>
+          card({
+            id: 'playback',
+            title: 'Playback',
+            note,
+            chart: null,
+            custom: body,
+            controls,
+            wide: true,
+          }),
+      },
+      Boolean(answer['more']),
+    );
+    play.append(player.element);
+  }
+  play.append(node('div', 'session-cols', timelineCard, sideCard));
+
   return {
     rangeDays: 90,
     title,
@@ -1637,7 +1683,7 @@ function sessionPage(answer: Answer): Rendered {
         { label: 'Channel', value: titled(first.channel) },
         { label: 'OS', value: `${osName(first.os)} ${first.os_version}` },
       ]),
-      node('div', 'session-cols', timelineCard, sideCard),
+      play,
     ],
     after: () => {
       // The open session in the middle of its list's box; the window doesn't move.
@@ -1735,7 +1781,7 @@ async function render(): Promise<boolean> {
   document.title = `${VIEW_NAMES[state.view]} · Penmoss Usage`;
   if (sessionOpen() && !(INSTALL_ID.test(state.install) && SESSION_ID.test(state.session))) {
     // An address that names no session: nothing to ask the API.
-    resizers.clear();
+    clearView();
     main.replaceChildren(...notASessionLink());
     main.removeAttribute('aria-busy');
     status.textContent = '';
@@ -1747,7 +1793,7 @@ async function render(): Promise<boolean> {
   try {
     const answer = await load<Answer>(requestPath());
     if (ticket !== rendering) return false;
-    resizers.clear();
+    clearView();
     const drawn = RENDERERS[state.view](answer);
     const page: Rendered = Array.isArray(drawn) ? { body: drawn } : drawn;
     const heading = document.createElement('h1');
