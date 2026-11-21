@@ -92,9 +92,12 @@ class OnScreen(private val onActivity: (block: (Activity) -> Unit) -> Unit) {
         }
         val list = lists.maxByOrNull { it.boundsInWindow.height } ?: return
         onActivity {
+            // A list on a screen that is leaving (open() waits through a screen change) can be
+            // detached by now: it isn't scrolled this time, and the next look finds the new screen.
+            if (!list.layoutInfo.isAttached) return@onActivity
             val range = list.config[SemanticsProperties.VerticalScrollAxisRange]
             val by = if (range.value() < range.maxValue()) list.boundsInWindow.height * 0.6f else -1_000_000f
-            list.config[SemanticsActions.ScrollBy].action?.invoke(0f, by)
+            runCatching { list.config[SemanticsActions.ScrollBy].action?.invoke(0f, by) }
         }
         instrumentation.waitForIdleSync()
         SystemClock.sleep(200)
