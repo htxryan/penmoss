@@ -10,6 +10,7 @@
     "vitest.config.ts",
     "vitest.workers.config.ts"
   ],
-  // The page (DOM) and the Playwright spec (Node) have their own.
-  "exclude": ["src/client", "test/client", "test/e2e"]
+  // The page (DOM) and the Playwright spec (Node) have their own, and they check the recorded
+  // sessions both read (test/fixtures, PEN-178).
+  "exclude": ["src/client", "test/client", "test/e2e", "test/fixtures"]
 }
