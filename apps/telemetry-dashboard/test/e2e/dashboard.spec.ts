@@ -5,7 +5,9 @@
  * walk ends on the Overview; the Platforms test holds on Common Window Sizes (PEN-174).
  * Sessions (PEN-173) has its own proof walk, "Sessions: the list, a session's timeline, its
  * install's sessions and a copied link", which ends on a session page with a stretch heading
- * pinned; the tests after it cover its other states.
+ * pinned; the tests after it cover its other states. Playback (PEN-178) has its own, "Sessions:
+ * Play draws the session as the app looked", over the recorded sessions in test/fixtures, and a
+ * second walk that ends playing a Mac session at 2×, the card pinned over the timeline.
  */
 import { expect, test as base, type Locator, type Page } from '@playwright/test';
 import { startDashboard, type Dashboard } from './server';

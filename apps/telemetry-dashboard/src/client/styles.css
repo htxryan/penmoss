@@ -1207,12 +1207,12 @@ li.ev[aria-current='true']::before {
   position: absolute;
   top: 0;
   left: 0;
+  transform-origin: 0 0;
 }
 
 .pb-frame {
   display: block;
   border: 0;
-  transform-origin: 0 0;
   pointer-events: none;
 }
 

@@ -355,7 +355,9 @@ export function createPlayer(
     fitted = key;
     iframe.style.width = `${width}px`;
     iframe.style.height = `${height}px`;
-    iframe.style.transform = `scale(${scale})`;
+    // The box around the frame is scaled, not the frame alone, so nothing outside the stage
+    // keeps the recorded window's full width.
+    scaler.style.transform = `scale(${scale})`;
     stage.style.width = `${Math.round(width * scale)}px`;
     stage.style.height = `${Math.round(height * scale)}px`;
   };
