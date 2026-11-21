@@ -7,7 +7,7 @@
 // no prop may hold the note's id, title or folder. The events go in the report as JSON.
 import { replayShape, type Props } from '@penmoss/core/analytics';
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, seeded, test } from './fixtures';
 import { body, collectErrors, holdForProof } from './support/app';
 
 const RUN = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -265,4 +265,44 @@ test('Search Settings and Quick Open record what is typed by its length, also as
       { field: 'query', chars: 4 },
       { field: 'query', chars: 7 },
     ]);
+});
+
+test('the selection toolbar’s link field and Send Feedback’s description record what is typed by its length (PEN-177 AC14)', async ({
+  page,
+  notebook,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto(`/notes/${seeded(notebook).noteIds[0]}`);
+  // The link field, as Android's link dialog: its address by length, never the address.
+  await body(page).locator('p', { hasText: 'Gamma line' }).click();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 'Gamma'.length; i++) await page.keyboard.press('Shift+ArrowRight');
+  await expect(page.getByTestId('selection-toolbar')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('Gamma');
+  await page.keyboard.press('ControlOrMeta+KeyK');
+  const address = page.getByRole('textbox', { name: 'Link address' });
+  await expect(address).toBeFocused();
+  await expect(address).toHaveAttribute('data-typed', 'link');
+  await page.keyboard.type('penmoss.app', { delay: 40 });
+  await expect
+    .poll(async () => of(await detail(page), 'input', 'link').map((event) => event.props))
+    .toEqual([{ field: 'url', chars: 11 }]);
+  await page.keyboard.press('Escape');
+
+  // Send Feedback's description, by length.
+  await page.getByTestId('sidebar-feedback').click();
+  const form = page.getByRole('dialog', { name: 'Send Feedback' });
+  await expect(form).toBeVisible();
+  const description = form.locator('.feedback-editor');
+  await expect(description).toHaveAttribute('data-typed', 'feedback');
+  await description.locator('.ProseMirror').click();
+  await page.keyboard.type('It flickers', { delay: 40 });
+  await expect
+    .poll(async () => of(await detail(page), 'input', 'feedback').map((event) => event.props))
+    .toEqual([{ field: 'body', chars: 11 }]);
+  const props = JSON.stringify((await detail(page)).map((event) => event.props));
+  for (const word of ['penmoss', 'flickers']) expect(props).not.toContain(word);
+  await holdForProof(page, 1_500);
+  await expect(description).toContainText('It flickers');
+  expect(errors).toEqual([]);
 });

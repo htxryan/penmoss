@@ -145,6 +145,16 @@ describe('selection toolbar', () => {
     expect(document.activeElement).toBe(collab.editor.view.dom);
   });
 
+  it('marks the link form’s fields for the app to record by length (PEN-177)', async () => {
+    await withSelection('see the docs now', 'the docs');
+    control('Link').click();
+    const form = toolbar()!;
+    const address = form.querySelector<HTMLInputElement>('input[aria-label="Link address"]')!;
+    const text = form.querySelector<HTMLInputElement>('input[aria-label="Link text"]')!;
+    expect([address.dataset['typed'], address.dataset['typedField']]).toEqual(['link', 'url']);
+    expect([text.dataset['typed'], text.dataset['typedField']]).toEqual(['link', 'other']);
+  });
+
   it('leaves the caret where a key put it straight after the link field closes', async () => {
     const collab = await withSelection('see the docs', 'the docs');
     control('Link').click();

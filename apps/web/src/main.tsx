@@ -16,6 +16,7 @@ import { FeedbackContext, FeedbackService } from './feedback/service';
 import { deviceStorage } from './shell/device-pref';
 import { installModalFocusTrap } from './shell/focus-trap';
 import { installClickTracking } from './analytics/track';
+import { installTypedTracking } from './analytics/typed';
 import { installMainTabs } from './tabs/controller';
 import { shownNotes } from './tabs/state';
 import { setTabNotes } from './notes/kept-editors';
@@ -45,6 +46,8 @@ installModalFocusTrap(document);
 
 // Tracked controls' clicks, by their `data-event` ids (PEN-137).
 installClickTracking(document);
+// The lengths typed into the fields the editor builds itself (PEN-177).
+installTypedTracking(document);
 
 // Back and Forward know where this window's history starts (a note window's, T45).
 startHistory();

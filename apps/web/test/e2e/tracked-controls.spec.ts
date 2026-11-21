@@ -191,6 +191,8 @@ async function audit(
         'input[type="url"]',
         'input[type="email"]',
         'textarea',
+        // A rich field (the feedback's description): its editor's host carries the mark.
+        '[contenteditable="true"]',
       ].join(', ');
       for (const element of document.querySelectorAll(TEXT_FIELDS)) {
         if (!visible(element)) continue;
@@ -199,7 +201,7 @@ async function audit(
           element.getAttribute('data-testid') === 'settings-search';
         if (!inDialog) continue;
         checked++;
-        if (element.hasAttribute('data-typed') || marked(element)) continue;
+        if (element.closest('[data-typed]') !== null || marked(element)) continue;
         misses.push({ selector: `${selector(element)} (text field)`, name: nameOf(element) });
       }
       for (const element of document.querySelectorAll(CONTROLS)) {
