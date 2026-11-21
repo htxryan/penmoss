@@ -13,6 +13,8 @@ window.addEventListener('message', (event: MessageEvent<FrameMessage>) => {
   if (event.origin !== location.origin || event.source !== window.parent) return;
   if (event.data?.type !== 'frame') return;
   drawFrame(document, event.data, FRAME_DATA);
+  // Drawn: the page shows the As Recorded list for this frame only now, so the two agree.
+  window.parent.postMessage({ type: 'drawn', seq: event.data.seq }, location.origin);
 });
 
 // Loaded: the page sends the first frame only after this.

@@ -28,7 +28,14 @@ import {
 import { displayName } from '../names';
 import type { FrameData } from './frame-data';
 import { loremOf } from './lorem';
-import { bucketFloor, isNoteScreen, type Frame, type FrameDialog, type FrameNote } from './state';
+import {
+  NARROW_PX,
+  bucketFloor,
+  isNoteScreen,
+  type Frame,
+  type FrameDialog,
+  type FrameNote,
+} from './state';
 
 /** What the page posts the frame. */
 export interface FrameMessage {
@@ -36,10 +43,11 @@ export interface FrameMessage {
   readonly frame: Frame;
   /** Light or dark, System already resolved by the page. */
   readonly variant: 'light' | 'dark';
+  /** Its number, which the frame sends back once it has drawn it. */
+  readonly seq?: number;
 }
 
-/** The app's narrow layout: one breakpoint, NARROW_QUERY (shell/media.ts). */
-export const NARROW_PX = 700;
+export { NARROW_PX };
 
 /** The phone's Settings group in place of This Mac, as Android names it. */
 const ANDROID_DEVICE_GROUP = 'This Phone';

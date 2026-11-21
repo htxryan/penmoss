@@ -15,6 +15,7 @@ import {
   bucketFloor,
   createReplay,
   isNoteScreen,
+  NARROW_PX,
   skipFrom,
   type Frame,
   type Replay,
@@ -29,6 +30,9 @@ const FRAME_HEIGHT_SHARE = 0.5;
 /** The card sticks only when it is no taller than this share of the window, and the window is wide. */
 const STICKY_HEIGHT_SHARE = 0.7;
 const STICKY_MIN_WIDTH = 600;
+/** The As Recorded list's narrowest beside the stage, and the stage's narrowest beside it. */
+const LIST_MIN_PX = 240;
+const STAGE_MIN_PX = 340;
 
 const SIZE_CLASS_WORDS = { compact: 'compact', medium: 'medium', expanded: 'expanded' } as const;
 
@@ -53,6 +57,33 @@ export function notices(replay: Replay, client: string): string[] {
     );
   }
   return out;
+}
+
+/** A block's kind in words, from its recorded token (`h1:24` is "Heading 1"). */
+const BLOCK_KINDS: Readonly<Record<string, string>> = {
+  p: 'Paragraph',
+  'li.b': 'Bulleted Item',
+  'li.n': 'Numbered Item',
+  'li.t': 'Checklist Item',
+  quote: 'Quote',
+  code: 'Code Block',
+  callout: 'Callout',
+  math: 'Math',
+  raw: 'Raw',
+  table: 'Table',
+  image: 'Image',
+  embed: 'Embed',
+  file: 'File',
+  drawing: 'Drawing',
+  hr: 'Divider',
+  other: 'Other',
+};
+export function blockKind(token: string | undefined): string | undefined {
+  if (!token) return undefined;
+  const heading = token.match(/^h([1-6])\b/);
+  if (heading) return `Heading ${heading[1]}`;
+  const kind = token.split(':')[0]!;
+  return BLOCK_KINDS[kind.startsWith('li.') ? kind.slice(0, 4) : kind.split('.')[0]!];
 }
 
 const count = (n: number) => n.toLocaleString('en-GB');
@@ -104,7 +135,7 @@ export function recordedLines(
     value: `${count(frame.window.width)} × ${count(frame.window.height)}`,
     ...(frame.window.recorded ? {} : { sub: 'Not Recorded' }),
   });
-  const phone = frame.window.width <= 700;
+  const phone = frame.window.width <= NARROW_PX;
   const { layout } = frame;
   const sidebarValue =
     layout.sidebar === 'shown'
@@ -186,16 +217,19 @@ export function recordedLines(
         sub: `Title ${plural(note.title?.length ?? 0, 'Character')}${note.more ? ' · Cut at the Cap' : ''}`,
       });
     }
+    // A block is numbered as recorded, from 0, as the timeline's Block chip numbers it.
     if (note?.selection) {
       lines.push({
         label: 'Selection',
         value: `${plural(note.selection.chars, 'Character')} across ${plural(note.selection.span, 'Block')}`,
+        sub: `From Block ${count(note.selection.block)}`,
       });
     } else if (note?.caret !== null && note?.caret !== undefined) {
+      const kind = note.caret === 'title' ? undefined : blockKind(note.blocks?.[note.caret]?.token);
       lines.push({
         label: 'Caret',
-        value:
-          note.caret === 'title' ? 'In the Title' : `At the End of Block ${count(note.caret + 1)}`,
+        value: note.caret === 'title' ? 'In the Title' : `At the End of Block ${count(note.caret)}`,
+        ...(kind ? { sub: kind } : {}),
       });
     }
   }
@@ -264,18 +298,21 @@ export function createPlayer(
   const skip = node('p', 'pb-skip');
   skip.hidden = true;
   const stage = node('div', 'pb-stage', scaler, skip);
-  const said = notices(replay, client);
-  const stageCol = node(
-    'div',
-    'pb-stage-col',
-    ...said.map((line) => node('p', 'pb-notice', line)),
-    stage,
-  );
   const list = node('dl', 'pb-list');
   list.setAttribute('aria-label', 'As Recorded');
   const spoken = node('p', 'sr-only');
   spoken.setAttribute('role', 'status');
-  const body = node('div', 'pb-body', stageCol, list, spoken);
+  // The stage is the scaled frame's own width, so the list sits right beside it.
+  const body = node('div', 'pb-body', stage, list, spoken);
+  const said = notices(replay, client);
+  const content = node(
+    'div',
+    'pb-content',
+    ...(said.length > 0
+      ? [node('div', 'pb-notices', ...said.map((line) => node('p', 'pb-notice', line)))]
+      : []),
+    body,
+  );
 
   // The controls, in the card's .tools bar.
   let playing = false;
@@ -300,16 +337,28 @@ export function createPlayer(
   scrubber.setAttribute('aria-label', 'Position');
   const time = node('span', 'pb-time');
   const card = parts.card(
-    body,
+    content,
     [play, ...speeds, node('span', 'pb-scrub', scrubber), time],
     `The session as the app looked, drawn with the app's own stylesheet. Notes are lorem ipsum in the shape that was recorded: no word is ever recorded.${more ? ' Plays the first 5,000 events.' : ''}`,
   );
 
-  // Drawing: the list and the time on every moment, the frame only when it changes.
+  // Drawing: the time on every moment, the frame only when it changes. The list says what the
+  // frame shows, so once the frame is loaded it's redrawn when the frame says it has drawn that
+  // frame, never ahead of it.
   let ready = false;
   let posted = '';
+  let seq = 0;
+  const awaiting = new Map<number, readonly RecordedLine[]>();
   let lastFrame: Frame | null = null;
   let driving = false;
+  const showLines = (lines: readonly RecordedLine[]) =>
+    list.replaceChildren(
+      ...lines.flatMap((line) => {
+        const value = node('dd', '', line.value);
+        if (line.sub) value.append(node('span', 'pb-sub', line.sub));
+        return [node('dt', '', line.label), value];
+      }),
+    );
   const draw = () => {
     const frame = replay.frameAt(t, {
       reduceMotion: reduceMotion(),
@@ -323,32 +372,39 @@ export function createPlayer(
       driving = false;
       if (playing && following && pinned) keepRowInView(frame.current);
     }
-    list.replaceChildren(
-      ...recordedLines(replay, frame, variant).flatMap((line) => {
-        const value = node('dd', '', line.value);
-        if (line.sub) value.append(node('span', 'pb-sub', line.sub));
-        return [node('dt', '', line.label), value];
-      }),
-    );
     scrubber.value = String(Math.round(t / 1000) * 1000);
     scrubber.setAttribute('aria-valuetext', `${sinceStart(t)} of ${sinceStart(replay.duration)}`);
     time.textContent = clock(t, replay.duration);
     fit(frame);
     // The frame's time aside: the frame draws the same at every moment of one state.
     const key = JSON.stringify([{ ...frame, t: 0 }, variant]);
-    if (ready && key !== posted) {
+    if (!ready) {
+      showLines(recordedLines(replay, frame, variant));
+    } else if (key !== posted) {
       posted = key;
-      const message: FrameMessage = { type: 'frame', frame, variant };
+      seq += 1;
+      awaiting.set(seq, recordedLines(replay, frame, variant));
+      const message: FrameMessage = { type: 'frame', frame, variant, seq };
       iframe.contentWindow?.postMessage(message, location.origin);
     }
   };
 
-  // The frame's size and scale: the recorded window, at most the stage's width and half the
-  // window's height, never above 1.
+  // The frame's size and scale: the recorded window, at most the room the list leaves beside it
+  // (or the card's width, once the list wraps under it) and half the window's height, never
+  // above 1.
   let fitted = '';
+  const roomFor = () => {
+    const style = getComputedStyle(body);
+    const inner =
+      body.clientWidth -
+      parseFloat(style.paddingLeft || '0') -
+      parseFloat(style.paddingRight || '0');
+    const beside = inner - LIST_MIN_PX - parseFloat(style.columnGap || '0');
+    return innerWidth > STICKY_MIN_WIDTH && beside >= STAGE_MIN_PX ? beside : inner;
+  };
   const fit = (frame: Frame) => {
     const { width, height } = frame.window;
-    const room = stageCol.clientWidth || width;
+    const room = roomFor() || width;
     const scale = Math.min(1, room / width, (innerHeight * FRAME_HEIGHT_SHARE) / height);
     const key = `${width}x${height}@${scale}`;
     if (key === fitted) return;
@@ -364,7 +420,14 @@ export function createPlayer(
 
   const onMessage = (event: MessageEvent) => {
     if (event.source !== iframe.contentWindow || event.origin !== location.origin) return;
-    if ((event.data as { type?: string } | null)?.type !== 'ready') return;
+    const data = event.data as { type?: string; seq?: number } | null;
+    if (data?.type === 'drawn' && typeof data.seq === 'number') {
+      const lines = awaiting.get(data.seq);
+      for (const n of awaiting.keys()) if (n <= data.seq) awaiting.delete(n);
+      if (lines) showLines(lines);
+      return;
+    }
+    if (data?.type !== 'ready') return;
     ready = true;
     posted = '';
     draw();
@@ -385,10 +448,16 @@ export function createPlayer(
   const keepRowInView = (index: number) => {
     const row = timeline.element.querySelector<HTMLElement>(`li.ev[data-index="${index}"]`);
     row?.scrollIntoView({ block: 'nearest' });
+    // A row near the timeline's start can come into view with the card below the window's top:
+    // the page goes on down to the card, which leaves the row still below it.
+    const top = card.getBoundingClientRect().top;
+    if (pinned && top > 0) window.scrollBy(0, top);
   };
   const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
   const byHand = () => {
     following = false;
+    // Stopped, the card stays pinned (in view, with Play) until the page is scrolled by hand.
+    if (!playing && pinned) stick(false);
   };
   const onKey = (event: KeyboardEvent) => {
     const target = event.target as Element | null;
@@ -458,7 +527,6 @@ export function createPlayer(
     playing = false;
     cancelAnimationFrame(frameRequest);
     setLabel('Play');
-    stick(false);
   }
   function setSpeed(n: (typeof SPEEDS)[number]) {
     speed = n;
@@ -480,11 +548,11 @@ export function createPlayer(
       fitted = '';
       fit(lastFrame);
     }
-    if (playing) stick(true);
+    if (playing || pinned) stick(true);
   };
   window.addEventListener('resize', onResize);
   const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(onResize);
-  watch?.observe(stageCol);
+  watch?.observe(body);
 
   draw();
   return {

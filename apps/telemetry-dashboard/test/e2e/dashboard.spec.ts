@@ -1285,8 +1285,12 @@ test.describe('Playback, drawn at twice the pixels', () => {
     expect(Math.round((await pb.card.boundingBox())!.y)).toBe(0);
     await expect(pb.frame.locator('.note-columns')).toHaveAttribute('data-panel', 'open');
     await page.waitForTimeout(3000);
+    // AC3: Pause stops it there, the card staying pinned in view with Play showing.
     await pb.play.click();
     await expect(pb.play).toHaveText('Play');
+    await expect(pb.card).toHaveClass(/pb-pinned/);
+    await expect(pb.play).toBeInViewport();
+    expect(Math.round((await pb.card.boundingBox())!.y)).toBe(0);
 
     // AC6, AC8, ac3: the palette over the note in dark mode on the rail, its field typed.
     await scrubTo(page, 24_000);
@@ -1328,18 +1332,31 @@ test.describe('Playback, drawn at twice the pixels', () => {
     await expect(pb.play).toHaveText('Play');
     await expect(pb.card.locator('.pb-skip')).toBeHidden();
 
-    // AC3, AC12, ac8: the caret to the heading, then the selection across two blocks, paused at
-    // 5:01 and still.
+    // AC3, AC12, ac8: the caret to the heading (block 0, as the timeline's chip says), then
+    // played on to the selection across two blocks, Pause pressed at 5:01, and still.
     await scrubTo(page, 298_000);
-    await expect(pb.line('Caret')).toHaveText('At the End of Block 1');
+    await expect(pb.line('Caret')).toHaveText(/^At the End of Block 0/);
+    await expect(pb.line('Caret')).toContainText('Heading 1');
+    await expect(timelineRow(page, 37)).toContainText('Block 0');
     await expect(pb.frame.locator('.ProseMirror > h1 .pf-caret')).toHaveCount(1);
     await showCard(page);
-    await scrubTo(page, 301_000);
-    await expect(pb.line('Selection')).toHaveText('230 Characters across 2 Blocks');
-    await expect(pb.time).toHaveText('5:01 / 18:04');
+    await pb.play.click();
+    await expect(pb.play).toHaveText('Pause');
+    await expect(pb.line('Selection')).toContainText('230 Characters across 2 Blocks', {
+      timeout: 5000,
+    });
+    await expect(pb.time).toHaveText('5:01 / 18:04', { timeout: 5000 });
+    await pb.play.click();
+    await expect(pb.play).toHaveText('Play');
+    await expect(pb.line('Selection')).toContainText('From Block 1');
+    await expect(timelineRow(page, 38)).toContainText('Block 1');
     await expect(pb.frame.locator('.pf-selection')).toHaveCount(2);
+    await expect(pb.play).toBeInViewport();
+    await expect(pb.card.locator('.pb-stage')).toBeInViewport();
+    const paused = await pb.time.textContent();
     await page.waitForTimeout(2000);
-    await expect(pb.time).toHaveText('5:01 / 18:04');
+    await expect(pb.time).toHaveText(paused!);
+    await expect(pb.time).toHaveText(/^5:0[12] \/ 18:04$/);
 
     // AC19: Tab goes Play, 1×, 2×, 4×, the scrubber; its arrows step one second.
     await pb.play.focus();
@@ -1347,9 +1364,11 @@ test.describe('Playback, drawn at twice the pixels', () => {
       await page.keyboard.press('Tab');
       await expect(page.locator(':focus')).toHaveAttribute('aria-label', name);
     }
+    const before = Number(await pb.scrubber.inputValue());
     await page.keyboard.press('ArrowRight');
-    await expect(pb.time).toHaveText('5:02 / 18:04');
-    await expect(pb.scrubber).toHaveAttribute('aria-valuetext', '5:02 of 18:04');
+    const stepped = `${Math.floor((before + 1000) / 60_000)}:${String(((before + 1000) % 60_000) / 1000).padStart(2, '0')}`;
+    await expect(pb.time).toHaveText(`${stepped} / 18:04`);
+    await expect(pb.scrubber).toHaveAttribute('aria-valuetext', `${stepped} of 18:04`);
     await showCard(page);
 
     // AC7, AC8, ac9: Confirmation on the Tags screen, its field typed.

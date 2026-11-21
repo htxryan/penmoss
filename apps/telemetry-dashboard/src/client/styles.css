@@ -1177,12 +1177,12 @@ li.ev[aria-current='true']::before {
   padding: 8px 16px 16px;
 }
 
-.pb-stage-col {
+/* The notices across the card, over the stage and the list. */
+.pb-notices {
   display: flex;
-  flex: 999 1 340px;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
+  padding: 8px 16px 0;
 }
 
 .pb-notice {
@@ -1195,8 +1195,11 @@ li.ev[aria-current='true']::before {
   font-size: var(--text-sm);
 }
 
+/* The stage is the scaled frame's width (player.ts sets it), so the list sits beside it. */
 .pb-stage {
   position: relative;
+  flex: 0 0 auto;
+  max-width: 100%;
   overflow: hidden;
   border: 1px solid var(--axis);
   border-radius: 6px;
@@ -1309,7 +1312,6 @@ li.ev[aria-current='true']::before {
     position: static;
   }
 
-  .pb-stage-col,
   .pb-list {
     flex-basis: 100%;
   }

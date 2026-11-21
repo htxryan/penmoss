@@ -45,6 +45,9 @@ export const SKIP_TO_MS = 1_000;
 /** How often a snapshot of the state is kept, so a seek replays at most this many events. */
 const SNAPSHOT_EVERY = 200;
 
+/** The app's narrow layout: one breakpoint, NARROW_QUERY (shell/media.ts). */
+export const NARROW_PX = 700;
+
 export interface FrameBlock {
   /** Its token, as recorded (`p:182`, `li.t.2:31`, `hr`). */
   readonly token: string;

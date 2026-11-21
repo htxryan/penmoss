@@ -41,7 +41,11 @@ describe('As Recorded', () => {
       Sidebar: 'Rail (Not on This Screen)',
       Scroll: 'Settings 42%',
     });
-    expect(words(mac, 301_000)).toMatchObject({ Selection: '230 Characters across 2 Blocks' });
+    // Blocks are numbered as recorded, from 0, as the timeline's Block chip numbers them.
+    expect(words(mac, 298_000)).toMatchObject({ Caret: 'At the End of Block 0 (Heading 1)' });
+    expect(words(mac, 301_000)).toMatchObject({
+      Selection: '230 Characters across 2 Blocks (From Block 1)',
+    });
     expect(words(mac, 346_000)).toMatchObject({ Theme: 'Solarized, Dark', 'Full Width': 'Yes' });
   });
 
