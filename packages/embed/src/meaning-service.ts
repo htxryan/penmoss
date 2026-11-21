@@ -87,6 +87,8 @@ export class MeaningService {
   private readonly notebooks = new Map<string, Notebook>();
   private starting: Promise<void> | null = null;
   private indexing = false;
+  /** Notes changed while a run was under way, which may have read them before: one more run. */
+  private indexAgain = false;
   private indexTimer: ReturnType<typeof setTimeout> | null = null;
   /** The indexing run under way, which Off waits for. */
   private slice: Promise<void> | null = null;
@@ -380,6 +382,12 @@ export class MeaningService {
     if (!this.opened || !this.keeper?.held || this.stopped || this.removing) return;
     if (this.indexTimer) clearTimeout(this.indexTimer);
     this.indexTimer = setTimeout(() => {
+      // A run under way may have read the notes before this change: it runs again once done,
+      // and Off still waits for the run under way.
+      if (this.indexing) {
+        this.indexAgain = true;
+        return;
+      }
       this.slice = this.indexSlice();
     }, ms);
     this.indexTimer.unref?.();
@@ -389,6 +397,7 @@ export class MeaningService {
   private async indexSlice(): Promise<void> {
     if (this.indexing || !this.opened || !this.keeper?.held) return;
     this.indexing = true;
+    this.indexAgain = false;
     try {
       // Lost it (a hang let another take it over): the keeper tries again.
       if (!(await this.keeper.check())) return;
@@ -429,6 +438,10 @@ export class MeaningService {
       this.indexSoon(30_000);
     } finally {
       this.indexing = false;
+      if (this.indexAgain) {
+        this.indexAgain = false;
+        this.indexSoon(0);
+      }
     }
   }
 

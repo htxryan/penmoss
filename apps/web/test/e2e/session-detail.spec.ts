@@ -83,6 +83,8 @@ interface Recorded {
   readonly kind: string;
   readonly name: string;
   readonly props: Props;
+  /** When the page recorded it (ms). */
+  readonly at: number;
   readonly refs?: { readonly note?: string | undefined; readonly folder?: string | undefined };
 }
 
@@ -91,10 +93,11 @@ async function detail(page: Page): Promise<Recorded[]> {
   const events = await page.evaluate(() => window.__penmossAnalytics ?? []);
   return events
     .filter((event) => ['note', 'input', 'tree'].includes(event.kind))
-    .map(({ kind, name, props, refs }) => ({
+    .map(({ kind, name, props, at, refs }) => ({
       kind,
       name,
       props: props ?? {},
+      at,
       ...(refs ? { refs } : {}),
     }));
 }
@@ -159,13 +162,20 @@ test('the tree, a note’s shape, typing, splits, the cursor, a selection and ty
   const cursors = of(await detail(page), 'note', 'cursor').map((event) => event.props);
   expect(cursors.slice(-2)).toEqual([{ block: 3 }, { block: 4 }]);
 
-  // --- Typing (AC8): 40 characters in about 3 s, as 3 or 4 bursts that add up to 40.
+  // --- Typing (AC8): 40 characters in about 3 s, as at most one burst a second that add up to
+  // 40: 3 or 4 bursts when the typing takes 3 s. A loaded runner types more slowly, so the most
+  // allowed follows how long the typing took, and each burst is a second or more after the last.
   const before = of(await detail(page), 'note', 'typing').length;
+  const started = Date.now();
   await page.keyboard.type('ж'.repeat(40), { delay: 75 });
+  const typedFor = Date.now() - started;
   await page.waitForTimeout(1_500);
   const bursts = of(await detail(page), 'note', 'typing').slice(before);
   expect(bursts.length).toBeGreaterThanOrEqual(3);
-  expect(bursts.length).toBeLessThanOrEqual(4);
+  expect(bursts.length).toBeLessThanOrEqual(Math.floor(typedFor / 1_000) + 1);
+  for (let i = 1; i < bursts.length; i += 1) {
+    expect(bursts[i]!.at - bursts[i - 1]!.at).toBeGreaterThanOrEqual(950);
+  }
   expect(bursts.every((burst) => burst.props['block'] === 4)).toBe(true);
   expect(bursts.reduce((sum, burst) => sum + (burst.props['typed'] as number), 0)).toBe(40);
   // No typing moved the cursor: nothing new for it.
