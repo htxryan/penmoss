@@ -164,6 +164,7 @@ export const DETAIL_CASES: ReadonlyArray<Record<string, unknown> & DetailEvent> 
   ]),
 ].map((each) =>
   each.client === 'cli' || each.client === 'mcp'
-    ? (({ sizeClass: _size, ...rest }) => ({ ...rest, actor: 'agent' }))(each)
+    ? // No size class (a CLI or MCP event has none; JSON leaves an undefined out).
+      { ...each, sizeClass: undefined, actor: 'agent' }
     : each,
 );

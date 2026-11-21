@@ -158,9 +158,13 @@ describe('the shape’s caps', () => {
     } as unknown as AnalyticsEvent;
     expect(eventProblem(event)).toBeNull();
     expect(new TextEncoder().encode(JSON.stringify(event)).length).toBeLessThan(34 * 1024);
-    const stored = [event, event].map(
-      (each, id) => ({ ...each, seq: id, id, state: 'waiting', sentAt: null }) as StoredEvent,
-    );
+    const stored = [event, event].map((each, id): StoredEvent => ({
+      ...each,
+      seq: id,
+      id,
+      state: 'waiting',
+      sentAt: null,
+    }));
     const { body, events } = batchBody('0123456789abcdef0123456789abcdef', stored);
     expect(events).toHaveLength(1);
     expect(new TextEncoder().encode(body).length).toBeLessThanOrEqual(MAX_BATCH_BYTES);

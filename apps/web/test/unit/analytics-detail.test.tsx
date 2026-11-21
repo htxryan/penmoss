@@ -3,7 +3,7 @@
 // its text, 500 ms after typing stops, a repeat dropped, and what waits when it closes; the tree
 // records folders opened and closed and notes opened by their real ids in `refs`, which only the
 // Mac's main process turns into refs: no prop holds an id.
-import { act, useState } from 'react';
+import { act, useEffect, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { INPUT_SETTLE_MS } from '@penmoss/core/analytics';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -36,11 +36,15 @@ function events(kind: string): PageEvent[] {
   return (window.__penmossAnalytics ?? []).filter((event) => event.kind === kind);
 }
 
-let setText: (value: string) => void = () => undefined;
+/** The field's setter, as the test types through it. */
+const control: { set: (value: string) => void } = { set: () => undefined };
+const setText = (value: string) => control.set(value);
 
 function Field({ initial = '' }: { readonly initial?: string }) {
   const [text, set] = useState(initial);
-  setText = set;
+  useEffect(() => {
+    control.set = set;
+  }, [set]);
   const typed = useTypedLength('palette', 'query', text);
   return <input value={text} onChange={(event) => set(event.target.value)} {...typed} />;
 }
@@ -51,11 +55,17 @@ describe('useTypedLength', () => {
     expect(host.querySelector('input')!.getAttribute('data-typed')).toBe('palette');
     for (const value of ['h', 'he', 'hel', 'hell', 'hello']) {
       act(() => setText(value));
-      act(() => vi.advanceTimersByTime(100));
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
     }
-    act(() => vi.advanceTimersByTime(INPUT_SETTLE_MS));
+    act(() => {
+      vi.advanceTimersByTime(INPUT_SETTLE_MS);
+    });
     act(() => setText('hellx'));
-    act(() => vi.advanceTimersByTime(2000));
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
     const input = events('input');
     expect(input.map((event) => [event.name, event.props])).toEqual([
       ['palette', { field: 'query', chars: 5 }],
@@ -67,7 +77,9 @@ describe('useTypedLength', () => {
     act(() => root!.render(<Field initial="Plans" />));
     act(() => setText('Plan'));
     act(() => setText('Plans'));
-    act(() => vi.advanceTimersByTime(2000));
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
     expect(events('input')).toEqual([]);
     act(() => setText('Plans for'));
     act(() => root!.render(<></>));
