@@ -9,7 +9,13 @@ import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
 import worker from '../src/index';
 import { insertEvent } from '../src/ingest';
-import { PRUNE_BATCH } from '../src/nightly';
+import {
+  MAX_DETAIL_ROUNDS,
+  NOTHING_LEFT_LOG,
+  nightly,
+  PRUNE_BATCH,
+  PRUNE_TO_BYTES,
+} from '../src/nightly';
 
 /** 02:15 UTC on 20 November 2026: "yesterday" is the 19th. */
 const CRON_AT = Date.UTC(2026, 10, 20, 2, 15);
@@ -237,6 +243,155 @@ describe('pruning', () => {
     for (const table of ['daily_counts', 'daily_installs', 'ingest_daily']) {
       expect(await all(`SELECT day FROM ${table}`), table).toEqual([{ day: '2024-10-20' }]);
     }
+  });
+});
+
+/** `count` events of `kind` on `day`, seeded in SQL, `name` and `seqFrom` keeping them apart. */
+async function seed(day: string, count: number, kind: string, name: string, seqFrom = 0) {
+  await env.DB.prepare(
+    `WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i < ?1 - 1)
+     INSERT INTO events (received_at, day, install, session, seq, at, client, actor, version,
+       channel, os, os_version, kind, name)
+     SELECT 0, ?2, ?3, '1111111111111111', ?4 + i, ?5 + i, 'mac', 'person', '1.4.0', 'stable',
+       'macos', '15.6', ?6, ?7 FROM n`,
+  )
+    .bind(count, day, INSTALL_A, seqFrom, at(day), kind, name)
+    .run();
+}
+
+const countOf = async (where = '1 = 1') =>
+  ((await all(`SELECT COUNT(*) AS n FROM events WHERE ${where}`))[0] as { n: number }).n;
+
+/**
+ * D1 as the night sees it, its size said to be `size` bytes on every result, recording each
+ * statement it prepares, so a test can count the reads of the size and the row count.
+ */
+function sizedDb(size: number) {
+  const prepared: string[] = [];
+  const sized = <T extends { meta?: object }>(result: T): T => ({
+    ...result,
+    meta: { ...result.meta, size_after: size },
+  });
+  const wrap = (statement: D1PreparedStatement): D1PreparedStatement =>
+    new Proxy(statement, {
+      get(target, key) {
+        if (key === 'bind') return (...args: unknown[]) => wrap(target.bind(...args));
+        if (key === 'run' || key === 'all') {
+          return async () => sized(await (target[key] as () => Promise<D1Result>).call(target));
+        }
+        const value = Reflect.get(target, key, target) as unknown;
+        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+      },
+    });
+  const db = {
+    prepare: (sql: string) => {
+      prepared.push(sql);
+      return wrap(env.DB.prepare(sql));
+    },
+    batch: async (statements: D1PreparedStatement[]) =>
+      (await env.DB.batch(statements)).map((result) => sized(result)),
+  } as unknown as D1Database;
+  return { db, prepared };
+}
+
+describe('session detail (PEN-177, O8)', () => {
+  const GB = 1_000_000_000;
+
+  it('keeps note, input and tree events 90 days, other kinds 13 months, and rolls them all up', async () => {
+    // 90 days before 2026-11-20 is 2026-08-22: the 21st goes, the 22nd stays.
+    for (const [index, kind, name] of [
+      [0, 'note', 'typing'],
+      [1, 'input', 'palette'],
+      [2, 'tree', 'expand'],
+    ] as const) {
+      await seed('2026-08-21', 3, kind, name, index * 10); // 91 days old
+      await seed('2026-08-23', 2, kind, name, 100 + index * 10); // 89 days old
+    }
+    await seed('2026-08-21', 4, 'command', 'app.palette', 200);
+    // Yesterday's, which the rollup counts.
+    await insert(INSTALL_B, [
+      event('2026-11-19', 0, { kind: 'note', name: 'cursor', props: { block: 3 } }),
+      event('2026-11-19', 1, {
+        kind: 'input',
+        name: 'search',
+        props: { field: 'query', chars: 4 },
+      }),
+    ]);
+    // A rollup of a day whose events are pruned stays (rollups keep 25 months).
+    await env.DB.prepare(
+      `INSERT INTO daily_counts VALUES ('2026-08-21', 'mac', 'person', '1.4.0', 'stable', 'note', 'typing', '', 3)`,
+    ).run();
+    await runCron();
+    expect(await countOf(`day = '2026-08-21' AND kind IN ('note', 'input', 'tree')`)).toBe(0);
+    expect(await countOf(`day = '2026-08-23' AND kind IN ('note', 'input', 'tree')`)).toBe(6);
+    expect(await countOf(`day = '2026-08-21' AND kind = 'command'`)).toBe(4);
+    expect(
+      await all(
+        "SELECT kind, name, events FROM daily_counts WHERE day = '2026-11-19' ORDER BY kind",
+      ),
+    ).toEqual([
+      { kind: 'input', name: 'search', events: 1 },
+      { kind: 'note', name: 'cursor', events: 1 },
+    ]);
+    expect(await all("SELECT events FROM daily_counts WHERE day = '2026-08-21'")).toEqual([
+      { events: 3 },
+    ]);
+  });
+
+  it('past 8 GB, deletes the computed number of the oldest session detail once, and nothing else', async () => {
+    await seed('2026-10-01', 600, 'note', 'typing');
+    await seed('2026-10-02', 600, 'tree', 'collapse', 1000);
+    await seed('2026-11-01', 800, 'note', 'cursor', 2000);
+    await seed('2026-09-01', 500, 'command', 'app.palette', 3000);
+    const total = 2500;
+    const size = 9 * GB;
+    // (9 GB − 7.5 GB) ÷ (9 GB ÷ 2,500 rows) = 416.67, so 417 rows go.
+    const expected = Math.ceil((size - PRUNE_TO_BYTES) / (size / total));
+    expect(expected).toBe(417);
+    const lines: string[] = [];
+    const { db, prepared } = sizedDb(size);
+    const report = await nightly(db, CRON_AT, (line) => lines.push(line));
+    expect(report.sizeBytes).toBe(size);
+    expect(report.prunedForSize).toBe(expected);
+    expect(await countOf()).toBe(total - expected);
+    // The oldest went: all from the 1st of October's 600, none later.
+    expect(await countOf(`day = '2026-10-01'`)).toBe(600 - expected);
+    expect(await countOf(`day = '2026-10-02'`)).toBe(600);
+    expect(await countOf(`day = '2026-11-01'`)).toBe(800);
+    expect(await countOf(`kind = 'command'`)).toBe(500);
+    // Worked out once: one row count, never the size again in a loop.
+    expect(
+      prepared.filter((sql) => /^SELECT COUNT\(\*\) AS n FROM events$/.test(sql)),
+    ).toHaveLength(1);
+    expect(lines).toEqual([]);
+  });
+
+  it('logs when no session detail is left to prune, and prunes no other kind early', async () => {
+    await seed('2026-10-01', 50, 'note', 'typing');
+    await seed('2026-09-01', 500, 'command', 'app.palette', 1000);
+    const lines: string[] = [];
+    const { db } = sizedDb(9.5 * GB);
+    const report = await nightly(db, CRON_AT, (line) => lines.push(line));
+    expect(report.prunedForSize).toBe(50);
+    expect(await countOf(`kind = 'command'`)).toBe(500);
+    expect(lines).toEqual([NOTHING_LEFT_LOG]);
+  });
+
+  it('under 8 GB prunes only by age', async () => {
+    await seed('2026-10-01', 50, 'note', 'typing');
+    const lines: string[] = [];
+    const { db, prepared } = sizedDb(7.9 * GB);
+    const report = await nightly(db, CRON_AT, (line) => lines.push(line));
+    expect(report.prunedForSize).toBe(0);
+    expect(await countOf()).toBe(50);
+    expect(
+      prepared.filter((sql) => /^SELECT COUNT\(\*\) AS n FROM events$/.test(sql)),
+    ).toHaveLength(0);
+    expect(lines).toEqual([]);
+  });
+
+  it('has its own budget of 400 rounds of 5,000 a night', () => {
+    expect(MAX_DETAIL_ROUNDS * PRUNE_BATCH).toBe(2_000_000);
   });
 });
 

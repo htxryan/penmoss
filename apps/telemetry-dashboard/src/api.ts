@@ -39,6 +39,11 @@ export const SESSIONS_PAGE = 50;
 export const MAX_EVENTS = 5000;
 /** Rows written a day on D1's Workers Free plan (D20): the Health view's line. */
 export const DAILY_WRITE_CAP = 100_000;
+/**
+ * Kinds Paths never starts from or steps through, as next.sql and starts.sql leave them out:
+ * scroll positions (PEN-175) and session detail (PEN-177), which say where, not what was done.
+ */
+export const NOT_PATH_KINDS: readonly string[] = ['scroll', 'note', 'input', 'tree'];
 
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9.]{1,20})?$/;
 const FILTERS = ['days', 'client', 'actor', 'channel', 'version', 'start'] as const;
@@ -221,9 +226,9 @@ export async function viewData(
       const seen = new Map(
         (await run('starts', raw)).map((row) => [`${row['kind']}:${row['name']}`, row['events']]),
       );
-      // Not scroll events (PEN-175): starts.sql leaves them out.
+      // Not scroll events (PEN-175) or session detail (PEN-177): starts.sql leaves them out.
       const options = Object.entries(CATALOGUE)
-        .filter(([kind]) => kind !== 'scroll')
+        .filter(([kind]) => !NOT_PATH_KINDS.includes(kind))
         .flatMap(([kind, names]) => names.map((name) => `${kind}:${name}`))
         .map((event) => ({ event, events: Number(seen.get(event) ?? 0) }))
         .sort((a, b) => b.events - a.events);

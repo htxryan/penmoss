@@ -15,6 +15,7 @@ import {
   SCROLL_MIN_GAP_MS,
   SCROLL_SETTLE_MS,
   ScrollGate,
+  SettleGate,
   type ScrollClock,
 } from '../src/analytics/scroll';
 
@@ -224,6 +225,154 @@ const GATE_CASES: readonly GateCase[] = [
   },
 ];
 
+/** A value a generalised gate holds (PEN-177): a cursor's block, or a selection. */
+type Value = number | { readonly block: number; readonly chars: number; readonly span: number };
+
+/** One step of a value case: a value, a flush, a mark (known, not recorded) or a reset. */
+type ValueStep =
+  | { readonly at: number; readonly move: Value }
+  | { readonly at: number; readonly flush: true }
+  | { readonly at: number; readonly mark: Value }
+  | { readonly at: number; readonly reset: true };
+
+interface ValueCase {
+  readonly name: string;
+  readonly steps: readonly ValueStep[];
+  readonly until: number;
+  readonly recorded: ReadonlyArray<{ readonly at: number; readonly value: Value }>;
+}
+
+/** Two values are the same when they hold the same numbers. */
+const sameValue = (a: Value, b: Value) => JSON.stringify(a) === JSON.stringify(b);
+
+function runValues(
+  steps: readonly ValueStep[],
+  until: number,
+): Array<{ at: number; value: Value }> {
+  const clock = new FakeClock();
+  const recorded: Array<{ at: number; value: Value }> = [];
+  // As a cursor, a selection or a field's length starts: nothing recorded yet.
+  const gate = new SettleGate<Value>((value) => recorded.push({ at: clock.now(), value }), {
+    clock,
+    equals: sameValue,
+  });
+  for (const step of steps) {
+    clock.advance(step.at);
+    if ('reset' in step) gate.reset();
+    else if ('flush' in step) gate.flush();
+    else if ('mark' in step) gate.mark(step.mark);
+    else gate.moved(step.move);
+  }
+  clock.advance(until);
+  return recorded;
+}
+
+const VALUE_CASES: readonly ValueCase[] = [
+  {
+    name: 'records a first value of 0: nothing is recorded yet',
+    steps: [{ at: 0, move: 0 }],
+    until: 5000,
+    recorded: [{ at: S, value: 0 }],
+  },
+  {
+    name: 'a cursor that moves on settles where it rests, at most one a second',
+    steps: [
+      { at: 0, move: 3 },
+      { at: S + 50, move: 4 },
+      { at: S + 100, move: 5 },
+    ],
+    until: 5000,
+    recorded: [
+      { at: S, value: 3 },
+      { at: S + G, value: 5 },
+    ],
+  },
+  {
+    name: 'drops a repeat of the last value recorded',
+    steps: [
+      { at: 0, move: 2 },
+      { at: 1000, move: 2 },
+    ],
+    until: 5000,
+    recorded: [{ at: S, value: 2 }],
+  },
+  {
+    name: 'a selection is the same only with the same block, length and span',
+    steps: [
+      { at: 0, move: { block: 1, chars: 40, span: 2 } },
+      { at: 1000, move: { block: 1, chars: 40, span: 2 } },
+      { at: 2000, move: { block: 1, chars: 41, span: 2 } },
+      { at: 3000, move: { block: 1, chars: 41, span: 3 } },
+    ],
+    until: 5000,
+    recorded: [
+      { at: S, value: { block: 1, chars: 40, span: 2 } },
+      { at: 2000 + S, value: { block: 1, chars: 41, span: 2 } },
+      { at: 3000 + S, value: { block: 1, chars: 41, span: 3 } },
+    ],
+  },
+  {
+    name: 'a flush records what waits at once, inside the settle and the gap',
+    steps: [
+      { at: 0, move: 7 },
+      { at: S + 10, move: 12 },
+      { at: S + 20, flush: true },
+    ],
+    until: 5000,
+    recorded: [
+      { at: S, value: 7 },
+      { at: S + 20, value: 12 },
+    ],
+  },
+  {
+    name: 'a flush with nothing waiting, or a repeat waiting, records nothing',
+    steps: [
+      { at: 0, move: 7 },
+      { at: 1000, flush: true },
+      { at: 2000, move: 7 },
+      { at: 2010, flush: true },
+    ],
+    until: 5000,
+    recorded: [{ at: S, value: 7 }],
+  },
+  {
+    name: 'a mark takes a value as known and drops what waits',
+    steps: [
+      { at: 0, move: 4 },
+      { at: 100, mark: 6 },
+      { at: 2000, move: 6 },
+      { at: 3000, move: 4 },
+    ],
+    until: 5000,
+    recorded: [{ at: 3000 + S, value: 4 }],
+  },
+  {
+    name: 'a reset forgets the last value: the next is recorded again',
+    steps: [
+      { at: 0, move: 0 },
+      { at: 2000, reset: true },
+      { at: 2010, move: 0 },
+    ],
+    until: 5000,
+    recorded: [
+      { at: S, value: 0 },
+      { at: 2010 + S, value: 0 },
+    ],
+  },
+];
+
+describe('SettleGate (PEN-177)', () => {
+  for (const each of VALUE_CASES) {
+    it(each.name, () => {
+      expect(runValues(each.steps, each.until)).toEqual(each.recorded);
+    });
+  }
+
+  it('a scroll gate still starts at the top and resets to it', () => {
+    expect(run([{ at: 0, move: 0 }], 5000)).toEqual([]);
+  });
+});
+
 /** [scrollTop, scrollHeight, clientHeight] and the position, or null when it can't scroll. */
 const FRACTION_CASES: ReadonlyArray<readonly [number, number, number, number | null]> = [
   [0, 2000, 500, 0],
@@ -307,11 +456,12 @@ const FILE = fileURLToPath(
 function contract() {
   return {
     $comment:
-      'Where an area is scrolled (PEN-175), written from packages/core/src/analytics/scroll.ts by packages/core/test/analytics-scroll.test.ts, which also checks it. `fraction`: [scrollTop, scrollHeight, clientHeight] and the position fractionOf gives (null: the area cannot scroll). `gate`: a ScrollGate run on a fake clock from 0; each step at its time moves the area to a position (null: it cannot scroll) or resets it (its content changed); `recorded` is each position the gate records, and when. Kotlin’s ScrollEvents replays every case.',
+      'Where an area is scrolled (PEN-175), written from packages/core/src/analytics/scroll.ts by packages/core/test/analytics-scroll.test.ts, which also checks it. `fraction`: [scrollTop, scrollHeight, clientHeight] and the position fractionOf gives (null: the area cannot scroll). `gate`: a ScrollGate run on a fake clock from 0; each step at its time moves the area to a position (null: it cannot scroll) or resets it (its content changed); `recorded` is each position the gate records, and when. `values` (PEN-177): the same gate holding any value (a cursor’s block, a selection as block, chars and span, a field’s length), starting with nothing recorded, so a first 0 is recorded; values are the same when equal as JSON; a step may also flush (record what waits at once, inside the settle and the gap, a repeat still dropped) or mark a value (known, not recorded; what waits is dropped). Kotlin’s ScrollEvents replays every case.',
     settleMs: SCROLL_SETTLE_MS,
     minGapMs: SCROLL_MIN_GAP_MS,
     fraction: FRACTION_CASES,
     gate: GATE_CASES,
+    values: VALUE_CASES,
   };
 }
 

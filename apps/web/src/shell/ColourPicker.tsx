@@ -334,6 +334,7 @@ export function ColourPicker({
                   <span>Hex</span>
                   <input
                     className="input"
+                    data-untracked="a colour's hex code, not text"
                     value={hexText ?? draftHex.toUpperCase()}
                     maxLength={9}
                     spellCheck={false}

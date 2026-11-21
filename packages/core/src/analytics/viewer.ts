@@ -42,3 +42,23 @@ export interface Page {
 export interface ForgetResult {
   readonly outcome: 'ok' | 'offline' | 'failed';
 }
+
+/** How many items of a list prop the viewers show before `… +N` (PEN-177, O5). */
+export const PROPS_LIST_SHOWN = 12;
+
+/**
+ * An event's props as the viewers show them (the Mac's Analytics Data, Android's and `penmoss
+ * analytics show`): `key: value` pairs joined by commas, a list's items by spaces, and a list
+ * longer than PROPS_LIST_SHOWN cut to its first items and `… +N` (a note's shape). Copy as JSON
+ * and `show --json` keep every item. Kotlin's twin is pinned by analytics-v1.json.
+ */
+export function propsLine(props: Readonly<Record<string, unknown>>): string {
+  return Object.entries(props)
+    .map(([key, value]) => {
+      if (!Array.isArray(value)) return `${key}: ${String(value)}`;
+      const shown = value.slice(0, PROPS_LIST_SHOWN).map(String).join(' ');
+      const more = value.length - PROPS_LIST_SHOWN;
+      return `${key}: ${more > 0 ? `${shown} … +${more}` : shown}`;
+    })
+    .join(', ');
+}

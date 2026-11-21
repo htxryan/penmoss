@@ -93,6 +93,7 @@ export function TimeZonePicker({
     >
       <div className="dlg-search">
         <PickerField
+          dialog="timeZone"
           picker={picker}
           aria-label="Time Zone"
           placeholder="Search time zones, such as Chicago or UTC+1"

@@ -123,3 +123,12 @@ export {
   type SelectionAnchor,
   type ShownThread,
 } from './extensions/comments';
+// PEN-177: session detail, a note's shape and typing by block position and length.
+export {
+  attachNoteUsage,
+  blockTokens,
+  NoteUsage,
+  type NoteUsageOptions,
+  type NoteUsageRecord,
+} from './usage';
+export { isRemoteTransaction } from './collab/binding';

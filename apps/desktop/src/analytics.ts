@@ -16,6 +16,11 @@
  * offline, a 5xx or a timeout keeps them and backs off up to an hour; a 4xx refuses the batch.
  * Turning sharing off aborts a batch in flight.
  *
+ * Session detail (PEN-177): an event from the page may name a note or a folder by its real id in
+ * `refs`; main swaps each for its ref (HMAC-SHA256 under this install's ref key, 16 hex
+ * characters, `@penmoss/core/analytics/node`'s ref-key) before it checks and stores the event.
+ * The key lives in `~/.penmoss/analytics-key`, never leaves main, and is made again with the ID.
+ *
  * No Electron here: `services.ts` wires it to the app, and the tests run it as it is.
  */
 import { unwatchFile, watchFile, type Stats } from 'node:fs';
@@ -50,6 +55,7 @@ import {
   type Page,
   type PageQuery,
   type Props,
+  type StateCode,
   type StateName,
   type StoredEvent,
 } from '@penmoss/core/analytics';
@@ -57,6 +63,10 @@ import {
   Backoff,
   forgetShared,
   readConsentFile,
+  readRefKey,
+  refKeyPathFor,
+  refOf,
+  renewRefKey,
   sendNext,
   updateConsentFile,
   type SendOutcome,
@@ -112,6 +122,12 @@ export interface AnalyticsOptions {
   readonly timeoutMs?: number;
 }
 
+/** The real ids a page's event names (PEN-177), swapped for refs here. */
+export interface PageEventRefs {
+  readonly note?: string;
+  readonly folder?: string;
+}
+
 /** An event from the page, before main stamps it (the page's `PageEvent`). */
 export interface PageEventInput {
   readonly kind: EventKind;
@@ -119,12 +135,31 @@ export interface PageEventInput {
   readonly props?: Props;
   readonly at: number;
   readonly sizeClass?: AnalyticsEvent['sizeClass'];
+  readonly refs?: PageEventRefs;
+}
+
+/** The longest id a page may name (a note's ULID, a folder's id or path). */
+const MAX_REF_ID = 1024;
+
+/** The ids a page named, checked: strings of a sensible length only. */
+function parseRefs(value: unknown): PageEventRefs | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const { note, folder } = value as Record<string, unknown>;
+  const id = (item: unknown) =>
+    typeof item === 'string' && item.length > 0 && item.length <= MAX_REF_ID ? item : undefined;
+  const refs = {
+    ...(id(note) ? { note: id(note)! } : {}),
+    ...(id(folder) ? { folder: id(folder)! } : {}),
+  };
+  return refs.note || refs.folder ? refs : undefined;
 }
 
 /** At most this many events in one message from a page. */
 export const MAX_PAGE_EVENTS = 200;
 /** A page's `at` further off than this from main's clock is replaced by main's. */
 const AT_SLACK_MS = 24 * 3_600_000;
+/** The most retired ref keys kept for late events (PEN-177). */
+const MAX_RETIRED_KEYS = 4;
 /** A batch after a full one follows soon. */
 const AGAIN_MS = 2_000;
 
@@ -134,11 +169,12 @@ export function parsePageEvents(value: unknown): PageEventInput[] {
   const events: PageEventInput[] = [];
   for (const item of value.slice(0, MAX_PAGE_EVENTS) as unknown[]) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
-    const { kind, name, props, at, sizeClass } = item as Record<string, unknown>;
+    const { kind, name, props, at, sizeClass, refs } = item as Record<string, unknown>;
     if (typeof kind !== 'string' || typeof name !== 'string') continue;
     if (props !== undefined && (!props || typeof props !== 'object' || Array.isArray(props))) {
       continue;
     }
+    const named = parseRefs(refs);
     events.push({
       kind: kind as EventKind,
       name,
@@ -147,6 +183,7 @@ export function parsePageEvents(value: unknown): PageEventInput[] {
       ...(typeof sizeClass === 'string'
         ? { sizeClass: sizeClass as AnalyticsEvent['sizeClass'] }
         : {}),
+      ...(named ? { refs: named } : {}),
     });
   }
   return events;
@@ -280,6 +317,15 @@ export class Analytics {
   private stopped = false;
   private quitRecorded = false;
   private lastDelay = 0;
+  /** The ref key (PEN-177) and the install it was read for; read again when the ID changes. */
+  private refKey: { readonly install: string; readonly key: string } | null = null;
+  /**
+   * The keys replaced by a reset or a forget, oldest first, each with when it was replaced: an
+   * event a page recorded before then reaches main later (its queue, a burst still flushing), and
+   * is named by the key current at its `at` and kept here, Not Shared, so it never links the old
+   * ID with the new one.
+   */
+  private retired: Array<{ readonly key: string; readonly until: number }> = [];
 
   constructor(private readonly options: AnalyticsOptions) {
     this.session = options.session ?? newSessionId();
@@ -384,18 +430,92 @@ export class Analytics {
     return this.keep({ kind, name, props, sizeClass });
   }
 
+  /** Where the ref key lives: beside the consent file. */
+  private get refKeyPath(): string {
+    return refKeyPathFor(this.options.consentPath);
+  }
+
+  /** This install's ref key, made on first use. */
+  private key(): string {
+    if (this.refKey?.install !== this.file.install) {
+      this.refKey = { install: this.file.install, key: readRefKey(this.refKeyPath) };
+    }
+    return this.refKey.key;
+  }
+
+  /** A note's or folder's ref on this install (PEN-177): what the stored events hold. */
+  refOf(type: 'note' | 'folder', id: string): string {
+    return refOf(this.key(), type, id);
+  }
+
+  /**
+   * The page's props with its named ids swapped for refs under `key` (the one current at the
+   * event's `at`); the ids go no further.
+   */
+  private withRefs(input: PageEventInput, key: string | null): Props {
+    const props = input.props ?? {};
+    if (!input.refs) return props;
+    const ref = (type: 'note' | 'folder', id: string) =>
+      key === null ? this.refOf(type, id) : refOf(key, type, id);
+    // The refs first: what the event is about reads first in the viewers.
+    return {
+      ...(input.refs.note ? { note: ref('note', input.refs.note) } : {}),
+      ...(input.refs.folder ? { folder: ref('folder', input.refs.folder) } : {}),
+      ...props,
+    };
+  }
+
+  /** The key in force until now is retired: events from before now are named by it. */
+  private retire(key: string | null): void {
+    if (key === null) return;
+    const now = this.now();
+    // An `at` older than the slack is main's own clock by then, so its key is never wanted.
+    this.retired = [
+      ...this.retired.filter((item) => now - item.until <= AT_SLACK_MS),
+      { key, until: now },
+    ].slice(-MAX_RETIRED_KEYS);
+  }
+
+  /** The retired key current at `at`, or null when the key in force was. */
+  private retiredAt(at: number): string | null {
+    return this.retired.find((item) => at < item.until)?.key ?? null;
+  }
+
+  /** The key in force, made if need be; null when the home can't be read or written. */
+  private keyOrNull(): string | null {
+    try {
+      return this.key();
+    } catch {
+      return null;
+    }
+  }
+
+  /** A new ref key with a new ID: the same note gets a different ref from then on. */
+  private renewKey(): void {
+    this.retire(this.keyOrNull());
+    this.refKey = null;
+    try {
+      renewRefKey(this.refKeyPath);
+    } catch {
+      // A home that cannot be written: the next read makes one for this run.
+    }
+  }
+
   /** The page's events: stamped, checked and stored in the order they came; how many kept. */
   recordPage(value: unknown): number {
     const events = parsePageEvents(value);
     if (events.length === 0) return 0;
     const state = this.state();
-    const kept: Array<{ event: AnalyticsEvent; state: typeof state }> = [];
+    const kept: Array<{ event: AnalyticsEvent; state: StateCode }> = [];
     const now = this.now();
+    let waiting = 0;
     for (const input of events) {
       const at =
         Number.isFinite(input.at) && Math.abs(input.at - now) <= AT_SLACK_MS
           ? Math.round(input.at)
           : now;
+      // Recorded before a reset or a forget, it belongs to the old ID: its key, and kept here.
+      const retired = this.retiredAt(at);
       const event: AnalyticsEvent = {
         session: this.session,
         seq: this.seq,
@@ -404,14 +524,16 @@ export class Analytics {
         ...(input.sizeClass ? { sizeClass: input.sizeClass } : {}),
         kind: input.kind,
         name: input.name,
-        props: input.props ?? {},
+        props: this.withRefs(input, retired),
       };
       if (eventProblem(event) !== null) continue;
       this.seq += 1;
-      kept.push({ event, state });
+      const stateOf = retired === null ? state : STATES.local;
+      if (stateOf === STATES.waiting) waiting += 1;
+      kept.push({ event, state: stateOf });
     }
     this.options.store.insert(kept);
-    if (state === STATES.waiting) this.counted(kept.length);
+    if (waiting > 0) this.counted(waiting);
     return kept.length;
   }
 
@@ -471,6 +593,7 @@ export class Analytics {
   /** Reset My Analytics ID: a new ID, and what was not sent stays here, Not Shared. */
   async resetId(): Promise<AnalyticsStatus> {
     this.abortSend();
+    this.renewKey();
     this.write(withNewId);
     await this.options.store.unsentToLocal();
     return this.changed();
@@ -490,6 +613,7 @@ export class Analytics {
     });
     this.log(`analytics forget: ${outcome}`);
     if (outcome === 'ok' && this.file.install === install) {
+      this.renewKey();
       this.write(withNewId);
       await this.options.store.unsentToLocal();
       await this.changed();
@@ -565,6 +689,8 @@ export class Analytics {
       await this.options.store.sharingOff();
     }
     if (before.install !== next.install) {
+      // The CLI made the new key: the one read for the old ID is retired from now.
+      if (this.refKey?.install === before.install) this.retire(this.refKey.key);
       this.abortSend();
       await this.options.store.unsentToLocal();
     }

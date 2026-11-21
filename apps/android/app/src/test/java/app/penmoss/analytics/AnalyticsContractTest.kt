@@ -106,6 +106,10 @@ class AnalyticsContractTest {
         "flags" -> JsonArray(listOf(JsonPrimitive(strings("cliFlags").first()))) to JsonArray(listOf(JsonPrimitive("slothcanary")))
         "length" -> JsonPrimitive(1440) to JsonPrimitive(1441)
         "fraction" -> JsonPrimitive(0.42) to JsonPrimitive("0.42")
+        "ref" -> JsonPrimitive("0123456789abcdef") to JsonPrimitive("0123456789ABCDEF")
+        "index" -> JsonPrimitive(5000) to JsonPrimitive(5001)
+        "chars" -> JsonPrimitive(1_000_000) to JsonPrimitive(1_000_001)
+        "shape" -> JsonArray(listOf(JsonPrimitive("p:12"), JsonPrimitive("hr"))) to JsonArray(listOf(JsonPrimitive("Plans for the week")))
         else -> error("A prop type the phone does not know: $type")
     }
 
@@ -128,7 +132,13 @@ class AnalyticsContractTest {
     @Test
     fun aNameWithPropsOfItsOwnTakesExactlyThose() {
         val nameProps = contract.getValue("nameProps").jsonObject
-        assertEquals(setOf("app.window", "app.layout"), nameProps.keys)
+        assertEquals(
+            setOf(
+                "app.window", "app.layout", "note.open", "note.typing", "note.blocks", "note.cursor", "note.select",
+                "tree.expand", "tree.collapse", "tree.open",
+            ),
+            nameProps.keys,
+        )
         val kindProps = contract.getValue("props").jsonObject
         for ((key, keys) in nameProps) {
             val kind = key.substringBefore('.')
@@ -199,6 +209,71 @@ class AnalyticsContractTest {
         // The shipped catalogue reads the same from its own copy.
         assertEquals("client", AnalyticsCatalogue.bundled.problem(scroll.copy(client = "cli")))
         assertNull(AnalyticsCatalogue.bundled.problem(scroll))
+    }
+
+    /** PEN-177: every event case core wrote is judged here as core judged it. */
+    @Test
+    fun eachSessionDetailCaseIsJudgedAsCoreJudgedIt() {
+        val cases = contract.getValue("eventCases").jsonArray.map { it.jsonObject }
+        assertTrue(cases.size > 100)
+        for (case in cases) {
+            val raw = case.getValue("event").jsonObject
+            fun text(key: String) = raw.getValue(key).jsonPrimitive.content
+            val event = AnalyticsEvent(
+                text("session"), raw.getValue("seq").jsonPrimitive.long, raw.getValue("at").jsonPrimitive.long, text("client"), text("actor"),
+                text("version"), text("channel"), text("os"), text("osVersion"), raw["sizeClass"]?.jsonPrimitive?.content, text("kind"),
+                text("name"), raw.getValue("props").jsonObject,
+            )
+            val want = case.getValue("problem").let { if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content }
+            assertEquals("$raw", want, catalogue.problem(event))
+            assertEquals("bundled: $raw", want, AnalyticsCatalogue.bundled.problem(event))
+        }
+    }
+
+    @Test
+    fun sessionDetailsNumbersAndPatternsAreCores() {
+        val detail = contract.getValue("detail").jsonObject
+        fun number(key: String) = detail.getValue(key).jsonPrimitive.long
+        assertEquals(number("maxIndex"), SessionDetail.MAX_INDEX.toLong())
+        assertEquals(number("maxChars"), SessionDetail.MAX_CHARS.toLong())
+        assertEquals(number("maxShapeTokens"), SessionDetail.MAX_SHAPE_TOKENS.toLong())
+        assertEquals(number("maxShapeBytes"), SessionDetail.MAX_SHAPE_BYTES.toLong())
+        assertEquals(number("maxTableSide"), SessionDetail.MAX_TABLE_SIDE.toLong())
+        assertEquals(number("maxListDepth"), SessionDetail.MAX_LIST_DEPTH.toLong())
+        assertEquals(number("inputSettleMs"), SessionDetail.INPUT_SETTLE_MS)
+        assertEquals(number("propsListShown"), SessionDetail.PROPS_LIST_SHOWN.toLong())
+        assertEquals(detail.getValue("inputFields").jsonArray.map { it.jsonPrimitive.content }, SessionDetail.INPUT_FIELDS)
+        val patterns = contract.getValue("patterns").jsonObject
+        assertEquals(patterns.getValue("ref").jsonPrimitive.content, SessionDetail.REF.pattern)
+        assertEquals(patterns.getValue("block").jsonPrimitive.content, SessionDetail.BLOCK.pattern)
+    }
+
+    @Test
+    fun clampUsageIsCores() {
+        val cases = contract.getValue("clamp").jsonArray
+        assertTrue(cases.size >= 10)
+        for (case in cases) {
+            val (type, value, want) = case.jsonArray
+            assertEquals("$case", want.jsonPrimitive.int, SessionDetail.clampUsage(type.jsonPrimitive.content, value.jsonPrimitive.content.toDouble()))
+        }
+    }
+
+    @Test
+    fun thePropsLineIsCores() {
+        for (case in contract.getValue("propsLine").jsonArray.map { it.jsonObject }) {
+            val props = case.getValue("props").jsonObject
+            assertEquals("$props", case.getValue("line").jsonPrimitive.content, SessionDetail.propsLine(props))
+        }
+    }
+
+    @Test
+    fun refsAreCores() {
+        val vectors = contract.getValue("refVectors").jsonArray.map { it.jsonObject }
+        assertTrue(vectors.size >= 4)
+        for (vector in vectors) {
+            fun text(key: String) = vector.getValue(key).jsonPrimitive.content
+            assertEquals("$vector", text("ref"), AnalyticsRefs.refOf(text("key"), text("type"), text("id")))
+        }
     }
 
     @Test

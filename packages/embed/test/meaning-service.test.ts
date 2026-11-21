@@ -263,6 +263,41 @@ describe('the embedding service (T76)', () => {
     await service.stop();
   });
 
+  it('indexes a change whose sections arrive while a run is embedding the notes before it', async () => {
+    // A slow embedder, so the first run is still embedding when the edit's text comes: that run
+    // read the notes before the edit, and the edit's own call for a run finds one under way.
+    const { source } = fakeSource({ embedder: fakeEmbedder({ delayMs: 60 }) });
+    const statuses: ServiceStatus[] = [];
+    const service = new MeaningService(source, (status) => statuses.push(status), {
+      batch: 1,
+      sliceMs: 60_000,
+    });
+    await service.start();
+    await service.update('nb', NOTES);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const edited = note('bread', 'Sourdough', 'A diesel generator stands behind the shed.', 2);
+    const heard = statuses.length;
+    await service.update('nb', [...NOTES.filter((each) => each.id !== 'bread'), edited]);
+    // The run under way ends before anyone searches (a search would only take cached vectors).
+    await vi.waitFor(
+      () => {
+        if (!statuses.slice(heard).some((status) => status.state === 'ready')) {
+          throw new Error('not yet ready');
+        }
+      },
+      { timeout: 5_000, interval: 10 },
+    );
+    await vi.waitFor(
+      async () => {
+        const hits = await service.search('nb', 'diesel generator shed');
+        expect(hits?.[0]?.id).toBe('bread');
+        expect(hits?.[0]?.preview).toContain('diesel');
+      },
+      { timeout: 5_000, interval: 20 },
+    );
+    await service.stop();
+  });
+
   it('compacts the cache to the keys every open notebook uses', async () => {
     const { source, cache } = fakeSource();
     const statuses: ServiceStatus[] = [];

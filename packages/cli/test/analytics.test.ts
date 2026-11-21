@@ -22,7 +22,7 @@ import {
   type ConsentFile,
   type StoredEvent,
 } from '@penmoss/core/analytics';
-import { AnalyticsStore, wireEvent } from '@penmoss/core/analytics/node';
+import { AnalyticsStore, readRefKey, refOf, wireEvent } from '@penmoss/core/analytics/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToolRecorder } from '../src/analytics';
 import type { FlagSpec } from '../src/args';
@@ -258,7 +258,7 @@ describe('penmoss analytics on, off, status, reset, forget (AC20)', () => {
     expect(first.stdout).toContain('Sharing: not answered yet.');
     expect(first.stdout).toContain(`Analytics ID: ${consent().install}`);
     expect(first.stdout).toContain('Recorded: Nothing Recorded Yet');
-    expect(first.stdout).toContain('Kept: 7 days, at most 5,000 events');
+    expect(first.stdout).toContain('Kept: 7 days, at most 200,000 events');
     expect(first.stdout).toContain(join(home, 'analytics.json'));
     expect(first.stdout).toContain(join(home, 'analytics', 'events.db'));
     const json = (await cli(['analytics', 'status', '--json'])).json();
@@ -332,6 +332,23 @@ describe('penmoss analytics on, off, status, reset, forget (AC20)', () => {
     expect(consent().install).toMatch(/^[0-9a-f]{32}$/);
     expect(reset.stdout).toContain(consent().install);
     expect(events().map((event) => event.state)).toEqual(['local', 'waiting']);
+  });
+
+  it('reset and forget make a new ref key, which status never shows (PEN-177)', async () => {
+    const cli = cliWith();
+    const keyPath = join(home, 'analytics-key');
+    const key = readRefKey(keyPath);
+    await cli(['analytics', 'reset']);
+    const afterReset = readRefKey(keyPath);
+    expect(afterReset).not.toBe(key);
+    expect(refOf(afterReset, 'note', 'n1')).not.toBe(refOf(key, 'note', 'n1'));
+    const done = await cli(['analytics', 'forget']);
+    expect(done.code, done.stderr).toBe(0);
+    const afterForget = readRefKey(keyPath);
+    expect(afterForget).not.toBe(afterReset);
+    const status = await cli(['analytics', 'status']);
+    const json = await cli(['analytics', 'status', '--json']);
+    for (const out of [status.stdout, json.stdout]) expect(out).not.toContain(afterForget);
   });
 
   it('forget asks the server to delete the old ID’s data, then gives a new ID', async () => {
@@ -458,7 +475,7 @@ describe('penmoss analytics limits (AC29)', () => {
     const listed = await cliWith()(['analytics', 'limits']);
     expect(listed.stdout).toMatch(/^Key\s+Value\s+Default\s+Range$/m);
     expect(listed.stdout).toMatch(/^events\.days\s+7\s+7\s+1–360 days$/m);
-    expect(listed.stdout).toMatch(/^events\.max\s+5,000\s+5,000\s+500–800,000 events$/m);
+    expect(listed.stdout).toMatch(/^events\.max\s+200,000\s+200,000\s+500–2,000,000 events$/m);
     expect(listed.stdout).toMatch(/^report\.kb\s+16\s+16\s+4–40 KB$/m);
   });
 

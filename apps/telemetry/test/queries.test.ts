@@ -175,7 +175,8 @@ describe('what they say', () => {
     );
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      expect([row.n1, row.n2, row.n3].join(' ')).not.toMatch(/scroll:/);
+      // Nor session detail (PEN-177): every session's note records its shape and typing.
+      expect([row.n1, row.n2, row.n3].join(' ')).not.toMatch(/(?:scroll|note|input|tree):/);
     }
     // Every session scrolls the sidebar between Home and the palette: the palette comes next.
     const fromHome = await runQuery<{ depth: number; n1: string }>(env.DB, 'next', {
@@ -239,8 +240,13 @@ describe('what they say', () => {
     expect(
       rows.find((row) => row.kind === 'command' && row.name === 'app.palette')?.events,
     ).toBeGreaterThan(0);
-    // Not scroll events (PEN-175), though every session has them.
-    expect(rows.some((row) => row.kind === 'scroll')).toBe(false);
+    // Not scroll events (PEN-175) or session detail (PEN-177), though every session has them.
+    for (const kind of ['scroll', 'note', 'input', 'tree']) {
+      expect(
+        rows.some((row) => row.kind === kind),
+        kind,
+      ).toBe(false);
+    }
   });
 
   it('freshness says when the newest event arrived and how far the rollup reached', async () => {
@@ -260,6 +266,8 @@ describe('what they say', () => {
     expect(names).not.toContain('command:app.palette');
     // A scroll area is not something anyone chooses to use (PEN-175).
     expect(names.some((name) => name.startsWith('scroll:'))).toBe(false);
+    // Nor session detail (PEN-177): no one chooses to use a note's cursor.
+    expect(names.some((name) => /^(?:note|input|tree):/.test(name))).toBe(false);
   });
 
   it('window-sizes counts installs by main window size, the 10 most per client, then Other', async () => {

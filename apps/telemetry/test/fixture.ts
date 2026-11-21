@@ -101,6 +101,23 @@ function dayDrafts(index: number, day: number, phone: boolean): Draft[] {
   // after Home is still the palette.
   drafts.splice(2, 0, { kind: 'scroll', name: 'sidebar', props: { position: 0.25 } });
   drafts.push({ kind: 'scroll', name: 'note', props: { position: 0.42 } });
+  // Inside the note (PEN-177): its shape, a burst of typing and the cursor, by refs. Paths skips
+  // these too, so what comes after the note's screen is still the next command.
+  const noteRef = (index * 31 + day).toString(16).padStart(16, '0');
+  drafts.push(
+    {
+      kind: 'note',
+      name: 'open',
+      props: {
+        note: noteRef,
+        how: 'open',
+        titleChars: 12,
+        shape: ['h1:12', 'p:182', 'li.b.1:31', 'hr'],
+      },
+    },
+    { kind: 'note', name: 'typing', props: { note: noteRef, block: 1, typed: 14, deleted: 2 } },
+    { kind: 'note', name: 'cursor', props: { note: noteRef, block: 2 } },
+  );
   drafts.push(
     {
       kind: 'command',

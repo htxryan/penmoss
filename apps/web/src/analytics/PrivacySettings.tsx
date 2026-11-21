@@ -16,7 +16,7 @@ import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { SettingRow, Switch } from '../theme/look-rows';
 import { PrivacyPolicyLink } from './Consent';
 import { AdvancedLimits } from './Limits';
-import { record } from './record';
+import { flushRecorded, record } from './record';
 import { analyticsBridge, copy, shortId, useAnalyticsStatus } from './status';
 import './privacy.css';
 
@@ -144,6 +144,8 @@ function PrivacyRows({
                 disabled={busy}
                 onClick={() =>
                   void run(async () => {
+                    // What this page recorded first reaches main under the old ID (PEN-177).
+                    flushRecorded();
                     await analytics.resetId();
                     record('setting', 'privacy.reset', { value: true });
                     setNote('reset');
@@ -198,6 +200,7 @@ function PrivacyRows({
                   onClick={() => {
                     setForgetting(false);
                     void run(async () => {
+                      flushRecorded();
                       const result = await analytics.forget().catch(() => null);
                       const outcome = result?.outcome ?? 'failed';
                       if (outcome === 'ok') record('setting', 'privacy.forget', { value: true });

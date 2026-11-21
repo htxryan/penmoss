@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedToggle
+import app.penmoss.analytics.typedLength
 import app.penmoss.ui.common.SQUARE
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Image
@@ -241,7 +242,7 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
                 isError = titleError != null,
                 supportingText = { Text(titleError ?: "${FeedbackValidation.title(title).length} of ${FeedbackLimits.TITLE_MAX}") },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth().testTag("feedbackTitle").semantics { if (titleError != null) error(titleError) },
+                modifier = Modifier.fillMaxWidth().testTag("feedbackTitle").typedLength("feedback", "title", title).semantics { if (titleError != null) error(titleError) },
             )
 
             Description(ui.draft.description, editing, problem(FeedbackValidation.Field.DESCRIPTION), actions.description)
@@ -398,7 +399,7 @@ private fun Description(description: String, editing: Boolean, problem: String?,
         isError = problem != null,
         supportingText = problem?.let { { Text(it) } } ?: { Text("Markdown: bold, italic, lists, links, code and quotes") },
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("feedbackDescription").semantics { if (problem != null) error(problem) },
+        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("feedbackDescription").typedLength("feedback", "body", value.text).semantics { if (problem != null) error(problem) },
     )
 }
 

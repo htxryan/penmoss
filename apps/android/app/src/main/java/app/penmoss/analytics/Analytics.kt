@@ -57,7 +57,30 @@ class AnalyticsService(
 ) {
     val session: String = AnalyticsFormat.newSessionId()
     private val seq = AtomicLong(0)
-    private val buffer = ArrayList<AnalyticsEvent>()
+    private val buffer = ArrayList<Buffered>()
+
+    /**
+     * An event waiting to be stored, with the notes and folders it names that still want their refs
+     * (PEN-177): recorded before the answer was read, so before the key was known. Their props
+     * hold [PLACEHOLDER_REF] until [flush] reads the key.
+     */
+    private class Buffered(
+        val event: AnalyticsEvent,
+        val refs: Map<String, Pair<String, String>> = emptyMap(),
+        /** It happened before a reset, so it belongs to the old ID: kept on the phone. */
+        val before: Boolean = false,
+    )
+
+    /** A key a reset or a forget replaced, and when (PEN-177). */
+    private class Retired(val key: String, val until: Long)
+
+    /**
+     * The keys replaced, oldest first: what the note screen held while Settings was in front
+     * (a burst the page sent as it paused) is named by the key current when it came, and kept on
+     * the phone, so it never links the old ID with the new one.
+     */
+    @Volatile
+    private var retired: List<Retired> = emptyList()
     private val flushing = Mutex()
     private val sending = Mutex()
     private var flushJob: Job? = null
@@ -81,7 +104,17 @@ class AnalyticsService(
     suspend fun stateNow(): ConsentState = state.filterNotNull().first()
 
     /** Records one event; false when it was dropped. */
-    fun record(kind: String, name: String, props: Map<String, Any?> = emptyMap()): Boolean = try {
+    fun record(kind: String, name: String, props: Map<String, Any?> = emptyMap()): Boolean = keep(kind, name, props, emptyMap(), false)
+
+    /** The service's clock: when an event that waits to be recorded happened. */
+    fun now(): Long = now.invoke()
+
+    /**
+     * Checks and buffers one event. [refs] are the props still to be named by their refs at
+     * [flush]: their values in [props] are [PLACEHOLDER_REF], so the catalogue checks the event as
+     * it will be stored.
+     */
+    private fun keep(kind: String, name: String, props: Map<String, Any?>, refs: Map<String, Pair<String, String>>, before: Boolean): Boolean = try {
         val client = fields()
         val json = JsonObject(props.mapNotNull { (key, value) -> jsonOf(value)?.let { key to it } }.toMap())
         val draft = AnalyticsEvent(
@@ -106,7 +139,7 @@ class AnalyticsService(
         } else {
             val size = synchronized(buffer) {
                 // seq rises in the order events are kept.
-                buffer += draft.copy(seq = seq.getAndIncrement())
+                buffer += Buffered(draft.copy(seq = seq.getAndIncrement()), refs, before)
                 buffer.size
             }
             if (size >= FLUSH_AT) flushSoon(0) else flushSoon(FLUSH_MS)
@@ -114,6 +147,36 @@ class AnalyticsService(
         }
     } catch (error: Exception) {
         false
+    }
+
+    /**
+     * Records an event of session detail (PEN-177) naming notes or folders: each of [refs] (a prop,
+     * to its type and real id) is recorded as its ref under this install's key, never the id. One
+     * recorded before the answer is read (the key with it) is buffered like any other, and named
+     * when it is stored: none is dropped for want of its key, so a replay never misses a step.
+     * [heldAt] is when an event held until now happened ([now]'s clock): from before a reset, it is
+     * named by the key current then and kept on the phone.
+     */
+    fun recordWithRefs(
+        kind: String,
+        name: String,
+        props: Map<String, Any?>,
+        refs: Map<String, Pair<String, String?>>,
+        heldAt: Long? = null,
+    ): Boolean {
+        val wanted = refs.mapNotNull { (prop, ref) -> ref.second?.let { id -> prop to (ref.first to id) } }.toMap()
+        val old = heldAt?.let { at -> retired.firstOrNull { at < it.until } }
+        val key = old?.key ?: state.value?.refKey?.takeIf(AnalyticsRefs.KEY::matches)
+        val named = wanted.mapValues { (_, ref) -> if (key == null) PLACEHOLDER_REF else AnalyticsRefs.refOf(key, ref.first, ref.second) }
+        // The refs first, as the Mac's main writes them: what the event is about reads first.
+        return keep(kind, name, named + props.filterKeys { it !in named }, if (key == null) wanted else emptyMap(), old != null)
+    }
+
+    /** [event] with each of [refs] named by its ref under [key]. */
+    private fun named(event: AnalyticsEvent, refs: Map<String, Pair<String, String>>, key: String): AnalyticsEvent {
+        if (refs.isEmpty()) return event
+        val props = JsonObject(event.props.mapValues { (prop, value) -> refs[prop]?.let { JsonPrimitive(AnalyticsRefs.refOf(key, it.first, it.second)) } ?: value })
+        return event.copy(props = props)
     }
 
     private fun flushSoon(delayMs: Long) {
@@ -131,8 +194,18 @@ class AnalyticsService(
         flushing.withLock {
             val taken = synchronized(buffer) { buffer.toList().also { buffer.clear() } }
             if (taken.isEmpty()) return
-            val state = stateNow().stateNow
-            store.insert(taken.map { it to state })
+            val read = stateNow()
+            val state = read.stateNow
+            // The answer is read, and the key with it (ConsentStore makes it with the ID).
+            val key = if (taken.any { it.refs.isNotEmpty() }) read.refKey.takeIf(AnalyticsRefs.KEY::matches) ?: consent.now().refKey else ""
+            // One recorded under the old key while a reset went (after its flush) is the old ID's.
+            val lastReset = retired.lastOrNull()?.until
+            store.insert(
+                taken.map {
+                    val old = it.before || (lastReset != null && it.event.at < lastReset)
+                    named(it.event, it.refs, key) to if (old) EventState.LOCAL else state
+                },
+            )
             if (state == EventState.WAITING && (store.counts()[EventState.WAITING] ?: 0) >= AnalyticsFormat.SEND_AT_WAITING) schedule(0)
         }
     }
@@ -159,7 +232,12 @@ class AnalyticsService(
     /** Reset My Analytics ID: a new ID, and unsent events stay on the phone. */
     suspend fun resetId() {
         flush()
+        val old = stateNow().refKey.takeIf(AnalyticsRefs.KEY::matches)
         consent.resetId()
+        if (old != null) {
+            val until = now()
+            retired = (retired.filter { until - it.until <= RETIRED_FOR_MS } + Retired(old, until)).takeLast(MAX_RETIRED)
+        }
         _state.value = consent.now()
         store.unsentToLocal()
     }
@@ -247,9 +325,16 @@ class AnalyticsService(
 
     companion object {
         const val FLUSH_MS = 1_000L
+
+        /** A ref's stand-in while the key is not read yet; never stored. */
+        private const val PLACEHOLDER_REF = "0000000000000000"
         const val FLUSH_AT = 100
         const val PRUNE_EVERY_MS = 60 * 60_000L
         private const val MAX_BATCHES_PER_RUN = 50
+
+        /** The most keys kept for what was held from before a reset, and for how long (PEN-177). */
+        private const val MAX_RETIRED = 4
+        private const val RETIRED_FOR_MS = 24 * 60 * 60_000L
 
         /**
          * A prop's value as JSON: an enum, a boolean, a bucket, a number or a list of names. A
@@ -257,6 +342,8 @@ class AnalyticsService(
          */
         fun jsonOf(value: Any?): JsonElement? = when (value) {
             null -> null
+            // A prop from the editor page (PEN-177), as it came; the catalogue checks it.
+            is JsonElement -> value
             is String -> JsonPrimitive(value)
             is Boolean -> JsonPrimitive(value)
             is Int -> JsonPrimitive(value)
@@ -287,6 +374,18 @@ object Analytics {
     /** Records one event (kind, catalogue name, typed props); false when dropped or not installed. */
     fun record(kind: String, name: String, props: Map<String, Any?> = emptyMap()): Boolean =
         service?.record(kind, name, props) ?: false
+
+    /** An event naming notes or folders (PEN-177): [refs] maps a prop to its type and real id. */
+    fun recordWithRefs(
+        kind: String,
+        name: String,
+        props: Map<String, Any?>,
+        refs: Map<String, Pair<String, String?>>,
+        heldAt: Long? = null,
+    ): Boolean = service?.recordWithRefs(kind, name, props, refs, heldAt) ?: false
+
+    /** The recorder's clock, for when an event held to record later happened; null if none is installed. */
+    fun now(): Long? = service?.now()
 
     /** A tracked control was used (`Modifier.tracked`): its id, and on/off for a switch. */
     fun click(id: String, on: Boolean? = null): Boolean =

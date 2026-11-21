@@ -7,10 +7,15 @@
  *
  * Recording never throws, never waits and never slows a click: it pushes to an array and
  * flushes on a timer.
+ *
+ * Session detail (PEN-177) names a note or a folder by a ref, a keyed hash only the Mac's main
+ * process can make: the page passes their real ids in `refs`, beside the props, and main swaps
+ * them for refs before it checks and stores the event. The memory sink keeps `refs` apart from
+ * the props too, and never sends anything, so the web suite can check no prop holds an id.
  */
 import { eventProblem, sizeClassOf, type EventKind, type Props } from '@penmoss/core/analytics';
 import { desktop } from '../desktop/bridge';
-import type { PageEvent } from '../desktop/bridge';
+import type { PageEvent, PageEventRefs } from '../desktop/bridge';
 
 declare global {
   interface Window {
@@ -66,7 +71,12 @@ export function flushRecorded(): void {
  * Records one interaction by name. An event the catalogue doesn't know, or with a prop it
  * doesn't allow, is dropped here (and warned about in development), so it never reaches main.
  */
-export function record(kind: EventKind, name: string, props: Props = {}): void {
+export function record(
+  kind: EventKind,
+  name: string,
+  props: Props = {},
+  refs?: PageEventRefs,
+): void {
   try {
     const clean = Object.fromEntries(
       Object.entries(props).filter(([, value]) => value !== undefined),
@@ -77,12 +87,28 @@ export function record(kind: EventKind, name: string, props: Props = {}): void {
       if (import.meta.env.DEV) console.warn(`analytics: dropped ${kind} ${name}: ${problem}`);
       return;
     }
-    queue.push({ kind, name, props: clean, at, sizeClass: sizeClassOf(window.innerWidth) });
+    const named = refs && (refs.note || refs.folder) ? { refs: withIds(refs) } : {};
+    queue.push({
+      kind,
+      name,
+      props: clean,
+      at,
+      sizeClass: sizeClassOf(window.innerWidth),
+      ...named,
+    });
     if (queue.length >= 50) flushRecorded();
     else timer ??= setTimeout(flush, FLUSH_MS);
   } catch {
     // Recording never breaks the page.
   }
+}
+
+/** Only the ids that are there. */
+function withIds(refs: PageEventRefs): PageEventRefs {
+  return {
+    ...(refs.note ? { note: refs.note } : {}),
+    ...(refs.folder ? { folder: refs.folder } : {}),
+  };
 }
 
 if (typeof window !== 'undefined') {

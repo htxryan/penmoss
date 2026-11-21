@@ -6,9 +6,9 @@
  *
  * There is no free-text field anywhere: a name is one of the catalogue's ids, and a prop is an
  * enum, a boolean, a bucket, a duration bucket, a limit's value, a window's length rounded to 10
- * (`lengthOf`), a scrolled area's position in hundredths (`fractionOf`, PEN-175) or a list of
- * flag names. So a
- * note's title, a path, a tag, a notebook or repository name, or anything a person typed cannot
+ * (`lengthOf`), a scrolled area's position in hundredths (`fractionOf`, PEN-175), a list of
+ * flag names, or session detail's refs, block positions, exact lengths and block tokens
+ * (`detail.ts`, PEN-177). So a note's title, a path, a tag, a notebook or repository name, or anything a person typed cannot
  * be recorded, let alone sent (`validate.ts` checks each event before it is stored and again in
  * the Worker).
  */
@@ -79,6 +79,10 @@ export const KINDS = [
   'cli',
   'tool',
   'scroll',
+  // PEN-177: session detail, from the apps only (KIND_CLIENTS).
+  'note',
+  'input',
+  'tree',
 ] as const;
 export type EventKind = (typeof KINDS)[number];
 

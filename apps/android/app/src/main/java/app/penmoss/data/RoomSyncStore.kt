@@ -102,8 +102,14 @@ class RoomSyncStore(
             val held = if (changed.kind == null) notes.note(changed.id) else null
             val kind = if (held != null) held.kind else journalKind(changed.kind)
             val period = if (held != null) held.period else changed.period?.takeIf { kind != "note" }
+            // The title this phone gave it stands while it has edits the server lacks, as its tags
+            // do (PEN-177): the open note's poll asks for changes before it sends the note's edits,
+            // so a title typed straight after New Note met the page's older, empty one, and the
+            // lists showed the note as Untitled until the next pass. The server's comes once they
+            // are sent.
+            val ownTitle = if (updates.count(changed.id, UpdateEntity.PENDING) > 0) notes.note(changed.id)?.title else null
             notes.updateMetadata(
-                changed.id, changed.title, changed.excerpt, changed.updatedAt, changed.clock,
+                changed.id, ownTitle ?: changed.title, changed.excerpt, changed.updatedAt, changed.clock,
                 changed.deleted, changed.seq, kind, period,
             )
             // Its tags (T40 P6): only from the row that landed, never an older one, and never over

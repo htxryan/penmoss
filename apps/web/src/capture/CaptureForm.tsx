@@ -7,6 +7,7 @@ import { useWorkspace } from '../workspace/hooks';
 import { captureStart } from './into';
 import { captureDestinationOf, type CaptureDestination } from '@penmoss/core/settings';
 import { saveCapture, type SavedCapture } from './save';
+import { useTypedLength } from '../analytics/typed';
 
 const SAVE_KEYS = 'Mod+Enter';
 
@@ -52,6 +53,8 @@ export function CaptureForm({
   const id = useId();
   const field = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState('');
+  // What is typed, by its length only (PEN-177): Quick Capture has no note yet.
+  const typedText = useTypedLength('capture', 'body', text);
   const [destination, setDestination] = useState<CaptureDestination>(() =>
     captureDestinationOf(workspace.settings()),
   );
@@ -144,6 +147,7 @@ export function CaptureForm({
         className="capture-text"
         data-testid="capture-text"
         value={text}
+        {...typedText}
         placeholder="What’s on your mind?"
         rows={4}
         onChange={(event) => setText(event.target.value)}

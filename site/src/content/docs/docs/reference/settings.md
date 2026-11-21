@@ -167,9 +167,9 @@ What Penmoss records about how you use it, on this Mac, and whether it is shared
 
 - **Share Usage Data**: sends the record to Penmoss's developer from now on. Off, it stays on this Mac.
 - **View Analytics Data**, with the counts by state: opens **Analytics Data** under Privacy, every event recorded by the app, the CLI and the MCP server, newest first, 100 at a time, filtered by App, CLI or MCP and by state, with **Copy as JSON**.
-- **Analytics ID**: the random ID your events carry, with **Reset My Analytics ID** and **Delete My Shared Data** (which asks first).
+- **Analytics ID**: the random ID your events carry, with **Reset My Analytics ID** and **Delete My Shared Data** (which asks first). Each also makes a new key for the keyed IDs that name notes and folders in the record.
 - **Logs**: **Show Log File** shows the app's log in Finder.
-- **Advanced**, folded away: how long events are kept (**Keep Events For**, **Keep at Most**), the logs' size and age (**Log File Size**, **Log Files Kept**, **Keep Log Lines For**), and what a bug report attaches (**Attach Logs from the Last**, **At Most** lines and KB), each with its range, and **Reset to Defaults**. Lowering one that would delete anything asks first.
+- **Advanced**, folded away: how long events are kept (**Keep Events For**, 7 days by default; **Keep at Most**, 200,000 events by default, 500–2,000,000), the logs' size and age (**Log File Size**, **Log Files Kept**, **Keep Log Lines For**), and what a bug report attaches (**Attach Logs from the Last**, **At Most** lines and KB), each with its range, and **Reset to Defaults**. Lowering one that would delete anything asks first.
 
 ## On Android
 

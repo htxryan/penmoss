@@ -111,6 +111,7 @@ import androidx.compose.ui.window.DialogProperties
 import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLimits
 import app.penmoss.feedback.MarkdownPreviewView
@@ -198,7 +199,7 @@ fun SettingsHome(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("settingsSearch"),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("settingsSearch").typedLength("settingsSearch", "query", query),
                     placeholder = { Text("Search Settings") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

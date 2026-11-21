@@ -5,7 +5,8 @@
 // every visible control (a button, a link, a select, a summary, a checkbox, radio or slider, or
 // anything with a control's role) must carry, on itself or on the <label> around a native input,
 // a `data-command`, a `data-event` the catalogue lists and has not retired, or a
-// `data-untracked` reason of three words or more. Every miss is collected over the whole tour,
+// `data-untracked` reason of three words or more. A text field in a dialog, and Search Settings,
+// must record its typed length (`data-typed`, PEN-177) or carry such a reason. Every miss is collected over the whole tour,
 // and the test fails once at its end, naming each as screen | selector | accessible name. The
 // proof ends on the fixture note with its widgets in view.
 import { CLICK_NAMES, COMMAND_NAMES, RETIRED_CLICK_NAMES } from '@penmoss/core/analytics';
@@ -181,6 +182,28 @@ async function audit(
       };
       const misses: Array<{ selector: string; name: string }> = [];
       let checked = 0;
+      // PEN-177: a text field in a dialog (or Search Settings) records what is typed by length
+      // (`useTypedLength`, `data-typed`), or says why not (`data-untracked`).
+      const TEXT_FIELDS = [
+        'input:not([type])',
+        'input[type="text"]',
+        'input[type="search"]',
+        'input[type="url"]',
+        'input[type="email"]',
+        'textarea',
+        // A rich field (the feedback's description): its editor's host carries the mark.
+        '[contenteditable="true"]',
+      ].join(', ');
+      for (const element of document.querySelectorAll(TEXT_FIELDS)) {
+        if (!visible(element)) continue;
+        const inDialog =
+          element.closest('[role="dialog"], [role="alertdialog"], dialog') !== null ||
+          element.getAttribute('data-testid') === 'settings-search';
+        if (!inDialog) continue;
+        checked++;
+        if (element.closest('[data-typed]') !== null || marked(element)) continue;
+        misses.push({ selector: `${selector(element)} (text field)`, name: nameOf(element) });
+      }
       for (const element of document.querySelectorAll(CONTROLS)) {
         if (!visible(element)) continue;
         checked++;

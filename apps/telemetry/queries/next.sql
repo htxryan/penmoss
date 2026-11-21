@@ -1,7 +1,8 @@
 -- Paths: in sessions of the period (at most the last 90 days) with the start event, what came
 -- next, three steps deep. Depth 0 is the start itself, then each step's events ('end' when the
--- session ended). Scroll events are skipped (PEN-175), so what comes next is the next action,
--- not where an area came to rest. A path seen in fewer than 5 sessions is never shown.
+-- session ended). Scroll events (PEN-175) and session detail (note, input and tree, PEN-177) are
+-- skipped, so what comes next is the next action, not where an area came to rest or how much
+-- was typed. A path seen in fewer than 5 sessions is never shown.
 -- Parameters: ?1 days (the period ends today and is this many days long), ?2 client, ?3 actor,
 -- ?4 channel, ?5 version ('' for all), ?6 today (YYYY-MM-DD, UTC).
 -- ?7 the start event's kind, ?8 its name.
@@ -18,7 +19,7 @@ steps AS (
     LEAD(events.kind || ':' || events.name, 3) OVER w AS n3
   FROM events
   JOIN sessions ON sessions.install = events.install AND sessions.session = events.session
-  WHERE events.kind <> 'scroll' OR (events.kind = ?7 AND events.name = ?8)
+  WHERE events.kind NOT IN ('scroll', 'note', 'input', 'tree') OR (events.kind = ?7 AND events.name = ?8)
   WINDOW w AS (PARTITION BY events.install, events.session ORDER BY events.seq)
 ),
 hits AS (

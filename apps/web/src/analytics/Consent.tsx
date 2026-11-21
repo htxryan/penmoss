@@ -18,6 +18,8 @@ const RECORDED = [
   'consent.recorded.2',
   'consent.recorded.3',
   'consent.recorded.4',
+  // PEN-177: session detail, after the Mac's CLI line.
+  'consent.recorded.5',
 ] as const;
 const NEVER = ['consent.never.1', 'consent.never.2', 'consent.never.3'] as const;
 

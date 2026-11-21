@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.engine.settings.FontSettings
 import app.penmoss.ui.common.interfaceFontFamily
 import kotlin.math.roundToInt
@@ -149,6 +150,7 @@ private fun FontDialog(title: String, current: String, onPick: (String) -> Unit,
                             .fillMaxWidth()
                             .padding(top = 4.dp)
                             .testTag("font-custom-name")
+                            .typedLength("fontPicker", "name", family)
                             .semantics { if (family.isNotEmpty()) problem?.let { error(it) } },
                     )
                 }

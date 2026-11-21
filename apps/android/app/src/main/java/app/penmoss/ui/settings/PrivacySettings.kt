@@ -351,15 +351,17 @@ private fun pruneReason(saved: Limits, ask: Asking): String {
  */
 @Composable
 private fun LimitField(spec: LimitSpec, value: Int, restore: Int, onCommit: (Int) -> Unit) {
-    var text by remember(value, restore) { mutableStateOf(value.toString()) }
+    // Digits grouped as the Mac writes them ("200,000", PEN-177); typed with or without commas.
+    var text by remember(value, restore) { mutableStateOf(AnalyticsFormat.number(value.toLong())) }
     var wrong by remember(value, restore) { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     fun commit() {
-        if (text.trim() == value.toString()) {
+        val parsed = spec.parse(text)
+        // Left as it was ("200,000" or "200000"): nothing to save.
+        if (parsed == value) {
             wrong = false
             return
         }
-        val parsed = spec.parse(text)
         wrong = parsed == null
         if (parsed != null) onCommit(parsed)
     }

@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.engine.git.AddResult
 import app.penmoss.engine.git.GitRefusal
 import app.penmoss.ui.common.roles
@@ -685,7 +686,7 @@ private fun NewFolderDialog(inside: String, onDismiss: () -> Unit, onMake: (Stri
         title = { Text("New Folder in ${folderWords(inside)}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it; problem = null }, Modifier.fillMaxWidth().testTag("first-run-new-folder"), label = { Text("Folder Name") }, singleLine = true)
+                OutlinedTextField(name, { name = it; problem = null }, Modifier.fillMaxWidth().testTag("first-run-new-folder").typedLength("newFolder", "name", name), label = { Text("Folder Name") }, singleLine = true)
                 problem?.let { Problem(it, "first-run-new-folder-problem") }
                 Lead("Made at the first sync.", small = true)
             }

@@ -34,6 +34,7 @@ import { moveRequest } from './move-request';
 import { isToggleClick, notesLabel, notesNamed, toggled, treeNoteClick } from './selection';
 import { duplicateNote, itemsCount, transfer, type TransferResult } from './transfer';
 import { useExpanded } from './expanded';
+import { recordTreeOpen, useTreeUsage, type TreeSource } from './tree-usage';
 import {
   TransferMenuItems,
   TransferButtons,
@@ -116,6 +117,8 @@ export function FolderTree({
   const { snapshot, loaded } = useWorkspaceState();
   const [expanded, setExpanded] = useExpanded();
   const { tree } = useFolderTree(true);
+  /** Why the open folders change next (PEN-177): a click, a key, or the app revealing a note. */
+  const cause = useRef<TreeSource>('click');
   const rows = useMemo(() => visibleRows(tree, expanded), [tree, expanded]);
   const current = currentFolder !== null && tree.byId.has(currentFolder) ? currentFolder : null;
 
@@ -184,7 +187,10 @@ export function FolderTree({
     const place = `${activeId} in ${around.join('/')}`;
     if (revealed.current === place) return;
     revealed.current = place;
-    if (around.some((id) => !expanded.has(id))) setExpanded(around, true);
+    if (around.some((id) => !expanded.has(id))) {
+      cause.current = 'reveal';
+      setExpanded(around, true);
+    }
     scrollToActive.current = true;
   }, [activeId, snapshot, tree, loaded, expanded, setExpanded, revealAsked]);
   useEffect(() => {
@@ -196,6 +202,9 @@ export function FolderTree({
     scrollToActive.current = false;
     row.scrollIntoView?.({ block: 'nearest' });
   }, [rows, activeId, shown]);
+
+  // Folders opened and closed, by their refs (PEN-177): whatever changed the open set, with why.
+  useTreeUsage(tree, expanded, cause);
 
   // Focus asked for before its row existed (a new folder, a reordered row) lands once it renders.
   useLayoutEffect(() => {
@@ -320,6 +329,8 @@ export function FolderTree({
 
   /** A click or Enter: the note here, or in the tab that has it already (A1574). */
   const openNote = (row: NoteRow) => {
+    // A note opened from the tree (PEN-177), by its ref and its folder's.
+    recordTreeOpen(tree, row, cause.current === 'key' ? 'key' : 'click');
     onCurrentFolderChange(row.parentId);
     openPath(notePath(row.id), 'current', REVEAL);
   };
@@ -467,7 +478,11 @@ export function FolderTree({
 
   // --- keyboard (tree-keys.ts) ---
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) =>
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    cause.current = 'key';
+    onTreeKeyDownWith(event);
+  };
+  const onTreeKeyDownWith = (event: KeyboardEvent<HTMLDivElement>) =>
     onTreeKeyDown(event, {
       rows,
       rowOf,
@@ -487,6 +502,7 @@ export function FolderTree({
   // --- pointer ---
 
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
+    cause.current = 'click';
     const target = event.target as HTMLElement;
     if (target.closest('input, .row-actions')) return;
     const row = rowOf(rowElement(event));

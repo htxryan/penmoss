@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.engine.settings.ColourLock
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
@@ -343,7 +344,7 @@ private fun SymbolDialog(
                     singleLine = true,
                     isError = glyphProblem != null,
                     supportingText = { Text(glyphProblem ?: "Or paste any symbol or emoji") },
-                    modifier = Modifier.fillMaxWidth().testTag("symbol-glyph").semantics { glyphProblem?.let { error(it) } },
+                    modifier = Modifier.fillMaxWidth().testTag("symbol-glyph").typedLength("symbolEditor", "other", glyph).semantics { glyphProblem?.let { error(it) } },
                 )
                 Text("Colour", style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

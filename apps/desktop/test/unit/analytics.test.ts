@@ -4,9 +4,9 @@
  * and sending when the endpoint is unreachable, slow or refusing (AC17), with a fake endpoint,
  * a fake clock and the real record behind the worker's protocol (in-process).
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { MessageChannel } from 'node:worker_threads';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -147,6 +147,124 @@ function world(
     },
   };
 }
+
+describe('session detail refs (PEN-177)', () => {
+  const NOTE = '01JB7Q3V6M8K2T9RZ4XN5C1HPD';
+  const FOLDER = '01JB7Q3V6M8K2T9RZ4XN5FOLDR';
+  const opened = (at: number) => ({
+    kind: 'note',
+    name: 'open',
+    props: { how: 'open', titleChars: 12, shape: ['h1:12', 'p:40'] },
+    refs: { note: NOTE, folder: FOLDER },
+    at,
+  });
+
+  it('stores a ref for the note and its folder, never the id, and the same ref each time', async () => {
+    const w = world();
+    expect(w.analytics.recordPage([opened(NOW + 1), opened(NOW + 2)])).toBe(2);
+    const events = (await w.client.page({})).events;
+    for (const event of events) {
+      expect(event.props['note']).toMatch(/^[0-9a-f]{16}$/);
+      expect(event.props['folder']).toMatch(/^[0-9a-f]{16}$/);
+      expect(JSON.stringify(event)).not.toContain(NOTE);
+      expect(JSON.stringify(event)).not.toContain(FOLDER);
+    }
+    expect(events[0]!.props['note']).toBe(events[1]!.props['note']);
+    expect(events[0]!.props['note']).not.toBe(events[0]!.props['folder']);
+    expect(events[0]!.props['note']).toBe(w.analytics.refOf('note', NOTE));
+  });
+
+  it('keeps the key beside the consent file, out of it and out of the status', async () => {
+    const w = world();
+    w.analytics.recordPage([opened(NOW)]);
+    const key = readFileSync(join(dirname(w.consentPath), 'analytics-key'), 'utf8').trim();
+    expect(key).toMatch(/^[0-9a-f]{64}$/);
+    expect(readFileSync(w.consentPath, 'utf8')).not.toContain(key);
+    expect(JSON.stringify(await w.analytics.status())).not.toContain(key);
+  });
+
+  it('makes a new key with a new ID: Reset My Analytics ID and Delete My Shared Data', async () => {
+    const w = world();
+    const first = w.analytics.refOf('note', NOTE);
+    await w.analytics.resetId();
+    const second = w.analytics.refOf('note', NOTE);
+    expect(second).not.toBe(first);
+    expect(await w.analytics.forget()).toEqual({ outcome: 'ok' });
+    expect(w.analytics.refOf('note', NOTE)).not.toBe(second);
+  });
+
+  it('names an event queued before Reset My Analytics ID by the old key, and keeps it here', async () => {
+    const w = world({ consent: { consent: 'yes', sharingSince: NOW } });
+    const old = w.analytics.refOf('note', NOTE);
+    w.analytics.recordPage([opened(NOW - 2)]);
+    // A burst the page recorded before the reset, still in its queue when the reset goes.
+    const burst = {
+      kind: 'note',
+      name: 'typing',
+      props: { block: 1, typed: 6, deleted: 0 },
+      refs: { note: NOTE },
+      at: NOW - 1,
+    };
+    await w.analytics.resetId();
+    const renewed = w.analytics.refOf('note', NOTE);
+    expect(renewed).not.toBe(old);
+    // It reaches main after the reset, with one recorded after it.
+    expect(w.analytics.recordPage([burst, { ...burst, at: NOW + 1 }])).toBe(2);
+    const events = (await w.client.page({})).events.filter((event) => event.name === 'typing');
+    const late = events.find((event) => event.at === NOW - 1)!;
+    const after = events.find((event) => event.at === NOW + 1)!;
+    expect(late.props['note']).toBe(old);
+    expect(late.state).toBe('local');
+    expect(after.props['note']).toBe(renewed);
+    expect(after.state).toBe('waiting');
+    // Only what was recorded after the reset goes, under the new ID: nothing links the two.
+    await w.analytics.sendNow();
+    const sent = w.sent.flatMap((batch) => batch.body.events);
+    expect(sent.map((event) => event.at)).toEqual([NOW + 1]);
+    expect(JSON.stringify(w.sent)).not.toContain(old);
+  });
+
+  it('names an event queued before Delete My Shared Data by the old key, and never sends it', async () => {
+    const w = world({
+      consent: { consent: 'yes', sharingSince: NOW },
+      respond: () => new Response(null, { status: 202 }),
+    });
+    const old = w.analytics.refOf('note', NOTE);
+    expect(await w.analytics.forget()).toEqual({ outcome: 'ok' });
+    expect(w.analytics.recordPage([opened(NOW - 1)])).toBe(1);
+    const [late] = (await w.client.page({})).events;
+    expect(late!.props['note']).toBe(old);
+    expect(late!.state).toBe('local');
+    expect(w.analytics.refOf('note', NOTE)).not.toBe(old);
+  });
+
+  it('names an event queued before a reset from the CLI by the old key', async () => {
+    const w = world({ consent: { consent: 'yes', sharingSince: NOW } });
+    const old = w.analytics.refOf('note', NOTE);
+    // `penmoss analytics reset`: a new ID and a new key file, then main reads the change.
+    updateConsentFile((file) => ({ ...file, install: 'f'.repeat(32) }), w.consentPath);
+    rmSync(join(dirname(w.consentPath), 'analytics-key'));
+    await w.analytics.reload();
+    expect(w.analytics.recordPage([opened(NOW - 1), opened(NOW + 1)])).toBe(2);
+    const events = (await w.client.page({})).events;
+    const late = events.find((event) => event.at === NOW - 1)!;
+    const after = events.find((event) => event.at === NOW + 1)!;
+    expect(late.props['note']).toBe(old);
+    expect(late.state).toBe('local');
+    expect(after.props['note']).not.toBe(old);
+  });
+
+  it('drops a ref id that is not a string, and an event of a new kind from a page with a prop it may not have', async () => {
+    const w = world();
+    const kept = w.analytics.recordPage([
+      { ...opened(NOW), refs: { note: 42, folder: { id: 'x' } } },
+      { ...opened(NOW), props: { title: 'Plans for the week' } },
+    ]);
+    expect(kept).toBe(1);
+    const [event] = (await w.client.page({})).events;
+    expect(event!.props).toEqual({ how: 'open', titleChars: 12, shape: ['h1:12', 'p:40'] });
+  });
+});
 
 describe('the stamper', () => {
   it('stamps one session, seq in arrival order and the Mac’s fields on every event', async () => {
@@ -501,7 +619,7 @@ describe('the limits', () => {
     expect(status.limits).toMatchObject({
       'events.days': 2,
       'report.lines': 50,
-      'events.max': 5000,
+      'events.max': 200_000,
     });
     expect(status.counts).toMatchObject({ local: 1 });
     expect(readConsentFile(w.consentPath).limits).toEqual({ 'events.days': 2, 'report.lines': 50 });

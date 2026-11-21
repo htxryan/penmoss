@@ -1,6 +1,7 @@
 package app.penmoss.analytics
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -105,6 +106,36 @@ class ScrollGateTest {
             val name = case.getValue("name").jsonPrimitive.content
             val want = case.getValue("recorded").jsonArray.map { it.jsonObject.let { r -> r.getValue("at").jsonPrimitive.long to r.getValue("position").jsonPrimitive.double } }
             val got = run(case.getValue("steps").jsonArray.map { it.jsonObject }, case.getValue("until").jsonPrimitive.long)
+            assertEquals(name, want, got)
+        }
+    }
+
+    /** A [SettleGate] holding any value (PEN-177): a cursor's block, a selection, a field's length. */
+    private fun runValues(steps: List<JsonObject>, until: Long): List<Pair<Long, JsonElement>> {
+        val clock = FakeScrollClock()
+        val recorded = mutableListOf<Pair<Long, JsonElement>>()
+        val gate = SettleGate<JsonElement>({ recorded += clock.now() to it }, clock)
+        for (step in steps) {
+            clock.advance(step.getValue("at").jsonPrimitive.long)
+            when {
+                step["reset"] != null -> gate.reset()
+                step["flush"] != null -> gate.flush()
+                step["mark"] != null -> gate.mark(step.getValue("mark"))
+                else -> gate.moved(step.getValue("move"))
+            }
+        }
+        clock.advance(until)
+        return recorded
+    }
+
+    @Test
+    fun eachValueCaseIsCores() {
+        val cases = contract.getValue("values").jsonArray.map { it.jsonObject }
+        assertTrue(cases.size >= 6)
+        for (case in cases) {
+            val name = case.getValue("name").jsonPrimitive.content
+            val want = case.getValue("recorded").jsonArray.map { it.jsonObject.let { r -> r.getValue("at").jsonPrimitive.long to r.getValue("value") } }
+            val got = runValues(case.getValue("steps").jsonArray.map { it.jsonObject }, case.getValue("until").jsonPrimitive.long)
             assertEquals(name, want, got)
         }
     }

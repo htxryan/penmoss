@@ -28,6 +28,8 @@ export const ANALYTICS_COPY = {
     mac: 'CLI commands and agents’ MCP calls, by name',
     android: '',
   },
+  // PEN-177: session detail, in the standard set (no second switch).
+  'consent.recorded.5': 'The shape of your notes and how much you type, never the words',
   'consent.never.title': 'Never Recorded',
   'consent.never.1': 'What you write: notes, titles, tags, links and searches',
   'consent.never.2': 'The names of notebooks, folders, files and repositories',

@@ -5,6 +5,8 @@ declare global {
     interface Env {
       /** The migrations, read by vitest.config.ts; test/apply-migrations.ts applies them. */
       readonly TEST_MIGRATIONS: D1Migration[];
+      /** wrangler.jsonc as written, read by vitest.config.ts. */
+      readonly TEST_WRANGLER: string;
     }
   }
 }

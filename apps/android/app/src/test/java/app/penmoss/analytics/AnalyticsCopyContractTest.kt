@@ -65,7 +65,7 @@ class AnalyticsCopyContractTest {
         compose.setContent { PenmossTheme { ConsentStep(lastStep = true, onAnswer = { answers += it }, openUrl = {}) } }
         val keys = listOf(
             "consent.title", "consent.lastStep.label", "consent.body", "consent.recorded.title", "consent.recorded.1", "consent.recorded.2",
-            "consent.recorded.3", "consent.never.title", "consent.never.1", "consent.never.2", "consent.never.3", "consent.later",
+            "consent.recorded.3", "consent.recorded.5", "consent.never.title", "consent.never.1", "consent.never.2", "consent.never.3", "consent.later",
             "consent.policy.label",
         )
         for (key in keys) compose.onNodeWithText(text(key), useUnmergedTree = true).performScrollTo().assertIsDisplayed()

@@ -171,6 +171,23 @@ class NoteStoreTest {
     }
 
     @Test
+    fun aTitleTypedStraightAfterNewNoteIsNotUndoneByAnOlderPage() = runTest {
+        // Made here and sent once with no title; the person types one at once (PEN-177).
+        store.saveChanges(ChangesPage(1, notes = listOf(ChangedNote("n", 1, "", "", 10), ChangedNote("m", 1, "", "", 10))))
+        store.setLocalTitle("n", "Bean Rows in May")
+        store.addPending("n", "TITLE", null)
+        // The open note's poll asks for changes before it sends the edits: the server still has none.
+        store.saveChanges(ChangesPage(2, notes = listOf(ChangedNote("n", 2, "", "", 20))))
+        assertEquals("Bean Rows in May", store.note("n")?.title)
+        assertEquals(2L, store.note("n")?.clock)
+        assertEquals("Bean Rows in May", store.observeList().first().first { it.id == "n" }.title)
+        // A note with nothing waiting takes the server's title, a rename elsewhere included.
+        store.setLocalTitle("m", "Typed here")
+        store.saveChanges(ChangesPage(3, notes = listOf(ChangedNote("m", 3, "Renamed elsewhere", "", 30))))
+        assertEquals("Renamed elsewhere", store.note("m")?.title)
+    }
+
+    @Test
     fun editsMadeOnACopyARestoreReplacedAreKeptApartWhenEverTheyArrive() = runTest {
         // Synced at e1; the editor has the e1 copy open.
         store.saveExchange(Exchange.decide(store.content("n"), Exchange.entry(store.content("n")), BatchNoteReply("n", "e1", "OLD", "SV1", null)))

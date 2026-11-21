@@ -13,6 +13,12 @@
  *   top (0) when the area's content changes (another note, another Settings page), since a
  *   replay reads a new screen as starting at the top: a screen that opens there records nothing.
  * - Every settled change counts, whatever moved it (the person, or the app restoring a place).
+ *
+ * The same rules settle other values (PEN-177, A1663 keeps one copy of them): a note's cursor
+ * and selection, and the length typed in a field. That gate (`SettleGate`) holds any value with
+ * an equality check, and starts with nothing recorded, so a first cursor in block 0 or a first
+ * length of 0 is recorded; `flush()` records what waits at once (a field that closes), and
+ * `mark()` takes a value as known without recording it (typing moved the cursor there).
  */
 
 /** How long an area must be still before its position is recorded. */
@@ -44,55 +50,111 @@ export const realScrollClock: ScrollClock = {
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
 };
 
-/** One area's settle, gap, repeat and reset rules. `emit` records the position. */
-export class ScrollGate {
-  /** The last position recorded, or the top since the content last changed. */
-  private last = 0;
+export interface SettleGateOptions<T> {
+  readonly clock?: ScrollClock;
+  readonly settleMs?: number;
+  readonly gapMs?: number;
+  /** Whether two values are the same (a repeat is dropped); `===` by default. */
+  readonly equals?: (a: T, b: T) => boolean;
+  /**
+   * The value taken as recorded at the start and after `reset()` (a scroll's top, 0). Without
+   * one, nothing is recorded yet, so the first value that settles is.
+   */
+  readonly start?: T;
+}
+
+/** The settle, gap, repeat and reset rules for one value. `emit` records it. */
+export class SettleGate<T> {
+  /** Whether anything counts as recorded (the start, or a value recorded or marked). */
+  private hasLast: boolean;
+  /** The last value recorded, or the start since the content last changed. */
+  private last: T | undefined;
   private lastAt = Number.NEGATIVE_INFINITY;
-  /** The latest position seen and not yet recorded. */
-  private latest: number | null = null;
+  /** Whether a value is waiting, and the latest one seen and not yet recorded. */
+  private waiting = false;
+  private latest: T | undefined;
   private settling: unknown = null;
   private holding: unknown = null;
+  private readonly clock: ScrollClock;
+  private readonly settleMs: number;
+  private readonly gapMs: number;
+  private readonly equals: (a: T, b: T) => boolean;
 
   constructor(
-    private readonly emit: (position: number) => void,
-    private readonly clock: ScrollClock = realScrollClock,
-    private readonly settleMs = SCROLL_SETTLE_MS,
-    private readonly gapMs = SCROLL_MIN_GAP_MS,
-  ) {}
+    private readonly emit: (value: T) => void,
+    private readonly options: SettleGateOptions<T> = {},
+  ) {
+    this.clock = options.clock ?? realScrollClock;
+    this.settleMs = options.settleMs ?? SCROLL_SETTLE_MS;
+    this.gapMs = options.gapMs ?? SCROLL_MIN_GAP_MS;
+    this.equals = options.equals ?? ((a, b) => a === b);
+    this.hasLast = 'start' in options;
+    this.last = options.start;
+  }
 
-  /** The area moved to `position` (`fractionOf`); null, it can't scroll, is ignored. */
-  moved(position: number | null): void {
-    if (position === null) return;
-    this.latest = position;
+  /** The value is now `value`; null (an area that can't scroll) is ignored. */
+  moved(value: T | null): void {
+    if (value === null) return;
+    this.latest = value;
+    this.waiting = true;
     if (this.settling !== null) this.clock.clear(this.settling);
     this.settling = this.clock.set(() => {
       this.settling = null;
-      // A held event records the latest position when its gap is up.
-      if (this.holding === null) this.flush();
+      // A held event records the latest value when its gap is up.
+      if (this.holding === null) this.settle();
     }, this.settleMs);
   }
 
-  /** The area's content changed: its last position is the top again, and what waits is dropped. */
+  /** The content changed: the last value is the start again, and what waits is dropped. */
   reset(): void {
     this.stop();
-    this.last = 0;
+    this.hasLast = 'start' in this.options;
+    this.last = this.options.start;
   }
 
-  /** Drops what waits (the area is gone). */
+  /** Drops what waits (the area or field is gone). */
   stop(): void {
     if (this.settling !== null) this.clock.clear(this.settling);
     if (this.holding !== null) this.clock.clear(this.holding);
     this.settling = null;
     this.holding = null;
-    this.latest = null;
+    this.waiting = false;
+    this.latest = undefined;
   }
 
-  private flush(): void {
-    const position = this.latest;
-    if (position === null) return;
-    if (position === this.last) {
-      this.latest = null;
+  /**
+   * Records what waits now, without waiting for it to settle or for the gap (a field that
+   * closes with a change pending); a value equal to the last recorded is still dropped.
+   */
+  flush(): void {
+    const waiting = this.waiting;
+    const value = this.latest as T;
+    this.stop();
+    if (!waiting) return;
+    if (this.hasLast && this.equals(value, this.last as T)) return;
+    this.record(value);
+  }
+
+  /** Takes `value` as known without recording it, and drops what waits (typing moved it there). */
+  mark(value: T): void {
+    this.stop();
+    this.hasLast = true;
+    this.last = value;
+  }
+
+  private record(value: T): void {
+    this.hasLast = true;
+    this.last = value;
+    this.lastAt = this.clock.now();
+    this.emit(value);
+  }
+
+  private settle(): void {
+    if (!this.waiting) return;
+    const value = this.latest as T;
+    if (this.hasLast && this.equals(value, this.last as T)) {
+      this.waiting = false;
+      this.latest = undefined;
       return;
     }
     const wait = this.lastAt + this.gapMs - this.clock.now();
@@ -100,13 +162,24 @@ export class ScrollGate {
       this.holding = this.clock.set(() => {
         this.holding = null;
         // Still moving: the settle records it.
-        if (this.settling === null) this.flush();
+        if (this.settling === null) this.settle();
       }, wait);
       return;
     }
-    this.latest = null;
-    this.last = position;
-    this.lastAt = this.clock.now();
-    this.emit(position);
+    this.waiting = false;
+    this.latest = undefined;
+    this.record(value);
+  }
+}
+
+/** One area's settle, gap, repeat and reset rules. `emit` records the position. */
+export class ScrollGate extends SettleGate<number> {
+  constructor(
+    emit: (position: number) => void,
+    clock: ScrollClock = realScrollClock,
+    settleMs = SCROLL_SETTLE_MS,
+    gapMs = SCROLL_MIN_GAP_MS,
+  ) {
+    super(emit, { clock, settleMs, gapMs, start: 0 });
   }
 }

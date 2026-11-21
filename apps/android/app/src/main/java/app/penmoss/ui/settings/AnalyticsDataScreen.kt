@@ -2,6 +2,8 @@ package app.penmoss.ui.settings
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,6 +36,7 @@ import app.penmoss.analytics.AnalyticsCopy
 import app.penmoss.analytics.AnalyticsFormat
 import app.penmoss.analytics.EventEntity
 import app.penmoss.analytics.EventState
+import app.penmoss.analytics.SessionDetail
 import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.TrackedScreen
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -145,14 +151,35 @@ fun AnalyticsDataScreen(
 private fun EventRow(event: EventEntity) {
     ListItem(
         overlineContent = { Text(eventTime(event.at)) },
-        headlineContent = { Text("${event.kind} · ${event.name}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        headlineContent = { EventName(event.kind, event.name) },
         supportingContent = if (event.props == "{}") null else {
-            { Text(event.props, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
+            // As the Mac's viewer writes them (PEN-177, core's propsLine): key: value, a long list cut.
+            { Text(propsText(event.props), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
         },
         trailingContent = { StateChip(event.eventState) },
         modifier = Modifier.testTag("viewerEvent"),
     )
 }
+
+/**
+ * An event's kind and name, each whole (PEN-177): where the row is too narrow for both, the name
+ * goes under the kind rather than breaking mid-word, as the Mac's Name cell never wraps; only the
+ * props line below wraps. It reads as one text, "kind · name".
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun EventName(kind: String, name: String) {
+    val line = "$kind · $name"
+    FlowRow(Modifier.clearAndSetSemantics { text = AnnotatedString(line) }) {
+        Text("$kind ·\u00A0", softWrap = false, maxLines = 1)
+        Text(name, softWrap = false, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** An event's stored props as one line ([SessionDetail.propsLine]); what isn't JSON, as it is. */
+internal fun propsText(props: String): String =
+    runCatching { SessionDetail.propsLine(kotlinx.serialization.json.Json.parseToJsonElement(props) as kotlinx.serialization.json.JsonObject) }
+        .getOrDefault(props)
 
 /** Penmoss's `warnBg` and `success` tokens (packages/ui/src/theme/builtins.ts), light and dark. */
 private val WARN_BG_LIGHT = Color(0xFFFBEFC9)

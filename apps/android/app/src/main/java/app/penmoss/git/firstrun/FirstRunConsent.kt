@@ -62,7 +62,7 @@ fun ConsentStep(lastStep: Boolean, busy: Boolean = false, onAnswer: (ConsentAnsw
         },
     ) {
         Lead(AnalyticsCopy.text("consent.body"), Modifier.testTag("consent-body"))
-        Points(AnalyticsCopy.text("consent.recorded.title"), (1..4).map { AnalyticsCopy.text("consent.recorded.$it") }, "consent-recorded")
+        Points(AnalyticsCopy.text("consent.recorded.title"), (1..5).map { AnalyticsCopy.text("consent.recorded.$it") }, "consent-recorded")
         Points(AnalyticsCopy.text("consent.never.title"), (1..3).map { AnalyticsCopy.text("consent.never.$it") }, "consent-never")
         Lead(AnalyticsCopy.text("consent.later"), small = true)
         Link(AnalyticsCopy.text("consent.policy.label"), "consent-policy", "external-link", event = "consent.policy") { openUrl(PRIVACY_POLICY_URL) }

@@ -1,5 +1,5 @@
 {
-  "$comment": "Where an area is scrolled (PEN-175), written from packages/core/src/analytics/scroll.ts by packages/core/test/analytics-scroll.test.ts, which also checks it. `fraction`: [scrollTop, scrollHeight, clientHeight] and the position fractionOf gives (null: the area cannot scroll). `gate`: a ScrollGate run on a fake clock from 0; each step at its time moves the area to a position (null: it cannot scroll) or resets it (its content changed); `recorded` is each position the gate records, and when. Kotlin’s ScrollEvents replays every case.",
+  "$comment": "Where an area is scrolled (PEN-175), written from packages/core/src/analytics/scroll.ts by packages/core/test/analytics-scroll.test.ts, which also checks it. `fraction`: [scrollTop, scrollHeight, clientHeight] and the position fractionOf gives (null: the area cannot scroll). `gate`: a ScrollGate run on a fake clock from 0; each step at its time moves the area to a position (null: it cannot scroll) or resets it (its content changed); `recorded` is each position the gate records, and when. `values` (PEN-177): the same gate holding any value (a cursor’s block, a selection as block, chars and span, a field’s length), starting with nothing recorded, so a first 0 is recorded; values are the same when equal as JSON; a step may also flush (record what waits at once, inside the settle and the gap, a repeat still dropped) or mark a value (known, not recorded; what waits is dropped). Kotlin’s ScrollEvents replays every case.",
   "settleMs": 300,
   "minGapMs": 1000,
   "fraction": [
@@ -457,6 +457,248 @@
         {
           "at": 2300,
           "position": 0
+        }
+      ]
+    }
+  ],
+  "values": [
+    {
+      "name": "records a first value of 0: nothing is recorded yet",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "a cursor that moves on settles where it rests, at most one a second",
+      "steps": [
+        {
+          "at": 0,
+          "move": 3
+        },
+        {
+          "at": 350,
+          "move": 4
+        },
+        {
+          "at": 400,
+          "move": 5
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "value": 3
+        },
+        {
+          "at": 1300,
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "drops a repeat of the last value recorded",
+      "steps": [
+        {
+          "at": 0,
+          "move": 2
+        },
+        {
+          "at": 1000,
+          "move": 2
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "a selection is the same only with the same block, length and span",
+      "steps": [
+        {
+          "at": 0,
+          "move": {
+            "block": 1,
+            "chars": 40,
+            "span": 2
+          }
+        },
+        {
+          "at": 1000,
+          "move": {
+            "block": 1,
+            "chars": 40,
+            "span": 2
+          }
+        },
+        {
+          "at": 2000,
+          "move": {
+            "block": 1,
+            "chars": 41,
+            "span": 2
+          }
+        },
+        {
+          "at": 3000,
+          "move": {
+            "block": 1,
+            "chars": 41,
+            "span": 3
+          }
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "value": {
+            "block": 1,
+            "chars": 40,
+            "span": 2
+          }
+        },
+        {
+          "at": 2300,
+          "value": {
+            "block": 1,
+            "chars": 41,
+            "span": 2
+          }
+        },
+        {
+          "at": 3300,
+          "value": {
+            "block": 1,
+            "chars": 41,
+            "span": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "a flush records what waits at once, inside the settle and the gap",
+      "steps": [
+        {
+          "at": 0,
+          "move": 7
+        },
+        {
+          "at": 310,
+          "move": 12
+        },
+        {
+          "at": 320,
+          "flush": true
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "value": 7
+        },
+        {
+          "at": 320,
+          "value": 12
+        }
+      ]
+    },
+    {
+      "name": "a flush with nothing waiting, or a repeat waiting, records nothing",
+      "steps": [
+        {
+          "at": 0,
+          "move": 7
+        },
+        {
+          "at": 1000,
+          "flush": true
+        },
+        {
+          "at": 2000,
+          "move": 7
+        },
+        {
+          "at": 2010,
+          "flush": true
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "value": 7
+        }
+      ]
+    },
+    {
+      "name": "a mark takes a value as known and drops what waits",
+      "steps": [
+        {
+          "at": 0,
+          "move": 4
+        },
+        {
+          "at": 100,
+          "mark": 6
+        },
+        {
+          "at": 2000,
+          "move": 6
+        },
+        {
+          "at": 3000,
+          "move": 4
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 3300,
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "a reset forgets the last value: the next is recorded again",
+      "steps": [
+        {
+          "at": 0,
+          "move": 0
+        },
+        {
+          "at": 2000,
+          "reset": true
+        },
+        {
+          "at": 2010,
+          "move": 0
+        }
+      ],
+      "until": 5000,
+      "recorded": [
+        {
+          "at": 300,
+          "value": 0
+        },
+        {
+          "at": 2310,
+          "value": 0
         }
       ]
     }

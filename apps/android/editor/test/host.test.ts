@@ -91,6 +91,14 @@ describe('EditorHost', () => {
       },
       // The note's frontmatter tags follow at once (T38).
       { v: 1, type: 'tags', noteId: NOTE, tags: [] },
+      // Its shape, for session detail (PEN-177): blocks by kind and length, no words.
+      {
+        v: 1,
+        type: 'usage',
+        noteId: NOTE,
+        name: 'open',
+        props: { how: 'open', titleChars: 9, shape: ['p:4'] },
+      },
       // And its details for the Info sheet (T40 P7, NT23).
       {
         v: 1,
@@ -998,5 +1006,63 @@ describe('scroll (PEN-175)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('session detail (PEN-177)', () => {
+  const usage = (sent: FromEditor[]) =>
+    sent.filter(
+      (message): message is Extract<FromEditor, { type: 'usage' }> => message.type === 'usage',
+    );
+
+  it('says the note’s shape once it shows, by tokens, never its words or id', () => {
+    const { host, sent } = page();
+    host.handle(open([toBase64(serverNote('Groceries', 'Milk and eggs').encodeStateAsUpdate())]));
+    const opened = usage(sent);
+    expect(opened).toEqual([
+      {
+        v: 1,
+        type: 'usage',
+        noteId: NOTE,
+        name: 'open',
+        props: { how: 'open', titleChars: 9, shape: ['p:13'] },
+      },
+    ]);
+    expect(JSON.stringify(opened[0]!.props)).not.toMatch(/Groceries|Milk|01JD2Z/);
+  });
+
+  it('sends typing in the note as bursts per block, and in the title as the title’s', () => {
+    vi.useFakeTimers();
+    try {
+      const { host, sent, title } = page();
+      host.handle(open([toBase64(serverNote('Groceries', 'Milk').encodeStateAsUpdate())]));
+      const editor = host.editor!.editor;
+      editor.commands.setTextSelection(5);
+      editor.commands.insertContent('!!');
+      vi.advanceTimersByTime(1000);
+      title.dispatchEvent(new Event('focus'));
+      title.dispatchEvent(new InputEvent('beforeinput'));
+      title.value = 'Groceries list';
+      title.dispatchEvent(new InputEvent('input'));
+      vi.advanceTimersByTime(1000);
+      const props = usage(sent).map((message) => [message.name, message.props]);
+      expect(props).toContainEqual(['typing', { block: 0, typed: 2, deleted: 0 }]);
+      expect(props).toContainEqual(['typing', { title: true, typed: 5, deleted: 0 }]);
+      expect(JSON.stringify(usage(sent))).not.toMatch(/Groceries|list|!!/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends what waits when the page goes to the background, and nothing for the theme preview', () => {
+    const { host, sent } = page();
+    host.handle(open([toBase64(serverNote('One', 'text').encodeStateAsUpdate())]));
+    host.editor!.editor.commands.insertContent('abc');
+    expect(usage(sent).filter((message) => message.name === 'typing')).toEqual([]);
+    host.flush();
+    expect(usage(sent).filter((message) => message.name === 'typing')).toHaveLength(1);
+    sent.length = 0;
+    host.handle({ v: 1, type: 'preview' });
+    expect(usage(sent)).toEqual([]);
   });
 });

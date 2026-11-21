@@ -177,8 +177,9 @@ class ScrollEventsTest {
             // Analytics Data, from All Notebooks: a finger first, so the large title folds away.
             // The five rows, with the screens and layouts recorded between them, run past a
             // phone's screen even at Display → Font Size's Small, as a person may have it (put back
-            // after): first Note Actions' row, the newest, at the top, held; then the fold's row at
-            // the top, the three scrolls below it, held to the end (AC10).
+            // after): first Note Actions' row, the newest, at the top, held, with the fold's row and
+            // the note's and the sidebar's scrolls below it; then the sidebar's scroll at the top and
+            // the settings page's below it, held to the end (AC10).
             smallerText()
             context.startActivity(allNotebooks().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             val home = OnScreen.inFront()
@@ -187,17 +188,23 @@ class ScrollEventsTest {
             home.tap("privacyViewData")
             home.text(AnalyticsCopy.text("viewer.title"))
             scrollBy(home, "viewerList", 0.3f)
-            home.reveal(home.text("click · note.actions.open"), margin = 48f)
+            belowBar(home, "click · note.actions.open")
             val first = listOf("click · note.actions.open", "click · editor.callout.fold", "scroll · note", "scroll · sidebar")
-            for (row in first) assertTrue("$row is in view; it shows ${home.texts()}", inView(home, row))
+            for (row in first) assertTrue("$row is in view (${where(home, row)}); it shows ${home.texts()}", inView(home, row))
             SystemClock.sleep(3_000)
             for (row in first) assertTrue("$row is still in view", inView(home, row))
+            // The note's scroll shows the position it recorded.
+            assertTrue("the note's ${note.text} shows", inView(home, note.text))
 
-            home.reveal(home.text("click · editor.callout.fold"), margin = 48f)
-            val last = listOf("click · editor.callout.fold", "scroll · note", "scroll · sidebar", "scroll · settings")
-            for (row in last) assertTrue("$row is in view; it shows ${home.texts()}", inView(home, row))
+            // The note's own rows (PEN-177's note open and note blocks) sit between the note's
+            // scroll and the sidebar's, so all three scrolls no longer fit on one screen: the
+            // first view holds the note's and the sidebar's; this one the sidebar's at the top and
+            // the settings page's, the oldest, below it.
+            belowBar(home, "scroll · sidebar")
+            val last = listOf("scroll · sidebar", "scroll · settings")
+            for (row in last) assertTrue("$row is in view (${where(home, row)}); it shows ${home.texts()}", inView(home, row))
             // Each scroll's row shows the position it recorded.
-            for (row in listOf(note, sidebar, settings)) assertTrue("${row.name}'s ${row.text} shows", home.has(row.text))
+            for (row in listOf(sidebar, settings)) assertTrue("${row.name}'s ${row.text} shows", inView(home, row.text))
             hold()
             for (row in last) assertTrue("$row is still in view", inView(home, row))
             ProofShot.take()
@@ -230,13 +237,14 @@ class ScrollEventsTest {
 
     private fun allNotebooks(): Intent = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_ALL_NOTEBOOKS, true)
 
+    /** A stored event; [text] is its props as Analytics Data shows them (`key: value`, [SessionDetail.propsLine]). */
     private data class Stored(val id: Long, val kind: String, val name: String, val text: String, val props: JsonObject)
 
     /** The events since the test began, oldest first. */
     private fun stored(): List<Stored> = runBlocking {
         analytics.flush()
         analytics.store.page(null, null, 500).filter { it.id > since }.reversed()
-            .map { Stored(it.id, it.kind, it.name, it.props, Json.parseToJsonElement(it.props) as JsonObject) }
+            .map { (Json.parseToJsonElement(it.props) as JsonObject).let { props -> Stored(it.id, it.kind, it.name, SessionDetail.propsLine(props), props) } }
     }
 
     private fun scrolls(area: String) = stored().filter { it.kind == "scroll" && it.name == area }
@@ -351,13 +359,48 @@ class ScrollEventsTest {
         screen.nodes()
     }
 
-    /** Whether the text [text] shows whole inside Analytics Data's list, not under its bar or below it. */
-    private fun inView(screen: OnScreen, text: String): Boolean {
-        val list = tag(screen, "viewerList")?.boundsInWindow ?: return false
-        val node = screen.nodes().firstOrNull { text in it.texts() } ?: return false
-        val at = node.boundsInWindow
-        return at.height > 0f && at.top >= list.top && at.bottom <= list.bottom
+    /**
+     * The row [text] where it shows in Analytics Data's list, if it does: below the page's top
+     * bar and not cut at the bottom. A row the list made ahead of a scroll but hasn't placed
+     * (its next row, at the window's top) doesn't count.
+     */
+    private fun shown(screen: OnScreen, text: String): SemanticsNode? {
+        val list = tag(screen, "viewerList")?.boundsInWindow ?: return null
+        val top = maxOf(list.top, tag(screen, "sectionTopBar")?.boundsInWindow?.bottom ?: list.top)
+        return screen.nodes().firstOrNull {
+            text in it.texts() && it.boundsInWindow.let { at -> at.height > 0f && at.top >= top && at.bottom <= list.bottom }
+        }
     }
+
+    /**
+     * Scrolls Analytics Data down, a page at a time (the lowest row shown brought to the top),
+     * until the row [text] shows, then brings it just below the top bar.
+     */
+    private fun belowBar(screen: OnScreen, text: String) {
+        val bar = tag(screen, "sectionTopBar")?.boundsInWindow?.bottom ?: 0f
+        repeat(40) {
+            val row = shown(screen, text)
+            val list = tag(screen, "viewerList")?.boundsInWindow
+            if (row != null && list != null) {
+                screen.reveal(row, margin = maxOf(0f, bar - list.top) + 48f)
+                return
+            }
+            if (list == null) { SystemClock.sleep(300); return@repeat }
+            val lowest = screen.nodes()
+                .filter { it.texts().isNotEmpty() && it.boundsInWindow.height > 0f && it.boundsInWindow.top >= maxOf(list.top, bar) && it.boundsInWindow.bottom <= list.bottom }
+                .maxByOrNull { it.boundsInWindow.top }
+            if (lowest != null) screen.reveal(lowest, margin = maxOf(0f, bar - list.top)) else SystemClock.sleep(300)
+        }
+        throw AssertionError("no row $text in Analytics Data; it shows ${screen.texts()}")
+    }
+
+    /** Where the bar, the list and the row [text] are, for a failure's message. */
+    private fun where(screen: OnScreen, text: String): String =
+        "bar ${tag(screen, "sectionTopBar")?.boundsInWindow}, list ${tag(screen, "viewerList")?.boundsInWindow}, " +
+            "row ${screen.nodes().filter { text in it.texts() }.map { it.boundsInWindow }}"
+
+    /** Whether the row [text] shows whole in the list: below the page's top bar, not cut at the bottom. */
+    private fun inView(screen: OnScreen, text: String): Boolean = shown(screen, text) != null
 
     /** The system's font size before [smallerText], put back after each test. */
     private var fontScale: String? = null

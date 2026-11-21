@@ -79,6 +79,23 @@ class TrackedControlsTest {
                 fun TextButton(onClick: () -> Unit) {}
                 """.trimIndent(),
             )
+            // PEN-177: a text field in a dialog or sheet records its typed length; one elsewhere needn't.
+            File(dir, "Fields.kt").writeText(
+                """
+                package x
+                fun Screen() {
+                    val d = rememberTrackedDialog("folderName")
+                    OutlinedTextField(value = q, onValueChange = { q = it })
+                    AlertDialog(onDismissRequest = {}, text = { OutlinedTextField(value = n, onValueChange = { n = it }) })
+                    AlertDialog(onDismissRequest = {}, text = { OutlinedTextField(value = n, onValueChange = { n = it }, modifier = Modifier.typedLength("folderName", "name", n)) })
+                    ModalBottomSheet(onDismissRequest = {}) {
+                        TextField(value = n, onValueChange = { n = it })
+                        // untracked: the picker's own filter field
+                        TextField(value = n, onValueChange = { n = it })
+                    }
+                }
+                """.trimIndent(),
+            )
             // The forms PEN-175 added, each without its id and then with it.
             File(dir, "More.kt").writeText(
                 """
@@ -119,6 +136,8 @@ class TrackedControlsTest {
                     "Bare.kt:5: clickable has no tracked id or command",
                     "Bare.kt:13: AlertDialog is not tracked by name (rememberTrackedDialog)",
                     "Bare.kt:15: \"x.y-${'$'}z\" is built from data",
+                    "Fields.kt:5: OutlinedTextField in a dialog records no typed length (typedLength)",
+                    "Fields.kt:8: TextField in a dialog records no typed length (typedLength)",
                     "More.kt:19: DropdownMenuItem has no tracked id or command",
                     "More.kt:20: Card has no tracked id or command",
                     "More.kt:6: ExposedDropdownMenuBox has no tracked id or command",
@@ -140,6 +159,10 @@ class TrackedControlsTest {
             assertEquals(
                 listOf("click feedback.send", "click tags.row.show", "click settings.switch", "dialog confirm"),
                 result.uses.filter { it.where.startsWith("Bare.kt") }.map { "${it.kind} ${it.name}" },
+            )
+            assertEquals(
+                listOf("dialog folderName", "input folderName"),
+                result.uses.filter { it.where.startsWith("Fields.kt") }.map { "${it.kind} ${it.name}" },
             )
         } finally {
             dir.deleteRecursively()

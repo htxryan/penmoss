@@ -4,6 +4,7 @@
  * the list, whose active row scrolls into view.
  */
 import { useLayoutEffect, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useTypedLength } from '../analytics/typed';
 import type { PickerList } from './picker-list';
 
 /** A picker's overlay and dialog: a press on the scrim closes it. */
@@ -44,16 +45,26 @@ export function PickerOverlay({
   );
 }
 
-/** The search field over a picker's list, focused as the picker opens. */
+/**
+ * The search field over a picker's list, focused as the picker opens. What is typed in it is
+ * recorded by its length only, as `input <dialog>` (PEN-177): `dialog` names the picker.
+ */
 export function PickerField({
   picker,
+  dialog,
   ...props
-}: { readonly picker: PickerList } & Omit<InputHTMLAttributes<HTMLInputElement>, 'role'>) {
+}: {
+  readonly picker: PickerList;
+  /** The picker's dialog, as the catalogue names it (DIALOG_NAMES). */
+  readonly dialog: string;
+} & Omit<InputHTMLAttributes<HTMLInputElement>, 'role'>) {
   const input = useRef<HTMLInputElement>(null);
   useLayoutEffect(() => input.current?.focus(), []);
+  const typed = useTypedLength(dialog, 'query', String(props.value ?? ''));
   return (
     <input
       ref={input}
+      {...typed}
       type="text"
       role="combobox"
       aria-expanded="true"

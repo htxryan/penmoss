@@ -37,49 +37,53 @@ interface ScrollClock {
 }
 
 /**
- * One area's settle, gap, repeat and reset rules (PEN-175): core's `ScrollGate`
- * (`packages/core/src/analytics/scroll.ts`), checked against `apps/android/contract/scroll-v1.json`.
+ * The settle, gap, repeat and reset rules for one value (PEN-175, generalised for PEN-177): core's
+ * `SettleGate` (`packages/core/src/analytics/scroll.ts`), checked against
+ * `apps/android/contract/scroll-v1.json` (its `gate` and `values` cases).
  *
- * - A position is recorded once the area has been still for [SETTLE_MS].
- * - At most one event every [MIN_GAP_MS]: a position that settles sooner is held, and the latest
- *   is recorded when the gap is up, so where the area comes to rest is never lost.
- * - A position equal to the last recorded is dropped; [reset] (the area's content changed: another
- *   page, another note) takes that memory back to the top (0) and keeps the gap.
+ * - A value is recorded once it has been still for [settleMs].
+ * - At most one event every [gapMs]: a value that settles sooner is held, and the latest is
+ *   recorded when the gap is up, so where it comes to rest is never lost.
+ * - A value equal to the last recorded is dropped. With a [start] (a scroll's top, 0) that is the
+ *   last value at first and after [reset]; without one, nothing is recorded yet, so a first 0 is.
+ * - [flush] records what waits at once (a field that closes); [mark] takes a value as known
+ *   without recording it (typing moved the cursor there).
  */
-class ScrollGate(
-    private val emit: (Double) -> Unit,
+open class SettleGate<T : Any>(
+    private val emit: (T) -> Unit,
     private val clock: ScrollClock = ScrollClock.main(),
-    private val settleMs: Long = SETTLE_MS,
-    private val gapMs: Long = MIN_GAP_MS,
+    private val settleMs: Long = ScrollGate.SETTLE_MS,
+    private val gapMs: Long = ScrollGate.MIN_GAP_MS,
+    private val start: T? = null,
 ) {
-    /** The last position recorded, or the top since the content last changed. */
-    private var last = 0.0
+    /** The last value recorded, or the start since the content last changed; null: none yet. */
+    private var last: T? = start
     private var lastAt: Long? = null
 
-    /** The latest position seen and not yet recorded. */
-    private var latest: Double? = null
+    /** The latest value seen and not yet recorded. */
+    private var latest: T? = null
     private var settling: Any? = null
     private var holding: Any? = null
 
-    /** The area moved to [position] ([fractionOf]); null, it can't scroll, is ignored. */
-    fun moved(position: Double?) {
-        position ?: return
-        latest = position
+    /** The value is now [value]; null (an area that can't scroll) is ignored. */
+    fun moved(value: T?) {
+        value ?: return
+        latest = value
         settling?.let(clock::clear)
         settling = clock.set(settleMs) {
             settling = null
-            // A held event records the latest position when its gap is up.
-            if (holding == null) flush()
+            // A held event records the latest value when its gap is up.
+            if (holding == null) settle()
         }
     }
 
-    /** The area's content changed: its last position is the top again, and what waits is dropped. */
+    /** The content changed: the last value is the start again, and what waits is dropped. */
     fun reset() {
         stop()
-        last = 0.0
+        last = start
     }
 
-    /** Drops what waits (the area is gone). */
+    /** Drops what waits (the area or field is gone). */
     fun stop() {
         settling?.let(clock::clear)
         holding?.let(clock::clear)
@@ -88,9 +92,30 @@ class ScrollGate(
         latest = null
     }
 
-    private fun flush() {
-        val position = latest ?: return
-        if (position == last) {
+    /** Records what waits now, inside the settle and the gap; a repeat of the last is still dropped. */
+    fun flush() {
+        val value = latest
+        stop()
+        value ?: return
+        if (value == last) return
+        record(value)
+    }
+
+    /** Takes [value] as known without recording it, and drops what waits. */
+    fun mark(value: T) {
+        stop()
+        last = value
+    }
+
+    private fun record(value: T) {
+        last = value
+        lastAt = clock.now()
+        emit(value)
+    }
+
+    private fun settle() {
+        val value = latest ?: return
+        if (value == last) {
             latest = null
             return
         }
@@ -99,16 +124,22 @@ class ScrollGate(
             holding = clock.set(wait) {
                 holding = null
                 // Still moving: the settle records it.
-                if (settling == null) flush()
+                if (settling == null) settle()
             }
             return
         }
         latest = null
-        last = position
-        lastAt = clock.now()
-        emit(position)
+        record(value)
     }
+}
 
+/** One area's scroll position (PEN-175): a [SettleGate] that starts at the top (0). */
+class ScrollGate(
+    emit: (Double) -> Unit,
+    clock: ScrollClock = ScrollClock.main(),
+    settleMs: Long = SETTLE_MS,
+    gapMs: Long = MIN_GAP_MS,
+) : SettleGate<Double>(emit, clock, settleMs, gapMs, start = 0.0) {
     companion object {
         /** How long an area must be still before its position is recorded (core's SCROLL_SETTLE_MS). */
         const val SETTLE_MS = 300L

@@ -479,7 +479,12 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     }
                                     // Then its top-level notes, as a folder's page lists its own (A1608).
                                     items(ui.notes, key = { "note:${it.id}" }, contentType = { "note" }) { note ->
-                                        NoteRowView(note, actions.onOpen, onLongPress = actions.onNoteLongPress, selectable = true)
+                                        // A top-level note opened from the tree (PEN-177).
+                                        val open: (String) -> Unit = { id ->
+                                            app.penmoss.analytics.TreeEvents.open(id, null, 0)
+                                            actions.onOpen(id)
+                                        }
+                                        NoteRowView(note, open, onLongPress = actions.onNoteLongPress, selectable = true)
                                     }
                                 }
                                 SidebarLayout.RECENT -> {

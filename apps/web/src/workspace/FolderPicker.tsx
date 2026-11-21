@@ -87,6 +87,7 @@ export function FolderPicker({
     >
       <div className="dlg-search">
         <PickerField
+          dialog="folderPicker"
           picker={picker}
           aria-label="Folder"
           placeholder={placeholder}

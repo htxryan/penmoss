@@ -18,7 +18,7 @@ import { REPOSITORY } from '../site';
 >
   <article class="wrap prose">
     <h1>Privacy policy</h1>
-    <p class="meta">Effective 19 November 2026</p>
+    <p class="meta">Effective 20 November 2026</p>
 
     <p>
       Penmoss is a free, open source notes app for the Mac, Android and the command line. It is made
@@ -111,8 +111,17 @@ import { REPOSITORY } from '../site';
       window&rsquo;s size and layout (its size to the nearest 10 pixels, and its sidebar, note panel, Full
       Width, light or dark and how many tabs, never where it is or which screen it is on), how far you
       scroll the note, the sidebar and Settings (from top to bottom in hundredths, never what is there),
-      and a random analytics ID. Counts are rounded into ranges and times into durations. The record stays
-      on the device for 7 days (at most 5,000 events) unless you change that, between 1 and 360 days,
+      and a random analytics ID. They also record the shape of your notes and how much you type, never
+      the words: a note&rsquo;s blocks in order when it opens, each one&rsquo;s kind and length in
+      characters; about once a second as you type, how many characters you typed and deleted in which
+      block, blocks added, removed or changed in kind, which block the cursor is in and how long a
+      selection is; the length of what you type in search, the palette, Quick Open and text dialogs;
+      and the folders you expand and collapse in the sidebar tree and the notes you open from it. A
+      note or folder is named by a keyed ID, made from its own ID with a key that never leaves the
+      device, which no one can turn back into the note, its title or its path. Counts are rounded into
+      ranges, except the lengths of note blocks and of what you type, which are exact (never the
+      words), and times into durations. The record stays on the device for 7 days (at most 200,000
+      events) unless you change that, between 1 and 360 days,
       in Settings &rarr; Privacy &rarr; Advanced or with <code>penmoss analytics limits</code>. You can
       read all of it in Settings &rarr; Privacy &rarr; View Analytics Data, or with
       <code>penmoss analytics show</code>.
@@ -121,7 +130,8 @@ import { REPOSITORY } from '../site';
       <strong>Sent only with your consent.</strong> At the end of setting up, or once after the update
       that added it, Penmoss asks whether to share it. If you choose Share Usage Data, the record,
       setup included, is sent to the developer&rsquo;s own server at t.penmoss.app, which runs on
-      Cloudflare for the developer. It keeps the events for 13 months and no IP address, and only the
+      Cloudflare for the developer. It keeps the events for 13 months, and note, input and tree events
+      for 90 days, and no IP address, and only the
       developer reads them, through a private dashboard, to learn how Penmoss is used. If you choose
       Don&rsquo;t Share, nothing is ever sent. The command-line tool and the MCP server follow the
       app&rsquo;s answer and never send anything themselves; <code>DO_NOT_TRACK=1</code> or
@@ -129,15 +139,16 @@ import { REPOSITORY } from '../site';
     </p>
     <p>
       <strong>Never recorded:</strong> note titles, text or excerpts; file, folder, tag, attachment,
-      notebook or repository names, paths, branches and links; search text; GitHub usernames, email
-      addresses, tokens and keys; command-line arguments; what agents ask for or read; anything you
-      type.
+      notebook or repository names, paths, branches and links; the words of a search (only its
+      length); GitHub usernames, email addresses, tokens and keys; command-line arguments; what agents
+      ask for or read; the words you type, only how many characters.
     </p>
     <p>
       <strong>Your choices.</strong> In Settings &rarr; Privacy, on the Mac and Android, or with
       <code>penmoss analytics</code>: turn sharing off (anything not yet sent stays on your device);
-      reset your analytics ID; Delete My Shared Data, which deletes everything your device shared from
-      the developer&rsquo;s server and gives it a new ID; and change how much is kept.
+      reset your analytics ID, which also makes a new key for the keyed IDs; Delete My Shared Data,
+      which deletes everything your device shared from the developer&rsquo;s server and gives it a new
+      ID and a new key; and change how much is kept.
     </p>
 
     <h2>Logs</h2>
@@ -182,7 +193,8 @@ import { REPOSITORY } from '../site';
     </ul>
     <p>Removing an app removes these copies from that device. Your repository keeps the notes.</p>
     <p>
-      Shared usage data is deleted from the developer&rsquo;s server after 13 months, or at once when
+      Shared usage data is deleted from the developer&rsquo;s server after 13 months, and note, input
+      and tree events for 90 days, or at once when
       you choose Delete My Shared Data in Settings &rarr; Privacy or run
       <code>penmoss analytics forget</code>.
     </p>

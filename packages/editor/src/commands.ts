@@ -10,6 +10,7 @@
  */
 import type { Editor } from '@tiptap/core';
 import { redoCommand, undoCommand } from '@y/prosemirror';
+import { asOwnChange } from './collab/binding';
 import { blockTypeKey, codeBlockKey } from './block-keys';
 import { CLIPBOARD_COMMANDS, defaultKeys } from './clipboard/commands';
 import { BLOCK_ITEMS, type BlockItem } from './extensions/block-items';
@@ -195,14 +196,14 @@ const FORMATTING: readonly EditorCommand[] = [
     title: 'Undo',
     keys: ['Mod+Z'],
     area: 'Editor',
-    run: ({ editor }) => undoCommand(editor.state, editor.view.dispatch),
+    run: ({ editor }) => asOwnChange(() => undoCommand(editor.state, editor.view.dispatch)),
   },
   {
     id: 'editor.redo',
     title: 'Redo',
     keys: ['Mod+Shift+Z', 'Mod+Y'],
     area: 'Editor',
-    run: ({ editor }) => redoCommand(editor.state, editor.view.dispatch),
+    run: ({ editor }) => asOwnChange(() => redoCommand(editor.state, editor.view.dispatch)),
   },
   {
     // False at the first block, so the browser's own Alt-Shift-↑ (extend selection) still works.

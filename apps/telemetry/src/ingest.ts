@@ -18,9 +18,9 @@ import { dayOf } from './day';
 
 export interface TelemetryEnv {
   readonly DB: D1Database;
-  /** 30 batches a minute per install. */
+  /** 60 batches a minute per install (PEN-177: typing sends about 5 a minute). */
   readonly INSTALL_LIMIT: RateLimit;
-  /** 120 requests a minute per IP address. */
+  /** 240 requests a minute per IP address (PEN-177). */
   readonly IP_LIMIT: RateLimit;
   /** 5 forgets a minute per IP address. */
   readonly FORGET_LIMIT: RateLimit;

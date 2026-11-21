@@ -46,6 +46,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useTrackedDialog, type TrackedDialog } from '../analytics/dialog';
+import { useTypedChars, useTypedLength } from '../analytics/typed';
 import { record } from '../analytics/record';
 import { useCommands } from '../commands/hooks';
 import { desktop } from '../desktop/bridge';
@@ -74,6 +75,11 @@ type Status =
   | { readonly kind: 'queued'; readonly error: OutboxError | null }
   | { readonly kind: 'elsewhere' }
   | { readonly kind: 'failed'; readonly error: OutboxError };
+
+/** The description's length in characters, each line break one, as Android counts its field's. */
+const bodyLength = (editor: {
+  getText: (options?: { readonly blockSeparator?: string }) => string;
+}): number => editor.getText({ blockSeparator: '\n' }).length;
 
 const keysOf = (keys: string) =>
   keys
@@ -182,6 +188,12 @@ function FeedbackForm({
   const [problems, setProblems] = useState<Problems>({});
   const [imageError, setImageError] = useState<string | null>(null);
   const [linkHref, setLinkHref] = useState<string | null>(null);
+  // What is typed in the title and a link's address, by length only (PEN-177).
+  const typedTitle = useTypedLength('feedback', 'title', title);
+  const typedLink = useTypedLength('feedback', 'url', linkHref ?? '');
+  // And the description's, once its editor holds the draft (the draft's length is where it starts).
+  const [bodyChars, setBodyChars] = useState<number | null>(null);
+  const typedBody = useTypedChars('feedback', 'body', bodyChars);
   /** Which formats the selection has, for the toolbar's pressed states (read on each change). */
   const [active, setActive] = useState<ReadonlySet<string>>(new Set());
   const dialog = useRef<HTMLDivElement>(null);
@@ -210,8 +222,12 @@ function FeedbackForm({
       content: initialDescription.current,
       label: 'Description',
       describedBy: `${id}-desc-hint`,
-      onUpdate: (current) => setDescription(current.getJSON()),
+      onUpdate: (current) => {
+        setDescription(current.getJSON());
+        setBodyChars(bodyLength(current));
+      },
     });
+    setBodyChars(bodyLength(editor));
     const bump = () => {
       const on = new Set<string>();
       for (const format of FEEDBACK_FORMATS) if (format.active(editor)) on.add(format.id);
@@ -571,6 +587,7 @@ function FeedbackForm({
                   id={`${id}-title`}
                   className="feedback-title"
                   data-testid="feedback-title"
+                  {...typedTitle}
                   value={title}
                   maxLength={FEEDBACK_LIMITS.titleMax}
                   autoComplete="off"
@@ -657,6 +674,7 @@ function FeedbackForm({
                       autoFocus
                       placeholder="https://"
                       value={linkHref}
+                      {...typedLink}
                       data-testid="feedback-link-href"
                       onChange={(event) => setLinkHref(event.target.value)}
                       onKeyDown={(event) => {
@@ -697,6 +715,7 @@ function FeedbackForm({
                   ref={editorHost}
                   className="feedback-editor"
                   aria-labelledby={`${id}-desc-label`}
+                  {...typedBody}
                 />
                 <p id={`${id}-desc-hint`} className="muted feedback-hint">
                   Sent as GitHub markdown: bold, italic, lists, links, code and quotes. Tab and

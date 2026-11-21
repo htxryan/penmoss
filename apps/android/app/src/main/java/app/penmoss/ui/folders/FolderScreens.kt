@@ -1,11 +1,18 @@
 package app.penmoss.ui.folders
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import app.penmoss.analytics.TreeEvents
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.ui.keys.FolderCommands
 import app.penmoss.ui.home.FolderScreen
 import kotlinx.coroutines.Dispatchers
@@ -199,7 +206,7 @@ fun FolderNameDialog(title: String, initial: String = "", onConfirm: (String) ->
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                modifier = Modifier.fillMaxWidth().testTag("folderNameField"),
+                modifier = Modifier.fillMaxWidth().testTag("folderNameField").typedLength("folderName", "name", name),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
@@ -587,16 +594,31 @@ internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
                     notes = filed,
                     sortMode = folder?.sortMode ?: "manual",
                     subtitle = Items.pathText(above.map { it.name }).takeIf { above.isNotEmpty() },
+                    depth = above.size,
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
-        }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null))
+        }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null, 0))
+        // Left however it is (its Back, the system Back or a predictive back): `tree collapse`.
+        val leaving = folderId?.let { rememberFolderLeaving(nav, entry, it, contents.depth) }
         FolderScreen(
             title = contents.name,
             folders = contents.folders,
             notes = contents.notes,
-            onBack = { nav.leave(entry) },
-            onFolder = { nav.open("folder/$it") },
-            onOpen = root::openNote,
+            // Where in the tree (PEN-177): this folder is at its depth, what it holds one deeper.
+            onBack = {
+                if (entry.lifecycle.currentState == Lifecycle.State.RESUMED && nav.currentBackStackEntry == entry) {
+                    leaving?.byBar = true
+                }
+                nav.leave(entry)
+            },
+            onFolder = {
+                TreeEvents.expand(it, contents.depth + 1)
+                nav.open("folder/$it")
+            },
+            onOpen = {
+                TreeEvents.open(it, folderId, contents.depth + 1)
+                root.openNote(it)
+            },
             onNewNote = { root.newNote(folderId) },
             onNewNoteIn = { root.choosing = Choosing.NewNote(folderId) },
             onNoteLongPress = root::startSelection,
@@ -617,11 +639,49 @@ internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
 }
 
 /** A folder's screen: its name, rows, sort order and path from the top (T40 P4). */
+/** A folder page being watched for its leaving (PEN-177): where it is, and whether its own Back left it. */
+private class FolderLeaving(val folderId: String, var depth: Int) {
+    /** Its top bar's Back was tapped (`click`); otherwise the system Back left it (`key`). */
+    var byBar = false
+}
+
+/** The folder pages watched, by their entry; an entry gone is let go with it. */
+private val watchedFolders = java.util.WeakHashMap<NavBackStackEntry, FolderLeaving>()
+
+/**
+ * Records `tree collapse` for the folder page [entry] once it is left, however it is left
+ * (PEN-177): its top bar's Back (`click`), or the system Back, its gesture or a predictive back
+ * once it commits (`key`). The page is left when its entry is destroyed while no longer on the
+ * back stack: a page opened over it keeps it there, and the activity going (a rotation) destroys
+ * it while still on the stack, so neither is a collapse.
+ */
+@Composable
+private fun rememberFolderLeaving(nav: NavController, entry: NavBackStackEntry, folderId: String, depth: Int): FolderLeaving {
+    val leaving = remember(entry) {
+        watchedFolders.getOrPut(entry) {
+            val watch = FolderLeaving(folderId, depth)
+            entry.lifecycle.addObserver(object : LifecycleEventObserver {
+                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                    if (event != Lifecycle.Event.ON_DESTROY) return
+                    source.lifecycle.removeObserver(this)
+                    if (nav.currentBackStack.value.any { it.id == entry.id }) return
+                    TreeEvents.collapse(watch.folderId, watch.depth, if (watch.byBar) "click" else "key")
+                }
+            })
+            watch
+        }
+    }
+    leaving.depth = depth
+    return leaving
+}
+
 private data class FolderView(
     val name: String,
     val folders: List<FolderItem>,
     val notes: List<NoteItem>,
     val sortMode: String,
     val subtitle: String?,
+    /** How deep the folder is: 0 at the notebook's top level (PEN-177). */
+    val depth: Int,
 )
 

@@ -25,6 +25,7 @@ import {
 } from 'react';
 import { DialogClose } from './DialogClose';
 import { useTrackedDialog } from '../analytics/dialog';
+import { useTypedLength } from '../analytics/typed';
 import { devicePref, useDevicePref } from './device-pref';
 import {
   cellLabel,
@@ -153,6 +154,7 @@ export function IconPicker({
   const tracked = useTrackedDialog('iconPicker');
   const [tab, setTab] = useState<PickerTab>(initialTab ?? tabs[0] ?? 'icons');
   const [query, setQuery] = useState('');
+  const typedQuery = useTypedLength('iconPicker', 'query', query);
   // The active cell; null: the chosen one (or the first) until a key, the pointer or a search
   // moves it.
   const [active, setActive] = useState<number | null>(null);
@@ -371,6 +373,7 @@ export function IconPicker({
           autoComplete="off"
           spellCheck={false}
           value={query}
+          {...typedQuery}
           data-testid={`${testId}-search`}
           onChange={(event) => {
             setQuery(event.target.value);

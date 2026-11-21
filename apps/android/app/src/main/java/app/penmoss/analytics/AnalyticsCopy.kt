@@ -17,6 +17,7 @@ object AnalyticsCopy {
         "consent.recorded.2" to "The screens and dialogs you open, and the settings you change",
         "consent.recorded.3" to "The app’s and the system’s versions, the window’s size and layout, and how far you scroll",
         "consent.recorded.4" to "",
+        "consent.recorded.5" to "The shape of your notes and how much you type, never the words",
         "consent.never.title" to "Never Recorded",
         "consent.never.1" to "What you write: notes, titles, tags, links and searches",
         "consent.never.2" to "The names of notebooks, folders, files and repositories",

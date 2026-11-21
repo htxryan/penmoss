@@ -17,7 +17,7 @@ import {
   ySyncPluginKey,
   yUndoPlugin,
 } from '@y/prosemirror';
-import { isBindingTransaction } from './binding';
+import { asOwnChange, isBindingTransaction } from './binding';
 import type { CollabEditor } from './types';
 import {
   UnsupportedContentError,
@@ -59,7 +59,7 @@ export function createYjs14Editor(options: Yjs14EditorOptions): CollabEditor {
     addProseMirrorPlugins: () => [yUndoPlugin(undoManager)],
     addKeyboardShortcuts() {
       const run = (command: typeof undoCommand) => () =>
-        command(this.editor.state, this.editor.view.dispatch);
+        asOwnChange(() => command(this.editor.state, this.editor.view.dispatch));
       return {
         'Mod-z': run(undoCommand),
         'Mod-y': run(redoCommand),
@@ -116,8 +116,8 @@ export function createYjs14Editor(options: Yjs14EditorOptions): CollabEditor {
   return {
     editor,
     replica,
-    undo: () => !stopped && undoCommand(editor.state, editor.view.dispatch),
-    redo: () => !stopped && redoCommand(editor.state, editor.view.dispatch),
+    undo: () => !stopped && asOwnChange(() => undoCommand(editor.state, editor.view.dispatch)),
+    redo: () => !stopped && asOwnChange(() => redoCommand(editor.state, editor.view.dispatch)),
     destroy,
   };
 }

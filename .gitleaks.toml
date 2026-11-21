@@ -14,6 +14,8 @@ regexes = [
   '''^0[0-9A-HJKMNP-TV-Z]{25}$''',
   # The fake 12-byte comment anchor keys in the bridge contract and its tests.
   '''^(0123456789abcdef01234567|89abcdef0123456789abcdef)$''',
+  # The fake analytics ref key (PEN-177): the hex digits in order, once or repeated up to 64 characters.
+  '''^(0123456789abcdef){1,4}$''',
   # Keyboard shortcuts (aria-keyshortcuts, Playwright key names).
   '''^(Alt|Shift|Control|Ctrl|Meta|Mod)(\+[A-Za-z]+)+$''',
   # The repository's own name, passed as a token-check argument in a test.

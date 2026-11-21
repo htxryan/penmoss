@@ -31,7 +31,7 @@ export type LimitKey = (typeof LIMIT_KEYS)[number];
 
 export const LIMITS: readonly LimitSpec[] = [
   { key: 'events.days', default: 7, min: 1, max: 360, unit: 'days', group: 'usage' },
-  { key: 'events.max', default: 5000, min: 500, max: 800_000, unit: 'events', group: 'usage' },
+  { key: 'events.max', default: 200_000, min: 500, max: 2_000_000, unit: 'events', group: 'usage' },
   { key: 'logs.fileKb', default: 1024, min: 256, max: 81_920, unit: 'KB', group: 'logs' },
   { key: 'logs.files', default: 2, min: 1, max: 5, unit: 'files', group: 'logs' },
   { key: 'logs.days', default: 7, min: 1, max: 360, unit: 'days', group: 'logs' },
@@ -106,8 +106,11 @@ export function parseLimit(key: LimitKey, text: string): number | null {
   return limitAllowed(key, value) ? value : null;
 }
 
-/** About how many bytes one stored event takes with its indexes. */
-export const EVENT_BYTES = 400;
+/**
+ * About how many bytes one stored event takes with its indexes (PEN-177: 500, as a note's open
+ * with its shape averages about 4 KB).
+ */
+export const EVENT_BYTES = 500;
 
 /** The most space the usage record takes at these limits, in bytes. */
 export function eventSpace(limits: Limits): number {

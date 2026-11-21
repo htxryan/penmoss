@@ -351,6 +351,12 @@ export class SelectionToolbar {
     this.linkInput.type = 'url';
     this.linkInput.placeholder = 'Paste or type a link';
     this.linkInput.setAttribute('aria-label', 'Link address');
+    // How much is typed in the form, never what (PEN-177): the app records these by length, as
+    // Android's link dialog records its address.
+    this.linkInput.dataset['typed'] = 'link';
+    this.linkInput.dataset['typedField'] = 'url';
+    this.linkText.dataset['typed'] = 'link';
+    this.linkText.dataset['typedField'] = 'other';
     this.linkError = doc.createElement('span');
     this.linkError.className = 'pm-toolbar-link-error';
     this.linkError.setAttribute('role', 'alert');

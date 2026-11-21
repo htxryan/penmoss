@@ -8,6 +8,7 @@
  */
 import {
   countsLine,
+  propsLine,
   STATE_LABELS,
   type ClientFilter,
   type Cursor,
@@ -16,7 +17,7 @@ import {
   type StoredEvent,
 } from '@penmoss/core/analytics';
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useState } from 'react';
 import { desktop, type DesktopAnalyticsStatus } from '../desktop/bridge';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { analyticsBridge, copy, shortId, useAnalyticsStatus } from './status';
@@ -61,14 +62,38 @@ function timeOf(at: number): string {
   });
 }
 
-/** An event's props as one line: `source: key, keys: Mod+K`. */
+/**
+ * An event's props as one line, `source: key, keys: Mod+K`, a list over 12 items cut to its first
+ * 12 and `… +N` (core's propsLine, PEN-177); Copy as JSON keeps every item.
+ */
 function propsOf(event: StoredEvent): string {
-  return Object.entries(event.props)
-    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : String(value)}`)
-    .join(', ');
+  return propsLine(event.props);
 }
 
 /** The summary under the title: where, how long, the ID, and whether it is shared. */
+/**
+ * An event's name, which breaks only between its words when the row has no room for all of it:
+ * after a dot or a hyphen ("settings.git-notebooks." over "signing-key.new"), never inside one
+ * ("tree.ope" over "n"). Most names fit whole (privacy.css).
+ */
+function NameParts({ name }: { name: string }) {
+  const parts = name.split('.');
+  return (
+    <>
+      {parts.map((part, index) => (
+        <Fragment key={index}>
+          {part}
+          {index < parts.length - 1 ? (
+            <>
+              .<wbr />
+            </>
+          ) : null}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
 function summary(status: DesktopAnalyticsStatus): string {
   const sharing =
     status.consent === 'yes'
@@ -215,7 +240,9 @@ export function AnalyticsData() {
                   <td className="privacy-table-time">{timeOf(event.at)}</td>
                   <td>{clientLabel(event)}</td>
                   <td>{event.kind}</td>
-                  <td className="privacy-table-name">{event.name}</td>
+                  <td className="privacy-table-name">
+                    <NameParts name={event.name} />
+                  </td>
                   <td className="privacy-table-props">{propsOf(event)}</td>
                   <td>
                     <span className="chip privacy-state" data-state={event.state}>

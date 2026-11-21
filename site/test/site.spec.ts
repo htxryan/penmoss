@@ -709,7 +709,7 @@ test.describe('Usage data in the policy (PEN-137)', () => {
     for (const words of [
       'Recorded on your device, always.',
       'Sent only with your consent.',
-      'keeps the events for 13 months and no IP address',
+      'keeps the events for 13 months, and note, input and tree events for 90 days, and no IP address',
       'only the developer reads them',
       'Delete My Shared Data',
       'reset your analytics ID',
@@ -766,5 +766,43 @@ test.describe('Usage data in the policy (PEN-137)', () => {
     await expect(page.locator('main')).toContainText('how far you scroll');
     await page.goto('/privacy/');
     await expect(page.locator('article')).toContainText(/how far you\s+scroll/);
+  });
+
+  // PEN-177: session detail (a note's shape, typing, typed lengths and the sidebar tree) is in
+  // the standard set, and the pages say so, with keyed IDs, exact lengths and the new limits.
+  test('the usage data page lists Note, Input and Tree, and both privacy pages name session detail', async ({
+    page,
+  }) => {
+    await page.goto('/docs/help/usage-data/');
+    const help = page.locator('main');
+    for (const [kind, example] of [
+      ['Note', 'li.t.2:31'],
+      ['Input', 'never the characters themselves'],
+      ['Tree', 'to show the open note'],
+    ] as const) {
+      await expect(help.locator('tr').filter({ hasText: example })).toContainText(kind);
+    }
+    await expect(help).toContainText('keyed ID');
+    await expect(help).toContainText('which are exact (never the words)');
+    await expect(help).toContainText('note, input and tree events for 90 days');
+    await expect(help).toContainText('the words of a search (only its length)');
+    await expect(help.locator('tr').filter({ hasText: 'events.max' })).toContainText(
+      '500–2,000,000',
+    );
+    await expect(help).not.toContainText('5,000 events');
+    await page.goto('/docs/help/privacy/');
+    const docs = page.locator('main');
+    await expect(docs).toContainText(
+      'the shape of your notes and how much you type, never the words',
+    );
+    await expect(docs).toContainText('at most 200,000 events');
+    await expect(docs).toContainText('a new key for its keyed IDs');
+    await page.goto('/privacy/');
+    const policy = page.locator('article');
+    await expect(policy).toContainText(
+      /the shape of your notes and how much you type, never\s+the words/,
+    );
+    await expect(policy).toContainText(/at most 200,000\s+events/);
+    await expect(policy).toContainText('Effective 20 November 2026');
   });
 });

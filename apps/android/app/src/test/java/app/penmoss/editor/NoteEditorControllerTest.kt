@@ -400,6 +400,7 @@ class NoteEditorControllerTest {
             app.penmoss.analytics.Analytics.install(harness.service)
             try {
                 val controller = controller()
+                controller.screenShown(true)
                 page(controller, FromEditor.Scroll("n", 0.42))
                 page(controller, FromEditor.Scroll("other-note", 0.9))
                 page(controller, FromEditor.Scroll("n", 1.0))
@@ -409,6 +410,137 @@ class NoteEditorControllerTest {
                 val stored = harness.store.page(null, null, 10).sortedBy { it.seq }
                 assertEquals(listOf("scroll" to "note", "scroll" to "note"), stored.map { it.kind to it.name })
                 assertEquals(listOf("""{"position":0.42}""", """{"position":1}"""), stored.map { it.props })
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
+    /**
+     * PEN-177: the page's `usage` is recorded as `note <name>` with the note's ref added, never
+     * its id, for the note shown only; a page sending a ref of its own is refused by the bridge.
+     */
+    @Test
+    fun recordsTheNoteShownsSessionDetailByRef() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                val key = harness.service.stateNow().refKey
+                val controller = controller()
+                controller.screenShown(true)
+                val props = kotlinx.serialization.json.buildJsonObject {
+                    put("block", kotlinx.serialization.json.JsonPrimitive(3))
+                    put("typed", kotlinx.serialization.json.JsonPrimitive(12))
+                    put("deleted", kotlinx.serialization.json.JsonPrimitive(2))
+                }
+                page(controller, FromEditor.Usage("n", "typing", props))
+                page(controller, FromEditor.Usage("other-note", "typing", props))
+                runBlocking(thread) {
+                    controller.onPageMessage("""{"v":1,"type":"usage","noteId":"n","name":"cursor","props":{"note":"0123456789abcdef","block":1}}""")
+                }
+                harness.service.flush()
+                val stored = harness.store.page(null, null, 10).sortedBy { it.seq }
+                assertEquals(listOf("note" to "typing"), stored.map { it.kind to it.name })
+                val ref = app.penmoss.analytics.AnalyticsRefs.refOf(key, "note", "n")
+                assertEquals("""{"note":"$ref","block":3,"typed":12,"deleted":2}""", stored.single().props)
+                assertTrue(!stored.single().props.contains("\"n\""))
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
+    /**
+     * PEN-177: the page's usage is recorded only while the note screen is shown. A page made again
+     * behind another screen (its activity re-made for a change of font size behind Settings)
+     * records no open or cursor; it is held, recorded once the screen is shown, and dropped if the
+     * screen goes without ever being shown.
+     */
+    @Test
+    fun recordsTheNotesUsageOnlyWhileItsScreenIsShown() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                val open = kotlinx.serialization.json.buildJsonObject {
+                    put("how", kotlinx.serialization.json.JsonPrimitive("open"))
+                    put("titleChars", kotlinx.serialization.json.JsonPrimitive(5))
+                    put("shape", kotlinx.serialization.json.JsonArray(listOf(kotlinx.serialization.json.JsonPrimitive("p:12"))))
+                }
+                val cursor = kotlinx.serialization.json.buildJsonObject { put("block", kotlinx.serialization.json.JsonPrimitive(0)) }
+                val stored = suspend {
+                    harness.service.flush()
+                    harness.store.page(null, null, 50).sortedBy { it.seq }.map { it.kind to it.name }
+                }
+
+                // Made behind Settings, never shown, then gone: nothing recorded.
+                val behind = controller()
+                page(behind, FromEditor.Usage("n", "open", open))
+                page(behind, FromEditor.Usage("n", "cursor", cursor))
+                page(behind, FromEditor.Scroll("n", 0.5))
+                assertEquals(emptyList<Pair<String, String>>(), stored())
+                behind.close()
+                assertEquals(emptyList<Pair<String, String>>(), stored())
+
+                // Made behind it, then shown: the open and the cursor once it shows, in order.
+                val later = controller()
+                page(later, FromEditor.Usage("n", "cursor", cursor))
+                page(later, FromEditor.Usage("n", "open", open))
+                page(later, FromEditor.Usage("n", "cursor", cursor))
+                assertEquals(emptyList<Pair<String, String>>(), stored())
+                later.screenShown(true)
+                // What came before the open is moot: the open starts the shape again.
+                assertEquals(listOf("note" to "open", "note" to "cursor"), stored())
+
+                // Shown, then paused: the bursts it sends as it goes are kept when it closes.
+                later.screenShown(false)
+                page(later, FromEditor.Usage("n", "cursor", kotlinx.serialization.json.buildJsonObject { put("block", kotlinx.serialization.json.JsonPrimitive(1)) }))
+                assertEquals(2, stored().size)
+                later.close()
+                assertEquals(listOf("note" to "open", "note" to "cursor", "note" to "cursor"), stored())
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
+    /**
+     * PEN-177: a burst the page sends as the note screen pauses for Settings, held there, is the
+     * old ID's when Reset My Analytics ID comes before the screen shows again: named by the old
+     * key and kept on the phone, so nothing links the old ID with the new. What comes after the
+     * reset is named by the new key.
+     */
+    @Test
+    fun aBurstHeldBehindAResetKeepsTheOldRef() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                harness.service.answer(app.penmoss.analytics.ConsentAnswer.YES, "0.4.2")
+                val old = harness.service.stateNow().refKey
+                val burst = kotlinx.serialization.json.buildJsonObject {
+                    put("block", kotlinx.serialization.json.JsonPrimitive(1))
+                    put("typed", kotlinx.serialization.json.JsonPrimitive(6))
+                    put("deleted", kotlinx.serialization.json.JsonPrimitive(0))
+                }
+                val controller = controller()
+                controller.screenShown(true)
+                // Settings in front: the page's last burst comes as the screen pauses, and is held.
+                controller.screenShown(false)
+                page(controller, FromEditor.Usage("n", "typing", burst))
+                harness.clock += 10
+                harness.service.resetId()
+                val renewed = harness.service.stateNow().refKey
+                assertTrue(old != renewed)
+                harness.clock += 10
+                // Back to the note: the held burst is recorded now, then one typed after the reset.
+                controller.screenShown(true)
+                page(controller, FromEditor.Usage("n", "typing", burst))
+                harness.service.flush()
+                val (late, after) = harness.store.page(null, null, 10).sortedBy { it.seq }.also { assertEquals(2, it.size) }
+                val refOf = { key: String -> app.penmoss.analytics.AnalyticsRefs.refOf(key, "note", "n") }
+                assertTrue(late.props, late.props.contains(refOf(old)))
+                assertEquals(app.penmoss.analytics.EventState.LOCAL, late.eventState)
+                assertTrue(after.props, after.props.contains(refOf(renewed)))
+                assertEquals(app.penmoss.analytics.EventState.WAITING, after.eventState)
             } finally {
                 app.penmoss.analytics.Analytics.install(null)
             }

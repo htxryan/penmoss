@@ -133,7 +133,11 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 onNotebookNewNote = { root.newNote(null) },
                 onSearch = { nav.open("search") },
                 onSettings = { nav.open("settings") },
-                onFolder = { nav.open("folder/$it") },
+                onFolder = {
+                    // A top-level folder opened from the notebook's list (PEN-177).
+                    app.penmoss.analytics.TreeEvents.expand(it, 0)
+                    nav.open("folder/$it")
+                },
                 onOpen = root::openNote,
                 onToday = { root.openPeriodic(ToEditor.PeriodKind.DAILY, null) },
                 onThisWeek = { root.openPeriodic(ToEditor.PeriodKind.WEEKLY, null) },

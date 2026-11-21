@@ -17,7 +17,7 @@ class LimitsTest {
     @Test
     fun eachLimitHasItsDefaultAndRange() {
         assertEquals(7, Limits.DEFAULTS.eventsDays)
-        assertEquals(5000, Limits.DEFAULTS.eventsMax)
+        assertEquals(200_000, Limits.DEFAULTS.eventsMax)
         assertEquals(1024, Limits.DEFAULTS.logsFileKb)
         assertEquals(2, Limits.DEFAULTS.logsFiles)
         assertEquals(7, Limits.DEFAULTS.logsDays)
@@ -25,7 +25,8 @@ class LimitsTest {
         assertEquals(300, Limits.DEFAULTS.reportLines)
         assertEquals(16, Limits.DEFAULTS.reportKb)
         assertEquals("1–360 days", Limits.spec(Limits.EVENTS_DAYS).rangeLabel)
-        assertEquals("500–800,000 events", Limits.spec(Limits.EVENTS_MAX).rangeLabel)
+        assertEquals("500–2,000,000 events", Limits.spec(Limits.EVENTS_MAX).rangeLabel)
+        assertEquals(500L, Limits.EVENT_BYTES)
         assertEquals("Between 256 and 81,920", Limits.spec(Limits.LOGS_FILE_KB).rangeMessage)
     }
 
@@ -38,7 +39,11 @@ class LimitsTest {
         assertNull(days.parse("7.5"))
         assertNull(days.parse("seven"))
         assertEquals(800_000, Limits.spec(Limits.EVENTS_MAX).parse("800,000"))
-        assertNull(Limits.spec(Limits.EVENTS_MAX).parse("800,001"))
+        // PEN-177: typed with or without commas, up to 2,000,000.
+        assertEquals(200_000, Limits.spec(Limits.EVENTS_MAX).parse("200,000"))
+        assertEquals(200_000, Limits.spec(Limits.EVENTS_MAX).parse("200000"))
+        assertEquals(2_000_000, Limits.spec(Limits.EVENTS_MAX).parse("2,000,000"))
+        assertNull(Limits.spec(Limits.EVENTS_MAX).parse("2,000,001"))
         // A stored value out of range reads as its default.
         assertEquals(7, Limits.of(mapOf(Limits.EVENTS_DAYS to 0)).eventsDays)
         assertEquals(5, Limits.of(mapOf(Limits.LOGS_FILES to 5)).logsFiles)
@@ -46,10 +51,11 @@ class LimitsTest {
 
     @Test
     fun spaceAndTheReportsHoursFollowTheLimits() {
-        assertEquals("1.9 MB", Limits.formatBytes(Limits.DEFAULTS.eventSpace))
+        // "About 95 MB of events at most on this phone" (PEN-177).
+        assertEquals("95 MB", Limits.formatBytes(Limits.DEFAULTS.eventSpace))
         assertEquals("2 MB", Limits.formatBytes(Limits.DEFAULTS.logSpace))
         val most = Limits.of(Limits.SPECS.associate { it.key to it.max })
-        assertEquals("305 MB", Limits.formatBytes(most.eventSpace))
+        assertEquals("954 MB", Limits.formatBytes(most.eventSpace))
         assertEquals("400 MB", Limits.formatBytes(most.logSpace))
         assertEquals("640 KB", Limits.formatBytes(640 * 1024))
         assertEquals("1.5 MB", Limits.formatBytes(1536 * 1024))

@@ -1312,6 +1312,21 @@ export const RETIRED_CLICK_NAMES: readonly string[] = [
 ];
 export const SYNC_NAMES: readonly string[] = ['pass'];
 
+/**
+ * Session detail (PEN-177): a note's shape when it opens, typing bursts, block splices, the cursor
+ * and the selection, by the note's ref and block positions, never a word.
+ */
+export const NOTE_NAMES: readonly string[] = ['open', 'typing', 'blocks', 'cursor', 'select'];
+
+/**
+ * The fields an `input` event names (PEN-177): the dialog the field is in (DIALOG_NAMES), and
+ * Settings' Search Settings field, which is on a page, not in a dialog.
+ */
+export const INPUT_NAMES: readonly string[] = [...DIALOG_NAMES, 'settingsSearch'];
+
+/** The sidebar tree (PEN-177): a folder expanded or collapsed, a note opened from it. */
+export const TREE_NAMES: readonly string[] = ['expand', 'collapse', 'open'];
+
 /** The CLI's commands (COMMANDS in packages/cli/src/main.ts), and help and version. */
 export const CLI_NAMES: readonly string[] = [
   'search',
@@ -1458,6 +1473,9 @@ export const CATALOGUE: Readonly<Record<EventKind, readonly string[]>> = {
   cli: CLI_NAMES,
   tool: TOOL_NAMES,
   scroll: SCROLL_NAMES,
+  note: NOTE_NAMES,
+  input: INPUT_NAMES,
+  tree: TREE_NAMES,
 };
 
 const SETS = new Map(

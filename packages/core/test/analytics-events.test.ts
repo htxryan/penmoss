@@ -135,6 +135,24 @@ const VALID: Readonly<Record<EventKind, AnalyticsEvent>> = {
     props: { agentClient: 'claude-code', result: 'ok', took: '<1s' },
   }),
   scroll: event({ kind: 'scroll', name: 'note', props: { position: 0.42 } }),
+  note: event({
+    kind: 'note',
+    name: 'open',
+    props: {
+      note: '0123456789abcdef',
+      folder: 'fedcba9876543210',
+      how: 'switch',
+      titleChars: 12,
+      shape: ['h1:12', 'p:182', 'li.t.2:31', 'table.4x3:96', 'hr'],
+      more: true,
+    },
+  }),
+  input: event({ kind: 'input', name: 'palette', props: { field: 'query', chars: 7 } }),
+  tree: event({
+    kind: 'tree',
+    name: 'expand',
+    props: { folder: '0123456789abcdef', depth: 2, source: 'reveal' },
+  }),
 };
 
 describe('buckets', () => {
@@ -411,7 +429,7 @@ describe('eventProblem', () => {
     expect(eventProblem(event({ version: '1.4.0-alpha.3' }))).toBeNull();
     expect(eventProblem(event({ osVersion: '15.1.2' }))).toBe('osVersion');
     expect(eventProblem(event({ sizeClass: 'huge' }))).toBe('sizeClass');
-    expect(eventProblem(event({ kind: 'note' }))).toBe('kind');
+    expect(eventProblem(event({ kind: 'zebracanary' }))).toBe('kind');
   });
 
   it('takes a key combination, never typed text', () => {

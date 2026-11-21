@@ -783,6 +783,15 @@ export function desktop(): PenmossDesktop | null {
   return typeof window === 'undefined' ? null : (window.penmossDesktop ?? null);
 }
 
+/**
+ * The note and folder a session detail event names (PEN-177), by their real ids: main swaps them
+ * for refs (a keyed hash) before it checks and stores the event, and they go no further.
+ */
+export interface PageEventRefs {
+  readonly note?: string | undefined;
+  readonly folder?: string | undefined;
+}
+
 /** What the page records: main stamps the session, `seq`, the client fields and the state. */
 export interface PageEvent {
   readonly kind: EventKind;
@@ -790,6 +799,7 @@ export interface PageEvent {
   readonly props?: Props;
   readonly at: number;
   readonly sizeClass?: SizeClass;
+  readonly refs?: PageEventRefs;
 }
 
 /** Usage analytics' state as Settings → Privacy shows it (PEN-137). */

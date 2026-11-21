@@ -381,6 +381,13 @@ internal fun rememberNoteScreenState(
     DisposableEffect(noteId, lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) controller.flush()
+            // Session detail only while the note is on screen (PEN-177): a page made again
+            // behind another screen records nothing until it is shown.
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> controller.screenShown(true)
+                Lifecycle.Event.ON_PAUSE -> controller.screenShown(false)
+                else -> Unit
+            }
         }
         lifecycle.addObserver(observer)
         onDispose {

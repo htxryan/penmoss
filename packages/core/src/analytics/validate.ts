@@ -3,8 +3,9 @@
  * one, and the ingest Worker again before it writes one to D1. A name must be catalogued and
  * every prop typed for its kind, or for its name where NAME_PROP_SPECS lists one, so no free text
  * can pass: strings are enums, buckets, flag names, a normalised key combination or one of the
- * words a setting may be (SETTING_VALUES), and numbers a limit's value, a rounded length or a
- * scrolled area's position in whole hundredths.
+ * words a setting may be (SETTING_VALUES), refs (16 hex characters, PEN-177) or block tokens
+ * (BLOCK_PATTERN), and numbers a limit's value, a rounded length, a scrolled area's position in
+ * whole hundredths, or session detail's block positions and exact lengths.
  */
 import { AGENT_CLIENTS } from './actors';
 import { CLI_FLAGS, isCatalogued, isSettingWord } from './catalogue';
@@ -30,6 +31,7 @@ import {
   type EventKind,
 } from './events';
 import { BUILTIN_THEMES } from './themes';
+import { INPUT_FIELDS, isShape, MAX_CHARS, MAX_INDEX, REF_PATTERN } from './detail';
 
 /** Whether a prop's value is allowed, for an event called `name`. */
 type Check = (value: unknown, name: string) => boolean;
@@ -92,6 +94,20 @@ const fraction: Check = (value) =>
   value <= 1 &&
   Math.abs(value * 100 - Math.round(value * 100)) < 1e-9;
 
+/** A note's or folder's ref (PEN-177): 16 lower-case hex characters, a keyed hash of its id. */
+const ref: Check = (value) => typeof value === 'string' && REF_PATTERN.test(value);
+/** A block's position, a count of blocks or a depth (PEN-177): a whole number 0 to MAX_INDEX. */
+const index: Check = (value) =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= MAX_INDEX;
+/**
+ * A length in characters (PEN-177, O1): a whole number 0 to MAX_CHARS, exact. The fourth raw
+ * number A1636 allows, after a limit's value, a window's length and a scroll position.
+ */
+const chars: Check = (value) =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= MAX_CHARS;
+/** A note's shape (PEN-177): block tokens matching BLOCK_PATTERN, within both caps. */
+const shape: Check = (value) => isShape(value);
+
 const screenKind: Check = (value) => typeof value === 'string' && isCatalogued('screen', value);
 
 export const CLI_EXITS = [
@@ -120,7 +136,9 @@ export const FIRSTRUN_ERRORS = [
  * list; a boolean; a count or a duration bucket; a key combination (KEYS_PATTERN); a list of
  * the CLI's flag names (CLI_FLAGS, at most MAX_FLAGS); a setting's value (`settingValue`, by the
  * event's name); a catalogued screen; a window's length (`length`: a whole multiple of 10,
- * 0 to MAX_LENGTH); or a scrolled area's position (`fraction`: 0 to 1 in whole hundredths).
+ * 0 to MAX_LENGTH); a scrolled area's position (`fraction`: 0 to 1 in whole hundredths); or
+ * session detail's (PEN-177) `ref` (REF_PATTERN), `index` (a whole number 0 to MAX_INDEX),
+ * `chars` (a whole number 0 to MAX_CHARS) and `shape` (block tokens, `detail.ts`).
  */
 export type PropSpec =
   | { readonly type: 'enum'; readonly values: readonly (string | number | boolean)[] }
@@ -134,7 +152,11 @@ export type PropSpec =
         | 'setting'
         | 'screen'
         | 'length'
-        | 'fraction';
+        | 'fraction'
+        | 'ref'
+        | 'index'
+        | 'chars'
+        | 'shape';
     };
 
 const enumOf = (values: readonly (string | number | boolean)[]): PropSpec => ({
@@ -145,6 +167,11 @@ const BOOL: PropSpec = { type: 'bool' };
 const COUNT: PropSpec = { type: 'count' };
 const TOOK: PropSpec = { type: 'duration' };
 const LENGTH: PropSpec = { type: 'length' };
+const REF: PropSpec = { type: 'ref' };
+const INDEX: PropSpec = { type: 'index' };
+const CHARS: PropSpec = { type: 'chars' };
+const SHAPE: PropSpec = { type: 'shape' };
+const TRUE = enumOf([true]);
 
 /** Each kind's props: the only keys allowed, and what each may hold. */
 export const PROP_SPECS: Readonly<Record<EventKind, Readonly<Record<string, PropSpec>>>> = {
@@ -187,6 +214,11 @@ export const PROP_SPECS: Readonly<Record<EventKind, Readonly<Record<string, Prop
   },
   // PEN-175: the area is the event's name; how far down it is, in hundredths.
   scroll: { position: { type: 'fraction' } },
+  // PEN-177: each `note` and `tree` name takes its own props (NAME_PROP_SPECS); an `input`'s
+  // name is the dialog its field is in, and it says which field and how long its text is.
+  note: {},
+  input: { field: enumOf(INPUT_FIELDS), chars: CHARS },
+  tree: {},
 };
 
 /**
@@ -212,6 +244,30 @@ export const NAME_PROP_SPECS: Readonly<Record<string, Readonly<Record<string, Pr
     themeMode: enumOf(THEME_MODES),
     tabs: COUNT,
   },
+  // PEN-177: session detail. `note` and `folder` are refs (a keyed hash of the real id), added
+  // where the key is (the Mac's main process, Android's Kotlin); `folder` is absent at the top level.
+  'note.open': {
+    note: REF,
+    folder: REF,
+    how: enumOf(['open', 'switch', 'resync']),
+    titleChars: CHARS,
+    shape: SHAPE,
+    more: TRUE,
+  },
+  'note.typing': {
+    note: REF,
+    block: INDEX,
+    title: TRUE,
+    typed: CHARS,
+    deleted: CHARS,
+    remote: TRUE,
+  },
+  'note.blocks': { note: REF, block: INDEX, removed: INDEX, inserted: SHAPE, remote: TRUE },
+  'note.cursor': { note: REF, block: INDEX, title: TRUE },
+  'note.select': { note: REF, block: INDEX, chars: CHARS, span: INDEX },
+  'tree.expand': { folder: REF, depth: INDEX, source: enumOf(['click', 'key', 'reveal']) },
+  'tree.collapse': { folder: REF, depth: INDEX, source: enumOf(['click', 'key', 'reveal']) },
+  'tree.open': { note: REF, folder: REF, depth: INDEX, source: enumOf(['click', 'key']) },
 };
 
 /**
@@ -229,6 +285,10 @@ export const NAME_CLIENTS: Readonly<Record<string, readonly string[]>> = {
  */
 export const KIND_CLIENTS: Readonly<Partial<Record<EventKind, readonly string[]>>> = {
   scroll: ['mac', 'android'],
+  // PEN-177: session detail comes from the apps, which have notes open, fields and a tree.
+  note: ['mac', 'android'],
+  input: ['mac', 'android'],
+  tree: ['mac', 'android'],
 };
 
 function checkOf(spec: PropSpec): Check {
@@ -253,6 +313,14 @@ function checkOf(spec: PropSpec): Check {
       return length;
     case 'fraction':
       return fraction;
+    case 'ref':
+      return ref;
+    case 'index':
+      return index;
+    case 'chars':
+      return chars;
+    case 'shape':
+      return shape;
   }
 }
 

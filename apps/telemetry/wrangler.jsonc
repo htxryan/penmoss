@@ -24,10 +24,12 @@
     },
   ],
   // The rate-limiting binding counts per key and never stores it: the IP is only a key here.
-  // Its period is 10 or 60 seconds, so forgets are limited per minute, not per hour.
+  // Its period is 10 or 60 seconds, so forgets are limited per minute, not per hour. PEN-177
+  // doubled the batch limits for session detail: typing makes about 5 batches a minute, and 60
+  // drains an offline backlog at up to 12,000 events a minute.
   "ratelimits": [
-    { "name": "INSTALL_LIMIT", "namespace_id": "13701", "simple": { "limit": 30, "period": 60 } },
-    { "name": "IP_LIMIT", "namespace_id": "13702", "simple": { "limit": 120, "period": 60 } },
+    { "name": "INSTALL_LIMIT", "namespace_id": "13701", "simple": { "limit": 60, "period": 60 } },
+    { "name": "IP_LIMIT", "namespace_id": "13702", "simple": { "limit": 240, "period": 60 } },
     { "name": "FORGET_LIMIT", "namespace_id": "13703", "simple": { "limit": 5, "period": 60 } },
   ],
   // 02:15 UTC: roll yesterday up, prune, refresh the catalogue (src/nightly.ts).

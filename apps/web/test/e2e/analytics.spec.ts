@@ -41,7 +41,10 @@ async function expectEqualAnswers(scope: Locator) {
       const style = getComputedStyle(element);
       return [style.borderColor, style.borderWidth, style.fontWeight, style.backgroundColor];
     });
-  expect(await look(share)).toEqual(await look(dont));
+  // A hover leaving runs its transition: the two are compared once it has ended.
+  await expect
+    .poll(async () => JSON.stringify(await look(share)) === JSON.stringify(await look(dont)))
+    .toBe(true);
   const row = (await scope.locator('.consent-answers').boundingBox())!;
   const shareBox = (await share.boundingBox())!;
   const dontBox = (await dont.boundingBox())!;
@@ -74,6 +77,11 @@ async function expectQuestion(scope: Locator) {
     );
   await versions.scrollIntoViewIfNeeded();
   await expect(versions).toBeInViewport();
+  // Session detail (PEN-177's AC20): core's one line, after the CLI's.
+  const shape = scope
+    .getByTestId('consent-recorded')
+    .getByText('The shape of your notes and how much you type, never the words', { exact: true });
+  await expect(shape).toBeVisible();
   await expect(scope.getByTestId('consent-never')).toContainText(
     'What you write: notes, titles, tags, links and searches',
   );
@@ -313,9 +321,13 @@ test.describe('Settings → Privacy', () => {
     await expect(days).toContainText('days');
     await expect(days.getByTestId('privacy-limit-range')).toHaveText('1–360 days');
     await expect(days.getByTestId('privacy-limit-default')).toHaveCount(0);
-    // How much each may take (core's estimate: 5,000 events, 2 files of 1 MB).
+    // Keep at Most's default and range (PEN-177's AC16), digits grouped.
+    const most = advanced.locator('[data-setting="keep-at-most"]');
+    await expect(most.getByRole('textbox')).toHaveValue('200,000');
+    await expect(most.getByTestId('privacy-limit-range')).toHaveText('500–2,000,000 events');
+    // How much each may take (core's estimate: 200,000 events, 2 files of 1 MB).
     await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-      /^About [\d.]+ MB of events at most on this Mac$/,
+      'About 95 MB of events at most on this Mac',
     );
     await expect(advanced.getByTestId('privacy-space-logs')).toHaveText(
       'Up to 2 MB of logs on this Mac (at most 400 MB)',
@@ -440,6 +452,148 @@ test.describe('Analytics Data (ac36)', () => {
   test.use({
     analytics: { consent: 'yes', events: 255 },
     permissions: ['clipboard-read', 'clipboard-write'],
+  });
+
+  test('keeps each name whole beside long props, which wrap, and never scrolls sideways (PEN-177)', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width: 1100, height: 720 });
+    await page.goto('/settings/privacy/data');
+    const data = page.getByTestId('analytics-data');
+    await expect(data.getByRole('heading', { level: 1 })).toHaveText('Analytics Data');
+    // Events of session detail whose props run long, as the Mac records them.
+    const ref = 'a1b2c3d4e5f60718';
+    const shape = Array.from({ length: 40 }, (_, index) => `p:${100 + index}`);
+    await page.evaluate(
+      ({ ref, shape }) => {
+        const at = Date.now();
+        window.penmossDesktop!.analytics!.record([
+          {
+            kind: 'command',
+            name: 'app.palette',
+            props: { source: 'key', keys: 'Mod+Shift+P' },
+            at,
+          },
+          {
+            kind: 'tree',
+            name: 'open',
+            props: { note: ref, folder: ref, depth: 3, source: 'click' },
+            at,
+          },
+          { kind: 'tree', name: 'collapse', props: { folder: ref, depth: 2, source: 'key' }, at },
+          {
+            kind: 'click',
+            name: 'privacy.data.filter-client',
+            props: { source: 'pointer' },
+            at,
+          },
+          // A name of 28 characters with a hyphen, which the Mac's font once broke after its hyphen.
+          {
+            kind: 'click',
+            name: 'firstrun.welcome.get-started',
+            props: { source: 'pointer' },
+            at,
+          },
+          // The catalogue's longest name, which can only break between its words.
+          {
+            kind: 'click',
+            name: 'settings.git-notebooks.signing-key.new-ed25519',
+            props: { source: 'pointer' },
+            at,
+          },
+          {
+            kind: 'note',
+            name: 'open',
+            props: { note: ref, folder: ref, how: 'open', titleChars: 24, shape },
+            at,
+          },
+        ]);
+      },
+      { ref, shape },
+    );
+    // The viewer reads the record when it opens.
+    await page.reload();
+    await expect(data.getByRole('heading', { level: 1 })).toHaveText('Analytics Data');
+    const rows = data.getByTestId('analytics-data-row');
+    const open = rows
+      .filter({ has: page.locator('td:nth-child(3)', { hasText: /^note$/ }) })
+      .filter({ hasText: ref })
+      .first();
+    await expect(open).toBeVisible();
+    // How many lines a cell's text takes on screen.
+    const linesOf = (cells: Locator) =>
+      cells.evaluateAll((all) =>
+        all.map((cell) => {
+          const range = document.createRange();
+          range.selectNodeContents(cell);
+          return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+        }),
+      );
+    /** Where a cell's text breaks onto its next line: the text before each break. */
+    const breaksOf = (cell: Locator) =>
+      cell.evaluate((element) => {
+        const text = element.textContent ?? '';
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const tops: number[] = [];
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          for (let index = 0; index < (node.textContent ?? '').length; index += 1) {
+            const range = document.createRange();
+            range.setStart(node, index);
+            range.setEnd(node, index + 1);
+            tops.push(Math.round(range.getBoundingClientRect().top));
+          }
+        }
+        return tops.flatMap((top, index) =>
+          index > 0 && top > tops[index - 1]! ? [text.slice(0, index)] : [],
+        );
+      });
+    const longest = rows
+      .filter({ hasText: 'settings.git-notebooks.signing-key.new-ed25519' })
+      .locator('td:nth-child(4)');
+    const whole = rows.filter({ hasText: 'privacy.data.filter-client' }).locator('td:nth-child(4)');
+    // At every width the Mac's window takes, from its narrowest (480) up: nothing scrolls sideways,
+    // and a name breaks, if it must, only after a dot or a hyphen, never inside a word.
+    for (let width = 480; width <= 1280; width += 20) {
+      await page.setViewportSize({ width, height: 720 });
+      const sideways = await data.evaluate((element) => {
+        const wrap = element.querySelector<HTMLElement>('.privacy-table-wrap')!;
+        const root = document.documentElement;
+        return {
+          table: wrap.scrollWidth - wrap.clientWidth,
+          page: root.scrollWidth - root.clientWidth,
+        };
+      });
+      expect({ width, ...sideways }).toEqual({ width, table: 0, page: 0 });
+      for (const cell of [longest, whole]) {
+        for (const before of await breaksOf(cell)) expect(before).toMatch(/[.-]$/);
+      }
+    }
+    // At the proofs' widths (the Mac's window is 1280), every name of up to 29 characters is whole
+    // on one line, measured in the name's own font; the longest breaks between its words.
+    for (const width of [1280, 1100]) {
+      await page.setViewportSize({ width, height: 720 });
+      await expect(whole).toHaveText('privacy.data.filter-client');
+      expect(await linesOf(whole)).toEqual([1]);
+      expect((await breaksOf(longest)).length).toBeGreaterThan(0);
+      const nameTexts = await rows.locator('td:nth-child(4)').allTextContents();
+      const names = await linesOf(rows.locator('td:nth-child(4)'));
+      expect(names.length).toBeGreaterThanOrEqual(6);
+      expect(nameTexts).toContain('firstrun.welcome.get-started');
+      expect({
+        width,
+        broken: nameTexts.filter((name, index) => name.length <= 29 && names[index] !== 1),
+      }).toEqual({ width, broken: [] });
+    }
+    await expect(open.locator('td:nth-child(4)')).toHaveText('open');
+    // The props beside it wrap instead.
+    const [props] = await linesOf(open.locator('td:nth-child(5)'));
+    expect(props).toBeGreaterThan(1);
+    await open.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    await holdForProof(page, 2_000);
+    await expect(open).toBeInViewport();
+    expect(errors).toEqual([]);
   });
 
   test('pages the record newest first under Privacy, filtered by state and client', async ({

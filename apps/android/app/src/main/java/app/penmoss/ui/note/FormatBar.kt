@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.editor.FormatState
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.settings.LineSymbol
@@ -316,7 +317,7 @@ fun LinkDialog(current: String?, onApply: (String) -> Unit, onDismiss: () -> Uni
                         onApply(address)
                     }
                 }),
-                modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("link-address"),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("link-address").typedLength("link", "url", address),
             )
         },
         confirmButton = {

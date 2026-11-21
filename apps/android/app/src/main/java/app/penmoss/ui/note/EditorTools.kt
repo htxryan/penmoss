@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.analytics.typedLength
 import app.penmoss.editor.BlockChoices
 import app.penmoss.editor.FormatState
 import app.penmoss.editor.NoteCounts
@@ -251,7 +252,7 @@ internal fun BlockSheet(
                         onPick(first)
                     }
                 }),
-                modifier = Modifier.fillMaxWidth().testTag("blockSearch"),
+                modifier = Modifier.fillMaxWidth().testTag("blockSearch").typedLength("blockPicker", "query", query),
             )
             when {
                 items == null -> Unit
