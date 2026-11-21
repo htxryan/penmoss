@@ -1,6 +1,7 @@
+import { createHmac } from 'node:crypto';
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { analyticsEnv, analyticsStatus, fakeAnalytics, type FakeAnalytics } from './fake-analytics';
 import {
   bareRepository,
@@ -53,6 +54,7 @@ async function endpoint(): Promise<FakeAnalytics> {
 
 interface Recorded {
   readonly id: number;
+  readonly at: number;
   readonly kind: string;
   readonly name: string;
   readonly props: Readonly<Record<string, unknown>>;
@@ -70,6 +72,30 @@ const noteEvents = async (page: Page, name?: string) =>
   (await record(page)).filter(
     (event) => event.kind === 'note' && (name === undefined || event.name === name),
   );
+
+/** A note's ref under the key main keeps beside the consent file: AC1's formula, worked here. */
+const refOf = (key: string, noteId: string) =>
+  createHmac('sha256', Buffer.from(key, 'hex'))
+    .update(`note:${noteId}`, 'utf8')
+    .digest('hex')
+    .slice(0, 16);
+
+/**
+ * Every `note open` the record holds now (ref, how, shape, at), logged and attached to the report:
+ * the evidence of which open the test reads. The welcome note the first run opens is one of them.
+ */
+async function logOpens(page: Page, testInfo: TestInfo, label: string): Promise<void> {
+  const opens = (await noteEvents(page, 'open')).map(({ id, at, props }) => ({
+    id,
+    at,
+    ref: props['note'],
+    how: props['how'],
+    shape: props['shape'],
+  }));
+  const line = JSON.stringify({ label, opens });
+  console.log(`[note open] ${line}`);
+  await testInfo.attach(`note-open-${label}`, { body: line, contentType: 'application/json' });
+}
 
 test('the first run’s last step lists the shape of your notes under What Is Recorded (AC20)', async () => {
   test.setTimeout(180_000);
@@ -132,18 +158,23 @@ test('the dialog over an existing install lists the shape of your notes too (AC2
 
 test('a note’s shape and typing are recorded by ref, shown in Analytics Data; Advanced and Delete My Shared Data (AC1, AC2, AC16, AC21, AC23)', async () => {
   test.setTimeout(300_000);
+  const testInfo = test.info();
   const fake = await endpoint();
   const launched = await launch({ analytics: 'yes', env: analyticsEnv(fake) });
   opened.push(launched);
   const { app, page, home } = launched;
   await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
+  // A new notebook's first run ends on its welcome note: that note's open is in the record too,
+  // under its own ref, before this test's note is made.
   await gitNotebook(launched);
 
   // A note written line by line: its open, typing bursts and a splice for each Enter.
   await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
   await page.keyboard.press(NEW_NOTE);
   await expect(page).toHaveURL(ULID);
-  const noteId = ULID.exec(page.url())![1]!;
+  const noteId = ULID.exec(new URL(page.url()).pathname)![1]!;
+  // The key beside the consent file, made by the first event that named a note (AC1, AC4).
+  const keyPath = join(home, 'analytics-key');
   await expect(page.getByTestId('note-title')).toBeFocused();
   await page.keyboard.type(TITLE);
   await page.keyboard.press('Enter');
@@ -155,30 +186,46 @@ test('a note’s shape and typing are recorded by ref, shown in Analytics Data; 
   await holdForProof(page, 1_000);
   await expect.poll(async () => (await noteEvents(page, 'typing')).length).toBeGreaterThan(3);
   await expect.poll(async () => (await noteEvents(page, 'blocks')).length).toBeGreaterThan(3);
+  const key = readFileSync(keyPath, 'utf8').trim();
+  expect(key).toMatch(/^[0-9a-f]{64}$/);
+  // This note's ref, which every one of its events names (AC1).
+  const ref = refOf(key, noteId);
+  await logOpens(page, testInfo, 'before-reopen');
 
-  // Opened again: a note open with the same ref, its 16 blocks in its shape (AC2, AC5).
+  // Opened again: a note open with the same ref, its 16 blocks in its shape (AC2, AC5). The open
+  // recorded by this showing, not an earlier one: the record already holds the welcome note's
+  // and this note's own first open (`p:0`, before a line was typed), and the page sends its
+  // events a moment after it records them.
   await go(page, '/');
   await expect(page).not.toHaveURL(ULID);
+  const reopened = Date.now();
   await go(page, `/notes/${noteId}`);
   await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  await expect.poll(async () => (await noteEvents(page, 'open')).length).toBeGreaterThan(1);
-  const opens = await noteEvents(page, 'open');
-  const last = opens.at(-1)!;
-  expect(last.props['how']).toMatch(/^(open|switch)$/);
-  expect(last.props['shape']).toEqual(LINES.map((line) => `p:${line.length}`));
-  expect(last.props['titleChars']).toBe(TITLE.length);
+  const ready = Date.now();
+  const reopen = async () =>
+    (await noteEvents(page, 'open')).filter(
+      (event) => event.props['note'] === ref && event.at >= reopened,
+    );
+  await expect.poll(async () => (await reopen()).length).toBeGreaterThan(0);
+  await logOpens(page, testInfo, `reopened-${reopened}-ready-${ready}`);
+  const [last] = await reopen();
+  expect(last!.props['how']).toMatch(/^(open|switch)$/);
+  expect(last!.props['shape']).toEqual(LINES.map((line) => `p:${line.length}`));
+  expect(last!.props['titleChars']).toBe(TITLE.length);
 
-  // Refs, never the note's id, title or words; one ref for the note throughout (AC1, AC2).
+  // Refs, never the note's id, title or words; this note's ref throughout (AC1, AC2): every
+  // event the writing made names it, and the opens before it name only it and the welcome note.
   const events = await noteEvents(page);
-  const refs = new Set(events.map((event) => event.props['note']));
-  expect(refs.size).toBe(1);
-  const [ref] = [...refs] as string[];
-  expect(ref).toMatch(/^[0-9a-f]{16}$/);
+  for (const event of events) expect(event.props['note']).toMatch(/^[0-9a-f]{16}$/);
+  const written = events.filter((event) => event.name === 'typing' || event.name === 'blocks');
+  expect(written.length).toBeGreaterThan(6);
+  expect(new Set(written.map((event) => event.props['note']))).toEqual(new Set([ref]));
+  const opens = await noteEvents(page, 'open');
+  expect(opens.filter((event) => event.props['note'] === ref).length).toBeGreaterThan(1);
+  expect(new Set(opens.map((event) => event.props['note'])).size).toBeLessThanOrEqual(2);
   const stored = JSON.stringify(await record(page));
   for (const text of [noteId, TITLE, 'seeds', 'Garden']) expect(stored).not.toContain(text);
   // The key beside the consent file, never in an event, the status or the consent file (AC4).
-  const key = readFileSync(join(home, 'analytics-key'), 'utf8').trim();
-  expect(key).toMatch(/^[0-9a-f]{64}$/);
   expect(stored).not.toContain(key);
   expect(JSON.stringify(await analyticsStatus(page))).not.toContain(key);
   expect(readFileSync(join(home, 'analytics.json'), 'utf8')).not.toContain(key);
@@ -194,18 +241,19 @@ test('a note’s shape and typing are recorded by ref, shown in Analytics Data; 
     rows
       .filter({ has: page.locator('td:nth-child(3)', { hasText: /^note$/ }) })
       .filter({ has: page.locator('td:nth-child(4)', { hasText: new RegExp(`^${name}$`) }) });
-  const openRow = rowsOf('open').first();
+  // This note's reopen: the newest of its opens (the viewer shows the newest first).
+  const openRow = rowsOf('open').filter({ hasText: ref }).first();
   await expect(openRow).toBeVisible();
   const shown = LINES.slice(0, 12)
     .map((line) => `p:${line.length}`)
     .join(' ');
-  // Shown again from the shelf of kept editors, the note's open says `switch`.
+  // Opened again it says `open`, or `switch` when its editor was still on the shelf of kept ones.
   await expect(openRow.locator('td:nth-child(5)')).toHaveText(
     new RegExp(
       `^note: ${ref}, how: (open|switch), titleChars: ${TITLE.length}, shape: ${shown} … \\+4$`,
     ),
   );
-  const typingRow = rowsOf('typing').first();
+  const typingRow = rowsOf('typing').filter({ hasText: ref }).first();
   await expect(typingRow).toBeVisible();
   await expect(typingRow.locator('td:nth-child(5)')).toHaveText(
     new RegExp(`^note: ${ref}, (block: \\d+|title: true), typed: \\d+, deleted: \\d+$`),
@@ -252,7 +300,7 @@ test('a note’s shape and typing are recorded by ref, shown in Analytics Data; 
   expect(fake.forgets).toEqual([install]);
   // A new ID, and a new ref key with it (AC3).
   expect((await analyticsStatus(page)).install).not.toBe(install);
-  await expect.poll(() => readFileSync(join(home, 'analytics-key'), 'utf8').trim()).not.toBe(key);
+  await expect.poll(() => readFileSync(keyPath, 'utf8').trim()).not.toBe(key);
   await holdForProof(page);
   await expect(done).toBeInViewport();
 });
