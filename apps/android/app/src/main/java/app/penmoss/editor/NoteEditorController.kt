@@ -265,8 +265,11 @@ class NoteEditorController(
     /** The screen was shown at least once: what the page sends as it goes (its last bursts) is kept. */
     private var everShown = false
 
-    /** The page's usage while the screen is not shown, oldest first: recorded once it is. */
-    private val heldUsage = ArrayList<FromEditor>()
+    /**
+     * The page's usage while the screen is not shown, oldest first, each with when it came:
+     * recorded once it is, named by the key current when it came (a reset in Settings between).
+     */
+    private val heldUsage = ArrayList<Pair<FromEditor, Long?>>()
 
     /** Between reading the stored content and sending it: exchanges meanwhile are held (S7). */
     private var opening = false
@@ -735,7 +738,11 @@ class NoteEditorController(
             everShown = true
             heldUsage.toList().also { heldUsage.clear() }
         }
-        release.forEach(::recordUsage)
+        // A page made again behind another screen starts with its open: that note is shown now,
+        // so it and what follows it are named as of now. Otherwise they are what the page sent as
+        // it paused, named by the key current when they came.
+        val shownNow = (release.firstOrNull()?.first as? FromEditor.Usage)?.name == "open"
+        release.forEach { (message, at) -> recordUsage(message, if (shownNow) null else at) }
     }
 
     /** The page's usage: recorded while the screen is shown, held otherwise. */
@@ -745,14 +752,14 @@ class NoteEditorController(
                 // A note open starts the note's shape again: what came before it is moot.
                 if (message is FromEditor.Usage && message.name == "open") heldUsage.clear()
                 if (heldUsage.size >= MAX_HELD_USAGE) heldUsage.removeAt(0)
-                heldUsage += message
+                heldUsage += message to Analytics.now()
                 return
             }
         }
         recordUsage(message)
     }
 
-    private fun recordUsage(message: FromEditor) {
+    private fun recordUsage(message: FromEditor, heldAt: Long? = null) {
         when (message) {
             is FromEditor.Scroll -> Analytics.record("scroll", "note", ScrollEvents.propsOf(message.position))
             is FromEditor.Usage -> Analytics.recordWithRefs(
@@ -760,6 +767,7 @@ class NoteEditorController(
                 message.name,
                 message.props,
                 mapOf("note" to ("note" to noteId), "folder" to ("folder" to usageFolder)),
+                heldAt,
             )
             else -> Unit
         }
@@ -777,7 +785,7 @@ class NoteEditorController(
             screenShown = false
             held
         }
-        release.forEach(::recordUsage)
+        release.forEach { (message, at) -> recordUsage(message, at) }
     }
 
     /** The app is pausing: have the page send the edits it is batching. */

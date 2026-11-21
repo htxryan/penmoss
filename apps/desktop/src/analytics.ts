@@ -55,6 +55,7 @@ import {
   type Page,
   type PageQuery,
   type Props,
+  type StateCode,
   type StateName,
   type StoredEvent,
 } from '@penmoss/core/analytics';
@@ -157,6 +158,8 @@ function parseRefs(value: unknown): PageEventRefs | undefined {
 export const MAX_PAGE_EVENTS = 200;
 /** A page's `at` further off than this from main's clock is replaced by main's. */
 const AT_SLACK_MS = 24 * 3_600_000;
+/** The most retired ref keys kept for late events (PEN-177). */
+const MAX_RETIRED_KEYS = 4;
 /** A batch after a full one follows soon. */
 const AGAIN_MS = 2_000;
 
@@ -316,6 +319,13 @@ export class Analytics {
   private lastDelay = 0;
   /** The ref key (PEN-177) and the install it was read for; read again when the ID changes. */
   private refKey: { readonly install: string; readonly key: string } | null = null;
+  /**
+   * The keys replaced by a reset or a forget, oldest first, each with when it was replaced: an
+   * event a page recorded before then reaches main later (its queue, a burst still flushing), and
+   * is named by the key current at its `at` and kept here, Not Shared, so it never links the old
+   * ID with the new one.
+   */
+  private retired: Array<{ readonly key: string; readonly until: number }> = [];
 
   constructor(private readonly options: AnalyticsOptions) {
     this.session = options.session ?? newSessionId();
@@ -438,20 +448,51 @@ export class Analytics {
     return refOf(this.key(), type, id);
   }
 
-  /** The page's props with its named ids swapped for refs; the ids go no further. */
-  private withRefs(input: PageEventInput): Props {
+  /**
+   * The page's props with its named ids swapped for refs under `key` (the one current at the
+   * event's `at`); the ids go no further.
+   */
+  private withRefs(input: PageEventInput, key: string | null): Props {
     const props = input.props ?? {};
     if (!input.refs) return props;
+    const ref = (type: 'note' | 'folder', id: string) =>
+      key === null ? this.refOf(type, id) : refOf(key, type, id);
     // The refs first: what the event is about reads first in the viewers.
     return {
-      ...(input.refs.note ? { note: this.refOf('note', input.refs.note) } : {}),
-      ...(input.refs.folder ? { folder: this.refOf('folder', input.refs.folder) } : {}),
+      ...(input.refs.note ? { note: ref('note', input.refs.note) } : {}),
+      ...(input.refs.folder ? { folder: ref('folder', input.refs.folder) } : {}),
       ...props,
     };
   }
 
+  /** The key in force until now is retired: events from before now are named by it. */
+  private retire(key: string | null): void {
+    if (key === null) return;
+    const now = this.now();
+    // An `at` older than the slack is main's own clock by then, so its key is never wanted.
+    this.retired = [
+      ...this.retired.filter((item) => now - item.until <= AT_SLACK_MS),
+      { key, until: now },
+    ].slice(-MAX_RETIRED_KEYS);
+  }
+
+  /** The retired key current at `at`, or null when the key in force was. */
+  private retiredAt(at: number): string | null {
+    return this.retired.find((item) => at < item.until)?.key ?? null;
+  }
+
+  /** The key in force, made if need be; null when the home can't be read or written. */
+  private keyOrNull(): string | null {
+    try {
+      return this.key();
+    } catch {
+      return null;
+    }
+  }
+
   /** A new ref key with a new ID: the same note gets a different ref from then on. */
   private renewKey(): void {
+    this.retire(this.keyOrNull());
     this.refKey = null;
     try {
       renewRefKey(this.refKeyPath);
@@ -465,13 +506,16 @@ export class Analytics {
     const events = parsePageEvents(value);
     if (events.length === 0) return 0;
     const state = this.state();
-    const kept: Array<{ event: AnalyticsEvent; state: typeof state }> = [];
+    const kept: Array<{ event: AnalyticsEvent; state: StateCode }> = [];
     const now = this.now();
+    let waiting = 0;
     for (const input of events) {
       const at =
         Number.isFinite(input.at) && Math.abs(input.at - now) <= AT_SLACK_MS
           ? Math.round(input.at)
           : now;
+      // Recorded before a reset or a forget, it belongs to the old ID: its key, and kept here.
+      const retired = this.retiredAt(at);
       const event: AnalyticsEvent = {
         session: this.session,
         seq: this.seq,
@@ -480,14 +524,16 @@ export class Analytics {
         ...(input.sizeClass ? { sizeClass: input.sizeClass } : {}),
         kind: input.kind,
         name: input.name,
-        props: this.withRefs(input),
+        props: this.withRefs(input, retired),
       };
       if (eventProblem(event) !== null) continue;
       this.seq += 1;
-      kept.push({ event, state });
+      const stateOf = retired === null ? state : STATES.local;
+      if (stateOf === STATES.waiting) waiting += 1;
+      kept.push({ event, state: stateOf });
     }
     this.options.store.insert(kept);
-    if (state === STATES.waiting) this.counted(kept.length);
+    if (waiting > 0) this.counted(waiting);
     return kept.length;
   }
 
@@ -643,6 +689,8 @@ export class Analytics {
       await this.options.store.sharingOff();
     }
     if (before.install !== next.install) {
+      // The CLI made the new key: the one read for the old ID is retired from now.
+      if (this.refKey?.install === before.install) this.retire(this.refKey.key);
       this.abortSend();
       await this.options.store.unsentToLocal();
     }

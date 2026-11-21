@@ -454,6 +454,74 @@ test.describe('Analytics Data (ac36)', () => {
     permissions: ['clipboard-read', 'clipboard-write'],
   });
 
+  test('keeps each name whole beside long props, which wrap (PEN-177)', async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width: 1100, height: 720 });
+    await page.goto('/settings/privacy/data');
+    const data = page.getByTestId('analytics-data');
+    await expect(data.getByRole('heading', { level: 1 })).toHaveText('Analytics Data');
+    // Events of session detail whose props run long, as the Mac records them.
+    const ref = 'a1b2c3d4e5f60718';
+    const shape = Array.from({ length: 40 }, (_, index) => `p:${100 + index}`);
+    await page.evaluate(
+      ({ ref, shape }) => {
+        const at = Date.now();
+        window.penmossDesktop!.analytics!.record([
+          {
+            kind: 'command',
+            name: 'app.palette',
+            props: { source: 'key', keys: 'Mod+Shift+P' },
+            at,
+          },
+          {
+            kind: 'tree',
+            name: 'open',
+            props: { note: ref, folder: ref, depth: 3, source: 'click' },
+            at,
+          },
+          { kind: 'tree', name: 'collapse', props: { folder: ref, depth: 2, source: 'key' }, at },
+          {
+            kind: 'note',
+            name: 'open',
+            props: { note: ref, folder: ref, how: 'open', titleChars: 24, shape },
+            at,
+          },
+        ]);
+      },
+      { ref, shape },
+    );
+    // The viewer reads the record when it opens.
+    await page.reload();
+    await expect(data.getByRole('heading', { level: 1 })).toHaveText('Analytics Data');
+    const rows = data.getByTestId('analytics-data-row');
+    const open = rows
+      .filter({ has: page.locator('td:nth-child(3)', { hasText: /^note$/ }) })
+      .filter({ hasText: ref })
+      .first();
+    await expect(open).toBeVisible();
+    // How many lines a cell's text takes on screen.
+    const linesOf = (cells: Locator) =>
+      cells.evaluateAll((all) =>
+        all.map((cell) => {
+          const range = document.createRange();
+          range.selectNodeContents(cell);
+          return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+        }),
+      );
+    const names = await linesOf(rows.locator('td:nth-child(4)'));
+    expect(names.length).toBeGreaterThanOrEqual(4);
+    expect(names.every((lines) => lines === 1)).toBe(true);
+    await expect(open.locator('td:nth-child(4)')).toHaveText('open');
+    // The props beside it wrap instead.
+    const [props] = await linesOf(open.locator('td:nth-child(5)'));
+    expect(props).toBeGreaterThan(1);
+    await open.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    await holdForProof(page, 2_000);
+    await expect(open).toBeInViewport();
+    expect(errors).toEqual([]);
+  });
+
   test('pages the record newest first under Privacy, filtered by state and client', async ({
     page,
   }) => {

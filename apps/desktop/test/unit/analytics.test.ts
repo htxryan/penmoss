@@ -193,6 +193,67 @@ describe('session detail refs (PEN-177)', () => {
     expect(w.analytics.refOf('note', NOTE)).not.toBe(second);
   });
 
+  it('names an event queued before Reset My Analytics ID by the old key, and keeps it here', async () => {
+    const w = world({ consent: { consent: 'yes', sharingSince: NOW } });
+    const old = w.analytics.refOf('note', NOTE);
+    w.analytics.recordPage([opened(NOW - 2)]);
+    // A burst the page recorded before the reset, still in its queue when the reset goes.
+    const burst = {
+      kind: 'note',
+      name: 'typing',
+      props: { block: 1, typed: 6, deleted: 0 },
+      refs: { note: NOTE },
+      at: NOW - 1,
+    };
+    await w.analytics.resetId();
+    const renewed = w.analytics.refOf('note', NOTE);
+    expect(renewed).not.toBe(old);
+    // It reaches main after the reset, with one recorded after it.
+    expect(w.analytics.recordPage([burst, { ...burst, at: NOW + 1 }])).toBe(2);
+    const events = (await w.client.page({})).events.filter((event) => event.name === 'typing');
+    const late = events.find((event) => event.at === NOW - 1)!;
+    const after = events.find((event) => event.at === NOW + 1)!;
+    expect(late.props['note']).toBe(old);
+    expect(late.state).toBe('local');
+    expect(after.props['note']).toBe(renewed);
+    expect(after.state).toBe('waiting');
+    // Only what was recorded after the reset goes, under the new ID: nothing links the two.
+    await w.analytics.sendNow();
+    const sent = w.sent.flatMap((batch) => batch.body.events);
+    expect(sent.map((event) => event.at)).toEqual([NOW + 1]);
+    expect(JSON.stringify(w.sent)).not.toContain(old);
+  });
+
+  it('names an event queued before Delete My Shared Data by the old key, and never sends it', async () => {
+    const w = world({
+      consent: { consent: 'yes', sharingSince: NOW },
+      respond: () => new Response(null, { status: 202 }),
+    });
+    const old = w.analytics.refOf('note', NOTE);
+    expect(await w.analytics.forget()).toEqual({ outcome: 'ok' });
+    expect(w.analytics.recordPage([opened(NOW - 1)])).toBe(1);
+    const [late] = (await w.client.page({})).events;
+    expect(late!.props['note']).toBe(old);
+    expect(late!.state).toBe('local');
+    expect(w.analytics.refOf('note', NOTE)).not.toBe(old);
+  });
+
+  it('names an event queued before a reset from the CLI by the old key', async () => {
+    const w = world({ consent: { consent: 'yes', sharingSince: NOW } });
+    const old = w.analytics.refOf('note', NOTE);
+    // `penmoss analytics reset`: a new ID and a new key file, then main reads the change.
+    updateConsentFile((file) => ({ ...file, install: 'f'.repeat(32) }), w.consentPath);
+    rmSync(join(dirname(w.consentPath), 'analytics-key'));
+    await w.analytics.reload();
+    expect(w.analytics.recordPage([opened(NOW - 1), opened(NOW + 1)])).toBe(2);
+    const events = (await w.client.page({})).events;
+    const late = events.find((event) => event.at === NOW - 1)!;
+    const after = events.find((event) => event.at === NOW + 1)!;
+    expect(late.props['note']).toBe(old);
+    expect(late.state).toBe('local');
+    expect(after.props['note']).not.toBe(old);
+  });
+
   it('drops a ref id that is not a string, and an event of a new kind from a page with a prop it may not have', async () => {
     const w = world();
     const kept = w.analytics.recordPage([

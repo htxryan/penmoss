@@ -407,7 +407,12 @@
   white-space: nowrap;
 }
 
-.privacy-table-name,
+/* A name stays whole (PEN-177): only the props beside it wrap, however long they are. */
+.privacy-table-name {
+  font-family: var(--pm-mono);
+  white-space: nowrap;
+}
+
 .privacy-table-props {
   font-family: var(--pm-mono);
   overflow-wrap: anywhere;

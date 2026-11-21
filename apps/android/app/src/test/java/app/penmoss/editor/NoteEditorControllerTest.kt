@@ -503,6 +503,50 @@ class NoteEditorControllerTest {
         }
     }
 
+    /**
+     * PEN-177: a burst the page sends as the note screen pauses for Settings, held there, is the
+     * old ID's when Reset My Analytics ID comes before the screen shows again: named by the old
+     * key and kept on the phone, so nothing links the old ID with the new. What comes after the
+     * reset is named by the new key.
+     */
+    @Test
+    fun aBurstHeldBehindAResetKeepsTheOldRef() = runBlocking {
+        app.penmoss.analytics.AnalyticsHarness().use { harness ->
+            app.penmoss.analytics.Analytics.install(harness.service)
+            try {
+                harness.service.answer(app.penmoss.analytics.ConsentAnswer.YES, "0.4.2")
+                val old = harness.service.stateNow().refKey
+                val burst = kotlinx.serialization.json.buildJsonObject {
+                    put("block", kotlinx.serialization.json.JsonPrimitive(1))
+                    put("typed", kotlinx.serialization.json.JsonPrimitive(6))
+                    put("deleted", kotlinx.serialization.json.JsonPrimitive(0))
+                }
+                val controller = controller()
+                controller.screenShown(true)
+                // Settings in front: the page's last burst comes as the screen pauses, and is held.
+                controller.screenShown(false)
+                page(controller, FromEditor.Usage("n", "typing", burst))
+                harness.clock += 10
+                harness.service.resetId()
+                val renewed = harness.service.stateNow().refKey
+                assertTrue(old != renewed)
+                harness.clock += 10
+                // Back to the note: the held burst is recorded now, then one typed after the reset.
+                controller.screenShown(true)
+                page(controller, FromEditor.Usage("n", "typing", burst))
+                harness.service.flush()
+                val (late, after) = harness.store.page(null, null, 10).sortedBy { it.seq }.also { assertEquals(2, it.size) }
+                val refOf = { key: String -> app.penmoss.analytics.AnalyticsRefs.refOf(key, "note", "n") }
+                assertTrue(late.props, late.props.contains(refOf(old)))
+                assertEquals(app.penmoss.analytics.EventState.LOCAL, late.eventState)
+                assertTrue(after.props, after.props.contains(refOf(renewed)))
+                assertEquals(app.penmoss.analytics.EventState.WAITING, after.eventState)
+            } finally {
+                app.penmoss.analytics.Analytics.install(null)
+            }
+        }
+    }
+
     private fun syncedAt(epoch: String, update: String) = runBlocking {
         val content = store.content("n")
         store.saveExchange(Exchange.decide(content, Exchange.entry(content), BatchNoteReply("n", epoch, update, "SV-$update", null)))

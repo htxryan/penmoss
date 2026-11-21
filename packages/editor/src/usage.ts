@@ -580,7 +580,9 @@ export class NoteUsage {
       return;
     }
     if (docChanged || from > MAX_INDEX) return;
-    const to = blockAt(doc.resolve(selection.to), this.prefix).index;
+    // The last block selected holds the position before the end: a selection that ends at a
+    // block's boundary (a divider selected, a block selected whole) would otherwise count the next.
+    const to = Math.max(from, blockAt(doc.resolve(selection.to - 1), this.prefix).index);
     this.selection.moved({
       block: from,
       chars: clampUsage('chars', measureFragment(doc.slice(selection.from, selection.to).content)),

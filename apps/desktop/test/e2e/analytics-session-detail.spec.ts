@@ -258,6 +258,15 @@ test('a note’s shape and typing are recorded by ref, shown in Analytics Data; 
   await expect(typingRow.locator('td:nth-child(5)')).toHaveText(
     new RegExp(`^note: ${ref}, (block: \\d+|title: true), typed: \\d+, deleted: \\d+$`),
   );
+  // Each name whole on one line beside the long props, which wrap instead.
+  const lines = await rows.locator('td:nth-child(4)').evaluateAll((cells) =>
+    cells.map((cell) => {
+      const range = document.createRange();
+      range.selectNodeContents(cell);
+      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+    }),
+  );
+  expect(lines.filter((count) => count !== 1)).toEqual([]);
   await openRow.scrollIntoViewIfNeeded();
   await page.mouse.move(0, 0);
   await holdForProof(page);

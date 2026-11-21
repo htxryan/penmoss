@@ -6,7 +6,7 @@
  */
 import { replayShape, type Props } from '@penmoss/core/analytics';
 import { createYjs14Replica } from '@penmoss/model/yjs14';
-import { TextSelection } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { createCollabEditor } from '../src/collab';
@@ -192,6 +192,45 @@ describe('the cursor and the selection (AC10, AC11)', () => {
     clock.advance(2000);
     expect(named(events, 'select').map((event) => event.props)).toEqual([
       { block: 0, chars: 6, span: 2 },
+    ]);
+    expectValid(events);
+  });
+});
+
+describe('a selection ending at a block’s boundary (AC11)', () => {
+  const selected = (events: readonly Recorded[]) =>
+    named(events, 'select').map((event) => event.props);
+
+  it('counts a selected divider as one block', () => {
+    const { collab, clock, events } = usageEditor([
+      p('Above'),
+      { type: 'horizontalRule' },
+      p('Below'),
+    ]);
+    const view = collab.editor.view;
+    const doc = view.state.doc;
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(doc, doc.child(0).nodeSize)));
+    clock.advance(2000);
+    expect(selected(events)).toEqual([{ block: 1, chars: 0, span: 1 }]);
+    expectValid(events);
+  });
+
+  it('counts a block selected to its end as one block, and two to the end of the next', () => {
+    const { collab, clock, events } = usageEditor([p('Hello'), p('World'), p('!')]);
+    const view = collab.editor.view;
+    const doc = view.state.doc;
+    // From the start of the first block to its end, then on to the second's end.
+    select(view, inside(doc, 0), inside(doc, 0, 5));
+    clock.advance(1200);
+    select(view, inside(doc, 0), inside(doc, 1, 5));
+    clock.advance(1200);
+    // The first block selected whole, as a node: it ends at the boundary before the second.
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(doc, 0)));
+    clock.advance(2000);
+    expect(selected(events)).toEqual([
+      { block: 0, chars: 5, span: 1 },
+      { block: 0, chars: 10, span: 2 },
+      { block: 0, chars: 5, span: 1 },
     ]);
     expectValid(events);
   });
