@@ -15,6 +15,7 @@ import {
   limitsOf,
   limitSpec,
   parseLimit,
+  propsLine,
   rangeLabel,
   rangeMessage,
   resetId,
@@ -26,7 +27,6 @@ import {
   type LimitKey,
   type Limits,
   type StateName,
-  type StoredEvent,
 } from '@penmoss/core/analytics';
 import { forgetShared, type AnalyticsStore } from '@penmoss/core/analytics/node';
 import { UsageError } from '../args';
@@ -172,6 +172,8 @@ function turn(context: Context, analytics: AnalyticsIo, consent: 'yes' | 'no'): 
 }
 
 function newId(analytics: AnalyticsIo): { file: ConsentFile; moved: number } {
+  // A new ref key first (PEN-177), so the app finds it once it sees the new ID.
+  analytics.renewKey?.();
   const file = resetId(analytics.readConsent());
   analytics.writeConsent(file);
   const moved = withRecord(analytics, (record) => record.unsentToLocal()) ?? 0;
@@ -219,13 +221,6 @@ function clientFilter(value: string | undefined): ClientFilter | undefined {
   const wanted = value.trim().toLowerCase();
   if ((CLIENTS as readonly string[]).includes(wanted)) return wanted as ClientFilter;
   throw new UsageError(`--client is one of ${CLIENTS.join(', ')} (got ${value})`);
-}
-
-function propsText(props: StoredEvent['props']): string {
-  return Object.entries(props)
-    .filter(([, value]) => !(Array.isArray(value) && value.length === 0))
-    .map(([key, value]) => `${key}=${Array.isArray(value) ? value.join(',') : String(value)}`)
-    .join(' ');
 }
 
 function table(rows: readonly (readonly string[])[]): string[] {
@@ -278,7 +273,7 @@ function show(context: Context, analytics: AnalyticsIo): void {
       event.kind,
       event.name,
       STATE_LABELS[event.state],
-      propsText(event.props),
+      propsLine(event.props),
     ]),
   ];
   const last = events[events.length - 1]!;

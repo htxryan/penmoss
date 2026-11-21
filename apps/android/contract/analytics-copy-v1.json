@@ -93,6 +93,10 @@
       "mac": "CLI commands and agents’ MCP calls, by name",
       "android": ""
     },
+    "consent.recorded.5": {
+      "mac": "The shape of your notes and how much you type, never the words",
+      "android": "The shape of your notes and how much you type, never the words"
+    },
     "consent.never.title": {
       "mac": "Never Recorded",
       "android": "Never Recorded"

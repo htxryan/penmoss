@@ -11,6 +11,8 @@ import {
   consentPath,
   eventsPath,
   readConsentFile,
+  refKeyPathFor,
+  renewRefKey,
   sqliteModule,
   writeConsentFile,
 } from '@penmoss/core/analytics/node';
@@ -98,6 +100,7 @@ export function nodeAnalytics(options: NodeAnalyticsOptions = {}): AnalyticsIo {
     eventsPath: events,
     readConsent: () => readConsentFile(consent),
     writeConsent: (file) => writeConsentFile(file, consent),
+    renewKey: () => void renewRefKey(refKeyPathFor(consent)),
     openStore: () => {
       quietSqlite();
       return AnalyticsStore.open(events);

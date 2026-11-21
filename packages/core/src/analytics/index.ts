@@ -18,3 +18,4 @@ export * from './recorder';
 export * from './viewer';
 export * from './scroll';
 export * from './setting';
+export * from './detail';

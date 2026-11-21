@@ -6,3 +6,4 @@
 export * from './store';
 export * from './consent-file';
 export * from './sender';
+export * from './ref-key';

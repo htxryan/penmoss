@@ -1,6 +1,7 @@
 // A wall-clock budget (A1244): `task budgets` runs it, never `task check`. The local usage
-// record at its largest limit (PEN-137, AC35, "Staying fast at the maximums"): 800,000 events in
-// a database file, as the Mac keeps it. What the store does is unit tested in
+// record at its largest limit (PEN-137, AC35, "Staying fast at the maximums"; PEN-177 raised it):
+// 2,000,000 events in a database file, as the Mac keeps it, session detail among them (about 2%
+// note opens of about 4 KB, the rest mostly typing bursts and cursor moves). What the store does is unit tested in
 // analytics-store.test.ts; here only how long it takes. The budgets are the plan's ceilings,
 // with 2× slack on CI's slower runners. On CI the record is in /dev/shm, in memory, so the
 // budgets time the store's work and not a hosted runner's disk, which stalled single steps for
@@ -22,7 +23,7 @@ import { AnalyticsStore, STEP_MS, type PruneStep } from '../src/analytics/node/s
 
 const ON_CI = Boolean(process.env['CI']);
 const SLACK = ON_CI ? 2 : 1;
-const EVENTS = 800_000;
+const EVENTS = 2_000_000;
 const DAY = 86_400_000;
 const NOW = Date.parse('2026-11-19T12:00:00.000Z');
 /** The record spans 360 days, the longest Keep Events For. */
@@ -38,8 +39,40 @@ const STATE_MIX: readonly StateCode[] = [
   STATES.pending,
 ];
 
+/** A note's shape of about 4 KB: 600 tokens. */
+const SHAPE = Array.from({ length: 600 }, (_, k) =>
+  k % 10 === 0 ? `h2:${k % 60}` : k % 7 === 0 ? `li.b.1:${k}` : `p:${100 + k}`,
+);
+const NOTE = '0123456789abcdef';
+
+/** A Mac event's kind, name and props: 2% note opens, then typing, cursor moves and commands. */
+function macEvent(i: number): Pick<AnalyticsEvent, 'kind' | 'name' | 'props'> {
+  const slot = Math.floor(i / CLIENTS.length) % 50;
+  if (slot === 0) {
+    return {
+      kind: 'note',
+      name: 'open',
+      props: { note: NOTE, how: 'open', titleChars: 24, shape: SHAPE },
+    };
+  }
+  if (slot < 30) {
+    return {
+      kind: 'note',
+      name: 'typing',
+      props: { note: NOTE, block: slot, typed: 14, deleted: 2 },
+    };
+  }
+  if (slot < 42) return { kind: 'note', name: 'cursor', props: { note: NOTE, block: slot } };
+  if (slot < 45) return { kind: 'input', name: 'palette', props: { field: 'query', chars: slot } };
+  if (slot < 47) {
+    return { kind: 'tree', name: 'expand', props: { folder: NOTE, depth: 1, source: 'click' } };
+  }
+  return { kind: 'command', name: 'note.new', props: { source: 'key', keys: 'Mod+N', ran: true } };
+}
+
 function event(i: number): AnalyticsEvent {
   const client = CLIENTS[i % CLIENTS.length]!;
+  const mac = client === 'mac' ? macEvent(i) : null;
   return {
     session: (Math.floor(i / 1000) + 1).toString(16).padStart(16, '0'),
     seq: i % 1000,
@@ -51,9 +84,11 @@ function event(i: number): AnalyticsEvent {
     os: 'macos',
     osVersion: '26.1',
     ...(client === 'mac' ? { sizeClass: 'expanded' as const } : {}),
-    kind: client === 'mac' ? 'command' : client === 'cli' ? 'cli' : 'tool',
-    name: client === 'mac' ? 'note.new' : client === 'cli' ? 'search' : 'search_notes',
-    props: client === 'mac' ? { source: 'key', keys: 'Mod+N', ran: true } : { took: '<1s' },
+    ...(mac ?? {
+      kind: client === 'cli' ? 'cli' : 'tool',
+      name: client === 'cli' ? 'search' : 'search_notes',
+      props: { took: '<1s' },
+    }),
   };
 }
 
@@ -114,7 +149,7 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-describe('the usage record at 800,000 events', () => {
+describe('the usage record at 2,000,000 events', () => {
   it('holds them all', () => {
     expect(store.size()).toBe(EVENTS);
   });
@@ -169,7 +204,7 @@ describe('the usage record at 800,000 events', () => {
     expect(best(3, () => store.outside(limits, NOW))).toBeLessThan(100 * SLACK);
   });
 
-  it('prunes 800,000 to 5,000 in under 30 s, every delete, checkpoint and vacuum step short', async () => {
+  it('prunes 2,000,000 to 5,000 in under 30 s, every delete, checkpoint and vacuum step short', async () => {
     const steps: Array<{ step: PruneStep; ms: number; rows: number }> = [];
     let last = performance.now();
     const started = last;

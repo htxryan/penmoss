@@ -271,6 +271,11 @@ export interface AnalyticsIo {
   /** The answer, read fresh each time (a new file, written, when there is none). */
   readConsent(): ConsentFile;
   writeConsent(file: ConsentFile): void;
+  /**
+   * Replaces the ref key (PEN-177) beside the consent file, as `reset` and `forget` give a new
+   * ID: the same note then gets a different ref. The key itself is never read here.
+   */
+  renewKey?(): void;
   /** Opens the shared record; throws where it cannot (no `node:sqlite`, a read-only home). */
   openStore(): AnalyticsStore;
   /** The endpoint's base, for `penmoss analytics forget` only. */

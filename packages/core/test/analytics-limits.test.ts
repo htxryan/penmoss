@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   changedLimits,
   DEFAULT_LIMITS,
+  EVENT_BYTES,
   eventSpace,
   formatBytes,
   isLimitKey,
@@ -37,7 +38,7 @@ describe('LIMITS', () => {
   it('has the plan’s defaults and ranges', () => {
     expect(LIMITS.map((spec) => [spec.key, spec.default, spec.min, spec.max, spec.unit])).toEqual([
       ['events.days', 7, 1, 360, 'days'],
-      ['events.max', 5000, 500, 800_000, 'events'],
+      ['events.max', 200_000, 500, 2_000_000, 'events'],
       ['logs.fileKb', 1024, 256, 81_920, 'KB'],
       ['logs.files', 2, 1, 5, 'files'],
       ['logs.days', 7, 1, 360, 'days'],
@@ -100,6 +101,8 @@ describe('readLimits', () => {
 describe('parseLimit', () => {
   it('reads a whole number typed with or without separators', () => {
     expect(parseLimit('events.max', '800,000')).toBe(800_000);
+    expect(parseLimit('events.max', '2,000,000')).toBe(2_000_000);
+    expect(parseLimit('events.max', '200000')).toBe(200_000);
     expect(parseLimit('events.max', ' 10_000 ')).toBe(10_000);
     expect(parseLimit('events.max', '5 000')).toBe(5000);
     expect(parseLimit('events.days', '360')).toBe(360);
@@ -109,23 +112,26 @@ describe('parseLimit', () => {
     for (const text of ['', 'seven', '7.5', '-7', '1e3', '0x10', '361', '0', '12345678']) {
       expect(parseLimit('events.days', text), text).toBeNull();
     }
-    expect(parseLimit('events.max', '800,001')).toBeNull();
+    expect(parseLimit('events.max', '2,000,001')).toBeNull();
+    expect(parseLimit('events.max', '499')).toBeNull();
   });
 });
 
 describe('range words', () => {
   it('writes a field’s range and what it says out of range', () => {
     expect(rangeLabel('events.days')).toBe('1–360 days');
-    expect(rangeLabel('events.max')).toBe('500–800,000 events');
+    expect(rangeLabel('events.max')).toBe('500–2,000,000 events');
     expect(rangeLabel('logs.fileKb')).toBe('256–81,920 KB');
     expect(rangeMessage('events.days')).toBe('Between 1 and 360');
-    expect(rangeMessage('events.max')).toBe('Between 500 and 800,000');
+    expect(rangeMessage('events.max')).toBe('Between 500 and 2,000,000');
   });
 });
 
 describe('space', () => {
   it('estimates the record’s and the logs’ space', () => {
-    expect(eventSpace(DEFAULT_LIMITS)).toBe(5000 * 400);
+    // PEN-177: 200,000 events of about 500 bytes each.
+    expect(EVENT_BYTES).toBe(500);
+    expect(eventSpace(DEFAULT_LIMITS)).toBe(200_000 * 500);
     expect(logSpace(DEFAULT_LIMITS)).toBe(2 * 1024 * 1024);
   });
 
@@ -138,7 +144,16 @@ describe('space', () => {
     expect(formatBytes(1.5 * 1024 * 1024)).toBe('1.5 MB');
     expect(formatBytes(12.4 * 1024 * 1024)).toBe('12 MB');
     expect(formatBytes(400 * 1024 * 1024)).toBe('400 MB');
-    expect(formatBytes(eventSpace(DEFAULT_LIMITS))).toBe('1.9 MB');
+    expect(formatBytes(eventSpace(DEFAULT_LIMITS))).toBe('95 MB');
+    expect(formatBytes(eventSpace({ ...DEFAULT_LIMITS, 'events.max': 2_000_000 }))).toBe('954 MB');
+  });
+
+  it('moves an install on the old default to the new one, deleting nothing (PEN-177)', () => {
+    // The consent file keeps only changed limits, so the old default (5,000) was never stored.
+    expect(readLimits({})['events.max']).toBe(200_000);
+    // A limit someone set stays theirs, even one the old range allowed at its top.
+    expect(readLimits({ 'events.max': 800_000 })['events.max']).toBe(800_000);
+    expect(readLimits({ 'events.max': 5000 })['events.max']).toBe(5000);
   });
 });
 
