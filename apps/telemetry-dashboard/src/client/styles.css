@@ -1156,7 +1156,7 @@ li.ev[aria-current='true']::before {
   position: sticky;
   top: 0;
   z-index: 3;
-  box-shadow: 0 6px 16px rgb(0 0 0 / 12%);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ink) 12%, transparent);
 }
 
 /* While it is pinned, a stretch heading pins just under it, and a played row comes into view
