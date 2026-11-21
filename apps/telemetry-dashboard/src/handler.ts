@@ -32,10 +32,18 @@ const headers = {
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
 const forbidden = () => new Response('Forbidden', { status: 403, headers });
 
-/** The page's own rules: its files only, nothing from elsewhere. */
+/**
+ * The page's own rules: its files only, nothing from elsewhere. A session's Playback (PEN-178)
+ * draws its frame in an iframe of the page's own, /player (player.html, which wrangler serves
+ * without its extension), so the page may frame itself.
+ */
 const CSP =
   "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
-  "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+  "connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+/** The replay's frame: the one response the page itself may frame, and nothing else may. */
+export const FRAME_PATH = '/player';
+const FRAME_CSP = CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
 
 async function api(
   url: URL,
@@ -108,7 +116,8 @@ export async function handle(
   const asset = await env.ASSETS.fetch(request);
   const response = new Response(asset.body, asset);
   for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
-  response.headers.set('content-security-policy', CSP);
-  response.headers.set('x-frame-options', 'DENY');
+  const frame = url.pathname === FRAME_PATH;
+  response.headers.set('content-security-policy', frame ? FRAME_CSP : CSP);
+  response.headers.set('x-frame-options', frame ? 'SAMEORIGIN' : 'DENY');
   return response;
 }

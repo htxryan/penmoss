@@ -1,0 +1,991 @@
+{
+  "about": "A Mac session after PEN-177: its window and layout, a note shape, typing, a splice, the palette, Settings scrolled, a 4m 12s pause, a selection, Confirmation on Tags, Solarized, the rail and full width, and a switch to another note and back.",
+  "install": "c0ffee00c0ffee00c0ffee00c0ffee01",
+  "session": "5e55100000000001",
+  "start": "-45d",
+  "client": {
+    "actor": "person",
+    "version": "1.3.2",
+    "channel": "stable",
+    "client": "mac",
+    "os": "macos",
+    "osVersion": "26.1",
+    "sizeClass": "expanded"
+  },
+  "events": [
+    {
+      "seq": 0,
+      "at": 0,
+      "kind": "app",
+      "name": "launch",
+      "props": {
+        "notebooks": "1",
+        "notes": "10–49",
+        "agents": false
+      }
+    },
+    {
+      "seq": 1,
+      "at": 300,
+      "kind": "app",
+      "name": "window",
+      "props": {
+        "window": "main",
+        "width": 1440,
+        "height": 900,
+        "fullScreen": false,
+        "maximised": false
+      }
+    },
+    {
+      "seq": 2,
+      "at": 400,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "shown",
+        "sidebarWidth": 280,
+        "panel": "none",
+        "fullWidth": false,
+        "themeMode": "light",
+        "tabs": "2–4"
+      }
+    },
+    {
+      "seq": 3,
+      "at": 1000,
+      "kind": "screen",
+      "name": "home",
+      "props": {}
+    },
+    {
+      "seq": 4,
+      "at": 2000,
+      "kind": "scroll",
+      "name": "sidebar",
+      "props": {
+        "position": 0.18
+      }
+    },
+    {
+      "seq": 5,
+      "at": 3000,
+      "kind": "tree",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "folder": "f0e1d2c3b4a59687",
+        "depth": 1,
+        "source": "click"
+      }
+    },
+    {
+      "seq": 6,
+      "at": 3200,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "home"
+      }
+    },
+    {
+      "seq": 7,
+      "at": 3600,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "folder": "f0e1d2c3b4a59687",
+        "how": "open",
+        "titleChars": 24,
+        "shape": [
+          "h1:24",
+          "p:182",
+          "p:96",
+          "li.b.1:31",
+          "li.b.1:44",
+          "li.b.2:18",
+          "image",
+          "p:120",
+          "li.t.1:22",
+          "li.t.1:30",
+          "table.3x2:60",
+          "hr",
+          "p:64"
+        ]
+      }
+    },
+    {
+      "seq": 8,
+      "at": 3700,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "shown",
+        "sidebarWidth": 280,
+        "panel": "closed",
+        "fullWidth": false,
+        "themeMode": "light",
+        "tabs": "2–4"
+      }
+    },
+    {
+      "seq": 9,
+      "at": 4900,
+      "kind": "command",
+      "name": "note.backlinks",
+      "props": {
+        "source": "button"
+      }
+    },
+    {
+      "seq": 10,
+      "at": 5000,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "shown",
+        "sidebarWidth": 280,
+        "panel": "open",
+        "fullWidth": false,
+        "themeMode": "light",
+        "tabs": "2–4"
+      }
+    },
+    {
+      "seq": 11,
+      "at": 6000,
+      "kind": "note",
+      "name": "cursor",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 3
+      }
+    },
+    {
+      "seq": 12,
+      "at": 7000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 3,
+        "typed": 6,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 13,
+      "at": 8000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 3,
+        "typed": 7,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 14,
+      "at": 9000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 3,
+        "typed": 5,
+        "deleted": 2
+      }
+    },
+    {
+      "seq": 15,
+      "at": 10000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 3,
+        "typed": 8,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 16,
+      "at": 11500,
+      "kind": "note",
+      "name": "blocks",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 4,
+        "removed": 0,
+        "inserted": ["li.b.1:0"]
+      }
+    },
+    {
+      "seq": 17,
+      "at": 12500,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 4,
+        "typed": 9,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 18,
+      "at": 13500,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 4,
+        "typed": 11,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 19,
+      "at": 15000,
+      "kind": "scroll",
+      "name": "note",
+      "props": {
+        "position": 0.12
+      }
+    },
+    {
+      "seq": 20,
+      "at": 18000,
+      "kind": "command",
+      "name": "app.toggleSidebar",
+      "props": {
+        "source": "key",
+        "keys": "Mod+\\"
+      }
+    },
+    {
+      "seq": 21,
+      "at": 18100,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "rail",
+        "panel": "open",
+        "fullWidth": false,
+        "themeMode": "light",
+        "tabs": "2–4"
+      }
+    },
+    {
+      "seq": 22,
+      "at": 20000,
+      "kind": "setting",
+      "name": "theme.mode",
+      "props": {
+        "value": "dark",
+        "changed": true
+      }
+    },
+    {
+      "seq": 23,
+      "at": 20100,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "rail",
+        "panel": "open",
+        "fullWidth": false,
+        "themeMode": "dark",
+        "tabs": "2–4"
+      }
+    },
+    {
+      "seq": 24,
+      "at": 22000,
+      "kind": "command",
+      "name": "app.palette",
+      "props": {
+        "source": "key",
+        "keys": "Mod+K"
+      }
+    },
+    {
+      "seq": 25,
+      "at": 22100,
+      "kind": "dialog",
+      "name": "palette",
+      "props": {
+        "action": "open"
+      }
+    },
+    {
+      "seq": 26,
+      "at": 23000,
+      "kind": "input",
+      "name": "palette",
+      "props": {
+        "field": "query",
+        "chars": 3
+      }
+    },
+    {
+      "seq": 27,
+      "at": 24000,
+      "kind": "input",
+      "name": "palette",
+      "props": {
+        "field": "query",
+        "chars": 10
+      }
+    },
+    {
+      "seq": 28,
+      "at": 26000,
+      "kind": "dialog",
+      "name": "palette",
+      "props": {
+        "action": "done",
+        "open": "2–5s"
+      }
+    },
+    {
+      "seq": 29,
+      "at": 26100,
+      "kind": "command",
+      "name": "app.appearance",
+      "props": {
+        "source": "palette"
+      }
+    },
+    {
+      "seq": 30,
+      "at": 26400,
+      "kind": "screen",
+      "name": "settings.appearance",
+      "props": {
+        "from": "note"
+      }
+    },
+    {
+      "seq": 31,
+      "at": 28000,
+      "kind": "scroll",
+      "name": "settings",
+      "props": {
+        "position": 0.2
+      }
+    },
+    {
+      "seq": 32,
+      "at": 30000,
+      "kind": "scroll",
+      "name": "settings",
+      "props": {
+        "position": 0.42
+      }
+    },
+    {
+      "seq": 33,
+      "at": 31000,
+      "kind": "scroll",
+      "name": "settings.nav",
+      "props": {
+        "position": 0.25
+      }
+    },
+    {
+      "seq": 34,
+      "at": 33000,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "settings.appearance"
+      }
+    },
+    {
+      "seq": 35,
+      "at": 33400,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "folder": "f0e1d2c3b4a59687",
+        "how": "open",
+        "titleChars": 24,
+        "shape": [
+          "h1:24",
+          "p:182",
+          "p:96",
+          "li.b.1:55",
+          "li.b.1:20",
+          "li.b.1:44",
+          "li.b.2:18",
+          "image",
+          "p:120",
+          "li.t.1:22",
+          "li.t.1:30",
+          "table.3x2:60",
+          "hr",
+          "p:64"
+        ]
+      }
+    },
+    {
+      "seq": 36,
+      "at": 45000,
+      "kind": "note",
+      "name": "cursor",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 2
+      }
+    },
+    {
+      "seq": 37,
+      "at": 298000,
+      "kind": "note",
+      "name": "cursor",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 0
+      }
+    },
+    {
+      "seq": 38,
+      "at": 300000,
+      "kind": "note",
+      "name": "select",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 1,
+        "chars": 230,
+        "span": 2
+      }
+    },
+    {
+      "seq": 39,
+      "at": 306000,
+      "kind": "note",
+      "name": "cursor",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 8
+      }
+    },
+    {
+      "seq": 40,
+      "at": 308000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 8,
+        "typed": 20,
+        "deleted": 5
+      }
+    },
+    {
+      "seq": 41,
+      "at": 312000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 2,
+        "typed": 9,
+        "deleted": 0,
+        "remote": true
+      }
+    },
+    {
+      "seq": 42,
+      "at": 320000,
+      "kind": "command",
+      "name": "app.tags",
+      "props": {
+        "source": "button"
+      }
+    },
+    {
+      "seq": 43,
+      "at": 320200,
+      "kind": "screen",
+      "name": "tags",
+      "props": {
+        "from": "note"
+      }
+    },
+    {
+      "seq": 44,
+      "at": 322000,
+      "kind": "dialog",
+      "name": "confirm",
+      "props": {
+        "action": "open"
+      }
+    },
+    {
+      "seq": 45,
+      "at": 323000,
+      "kind": "input",
+      "name": "confirm",
+      "props": {
+        "field": "name",
+        "chars": 6
+      }
+    },
+    {
+      "seq": 46,
+      "at": 325000,
+      "kind": "dialog",
+      "name": "confirm",
+      "props": {
+        "action": "cancel",
+        "open": "2–5s"
+      }
+    },
+    {
+      "seq": 47,
+      "at": 327000,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "tags"
+      }
+    },
+    {
+      "seq": 48,
+      "at": 327400,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "folder": "f0e1d2c3b4a59687",
+        "how": "open",
+        "titleChars": 24,
+        "shape": [
+          "h1:24",
+          "p:182",
+          "p:105",
+          "li.b.1:55",
+          "li.b.1:20",
+          "li.b.1:44",
+          "li.b.2:18",
+          "image",
+          "p:120",
+          "li.t.1:37",
+          "li.t.1:30",
+          "table.3x2:60",
+          "hr",
+          "p:64"
+        ]
+      }
+    },
+    {
+      "seq": 49,
+      "at": 340000,
+      "kind": "command",
+      "name": "app.appearance",
+      "props": {
+        "source": "menu"
+      }
+    },
+    {
+      "seq": 50,
+      "at": 340200,
+      "kind": "screen",
+      "name": "settings.appearance",
+      "props": {
+        "from": "note"
+      }
+    },
+    {
+      "seq": 51,
+      "at": 342000,
+      "kind": "setting",
+      "name": "theme.id",
+      "props": {
+        "value": "solarized",
+        "changed": true
+      }
+    },
+    {
+      "seq": 52,
+      "at": 344000,
+      "kind": "screen",
+      "name": "note",
+      "props": {
+        "from": "settings.appearance"
+      }
+    },
+    {
+      "seq": 53,
+      "at": 344300,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "folder": "f0e1d2c3b4a59687",
+        "how": "open",
+        "titleChars": 24,
+        "shape": [
+          "h1:24",
+          "p:182",
+          "p:105",
+          "li.b.1:55",
+          "li.b.1:20",
+          "li.b.1:44",
+          "li.b.2:18",
+          "image",
+          "p:120",
+          "li.t.1:37",
+          "li.t.1:30",
+          "table.3x2:60",
+          "hr",
+          "p:64"
+        ]
+      }
+    },
+    {
+      "seq": 54,
+      "at": 345000,
+      "kind": "command",
+      "name": "note.fullWidth",
+      "props": {
+        "source": "button"
+      }
+    },
+    {
+      "seq": 55,
+      "at": 345100,
+      "kind": "app",
+      "name": "layout",
+      "props": {
+        "window": "main",
+        "sidebar": "rail",
+        "panel": "open",
+        "fullWidth": true,
+        "themeMode": "dark",
+        "tabs": "2–4"
+      }
+    },
+    {
+      "seq": 56,
+      "at": 350000,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "b2c3d4e5f6071829",
+        "how": "switch",
+        "titleChars": 11,
+        "shape": ["h2:12", "p:40"]
+      }
+    },
+    {
+      "seq": 57,
+      "at": 352000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "b2c3d4e5f6071829",
+        "block": 1,
+        "typed": 12,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 58,
+      "at": 355000,
+      "kind": "note",
+      "name": "open",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "folder": "f0e1d2c3b4a59687",
+        "how": "switch",
+        "titleChars": 24,
+        "shape": [
+          "h1:24",
+          "p:182",
+          "p:105",
+          "li.b.1:55",
+          "li.b.1:20",
+          "li.b.1:44",
+          "li.b.2:18",
+          "image",
+          "p:120",
+          "li.t.1:37",
+          "li.t.1:30",
+          "table.3x2:60",
+          "hr",
+          "p:64"
+        ]
+      }
+    },
+    {
+      "seq": 59,
+      "at": 357000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "title": true,
+        "typed": 6,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 60,
+      "at": 380000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 14,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 61,
+      "at": 421000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 19,
+        "deleted": 1
+      }
+    },
+    {
+      "seq": 62,
+      "at": 462000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 15,
+        "deleted": 2
+      }
+    },
+    {
+      "seq": 63,
+      "at": 503000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 20,
+        "deleted": 3
+      }
+    },
+    {
+      "seq": 64,
+      "at": 544000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 16,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 65,
+      "at": 585000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 12,
+        "deleted": 1
+      }
+    },
+    {
+      "seq": 66,
+      "at": 626000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 17,
+        "deleted": 2
+      }
+    },
+    {
+      "seq": 67,
+      "at": 667000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 13,
+        "deleted": 3
+      }
+    },
+    {
+      "seq": 68,
+      "at": 708000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 18,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 69,
+      "at": 749000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 14,
+        "deleted": 1
+      }
+    },
+    {
+      "seq": 70,
+      "at": 790000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 19,
+        "deleted": 2
+      }
+    },
+    {
+      "seq": 71,
+      "at": 831000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 15,
+        "deleted": 3
+      }
+    },
+    {
+      "seq": 72,
+      "at": 872000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 20,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 73,
+      "at": 913000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 16,
+        "deleted": 1
+      }
+    },
+    {
+      "seq": 74,
+      "at": 954000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 12,
+        "deleted": 2
+      }
+    },
+    {
+      "seq": 75,
+      "at": 995000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 17,
+        "deleted": 3
+      }
+    },
+    {
+      "seq": 76,
+      "at": 1036000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 12,
+        "typed": 13,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 77,
+      "at": 1076000,
+      "kind": "note",
+      "name": "cursor",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 7
+      }
+    },
+    {
+      "seq": 78,
+      "at": 1078000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 7,
+        "typed": 10,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 79,
+      "at": 1080000,
+      "kind": "note",
+      "name": "typing",
+      "props": {
+        "note": "a1b2c3d4e5f60718",
+        "block": 7,
+        "typed": 9,
+        "deleted": 0
+      }
+    },
+    {
+      "seq": 80,
+      "at": 1084000,
+      "kind": "scroll",
+      "name": "note",
+      "props": {
+        "position": 0.3
+      }
+    }
+  ]
+}

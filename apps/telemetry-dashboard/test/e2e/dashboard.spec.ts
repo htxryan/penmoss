@@ -1144,3 +1144,318 @@ test('Sessions on a phone: the list scrolls in its box, a session stacks, a head
   await pinStretch(page, 'Note');
   await hold(page);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Playback (PEN-178): a session played back as the app looked, over the recorded fixture sessions
+// (test/fixtures), seeded 43 to 46 days back by server.ts.
+
+const playbackHref = (dashboard: Dashboard, fixture: { install: string; session: string }) =>
+  `${dashboard.url}/#sessions?days=30&install=${fixture.install}&session=${fixture.session}`;
+
+/** The recorded sessions' ids (test/fixtures/*.json). */
+const PLAYED = {
+  mac: { install: 'c0ffee00c0ffee00c0ffee00c0ffee01', session: '5e55100000000001' },
+  older: { install: 'c0ffee00c0ffee00c0ffee00c0ffee01', session: '5e55100000000000' },
+  android: { install: 'c0ffee00c0ffee00c0ffee00c0ffee02', session: '5e55100000000002' },
+  cli: { install: 'c0ffee00c0ffee00c0ffee00c0ffee01', session: '5e55100000000003' },
+} as const;
+
+async function openPlayed(page: Page, dashboard: Dashboard, which: keyof typeof PLAYED) {
+  const href = playbackHref(dashboard, PLAYED[which]);
+  await page.goto(href);
+  await sessionShown(page, href);
+}
+
+/** The Playback card's parts. */
+function playback(page: Page) {
+  const card = page.getByRole('region', { name: 'Playback', exact: true });
+  const frame = page.frameLocator('iframe.pb-frame');
+  const list = card.getByRole('definition');
+  const line = (label: string) =>
+    card
+      .locator('.pb-list dt', { hasText: new RegExp(`^${label}$`) })
+      .locator('xpath=following-sibling::dd[1]');
+  return {
+    card,
+    frame,
+    list,
+    line,
+    play: card.locator('.pb-play'),
+    speed: (n: 1 | 2 | 4) => card.getByRole('button', { name: `Speed ${n}×` }),
+    scrubber: card.getByRole('slider', { name: 'Position' }),
+    time: card.locator('.pb-time'),
+  };
+}
+
+/** Moves the scrubber to `ms` into the session. */
+async function scrubTo(page: Page, ms: number) {
+  await playback(page).scrubber.fill(String(ms));
+}
+
+/** Scrolls the Playback card to the window's top, and dwells on it. */
+async function showCard(page: Page) {
+  await playback(page).card.evaluate((node) =>
+    window.scrollTo(0, node.getBoundingClientRect().top + window.scrollY),
+  );
+  await hold(page);
+}
+
+/** The timeline's row for event `index`. */
+const timelineRow = (page: Page, index: number) =>
+  page.getByRole('region', { name: 'Timeline' }).locator(`li.ev[data-index="${index}"]`);
+
+test.describe('Playback, drawn at twice the pixels', () => {
+  test.use({ deviceScaleFactor: 2 });
+
+  test('Sessions: Play draws the session as the app looked', async ({
+    signedIn: page,
+    dashboard,
+  }) => {
+    test.setTimeout(180_000);
+    await openPlayed(page, dashboard, 'mac');
+    const pb = playback(page);
+
+    // AC1: the Playback card between the tiles and the timeline, its frame, list and controls.
+    const order = await page
+      .locator('main > *, main .session-play > *')
+      .evaluateAll((nodes: HTMLElement[]) =>
+        nodes.map((n) => String(n.getAttribute('data-card') ?? n.getAttribute('class'))),
+      );
+    expect(order.indexOf('playback')).toBeGreaterThan(order.indexOf('tiles session-tiles'));
+    expect(order.indexOf('playback')).toBeLessThan(order.indexOf('session-cols'));
+    await expect(pb.card.locator('.note')).toHaveText(
+      "The session as the app looked, drawn with the app's own stylesheet. Notes are lorem ipsum in the shape that was recorded: no word is ever recorded.",
+    );
+    await expect(pb.card.locator('footer.tools > *')).toHaveCount(6);
+    await expect(pb.play).toHaveText('Play');
+    await expect(pb.speed(1)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pb.time).toHaveText('0:00 / 18:04');
+    await expect(pb.scrubber).toHaveAttribute('aria-valuetext', '0:00 of 18:04');
+    const iframe = pb.card.locator('iframe.pb-frame');
+    await expect(iframe).toHaveAttribute('aria-hidden', 'true');
+    await expect(iframe).toHaveAttribute('tabindex', '-1');
+    await pb.card.evaluate((node) => node.scrollIntoView({ block: 'start' }));
+    await expect(pb.frame.locator('.notes-app')).toBeVisible();
+    await showCard(page);
+
+    // AC5, AC10: a row chosen, and the frame and the list go to it: the note opened, its title,
+    // heading, paragraphs, lists and image frame in lorem ipsum of the recorded lengths.
+    await timelineRow(page, 7).click();
+    await expect(pb.line('Event')).toContainText('Opennote:open · 8 of 81');
+    await expect(pb.line('Screen')).toHaveText('Note');
+    await expect(pb.line('Window')).toHaveText('1,440 × 900');
+    await expect(pb.line('Note')).toContainText('13 Blocks, ');
+    await expect(pb.time).toHaveText('0:03 / 18:04');
+    const body = pb.frame.locator('.note-body .ProseMirror');
+    await expect(body.locator('h1')).toHaveText(/^.{24}$/);
+    await expect(body.locator('.pm-image-frame')).toBeVisible();
+    await expect(body.locator('ul[data-type="taskList"] li')).toHaveCount(2);
+    await expect(pb.frame.locator('.tab-strip .tab')).toHaveCount(2);
+    await showCard(page);
+
+    // AC2, AC4, AC11, AC13: 2×, then Play from the caret in a list item: the item fills in
+    // character by character, the marked row moves down, the card stays at the top.
+    await timelineRow(page, 11).click();
+    const item = body.locator(':scope > ul:not([data-type]) > li > p').first();
+    await expect(item).toHaveText(/^.{31}$/);
+    await pb.speed(2).click();
+    await expect(pb.speed(2)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pb.speed(1)).toHaveAttribute('aria-pressed', 'false');
+    const sizes = await Promise.all(
+      [1, 2, 4].map(async (n) => (await pb.speed(n as 1 | 2 | 4).boundingBox())!),
+    );
+    expect(new Set(sizes.map((box) => Math.round(box.width))).size).toBe(1);
+    await pb.card.evaluate((node) =>
+      window.scrollTo(0, node.getBoundingClientRect().top + window.scrollY),
+    );
+    await pb.play.click();
+    await expect(pb.play).toHaveText('Pause');
+    await expect(pb.play).toHaveAttribute('aria-label', 'Pause');
+    await expect(item.locator('.pf-caret')).toHaveCount(1);
+    await expect.poll(async () => (await item.textContent())!.length).toBeGreaterThan(31);
+    await expect.poll(async () => (await item.textContent())!.length).toBeGreaterThan(40);
+    await expect(pb.card).toHaveClass(/pb-pinned/);
+    await expect
+      .poll(async () =>
+        Number(await page.locator('li.ev[aria-current="true"]').getAttribute('data-index')),
+      )
+      .toBeGreaterThan(14);
+    expect(Math.round((await pb.card.boundingBox())!.y)).toBe(0);
+    await expect(pb.frame.locator('.note-columns')).toHaveAttribute('data-panel', 'open');
+    await page.waitForTimeout(3000);
+    await pb.play.click();
+    await expect(pb.play).toHaveText('Play');
+
+    // AC6, AC8, ac3: the palette over the note in dark mode on the rail, its field typed.
+    await scrubTo(page, 24_000);
+    await expect(pb.line('Dialog')).toContainText('Command Palette');
+    await expect(pb.line('Sidebar')).toHaveText('Rail');
+    await expect(pb.line('Theme')).toContainText('Penmoss, Dark');
+    await expect(pb.line('Theme')).toContainText('Theme Not Recorded');
+    await expect(pb.frame.locator('.overlay .dialog.palette input')).toHaveValue(/^.{10}$/);
+    await expect(pb.frame.locator('.notes-app')).toHaveAttribute('data-sidebar', 'collapsed');
+    await expect(pb.frame.locator('html')).toHaveAttribute('data-mode', 'dark');
+    await showCard(page);
+
+    // AC7, AC9, ac4: Settings › Appearance, its nav's icons, scrolled to 0.42.
+    await scrubTo(page, 30_000);
+    await expect(pb.line('Screen')).toHaveText('Settings › Appearance');
+    await expect(pb.line('Scroll')).toHaveText('Settings 42%');
+    await expect(pb.line('Sidebar')).toContainText('Not on This Screen');
+    const nav = pb.frame.locator('.settings-nav');
+    await expect(nav.locator('a[aria-current="page"]')).toHaveText('Appearance');
+    await expect(nav.locator('a[aria-current="page"] svg')).toHaveAttribute('data-icon', 'palette');
+    await expect(nav.locator('svg[data-icon]')).toHaveCount(16);
+    await expect
+      .poll(() => pb.frame.locator('.settings-content').evaluate((node) => node.scrollTop))
+      .toBeGreaterThan(0);
+    await showCard(page);
+
+    // AC14: playing across the long pause skips it, the time keeping the session's.
+    await scrubTo(page, 44_000);
+    await pb.speed(1).click();
+    await pb.card.evaluate((node) =>
+      window.scrollTo(0, node.getBoundingClientRect().top + window.scrollY),
+    );
+    await pb.play.click();
+    await expect(pb.card.locator('.pb-skip')).toHaveText('Skipped a 4m 12s Pause');
+    await expect(pb.card.locator('.pb-skip')).toBeVisible();
+    await expect(pb.time).toHaveText(/^4:5[789] \/ 18:04$/);
+    await page.waitForTimeout(1000);
+    await pb.play.click();
+    await expect(pb.play).toHaveText('Play');
+    await expect(pb.card.locator('.pb-skip')).toBeHidden();
+
+    // AC3, AC12, ac8: the caret to the heading, then the selection across two blocks, paused at
+    // 5:01 and still.
+    await scrubTo(page, 298_000);
+    await expect(pb.line('Caret')).toHaveText('At the End of Block 1');
+    await expect(pb.frame.locator('.ProseMirror > h1 .pf-caret')).toHaveCount(1);
+    await showCard(page);
+    await scrubTo(page, 301_000);
+    await expect(pb.line('Selection')).toHaveText('230 Characters across 2 Blocks');
+    await expect(pb.time).toHaveText('5:01 / 18:04');
+    await expect(pb.frame.locator('.pf-selection')).toHaveCount(2);
+    await page.waitForTimeout(2000);
+    await expect(pb.time).toHaveText('5:01 / 18:04');
+
+    // AC19: Tab goes Play, 1×, 2×, 4×, the scrubber; its arrows step one second.
+    await pb.play.focus();
+    for (const name of ['Speed 1×', 'Speed 2×', 'Speed 4×', 'Position']) {
+      await page.keyboard.press('Tab');
+      await expect(page.locator(':focus')).toHaveAttribute('aria-label', name);
+    }
+    await page.keyboard.press('ArrowRight');
+    await expect(pb.time).toHaveText('5:02 / 18:04');
+    await expect(pb.scrubber).toHaveAttribute('aria-valuetext', '5:02 of 18:04');
+    await showCard(page);
+
+    // AC7, AC8, ac9: Confirmation on the Tags screen, its field typed.
+    await scrubTo(page, 323_000);
+    await expect(pb.line('Screen')).toHaveText('Tags');
+    await expect(pb.line('Dialog')).toContainText('Confirmation');
+    await expect(pb.frame.locator('dialog.confirm')).toBeVisible();
+    await expect(pb.frame.locator('dialog.confirm input')).toHaveValue(/^.{6}$/);
+    await expect(pb.frame.locator('.empty-state h2')).toHaveText('Tags');
+    await showCard(page);
+
+    // AC6, ac10: past the theme change: Solarized, the rail and the note full width.
+    await scrubTo(page, 346_000);
+    await expect(pb.line('Theme')).toHaveText('Solarized, Dark');
+    await expect(pb.line('Full Width')).toHaveText('Yes');
+    await expect(pb.frame.locator('html')).toHaveAttribute('data-theme', 'solarized');
+    await expect(pb.frame.locator('article.note')).toHaveAttribute('data-width', 'full');
+    await showCard(page);
+
+    // AC3: to the end, then Play starts again from the first event.
+    await scrubTo(page, 1_080_000);
+    await pb.play.click();
+    await expect(pb.play).toHaveText('Play', { timeout: 10_000 });
+    await expect(pb.time).toHaveText('18:04 / 18:04');
+    await pb.play.click();
+    await expect(pb.time).toHaveText(/^0:0\d \/ 18:04$/);
+    await pb.play.click();
+    await showCard(page);
+  });
+
+  test('Sessions: Playback of an older session, an Android one and a CLI run', async ({
+    signedIn: page,
+    dashboard,
+  }) => {
+    test.setTimeout(120_000);
+    // AC15, ac5: before note shape and typing (and the window) were recorded.
+    await openPlayed(page, dashboard, 'older');
+    const pb = playback(page);
+    await expect(pb.card.locator('.pb-notice')).toHaveText(
+      "This session was recorded before Penmoss recorded a note's shape and typing, so its notes play as placeholders. Its window's size and layout weren't recorded either: it plays in an expanded window as the app first opens.",
+    );
+    await timelineRow(page, 6).click();
+    await expect(pb.line('Note')).toHaveText('Placeholder');
+    await expect(pb.line('Window')).toContainText('Not Recorded');
+    await expect(pb.line('Sidebar')).toContainText('Not Recorded');
+    await expect(pb.line('Theme')).toContainText('Theme Not Recorded');
+    await expect(pb.frame.locator('.pf-placeholder')).toBeVisible();
+    await showCard(page);
+
+    // AC16, ac6: an Android session in the phone layout, with no tab strip.
+    await openPlayed(page, dashboard, 'android');
+    await expect(pb.card.locator('.pb-notice')).toHaveText(
+      "An Android session is drawn with the app's phone layout, as the web app shows it on a phone: Android's own screens differ in places.",
+    );
+    await timelineRow(page, 9).click();
+    await expect(pb.line('Window')).toHaveText('410 × 920');
+    await expect(pb.frame.locator('article.note .app-bar')).toBeVisible();
+    await expect(pb.frame.locator('.phone-format')).toBeVisible();
+    await expect(pb.frame.locator('.tab-strip')).toHaveCount(0);
+    expect(await pb.card.locator('.pb-list dt').allTextContents()).not.toContain('Tabs');
+    await showCard(page);
+
+    // AC17: a CLI run has no window: no Playback, the timeline straight after the tiles.
+    await openPlayed(page, dashboard, 'cli');
+    await expect(page.getByRole('region', { name: 'Timeline' })).toBeVisible();
+    await expect(pb.card).toHaveCount(0);
+    await expect(page.locator('.session-play > *').first()).toHaveClass('session-cols');
+    await hold(page);
+
+    // AC18, ac7: on a phone, the frame at its width, the list under it, the scrubber on its own row.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openPlayed(page, dashboard, 'mac');
+    await timelineRow(page, 7).click();
+    await pb.card.evaluate((node) => node.scrollIntoView({ block: 'start' }));
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    const [stage, list, play, scrub] = await Promise.all(
+      [pb.card.locator('.pb-stage'), pb.card.locator('.pb-list'), pb.play, pb.scrubber].map(
+        async (l) => (await l.boundingBox())!,
+      ),
+    );
+    expect(list!.y).toBeGreaterThanOrEqual(stage!.y + stage!.height - 1);
+    expect(scrub!.y).toBeGreaterThan(play!.y + play!.height - 1);
+    expect(stage!.x + stage!.width).toBeLessThanOrEqual(390);
+    await pb.speed(4).click();
+    await pb.play.click();
+    await page.waitForTimeout(500);
+    await expect(pb.card).not.toHaveClass(/pb-pinned/);
+    await pb.play.click();
+    await showCard(page);
+
+    // The proof ends playing the Mac session at 2×, the note filling in, the card pinned over the
+    // timeline and the marked row in view below it.
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await openPlayed(page, dashboard, 'mac');
+    await timelineRow(page, 11).click();
+    await pb.speed(2).click();
+    await pb.card.evaluate((node) =>
+      window.scrollTo(0, node.getBoundingClientRect().top + window.scrollY),
+    );
+    await pb.play.click();
+    const item = pb.frame.locator('.note-body .ProseMirror > ul:not([data-type]) > li > p').first();
+    await expect.poll(async () => (await item.textContent())!.length).toBeGreaterThan(34);
+    await expect(pb.card).toHaveClass(/pb-pinned/);
+    await page.waitForTimeout(3000);
+    await expect(page.locator('li.ev[aria-current="true"]')).toBeInViewport();
+    expect(Math.round((await pb.card.boundingBox())!.y)).toBe(0);
+  });
+});

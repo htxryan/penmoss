@@ -1033,6 +1033,7 @@ li.ev[aria-current='true']::before {
 }
 
 .prop-chip {
+  max-width: 100%;
   padding: 1px 8px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -1048,6 +1049,9 @@ li.ev[aria-current='true']::before {
 .prop-value {
   color: var(--ink);
   font-weight: var(--weight-medium);
+  /* A note's shape (PEN-177) is a long list of tokens: it wraps inside its chip, between tokens. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* This Install's Sessions: a list that scrolls in its card. */
@@ -1135,5 +1139,195 @@ li.ev[aria-current='true']::before {
 
   .ev-time {
     text-align: left;
+  }
+}
+
+/* Playback (PEN-178): the session drawn as the app looked, the card and the timeline in one box,
+   so the card can stick over the timeline while it plays. */
+.session-play {
+  display: flex;
+  flex-direction: column;
+  grid-column: 1 / -1;
+  gap: 16px;
+  min-width: 0;
+}
+
+.card.pb-pinned {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 12%);
+}
+
+/* While it is pinned, a stretch heading pins just under it, and a played row comes into view
+   below both. */
+.session-play[data-playing] .stretch-head {
+  top: var(--pb-height, 0);
+}
+
+.session-play[data-playing] .ev {
+  scroll-margin-top: calc(var(--pb-height, 0px) + var(--head-height, 0px));
+}
+
+.pb-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 20px;
+  padding: 8px 16px 16px;
+}
+
+.pb-stage-col {
+  display: flex;
+  flex: 999 1 340px;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pb-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--band);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.pb-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--axis);
+  border-radius: 6px;
+  background: var(--page);
+}
+
+.pb-scaler {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.pb-frame {
+  display: block;
+  border: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.pb-skip {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--page);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pb-skip[hidden] {
+  display: none;
+}
+
+/* As Recorded: the frame in words, beside it, under it on a narrow window. */
+.pb-list {
+  display: grid;
+  flex: 1 1 240px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.pb-list dt {
+  color: var(--ink-2);
+}
+
+.pb-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pb-sub {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* The controls fill the card's foot: Play, the three speeds, the scrubber, the time. */
+.tools .pb-play {
+  min-width: 6.5em;
+}
+
+.tools .pb-speed {
+  width: 3.25em;
+  padding-inline: 0;
+}
+
+.pb-scrub {
+  display: flex;
+  flex: 1 1 200px;
+  align-items: center;
+  min-width: 0;
+  padding: 0 14px;
+  border-right: 1px solid var(--border);
+}
+
+.pb-scrubber {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--s1);
+}
+
+.pb-time {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .card.pb-pinned {
+    position: static;
+  }
+
+  .pb-stage-col,
+  .pb-list {
+    flex-basis: 100%;
+  }
+
+  .tools:has(.pb-scrub) {
+    flex-wrap: wrap;
+  }
+
+  /* The scrubber on its own row, under the buttons and the time. */
+  .pb-scrub {
+    flex-basis: 100%;
+    order: 1;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    border-right: 0;
+  }
+
+  .tools .pb-time {
+    margin-left: auto;
   }
 }

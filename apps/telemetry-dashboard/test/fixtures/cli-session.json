@@ -1,0 +1,28 @@
+{
+  "about": "A CLI run: no window, so no Playback.",
+  "install": "c0ffee00c0ffee00c0ffee00c0ffee01",
+  "session": "5e55100000000003",
+  "start": "-43d",
+  "client": {
+    "actor": "person",
+    "version": "1.3.2",
+    "channel": "stable",
+    "client": "cli",
+    "os": "macos",
+    "osVersion": "26.1"
+  },
+  "events": [
+    {
+      "seq": 0,
+      "at": 0,
+      "kind": "cli",
+      "name": "search",
+      "props": {
+        "flags": ["json"],
+        "exit": "OK",
+        "took": "<1s",
+        "tty": true
+      }
+    }
+  ]
+}

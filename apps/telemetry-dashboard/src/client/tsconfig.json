@@ -2,7 +2,10 @@
   // The page, in the browser.
   "extends": "../../../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2024", "DOM", "DOM.Iterable"]
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    // The replay frame (PEN-178) reads apps/web's lists and @penmoss/ui's Icon, whose types bring
+    // their .tsx modules into the check.
+    "jsx": "react-jsx"
   },
   "include": ["."]
 }
