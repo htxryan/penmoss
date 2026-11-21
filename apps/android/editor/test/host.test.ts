@@ -1011,7 +1011,9 @@ describe('scroll (PEN-175)', () => {
 
 describe('session detail (PEN-177)', () => {
   const usage = (sent: FromEditor[]) =>
-    sent.filter((message): message is Extract<FromEditor, { type: 'usage' }> => message.type === 'usage');
+    sent.filter(
+      (message): message is Extract<FromEditor, { type: 'usage' }> => message.type === 'usage',
+    );
 
   it('says the note’s shape once it shows, by tokens, never its words or id', () => {
     const { host, sent } = page();
