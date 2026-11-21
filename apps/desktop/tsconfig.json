@@ -4,7 +4,10 @@
     "types": ["node"],
     "lib": ["ES2024", "DOM"],
     // test/e2e/fake-github.ts runs under Node 24, which needs the .ts extension on imports.
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    // test/e2e/settings-title-case.spec.ts reads apps/web's settings index, whose pages name their
+    // icons by @penmoss/ui's IconName (PEN-178), a type in Icon.tsx.
+    "jsx": "react-jsx"
   },
   "include": ["src", "test", "vitest.config.ts", "playwright.config.ts"]
 }
