@@ -7,7 +7,7 @@
  * model is notice.ts). The Mac app only.
  */
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
 import { navigate } from '../router';
 import { SettingRow, Switch } from '../theme/look-rows';
@@ -20,26 +20,18 @@ import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { Segmented } from '../shell/Segmented';
+import { useNow } from '../shell/use-now';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
   { value: 'stable', label: 'Stable' },
   { value: 'alpha', label: 'Alpha' },
 ];
 
-/** Now, again each minute, so "checked 5 minutes ago" keeps true while the page is open. */
-function useMinute(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
-
 export function UpdatesSettings() {
   const found = useUpdates();
   const id = useId();
-  const now = useMinute();
+  // Each minute, so "checked 5 minutes ago" keeps true while the page is open.
+  const now = useNow(60_000);
   const [busy, setBusy] = useState(false);
   /** The switch as just clicked, until main answers. */
   const [wanted, setWanted] = useState<boolean | null>(null);

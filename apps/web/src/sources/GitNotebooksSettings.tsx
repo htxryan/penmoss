@@ -87,6 +87,7 @@ import './notebook-settings.css';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { withoutRecording } from '../analytics/track';
+import { useNow } from '../shell/use-now';
 
 const when = (at: number | null) =>
   at === null
@@ -100,15 +101,8 @@ function unpushedWords(notes: number, folders: boolean): string {
   return `${counted}${folders ? ' and the folders' : ''} ${notes === 1 && !folders ? 'has' : 'have'} changes`;
 }
 
-/** Now, again every half minute, so "Synced 2 min ago" keeps up. */
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
+/** How often "Synced 2 min ago" is worked out again. */
+const TICK_MS = 30_000;
 
 /**
  * Git's own name and email on this Mac, read again whenever Penmoss comes to the front or a
@@ -457,7 +451,7 @@ function GitNotebookRow({ source }: { source: GitSource }) {
   const primary = useSourcesState().journal.id === source.id;
   const status = useShownGitStatus(source);
   const info = useGitInfo(source);
-  const now = useNow();
+  const now = useNow(TICK_MS);
   const path = gitNotebookPath(source.id);
   const stopped = status.phase === 'stopped' && status.detail;
   return (
@@ -766,7 +760,7 @@ function GitNotebookCard({
   const info = useGitInfo(source);
   const location = useLocation();
   const tab = notebookTab(location.search);
-  const now = useNow();
+  const now = useNow(TICK_MS);
   const card = useRef<HTMLElement>(null);
   /** The control a command asked for, focused once its tab shows. */
   const [wanted, setWanted] = useState<GitControl | null>(null);
