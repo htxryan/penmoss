@@ -7,6 +7,7 @@
 import { AI_DESCRIPTION_COPY } from '@penmoss/core/ai-description';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BatchDialog } from '../notes/BatchDialog';
 import { windowDescriber, type TagDescriberSource, type TagGroup } from '../notes/describer';
 import { generateAllWords, generateGroups } from './generate';
 import { linkHandler, settingsPath } from '../router';
@@ -31,7 +32,6 @@ export function GenerateTagsDialog({
   useEffect(() => () => stop.current?.abort(), []);
   const groups = going ?? counted;
   const total = groups.reduce((sum, group) => sum + group.tags.length, 0);
-  const running = done !== null && done < total;
   const finished = done !== null && done >= total;
   const start = () => {
     if (!describer || total === 0) return;
@@ -46,15 +46,37 @@ export function GenerateTagsDialog({
       });
   };
   return (
-    <ConfirmDialog
+    <BatchDialog
       title="Generate All Tag Descriptions?"
       testId="generate-tags"
       dialog="tagsGenerate"
-      onCancel={() => {
-        stop.current?.abort();
-        onClose();
+      total={total}
+      done={done}
+      stop={stop}
+      startIcon="sparkle"
+      startLabel={total === 1 ? 'Generate 1 Description' : `Generate ${total} Descriptions`}
+      progress={{
+        label: 'Tags described',
+        running: (at, of) => `Generating ${at} of ${of}…`,
+        finished: (count, of) => `Generated ${count} of ${of}.`,
       }}
-      onSubmit={() => (finished ? onClose() : start())}
+      events={{
+        stop: 'tags.generate.stop',
+        cancel: 'tags.generate.cancel',
+        start: 'tags.generate.start',
+      }}
+      onStart={start}
+      onClose={onClose}
+      after={
+        finished && failed ? (
+          <p className="ai-warn" role="alert" data-testid="generate-tags-failed">
+            {failed.count === 1
+              ? '1 couldn’t be described'
+              : `${failed.count} couldn’t be described`}
+            {failed.message ? `: ${failed.message}` : '.'}
+          </p>
+        ) : null
+      }
     >
       <p data-testid="generate-tags-count">{generateAllWords(total, replace)}</p>
       {done === null ? (
@@ -68,62 +90,8 @@ export function GenerateTagsDialog({
           />
           <span>Replace Existing Descriptions</span>
         </label>
-      ) : (
-        <>
-          <progress className="ai-progress" max={total} value={done} aria-label="Tags described" />
-          <p className="muted" role="status" data-testid="generate-tags-progress">
-            {finished ? `Generated ${done} of ${total}.` : `Generating ${done + 1} of ${total}…`}
-          </p>
-          {finished && failed ? (
-            <p className="ai-warn" role="alert" data-testid="generate-tags-failed">
-              {failed.count === 1
-                ? '1 couldn’t be described'
-                : `${failed.count} couldn’t be described`}
-              {failed.message ? `: ${failed.message}` : '.'}
-            </p>
-          ) : null}
-        </>
-      )}
-      <div className="confirm-actions">
-        {running ? (
-          <button
-            data-ui="dismiss"
-            type="button"
-            className="btn"
-            data-event="tags.generate.stop"
-            onClick={() => {
-              stop.current?.abort();
-              onClose();
-            }}
-          >
-            Stop
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn"
-            data-ui="dismiss"
-            data-event="tags.generate.cancel"
-            onClick={onClose}
-            autoFocus
-          >
-            {finished ? 'Close' : 'Cancel'}
-          </button>
-        )}
-        {!finished && !running ? (
-          <button
-            type="submit"
-            className="btn primary"
-            data-ui="submit"
-            data-event="tags.generate.start"
-            disabled={total === 0}
-          >
-            <Icon name="sparkle" size={14} />
-            {total === 1 ? 'Generate 1 Description' : `Generate ${total} Descriptions`}
-          </button>
-        ) : null}
-      </div>
-    </ConfirmDialog>
+      ) : null}
+    </BatchDialog>
   );
 }
 

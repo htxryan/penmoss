@@ -20,7 +20,7 @@ export function ConfirmDialog({
   /** `confirm` and any classes of its own (the Tags dialogs' `tags-dialog`). */
   readonly className?: string;
   /** Its name in usage analytics (PEN-137): `confirm`, unless the catalogue has one of its own. */
-  readonly dialog?: string;
+  readonly dialog?: string | undefined;
   readonly onCancel: () => void;
   readonly onSubmit: () => void;
   readonly children: ReactNode;
