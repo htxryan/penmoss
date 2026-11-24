@@ -213,11 +213,14 @@ export class SearchService {
 
   /** Builds or updates the offline index (search calls it; opening search warms it). */
   async refresh(): Promise<void> {
-    if (!this.stale && this.index) return;
-    this.refreshing ??= this.doRefresh().finally(() => {
-      this.refreshing = null;
-    });
-    return this.refreshing;
+    // Again while notes changed during the one in flight: it began before them, so what it
+    // indexed (and the versions meaning is sent) would miss them (PEN-182's CI).
+    while (this.stale || !this.index) {
+      this.refreshing ??= this.doRefresh().finally(() => {
+        this.refreshing = null;
+      });
+      await this.refreshing;
+    }
   }
 
   /**
