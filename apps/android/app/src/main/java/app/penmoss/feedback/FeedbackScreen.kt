@@ -28,7 +28,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -37,7 +36,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -57,7 +55,6 @@ import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -97,6 +94,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import app.penmoss.ui.common.ConfirmDialog
 
 /*
  * The Send feedback form on Android (T49, D41, A790, A800): native fields, a markdown toolbar
@@ -261,18 +259,20 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
         }
     }
     if (discarding) {
-        val confirm = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { discarding = false },
-            title = { Text("Discard This Draft?") },
-            text = { Text("Its title, description and screenshots are deleted from this phone.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("feedback.discard.confirm", confirm.done {
-                    discarding = false
-                    actions.discard()
-                }), modifier = Modifier.testTag("confirmDiscardDraft")) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+        ConfirmDialog(
+            title = "Discard This Draft?",
+            body = "Its title, description and screenshots are deleted from this phone.",
+            confirmLabel = "Discard",
+            confirmEvent = "feedback.discard.confirm",
+            cancelEvent = "feedback.discard.cancel",
+            onConfirm = {
+                discarding = false
+                actions.discard()
             },
-            dismissButton = { TextButton(onClick = trackedClick("feedback.discard.cancel") { discarding = false }) { Text("Keep It") } },
+            onDismiss = { discarding = false },
+            destructive = true,
+            cancelLabel = "Keep It",
+            confirmTag = "confirmDiscardDraft",
         )
     }
 }

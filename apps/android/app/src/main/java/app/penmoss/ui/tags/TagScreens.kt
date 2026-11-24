@@ -99,6 +99,7 @@ import app.penmoss.ui.RootUi
 import app.penmoss.ui.leave
 import app.penmoss.ui.open
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
 
 /** "1 note", "3 notes". */
 internal fun notesCount(count: Int) = "$count ${if (count == 1) "note" else "notes"}"
@@ -323,15 +324,16 @@ fun GenerateAllTagsDialog(covers: TagsToDescribe, onGenerate: (replace: Boolean)
 /** Generating needs an AI provider on this phone: where to choose one, as a note's Describe Now says. */
 @Composable
 fun ChooseAiProviderDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
-    val tracked = rememberTrackedDialog("aiProvider")
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Choose an AI Provider") },
-        text = { Text(AiDescriptionCopy.text("chooseProvider.body"), style = MaterialTheme.roles.body) },
-        confirmButton = {
-            TextButton(onClick = trackedClick("tags.generate.open-settings", tracked.done(onOpenSettings)), modifier = Modifier.testTag("tagsOpenAiSettings")) { Text("Open Settings") }
-        },
-        dismissButton = { TextButton(onClick = trackedClick("tags.generate.cancel", onDismiss)) { Text("Cancel") } },
+    ConfirmDialog(
+        title = "Choose an AI Provider",
+        body = AiDescriptionCopy.text("chooseProvider.body"),
+        confirmLabel = "Open Settings",
+        confirmEvent = "tags.generate.open-settings",
+        cancelEvent = "tags.generate.cancel",
+        onConfirm = onOpenSettings,
+        onDismiss = onDismiss,
+        confirmTag = "tagsOpenAiSettings",
+        dialog = "aiProvider",
     )
 }
 

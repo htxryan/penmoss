@@ -86,6 +86,7 @@ import app.penmoss.ui.common.shortWhen
 import app.penmoss.ui.settings.SettingsIcons
 import kotlinx.coroutines.launch
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
 
 /**
  * Version history (T40 P3b, NT16–NT20), laid out as the Mac's (Ryan's Android feedback, 15 Nov
@@ -167,15 +168,15 @@ fun HistoryScreen(
     }
     ui.confirming?.let { confirming ->
         val whenOf = ui.history?.versions?.firstOrNull { it.id == confirming }?.createdAt?.takeIf { it > 0 }
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = onDismissConfirm,
-            title = { Text("Restore This Version?") },
-            text = { Text("The note goes back to how it was ${shortWhen(whenOf)}, as a new change. Edits made since stay in a version of their own.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("history.restore.confirm", tracked.done { onRestore(confirming) }), modifier = Modifier.testTag("confirmRestore")) { Text("Restore") }
-            },
-            dismissButton = { TextButton(onClick = trackedClick("history.restore.cancel", onDismissConfirm)) { Text("Cancel") } },
+        ConfirmDialog(
+            title = "Restore This Version?",
+            body = "The note goes back to how it was ${shortWhen(whenOf)}, as a new change. Edits made since stay in a version of their own.",
+            confirmLabel = "Restore",
+            confirmEvent = "history.restore.confirm",
+            cancelEvent = "history.restore.cancel",
+            onConfirm = { onRestore(confirming) },
+            onDismiss = onDismissConfirm,
+            confirmTag = "confirmRestore",
         )
     }
     if (ui.conflicts.isNotEmpty()) {

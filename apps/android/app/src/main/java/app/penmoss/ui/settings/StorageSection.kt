@@ -1,9 +1,7 @@
 package app.penmoss.ui.settings
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
 import androidx.compose.runtime.Composable
@@ -14,9 +12,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.WebPictureSetting
+import app.penmoss.ui.common.ConfirmDialog
 
 /** A size for people, as core's `formatBytes`: `512 B`, `1.5 KB`, `20 MB`. */
 fun formatBytes(bytes: Long): String {
@@ -91,18 +89,19 @@ fun StorageScreen(
         )
     }
     if (clearing) {
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { clearing = false },
-            title = { Text("Clear Pictures from the Web?") },
-            text = { Text("Penmoss fetches each one again the next time a note shows it. Your notes and their own files stay as they are.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("settings.storage.clear-web-pictures.confirm", tracked.done {
-                    clearing = false
-                    onClearWebPictures()
-                }), modifier = Modifier.testTag("confirmClearWebPictures")) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+        ConfirmDialog(
+            title = "Clear Pictures from the Web?",
+            body = "Penmoss fetches each one again the next time a note shows it. Your notes and their own files stay as they are.",
+            confirmLabel = "Clear",
+            confirmEvent = "settings.storage.clear-web-pictures.confirm",
+            cancelEvent = "settings.storage.clear-web-pictures.cancel",
+            onConfirm = {
+                clearing = false
+                onClearWebPictures()
             },
-            dismissButton = { TextButton(onClick = trackedClick("settings.storage.clear-web-pictures.cancel") { clearing = false }) { Text("Cancel") } },
+            onDismiss = { clearing = false },
+            destructive = true,
+            confirmTag = "confirmClearWebPictures",
         )
     }
 }

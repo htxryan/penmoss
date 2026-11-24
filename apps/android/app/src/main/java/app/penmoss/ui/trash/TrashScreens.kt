@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,6 +48,7 @@ import app.penmoss.ui.common.EmptyMessage
 import app.penmoss.ui.common.FolderIcon
 import app.penmoss.ui.common.PenmossSnackbar
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
 
 /** One note in Trash as the screen shows it (NT13). */
 data class TrashEntryUi(
@@ -168,18 +168,19 @@ fun TrashScreen(
         }
     }
     confirming?.let { entry ->
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { confirming = null },
-            title = { Text("Delete “${entry.title}” for Good?") },
-            text = { Text("It can’t be restored on this phone or any other device. You’ll be asked for your fingerprint, face or screen lock.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("trash.delete-for-good.confirm", tracked.done {
-                    confirming = null
-                    onDeleteForGood(entry)
-                }), modifier = Modifier.testTag("confirmDeleteForGood")) { Text("Delete for Good") }
+        ConfirmDialog(
+            title = "Delete “${entry.title}” for Good?",
+            body = "It can’t be restored on this phone or any other device. You’ll be asked for your fingerprint, face or screen lock.",
+            confirmLabel = "Delete for Good",
+            confirmEvent = "trash.delete-for-good.confirm",
+            cancelEvent = "trash.delete-for-good.cancel",
+            onConfirm = {
+                confirming = null
+                onDeleteForGood(entry)
             },
-            dismissButton = { TextButton(onClick = trackedClick("trash.delete-for-good.cancel") { confirming = null }) { Text("Cancel") } },
+            onDismiss = { confirming = null },
+            destructive = true,
+            confirmTag = "confirmDeleteForGood",
         )
     }
 }

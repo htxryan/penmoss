@@ -17,12 +17,10 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.draw.rotate
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,13 +47,14 @@ import app.penmoss.analytics.EventState
 import app.penmoss.analytics.LimitSpec
 import app.penmoss.analytics.Limits
 import app.penmoss.analytics.TrackedScreen
-import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedId
 import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.OutlinedTextField
 import app.penmoss.ui.common.TextButton
 import kotlinx.coroutines.launch
+import app.penmoss.ui.common.Toggle
+import app.penmoss.ui.common.ConfirmDialog
 
 /*
  * Settings → Privacy on the phone (PEN-137, AC5, AC26, AC38, AC40): one layout with the Mac's,
@@ -139,16 +138,19 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
     // A search result inside Advanced opens it first (AC48).
     var advanced by rememberSaveable { mutableStateOf(mark.target in LIMIT_ROW_IDS.values || mark.target == "reset-to-defaults") }
     SectionScreen(AnalyticsCopy.text("privacy.title"), actions.onBack) {
-        ListItem(
-            headlineContent = { Text(AnalyticsCopy.text("privacy.share.label")) },
-            supportingContent = { Text(AnalyticsCopy.text("privacy.share.hint")) },
-            trailingContent = { Switch(checked = ui.sharing, onCheckedChange = null, enabled = ui.known) },
-            modifier = Modifier.settingRow("share-usage-data").testTag("privacyShare").trackedId("privacy.share.on")
-                .toggleable(value = ui.sharing, enabled = ui.known, role = Role.Switch) { on ->
-                    app.penmoss.analytics.Analytics.click(if (on) "privacy.share.on" else "privacy.share.off")
-                    actions.onShare(on)
-                },
-        )
+        // Recorded as privacy.share.on or .off, as the Mac's two ids (not one id with a state).
+        Toggle(
+            AnalyticsCopy.text("privacy.share.label"),
+            AnalyticsCopy.text("privacy.share.hint"),
+            ui.sharing,
+            ui.known,
+            "privacyShare",
+            Modifier.settingRow("share-usage-data").trackedId("privacy.share.on"),
+            event = null,
+        ) { on ->
+            app.penmoss.analytics.Analytics.click(if (on) "privacy.share.on" else "privacy.share.off")
+            actions.onShare(on)
+        }
         ListItem(
             headlineContent = { Text(AnalyticsCopy.text("privacy.viewData.label")) },
             supportingContent = { Text(AnalyticsFormat.countsLine(ui.counts), Modifier.testTag("privacyCounts")) },
@@ -222,29 +224,23 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
         )
     }
     if (forgetAsk) {
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = {
-                app.penmoss.analytics.Analytics.click("privacy.forget.cancel")
+        ConfirmDialog(
+            title = AnalyticsCopy.text("forget.title"),
+            body = AnalyticsCopy.text("forget.body", "id" to shortId(ui.install)),
+            confirmLabel = AnalyticsCopy.text("confirm.delete.button"),
+            confirmEvent = "privacy.forget.confirm",
+            cancelEvent = "privacy.forget.cancel",
+            onConfirm = {
                 forgetAsk = false
+                actions.onForget()
             },
-            title = { Text(AnalyticsCopy.text("forget.title")) },
-            text = { Text(AnalyticsCopy.text("forget.body", "id" to shortId(ui.install))) },
-            confirmButton = {
-                TextButton(
-                    onClick = trackedClick("privacy.forget.confirm", tracked.done {
-                        forgetAsk = false
-                        actions.onForget()
-                    }),
-                    modifier = Modifier.testTag("confirmForget"),
-                ) { Text(AnalyticsCopy.text("confirm.delete.button"), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = trackedClick("privacy.forget.cancel") { forgetAsk = false }, modifier = Modifier.testTag("cancelForget")) {
-                    Text(AnalyticsCopy.text("confirm.cancel.button"))
-                }
-            },
+            onDismiss = { forgetAsk = false },
             modifier = Modifier.testTag("forgetDialog"),
+            destructive = true,
+            cancelLabel = AnalyticsCopy.text("confirm.cancel.button"),
+            confirmTag = "confirmForget",
+            cancelTag = "cancelForget",
+            recordOutsideDismiss = true,
         )
     }
 }
@@ -298,22 +294,23 @@ private fun AdvancedLimits(limits: Limits, actions: PrivacyActions) {
             asking = null
             restore += 1
         }
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = trackedClick("privacy.limits.cancel", back),
-            title = { Text(pruneTitle(ask.preview)) },
-            text = { Text(AnalyticsCopy.text("prune.body", "reason" to pruneReason(limits, ask))) },
-            confirmButton = {
-                TextButton(
-                    onClick = trackedClick("privacy.limits.confirm", tracked.done {
-                        asking = null
-                        save(ask.limits, ask.key, actions)
-                    }),
-                    modifier = Modifier.testTag("confirmPrune"),
-                ) { Text(AnalyticsCopy.text("confirm.delete.button"), color = MaterialTheme.colorScheme.error) }
+        ConfirmDialog(
+            title = pruneTitle(ask.preview),
+            body = AnalyticsCopy.text("prune.body", "reason" to pruneReason(limits, ask)),
+            confirmLabel = AnalyticsCopy.text("confirm.delete.button"),
+            confirmEvent = "privacy.limits.confirm",
+            cancelEvent = "privacy.limits.cancel",
+            onConfirm = {
+                asking = null
+                save(ask.limits, ask.key, actions)
             },
-            dismissButton = { TextButton(onClick = trackedClick("privacy.limits.cancel", back), modifier = Modifier.testTag("cancelPrune")) { Text(AnalyticsCopy.text("confirm.cancel.button")) } },
+            onDismiss = back,
             modifier = Modifier.testTag("pruneDialog"),
+            destructive = true,
+            cancelLabel = AnalyticsCopy.text("confirm.cancel.button"),
+            confirmTag = "confirmPrune",
+            cancelTag = "cancelPrune",
+            recordOutsideDismiss = true,
         )
     }
 }

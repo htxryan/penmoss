@@ -29,6 +29,7 @@ import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.ui.common.roles
 import kotlinx.serialization.json.JsonPrimitive
+import app.penmoss.ui.common.Toggle
 
 /*
  * Settings → Note on the phone (A1634): the Mac's Note page (`NoteSettings`), with what the

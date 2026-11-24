@@ -30,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import app.penmoss.ui.common.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -97,6 +96,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.util.Locale
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
 
 /** Edits are saved (and synced) once they pause this long, as on the web; the preview shows them at once. */
 const val THEME_SAVE_DELAY_MS = 400L
@@ -270,22 +270,21 @@ fun ThemeEditorScreen(
             )
         }
         if (confirmDelete) {
-            val tracked = rememberTrackedDialog("confirm")
-            AlertDialog(
-                onDismissRequest = { confirmDelete = false },
-                title = { Text("Delete “${theme.text("name")}” on Every Device?") },
-                text = { Text("Devices showing it go back to the theme it was based on.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = trackedClick("theme-editor.delete.confirm", tracked.done {
-                            confirmDelete = false
-                            dirty = false
-                            onDelete(theme)
-                        }),
-                        modifier = Modifier.testTag("confirmDelete"),
-                    ) { Text("Delete Theme", color = MaterialTheme.colorScheme.error) }
+            ConfirmDialog(
+                title = "Delete “${theme.text("name")}” on Every Device?",
+                body = "Devices showing it go back to the theme it was based on.",
+                confirmLabel = "Delete Theme",
+                confirmEvent = "theme-editor.delete.confirm",
+                cancelEvent = "theme-editor.delete.cancel",
+                onConfirm = {
+                    confirmDelete = false
+                    dirty = false
+                    onDelete(theme)
                 },
-                dismissButton = { TextButton(onClick = trackedClick("theme-editor.delete.cancel") { confirmDelete = false }) { Text("Keep It") } },
+                onDismiss = { confirmDelete = false },
+                destructive = true,
+                cancelLabel = "Keep It",
+                confirmTag = "confirmDelete",
             )
         }
     }

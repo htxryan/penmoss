@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
@@ -57,6 +56,7 @@ import app.penmoss.analytics.TrackedDialog
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.CaptureRequest
+import app.penmoss.ui.common.ConfirmDialog
 
 /** What the capture sheet shows. */
 /** A git notebook a capture can go to (A888, A1040), by its local id. */
@@ -202,13 +202,18 @@ fun CaptureScreen(
         }
     }
     if (ui.discarding) {
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = onKeepEditing,
-            title = { Text("Discard This Capture?") },
-            text = { Text("What you typed here has not been saved.") },
-            confirmButton = { TextButton(onClick = trackedClick("capture.discard", tracked.done(onDiscard)), Modifier.testTag("captureDiscard")) { Text("Discard") } },
-            dismissButton = { TextButton(onClick = trackedClick("capture.keep-editing", onKeepEditing), Modifier.testTag("captureKeepEditing")) { Text("Keep Editing") } },
+        ConfirmDialog(
+            title = "Discard This Capture?",
+            body = "What you typed here has not been saved.",
+            confirmLabel = "Discard",
+            confirmEvent = "capture.discard",
+            cancelEvent = "capture.keep-editing",
+            onConfirm = onDiscard,
+            onDismiss = onKeepEditing,
+            destructive = true,
+            cancelLabel = "Keep Editing",
+            confirmTag = "captureDiscard",
+            cancelTag = "captureKeepEditing",
         )
     }
     // The keyboard comes up at once: a capture from the tile is typed straight away.

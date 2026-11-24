@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -25,10 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.CaptureRequest
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
 
 /**
  * Captures that cannot go as they are (T34 review S2, A345): each one's text and why, to
@@ -86,21 +85,19 @@ fun RefusedCapturesScreen(
         }
     }
     captures.firstOrNull { it.id == discarding }?.let { capture ->
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { discarding = null },
-            title = { Text("Discard This Capture?") },
-            text = { Text("It is only on this phone, so its text is lost. Copy it first to keep it.") },
-            confirmButton = {
-                TextButton(
-                    onClick = trackedClick("capture.refused.discard.confirm", tracked.done {
-                        discarding = null
-                        onDiscard(capture)
-                    }),
-                    Modifier.testTag("refusedDiscardConfirm"),
-                ) { Text("Discard") }
+        ConfirmDialog(
+            title = "Discard This Capture?",
+            body = "It is only on this phone, so its text is lost. Copy it first to keep it.",
+            confirmLabel = "Discard",
+            confirmEvent = "capture.refused.discard.confirm",
+            cancelEvent = "capture.refused.discard.cancel",
+            onConfirm = {
+                discarding = null
+                onDiscard(capture)
             },
-            dismissButton = { TextButton(onClick = trackedClick("capture.refused.discard.cancel") { discarding = null }) { Text("Cancel") } },
+            onDismiss = { discarding = null },
+            destructive = true,
+            confirmTag = "refusedDiscardConfirm",
         )
     }
 }

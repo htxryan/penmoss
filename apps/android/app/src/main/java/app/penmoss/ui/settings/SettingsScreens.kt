@@ -126,6 +126,7 @@ import app.penmoss.ui.home.HomeShortcutRow
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.Toggle
 
 /*
  * Settings on the phone (T40 P1; PEN-146): one list in five groups (Look and Feel, Writing,
