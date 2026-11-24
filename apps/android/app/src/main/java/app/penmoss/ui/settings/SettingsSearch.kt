@@ -43,7 +43,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Symbols", "Symbols", SettingsRoutes.SYMBOLS, "Mark a line with a symbol at its start", "line symbols", "glyph", "emoji", "star"),
     entry("Add a Symbol or List Item", "Symbols", SettingsRoutes.SYMBOLS, "Up to nine: a symbol, Checkbox, Bulleted or Numbered List Item"),
     entry("Change Their Shortcuts", "Symbols", SettingsRoutes.SYMBOLS, null, "symbol keys", "keys"),
-    entry("Restore Default Symbols", "Symbols", SettingsRoutes.SYMBOLS, null, "reset symbols"),
+    entry("Restore Defaults", "Symbols", SettingsRoutes.SYMBOLS, null, "reset symbols", "default symbols"),
     entry("Time Zone", "Daily Notes", SettingsRoutes.DAILY, "Which day today is", "timezone", "zone", "clock"),
     entry("Daily Template", "Daily Notes", SettingsRoutes.DAILY, "What a new daily note starts with", "journal", "today"),
     entry("Weekly Template", "Daily Notes", SettingsRoutes.DAILY, "What a new weekly note starts with", "journal", "week"),

@@ -26,7 +26,7 @@ export function QuickAccessFlyout() {
         <MenuItem
           icon="pin"
           disabled
-          data-event="sidebar.quick-access.flyout"
+          data-event="sidebar.quick-access.flyout-empty"
           data-testid="quick-access-flyout-empty"
         >
           No Pinned Notes

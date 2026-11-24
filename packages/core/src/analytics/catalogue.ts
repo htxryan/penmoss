@@ -701,6 +701,7 @@ export const CLICK_NAMES: readonly string[] = [
   'sidebar.notebook.settings',
   'sidebar.notebook.sync-status',
   'sidebar.quick-access.flyout',
+  'sidebar.quick-access.flyout-empty',
   'sidebar.quick-access.note',
   'sidebar.quick-access.remove',
   'sidebar.recent.note',

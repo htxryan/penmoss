@@ -8,6 +8,7 @@ import { QuickAccessFlyout } from '../notes/QuickAccessFlyout';
 import { useSourcesState } from '../sources/hooks';
 import { useSidebarDisplay } from './display';
 import { withKeys } from './drawer';
+import { useSidebarLayout } from './sidebar-layout-state';
 import { SHORTCUTS, type Shortcut } from './sidebar-shortcuts';
 
 /**
@@ -39,6 +40,8 @@ export function SidebarShortcuts({
   readonly rail?: boolean;
 }) {
   const { shows } = useSidebarDisplay();
+  // Quick Access hidden in Settings → Sidebar: no pin on the rail either (A1675).
+  const { hidden } = useSidebarLayout();
   const current = useCurrentJournal();
   return (
     <div className="sb-shortcuts" data-testid="sidebar-shortcuts">
@@ -58,7 +61,7 @@ export function SidebarShortcuts({
           />
         ),
       )}
-      {rail ? <QuickAccessFlyout /> : null}
+      {rail && !hidden.has('quickAccess') ? <QuickAccessFlyout /> : null}
     </div>
   );
 }

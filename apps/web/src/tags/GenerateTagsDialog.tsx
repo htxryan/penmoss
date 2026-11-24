@@ -48,6 +48,7 @@ export function GenerateTagsDialog({
     <ConfirmDialog
       title="Generate All Tag Descriptions?"
       testId="generate-tags"
+      dialog="tagsGenerate"
       onCancel={() => {
         stop.current?.abort();
         onClose();
@@ -132,6 +133,7 @@ export function ChooseAiProviderDialog({ onClose }: { readonly onClose: () => vo
     <ConfirmDialog
       title="Choose an AI Provider"
       testId="choose-ai-provider"
+      dialog="aiProvider"
       onCancel={onClose}
       onSubmit={onClose}
     >

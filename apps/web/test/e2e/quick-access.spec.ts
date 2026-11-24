@@ -249,5 +249,14 @@ test('the rail’s Quick Access opens its pinned notes beside the rail, and one 
   await expect(menu).toBeHidden();
   await expect(page).toHaveURL(new RegExp(a));
   await expect(page.getByTestId('app-root')).toHaveAttribute('data-sidebar', 'collapsed');
+  // Quick Access hidden in the sidebar: no pin on the rail either (A1675).
+  await page.getByTestId('toggle-sidebar').click();
+  const section = page.getByTestId('quick-access');
+  await section.locator('.sb-section-head').first().hover();
+  await section.getByTestId('section-hide').click();
+  await expect(section).toHaveCount(0);
+  await page.getByTestId('toggle-sidebar').click();
+  await expect(page.getByTestId('app-root')).toHaveAttribute('data-sidebar', 'collapsed');
+  await expect(pin).toHaveCount(0);
   expect(errors).toEqual([]);
 });

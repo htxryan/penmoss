@@ -10,6 +10,7 @@ export function ConfirmDialog({
   title,
   testId,
   className = 'confirm',
+  dialog = 'confirm',
   onCancel,
   onSubmit,
   children,
@@ -18,13 +19,15 @@ export function ConfirmDialog({
   readonly testId?: string;
   /** `confirm` and any classes of its own (the Tags dialogs' `tags-dialog`). */
   readonly className?: string;
+  /** Its name in usage analytics (PEN-137): `confirm`, unless the catalogue has one of its own. */
+  readonly dialog?: string;
   readonly onCancel: () => void;
   readonly onSubmit: () => void;
   readonly children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const tracked = useTrackedDialog('confirm');
+  const tracked = useTrackedDialog(dialog);
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();

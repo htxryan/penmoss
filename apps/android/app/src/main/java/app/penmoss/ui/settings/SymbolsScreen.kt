@@ -105,7 +105,7 @@ fun SymbolsScreen(
             name = { (_, symbol) -> symbol.call },
             enabled = enabled,
             onMove = { from, to -> change(symbols.movedTo(from, to), "${symbols[from].call} is now symbol ${to + 1}.") },
-            modifier = Modifier.testTag("symbolList"),
+            modifier = Modifier.settingRow("symbols").testTag("symbolList"),
         ) { (index, symbol), _, handle ->
             val kind = symbol.kind
             if (kind != null) {
@@ -227,7 +227,7 @@ fun SymbolsScreen(
                     said = "Restored " + LineSymbols.DEFAULTS.joinToString(" ") { it.call } + "."
                 },
                 enabled = enabled && custom,
-                modifier = Modifier.settingRow("restore-default-symbols").testTag("symbol-reset"),
+                modifier = Modifier.settingRow("restore-defaults").testTag("symbol-reset"),
             ) { Text("Restore Defaults") }
         }
         Text(
