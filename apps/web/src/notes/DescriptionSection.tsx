@@ -28,6 +28,7 @@ import { shortWhen } from '../shell/when';
 import { useAppWorkspace, useSource } from '../sources/hooks';
 import { windowDescriber, type DescribeStatus } from './describer';
 import './ai-descriptions.css';
+import { Segmented } from '../shell/Segmented';
 
 const MODES: readonly { readonly value: AiSetting; readonly label: string }[] = [
   { value: 'inherit', label: 'Inherit' },
@@ -191,23 +192,14 @@ export function DescriptionSection({
         AI Description
       </h4>
       <div className="ai-row" data-testid="ai-control">
-        <div className="seg" role="radiogroup" aria-labelledby={`${id}-ai`}>
-          {MODES.map((mode) => (
-            <label key={mode.value} className="seg-option">
-              <input
-                type="radio"
-                name={`${id}-mode`}
-                data-event="note.ai.mode"
-                value={mode.value}
-                checked={own === mode.value}
-                onChange={() => setAiSetting(doc, mode.value)}
-              />
-              <span className="bold-steady" data-label={mode.label}>
-                {mode.label}
-              </span>
-            </label>
-          ))}
-        </div>
+        <Segmented
+          name={`${id}-mode`}
+          labelledBy={`${id}-ai`}
+          value={own}
+          options={MODES}
+          event="note.ai.mode"
+          onChange={(mode) => setAiSetting(doc, mode)}
+        />
         <span className="ai-eff" data-testid="ai-effective">
           <span className="ai-res">
             <span className={effective.on ? 'ai-dot' : 'ai-dot off'} aria-hidden="true" />

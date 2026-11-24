@@ -20,6 +20,7 @@ import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
 import { searchesByKeys, useKeyRecorder } from './recorder';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { Segmented } from '../shell/Segmented';
 
 type Notice =
   | {
@@ -409,23 +410,15 @@ export function ShortcutsSettings() {
             }}
           />
         </div>
-        <div className="seg" role="radiogroup" aria-label="Show" data-testid="shortcut-filter">
-          {counted.map(([value, label]) => (
-            <label key={value} className="seg-option">
-              <input
-                type="radio"
-                data-event="settings.shortcuts.show"
-                name={`${id}-show`}
-                value={value}
-                checked={show === value}
-                onChange={() => setShow(value)}
-              />
-              <span className="bold-steady" data-label={label}>
-                {label}
-              </span>
-            </label>
-          ))}
-        </div>
+        <Segmented
+          name={`${id}-show`}
+          label="Show"
+          value={show}
+          options={counted.map(([value, label]) => ({ value, label }))}
+          event="settings.shortcuts.show"
+          onChange={setShow}
+          testId="shortcut-filter"
+        />
       </div>
       <p className="kb-found" id={`${id}-found`} role="status">
         {rows.length === 0

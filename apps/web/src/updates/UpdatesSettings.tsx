@@ -19,6 +19,7 @@ import { checkedLine, updateChip, updateStatus, useUpdates } from './updates';
 import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { Segmented } from '../shell/Segmented';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
   { value: 'stable', label: 'Stable' },
@@ -161,27 +162,19 @@ export function UpdatesSettings() {
             disabled={busy || working || state?.phase === 'ready' || !state?.supported}
             aria-labelledby={`${id}-channel-label`}
           >
-            <div className="seg" data-testid="updates-channel">
-              {CHANNELS.map((item) => (
-                <label key={item.value} className="seg-option">
-                  <input
-                    data-event="settings.updates.channel"
-                    type="radio"
-                    name={`${id}-channel`}
-                    value={item.value}
-                    checked={channel === item.value}
-                    aria-describedby={item.value === 'alpha' ? `${id}-alpha` : undefined}
-                    onChange={() => {
-                      setChosen(item.value);
-                      void run(() => updates.setChannel(item.value)).finally(() => setChosen(null));
-                    }}
-                  />
-                  <span className="bold-steady" data-label={item.label}>
-                    {item.label}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <Segmented
+              name={`${id}-channel`}
+              value={channel}
+              options={CHANNELS.map((item) =>
+                item.value === 'alpha' ? { ...item, describedBy: `${id}-alpha` } : item,
+              )}
+              event="settings.updates.channel"
+              onChange={(value) => {
+                setChosen(value);
+                void run(() => updates.setChannel(value)).finally(() => setChosen(null));
+              }}
+              testId="updates-channel"
+            />
           </fieldset>
         </SettingRow>
       </div>
