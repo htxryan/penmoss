@@ -29,18 +29,18 @@ export type PanelState = 'open' | 'closed' | 'none';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 /** A window when none was recorded: the size class's (as sizeClassOf divides them at 600, 840). */
-export const SIZE_CLASS_WINDOWS: Readonly<Record<SizeClass, { width: number; height: number }>> = {
+const SIZE_CLASS_WINDOWS: Readonly<Record<SizeClass, { width: number; height: number }>> = {
   compact: { width: 412, height: 915 },
   medium: { width: 768, height: 1024 },
   expanded: { width: 1280, height: 800 },
 };
 
 /** The app's sidebar width before any is recorded: 17 rem. */
-export const DEFAULT_SIDEBAR_PX = 17 * 16;
+const DEFAULT_SIDEBAR_PX = 17 * 16;
 
 /** Gaps longer than this play as SKIP_TO before the next event (O4). */
-export const SKIP_OVER_MS = 10_000;
-export const SKIP_TO_MS = 1_000;
+const SKIP_OVER_MS = 10_000;
+const SKIP_TO_MS = 1_000;
 
 /** How often a snapshot of the state is kept, so a seek replays at most this many events. */
 const SNAPSHOT_EVERY = 200;
@@ -48,7 +48,7 @@ const SNAPSHOT_EVERY = 200;
 /** The app's narrow layout: one breakpoint, NARROW_QUERY (shell/media.ts). */
 export const NARROW_PX = 700;
 
-export interface FrameBlock {
+interface FrameBlock {
   /** Its token, as recorded (`p:182`, `li.t.2:31`, `hr`). */
   readonly token: string;
   /** Its length in characters, or null for a kind without text. */
@@ -226,7 +226,7 @@ function noteFrom(props: Readonly<Record<string, PropValue>>): NoteState {
 const refOf = (state: State, props: Readonly<Record<string, PropValue>>) =>
   str(props, 'note') ?? (state.shown || null);
 
-export interface FrameOptions {
+interface FrameOptions {
   readonly reduceMotion?: boolean;
   readonly index?: number;
 }

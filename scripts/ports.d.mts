@@ -1,5 +1,6 @@
 // Types for scripts/ports.mjs, which the Playwright and Vite configs import.
-export type PortName = 'vite' | 'preview' | 'worker' | 'fakeGithub' | 'inspector' | 'dashboard';
+export type PortName =
+  'vite' | 'preview' | 'worker' | 'fakeGithub' | 'inspector' | 'dashboard' | 'site' | 'telemetry';
 export type Ports = Readonly<Record<PortName, number>>;
 export declare const BASE_PORTS: Ports;
 export declare const OFFSETS: Ports;

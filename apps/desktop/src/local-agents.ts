@@ -12,7 +12,6 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { CliError, type NotebookEntry, type NotebookIo } from '@penmoss/cli/node';
 import type { GitAnswer, GitNotebookEntry, GitRefusal } from './git-notebooks';
-import { fitWords, repositoryWords } from './owner-words';
 
 /** The switch that makes this binary the CLI (A992). */
 export const CLI_FLAG = '--penmoss-cli';
@@ -56,16 +55,15 @@ export function cliScript(cli: readonly string[]): string {
 }
 /** The CLI's rule for a notebook's name. */
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
-const LABEL_MAX = 40;
 /** The agent the app connects to every one of its notebooks by itself (D52). */
-export const AUTOMATIC_AGENT = 'Agent';
+const AUTOMATIC_AGENT = 'Agent';
 /** How long an automatic clone that could not be made waits before the next try (D52). */
 const RETRY_MS = 5 * 60_000;
 /** The same while the target holds no notebook yet: the app's first push is on its way. */
 const NOT_THERE_RETRY_MS = 15_000;
 
 /** How to give an agent an MCP server: Claude Code's commands and Codex's lines. */
-export interface AgentServerLines {
+interface AgentServerLines {
   /** The MCP server's name in the agent's configuration. */
   readonly server: string;
   /** `claude mcp add …`, to paste into a terminal. */
@@ -82,7 +80,7 @@ export interface AgentServerLines {
 }
 
 /** One agent connected to a git notebook: its clone's name and how to give it the MCP server. */
-export interface LocalAgentView extends AgentServerLines {
+interface LocalAgentView extends AgentServerLines {
   /** The clone's name in `~/.penmoss` (`penmoss … --notebook <name>`). */
   readonly name: string;
   /** The agent's name, as History and Agent activity show it. */
@@ -92,7 +90,7 @@ export interface LocalAgentView extends AgentServerLines {
 }
 
 /** The `penmoss` command on this Mac. */
-export interface CliView {
+interface CliView {
   /** Where the app writes it: `~/.local/bin/penmoss`. */
   readonly path: string;
   /**
@@ -119,7 +117,7 @@ export type OwnerCheck = (
   words: string,
 ) => Promise<{ readonly ok: true } | { readonly ok: false; readonly message: string }>;
 
-export interface LocalAgentsOptions {
+interface LocalAgentsOptions {
   /** The command that runs this app as the CLI: its binary, the app path in development, the switch. */
   readonly cli: readonly string[];
   /**
@@ -218,7 +216,7 @@ const ofNotebook = (entry: GitNotebookEntry, clone: NotebookEntry) =>
  * several of one notebook, every one after the first added (the one `penmoss mcp` serves,
  * A1097's order), so agents already using it keep it.
  */
-export function automaticToRemove(
+function automaticToRemove(
   app: readonly GitNotebookEntry[],
   clones: readonly NotebookEntry[],
 ): NotebookEntry[] {
@@ -493,63 +491,6 @@ export class LocalAgents {
       return { ok: true, value: (await this.agentsOf(found.entry)).map((each) => this.view(each)) };
     } catch (error) {
       return refuse('agents_unreadable', cliMessage(error));
-    }
-  }
-
-  /**
-   * Connect an Agent (A993): after the owner check, the agent's own clone, as `penmoss notebook
-   * add --agent` makes it, with this notebook's target, token, signing and commit identity
-   * (A994).
-   */
-  async connect(localId: unknown, label: unknown): Promise<GitAnswer<LocalAgentView>> {
-    const found = await this.options.notebook(localId);
-    if (!found) return refuse('not_found', 'No such git notebook.');
-    const name = typeof label === 'string' ? label.trim().replace(/\s+/g, ' ') : '';
-    if (!name || name.length > LABEL_MAX || /[\p{Cc}"]/u.test(name)) {
-      return refuse('invalid_label', `Give the agent a name of up to ${LABEL_MAX} characters.`);
-    }
-    const { entry, token } = found;
-    const notebooks = this.options.notebooks();
-    let all: NotebookEntry[];
-    try {
-      all = await notebooks.list();
-    } catch (error) {
-      return refuse('agents_unreadable', cliMessage(error));
-    }
-    const twin = all.find(
-      (each) =>
-        each.writer.kind === 'agent' &&
-        each.writer.label === name &&
-        each.remote === entry.remote &&
-        each.branch === entry.branch &&
-        each.dir === entry.dir,
-    );
-    if (twin) {
-      return refuse(
-        'agent_exists',
-        `“${name}” is connected to this notebook already, as ${twin.name}.`,
-      );
-    }
-    const asked = await this.options.ownerCheck(
-      fitWords(`let the agent “${name}” edit `, repositoryWords(entry.remote), ' on this Mac'),
-    );
-    if (!asked.ok) return refuse('not_confirmed', asked.message);
-    const clone = agentCloneName(entry.name, name, new Set(all.map((each) => each.name)));
-    try {
-      const added = await notebooks.add({
-        remote: entry.remote,
-        branch: entry.branch,
-        dir: entry.dir,
-        name: clone,
-        agent: name,
-        ...(token ? { token } : {}),
-        ...(entry.tokenUser ? { tokenUser: entry.tokenUser } : {}),
-        ...(entry.sign === false ? { sign: false } : {}),
-      });
-      if (entry.author) await notebooks.set(clone, { author: entry.author });
-      return { ok: true, value: this.view(added.entry) };
-    } catch (error) {
-      return refuse(error instanceof CliError ? error.code : 'connect_failed', cliMessage(error));
     }
   }
 

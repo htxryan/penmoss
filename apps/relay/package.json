@@ -10,7 +10,7 @@
     "types": "wrangler types",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run && vitest run --config vitest.workers.config.ts",
-    "deploy": "test -z \"$PENMOSS_FACTORY_RUN\" || { echo 'No production deploys from a factory run: they happen after merge (FD24).' >&2; exit 1; }; wrangler deploy"
+    "deploy": "sh ../../scripts/no-factory-deploy.sh && wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",

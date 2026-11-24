@@ -492,7 +492,6 @@ export function installFakeBridge(config: {
       identity: () => host('identity'),
       onChange: (listener) => listen(gitListeners, listener),
       agents: () => Promise.resolve({ ok: true, value: [] }),
-      connectAgent: () => Promise.resolve(none),
       disconnectAgent: () => Promise.resolve(none),
       cli: () => host('cliStatus'),
       // Browsing GitHub in Add a Git Notebook (T81): main's GitHubBrowseHost on the stand-in Mac.

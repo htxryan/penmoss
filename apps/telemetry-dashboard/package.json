@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p src/client && tsc --noEmit -p test/client && tsc --noEmit -p test/e2e && tsc --noEmit -p test/fixtures",
     "test": "node build.mjs && vitest run && vitest run --config vitest.workers.config.ts",
     "e2e": "playwright test --config test/e2e/playwright.config.ts",
-    "deploy": "test -z \"$PENMOSS_FACTORY_RUN\" || { echo 'No production deploys from a factory run: they happen after merge (FD24).' >&2; exit 1; }; node build.mjs && wrangler deploy"
+    "deploy": "sh ../../scripts/no-factory-deploy.sh && node build.mjs && wrangler deploy"
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",

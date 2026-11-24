@@ -130,147 +130,82 @@ function agents(
   return { service, asked, home, secrets, registry: join(home, '.penmoss', 'notebooks.json') };
 }
 
-describe.concurrent(
-  'connecting an agent to a git notebook (A993, A994)',
-  { timeout: 60_000 },
-  () => {
-    it('makes the agent its own clone after Touch ID, with its MCP command', async ({ dir }) => {
-      const remote = bare(dir, 'notes');
-      await seeded(dir, remote);
-      const { service, asked, registry } = agents(dir, { entry: appEntry(remote) });
-      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', '  Claude   Code ');
-      if (!answer.ok) throw new Error(answer.error.message);
-      expect(answer.value).toMatchObject({
-        name: 'notes-claude-code',
-        label: 'Claude Code',
-        server: 'penmoss-notes-claude-code',
-      });
-      expect(answer.value.claude).toBe(
-        `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code`,
-      );
-      // With the switch on (T60, A1073): the channel, and how Claude Code starts with it.
-      expect(answer.value.claudeChannel).toBe(
-        `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code --channel`,
-      );
-      expect(answer.value.claudeLaunch).toBe(
-        'claude --dangerously-load-development-channels server:penmoss-notes-claude-code',
-      );
-      expect(answer.value.codex).toBe(
-        [
-          '[mcp_servers."penmoss-notes-claude-code"]',
-          `command = "${EXE}"`,
-          'args = ["--penmoss-cli", "mcp", "--notebook", "notes-claude-code"]',
-        ].join('\n'),
-      );
-      expect(asked).toHaveLength(1);
-      expect(asked[0]).toContain('let the agent “Claude Code” edit');
-      // The CLI's own registry: an agent's clone, and no confirmation of any kind (D51).
-      const text = readFileSync(registry, 'utf8');
-      const stored = JSON.parse(text) as {
-        notebooks: { name: string; writer: { kind: string; label: string } }[];
-      };
-      expect(stored.notebooks).toHaveLength(1);
-      expect(stored.notebooks[0]).toMatchObject({
-        name: 'notes-claude-code',
-        writer: { kind: 'agent', label: 'Claude Code' },
-      });
-      expect(text).not.toMatch(/confirm/i);
-      // It syncs as the agent: the CLI's code finds the notebook the app made.
-      const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
-      expect(listed.ok && listed.value.map((each) => each.name)).toEqual(['notes-claude-code']);
-    });
+/** An agent's clone of the notebook in `remote`, as `penmoss notebook add --agent` makes it. */
+async function agentClone(home: string, remote: string, label: string, name: string) {
+  await cliNotebooks(join(home, '.penmoss')).add({
+    remote,
+    branch: 'main',
+    dir: '',
+    name,
+    agent: label,
+  });
+}
 
-    it('refuses without Touch ID, and leaves nothing behind', async ({ dir }) => {
-      const remote = bare(dir, 'notes');
-      await seeded(dir, remote);
-      const { service, registry } = agents(dir, {
-        entry: appEntry(remote),
-        owner: () => Promise.resolve({ ok: false, message: 'Cancelled.' }),
-      });
-      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code');
-      expect(answer).toEqual({
-        ok: false,
-        error: { code: 'not_confirmed', message: 'Cancelled.' },
-      });
-      expect(() => readFileSync(registry)).toThrow();
+describe.concurrent('agents connected to a git notebook (A993)', { timeout: 60_000 }, () => {
+  it('lists an agent’s clone with its MCP command', async ({ dir }) => {
+    const remote = bare(dir, 'notes');
+    await seeded(dir, remote);
+    const { service, home } = agents(dir, { entry: appEntry(remote) });
+    await agentClone(home, remote, 'Claude Code', 'notes-claude-code');
+    const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
+    if (!listed.ok) throw new Error(listed.error.message);
+    expect(listed.value).toHaveLength(1);
+    const [agent] = listed.value;
+    expect(agent).toMatchObject({
+      name: 'notes-claude-code',
+      label: 'Claude Code',
+      server: 'penmoss-notes-claude-code',
     });
+    expect(agent!.claude).toBe(
+      `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code`,
+    );
+    // With the switch on (T60, A1073): the channel, and how Claude Code starts with it.
+    expect(agent!.claudeChannel).toBe(
+      `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code --channel`,
+    );
+    expect(agent!.claudeLaunch).toBe(
+      'claude --dangerously-load-development-channels server:penmoss-notes-claude-code',
+    );
+    expect(agent!.codex).toBe(
+      [
+        '[mcp_servers."penmoss-notes-claude-code"]',
+        `command = "${EXE}"`,
+        'args = ["--penmoss-cli", "mcp", "--notebook", "notes-claude-code"]',
+      ].join('\n'),
+    );
+    expect(await agents(dir, { entry: null }).service.list('nope')).toMatchObject({
+      ok: false,
+    });
+  });
 
-    it('leaves nothing behind when the add fails', async ({ dir }) => {
-      // A repository that is not there: the CLI's add rolls back, and no agent is listed.
-      const { service, registry } = agents(dir, {
-        entry: appEntry(`file://${join(dir, 'missing.git')}`),
-      });
-      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-      expect(answer.ok).toBe(false);
-      expect(await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA')).toEqual({ ok: true, value: [] });
-      expect(() => readFileSync(registry)).toThrow();
+  it('disconnects an agent, never a person’s clone; losing changes asks Touch ID', async ({
+    dir,
+  }) => {
+    const remote = bare(dir, 'notes');
+    await seeded(dir, remote);
+    const { service, asked, home } = agents(dir, { entry: appEntry(remote) });
+    await agentClone(home, remote, 'Codex', 'notes-codex');
+    // A person's own clone in the same ~/.penmoss is not the page's to remove.
+    await cliNotebooks(join(home, '.penmoss')).add({
+      remote,
+      branch: 'main',
+      dir: '',
+      name: 'mine',
     });
-
-    it('carries the token, signing and commit identity over to the clone', async ({ dir }) => {
-      const remote = bare(dir, 'notes');
-      await seeded(dir, remote);
-      const author = { name: 'Ryan', email: 'ryan@users.noreply.github.com' };
-      const { service, registry, secrets } = agents(dir, {
-        entry: appEntry(remote, { sign: false, author }),
-        token: 'ghp_example0token0for0tests',
-      });
-      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-      if (!answer.ok) throw new Error(answer.error.message);
-      const stored = JSON.parse(readFileSync(registry, 'utf8')) as {
-        notebooks: { localId: string; sign?: boolean; identity?: unknown }[];
-      };
-      expect(stored.notebooks[0]).toMatchObject({ sign: false, identity: author });
-      const saved = await secrets.get(`token:${stored.notebooks[0]!.localId}`);
-      expect(saved?.token).toBe('ghp_example0token0for0tests');
+    expect(await service.disconnect('mine', false)).toMatchObject({
+      ok: false,
+      error: { code: 'not_found' },
     });
-
-    it('refuses a second agent of the same name, and a name it cannot use', async ({ dir }) => {
-      const remote = bare(dir, 'notes');
-      await seeded(dir, remote);
-      const { service } = agents(dir, { entry: appEntry(remote) });
-      expect((await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code')).ok).toBe(true);
-      const again = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code');
-      expect(!again.ok && again.error.code).toBe('agent_exists');
-      for (const bad of ['', '   ', 'x'.repeat(41), 'say "hi"']) {
-        const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', bad);
-        expect(!answer.ok && answer.error.code).toBe('invalid_label');
-      }
-      const missing = agents(dir, { entry: null }).service;
-      expect(await missing.connect('nope', 'Codex')).toMatchObject({ ok: false });
+    asked.length = 0;
+    expect(await service.disconnect('notes-codex', true)).toEqual({
+      ok: true,
+      value: null,
     });
-
-    it('disconnects an agent, never a person’s clone; losing changes asks Touch ID', async ({
-      dir,
-    }) => {
-      const remote = bare(dir, 'notes');
-      await seeded(dir, remote);
-      const { service, asked, home } = agents(dir, { entry: appEntry(remote) });
-      const connected = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-      if (!connected.ok) throw new Error(connected.error.message);
-      // A person's own clone in the same ~/.penmoss is not the page's to remove.
-      await cliNotebooks(join(home, '.penmoss')).add({
-        remote,
-        branch: 'main',
-        dir: '',
-        name: 'mine',
-      });
-      expect(await service.disconnect('mine', false)).toMatchObject({
-        ok: false,
-        error: { code: 'not_found' },
-      });
-      asked.length = 0;
-      expect(await service.disconnect(connected.value.name, true)).toEqual({
-        ok: true,
-        value: null,
-      });
-      expect(asked).toEqual([
-        'disconnect the agent “Codex” and lose the changes it has not pushed',
-      ]);
-      const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
-      expect(listed).toEqual({ ok: true, value: [] });
-    });
-  },
-);
+    expect(asked).toEqual(['disconnect the agent “Codex” and lose the changes it has not pushed']);
+    const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
+    expect(listed).toEqual({ ok: true, value: [] });
+  });
+});
 
 describe.concurrent(
   'every agent on this Mac reaches every notebook in the app (D52)',
@@ -438,7 +373,7 @@ describe.concurrent(
         entry: first,
         all: () => all.map((entry) => ({ entry, token: null })),
       });
-      expect((await service.connect(first.localId, 'Codex')).ok).toBe(true);
+      await agentClone(home, remote, 'Codex', 'notes-codex');
       await service.ensureAll();
       const cli = cliNotebooks(join(home, '.penmoss'));
       expect((await cli.list()).map((each) => each.name).sort()).toEqual([
@@ -612,15 +547,20 @@ describe.concurrent('the CLI bundle (PEN-121)', () => {
     async ({ dir }) => {
       const remote = bare(dir, 'bundle');
       await seeded(dir, remote);
-      const { service } = agents(dir, { entry: appEntry(remote), cli: [BUNDLED, '--penmoss-cli'] });
-      const connected = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-      if (!connected.ok) throw new Error(connected.error.message);
+      const { service, home } = agents(dir, {
+        entry: appEntry(remote),
+        cli: [BUNDLED, '--penmoss-cli'],
+      });
+      await agentClone(home, remote, 'Codex', 'notes-codex');
+      const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
+      if (!listed.ok) throw new Error(listed.error.message);
+      const [connected] = listed.value;
       const quoted = `'${BUNDLED}' --penmoss-cli`;
-      expect(connected.value.claude).toBe(
+      expect(connected!.claude).toBe(
         `claude mcp add penmoss-notes-codex -- ${quoted} mcp --notebook notes-codex`,
       );
-      expect(connected.value.codex).toContain(`command = "${BUNDLED}"`);
-      expect(connected.value.codex).toContain(
+      expect(connected!.codex).toContain(`command = "${BUNDLED}"`);
+      expect(connected!.codex).toContain(
         'args = ["--penmoss-cli", "mcp", "--notebook", "notes-codex"]',
       );
       expect((await service.cliStatus()).direct).toBe(quoted);

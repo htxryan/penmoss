@@ -21,7 +21,7 @@ penmoss.app is one Astro project (P9, P13; A1200): the brochure pages, written b
 - `task site:dev`: `astro dev`, with live reload.
 - `task site:build`: builds into `dist/`. A broken internal link in the docs fails it (starlight-links-validator).
 - `task site:preview`: `wrangler dev` over `dist/` with the real headers, on http://localhost:8788.
-- `task site:test`: builds, checks the screenshots (`scripts/images.test.mjs`), then runs `test/site.spec.ts` against `wrangler dev` (headless Chromium). `PENMOSS_SITE_PORT` picks another port. CI's Site job runs it when `site/` changes.
+- `task site:test`: builds, checks the screenshots (`scripts/images.test.mjs`), then runs `test/site.spec.ts` against `wrangler dev` (headless Chromium). Its port is this checkout's (`scripts/checkout-ports.mjs`), or `PENMOSS_SITE_PORT`. CI's Site job runs it when `site/` changes.
 - `task site:screenshots`: regenerates `public/img/` from `demo/` (see Screenshots).
 - `task site:social`: redraws the social card, `public/img/social.png`.
 - `task site:deploy`: builds, then `wrangler deploy`. CI deploys when a stable release is published (`.github/workflows/site.yml`, docs/ci.md).

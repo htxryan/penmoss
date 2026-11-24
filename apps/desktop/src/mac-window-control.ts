@@ -21,7 +21,7 @@ export function windowState(window: BrowserWindow): MacWindowState {
 }
 
 /** Tells a window's page its state: the pin button, the menu's tick and the title bar follow. */
-export function sendWindowState(window: BrowserWindow): void {
+function sendWindowState(window: BrowserWindow): void {
   if (!window.isDestroyed()) {
     sendEvent(window.webContents, 'windowStateChanged', windowState(window));
   }
@@ -54,7 +54,7 @@ export function keepOnTop(window: BrowserWindow, on: boolean): MacWindowState {
  * nothing typed after the save is lost when they close. Clicks still reach the page (blocking
  * them would let them fall through to the app behind): a click changes no text by itself.
  */
-export function holdInput(open: readonly BrowserWindow[]): () => void {
+function holdInput(open: readonly BrowserWindow[]): () => void {
   const block = (event: Electron.Event) => event.preventDefault();
   for (const window of open) {
     if (!window.isDestroyed()) window.webContents.on('before-input-event', block);
@@ -149,7 +149,7 @@ export async function setCompactTitleBar(
  * bar (A724). The window that was in front opens last and comes to the front. One that cannot
  * be made again is logged, and the rest still open.
  */
-export function reopenWindows(open: readonly BrowserWindow[]): void {
+function reopenWindows(open: readonly BrowserWindow[]): void {
   const front = windows.active;
   state.saveMainState?.();
   const plans = open

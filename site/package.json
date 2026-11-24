@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "node build.mjs",
-    "preview": "wrangler dev --local --port 8788",
+    "preview": "wrangler dev --local --port $(node ../scripts/ports.mjs site)",
     "typecheck": "astro sync && tsc --noEmit -p . && tsc --noEmit -p scripts",
     "test": "node --test build.test.mjs scripts/images.test.mjs",
     "test:e2e": "playwright test"

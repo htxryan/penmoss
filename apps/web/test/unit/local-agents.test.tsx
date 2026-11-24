@@ -42,7 +42,6 @@ const cliInfo = (state: CliInfo['state'], onPath: boolean | null = false): CliIn
 function bridge(
   options: {
     agents?: LocalAgentInfo[];
-    connect?: (label: string) => GitAnswer<LocalAgentInfo>;
     disconnect?: (name: string, force: boolean) => GitAnswer<null>;
     cli?: CliInfo;
   } = {},
@@ -54,12 +53,6 @@ function bridge(
     agents: (localId: string) => {
       calls.push(['agents', localId]);
       return Promise.resolve({ ok: true, value: agents });
-    },
-    connectAgent: (localId: string, label: string) => {
-      calls.push(['connect', localId, label]);
-      const answer = options.connect?.(label) ?? { ok: true, value: agent(label, 'notes-x') };
-      if (answer.ok) agents = [...agents, answer.value];
-      return Promise.resolve(answer);
     },
     disconnectAgent: (name: string, force: boolean) => {
       calls.push(['disconnect', name, force]);

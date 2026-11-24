@@ -2,11 +2,12 @@
  * The named queries (PEN-137): one SELECT each in queries/*.sql, run by the dashboard
  * (apps/telemetry-dashboard) and by `task telemetry:query -- <name>` (scripts/query.mjs).
  *
- * Every query takes the same parameters, ?1 to ?6 (QueryParams); next.sql also takes ?7 and ?8,
- * the start event's kind and name, and the Sessions tab's queries (PEN-173) ?9 to ?11, an
- * install, a session and a page. The dashboard binds them; the script, which runs a query
- * through `wrangler d1 execute`, writes them in as checked literals.
+ * Every query takes the same parameters, ?1 to ?6 (QueryParams, in params.ts); next.sql also
+ * takes ?7 and ?8, the start event's kind and name, and the Sessions tab's queries (PEN-173) ?9
+ * to ?11, an install, a session and a page. The dashboard binds them; the script, which runs a
+ * query through `wrangler d1 execute`, writes them in as checked literals.
  */
+import { queryValues, type QueryParams } from './params';
 import activeTotals from '../queries/active-totals.sql';
 import active from '../queries/active.sql';
 import actors from '../queries/actors.sql';
@@ -64,30 +65,7 @@ export type QueryName = keyof typeof NAMED_QUERIES;
 
 export const QUERY_NAMES = Object.keys(NAMED_QUERIES) as QueryName[];
 
-export function isQueryName(name: string): name is QueryName {
-  return Object.hasOwn(NAMED_QUERIES, name);
-}
-
-/** The parameters every query takes, in order (?1 to ?6), and the ones some take (?7 to ?11). */
-export interface QueryParams {
-  /** How many days the period is, ending today. */
-  readonly days: number;
-  /** '' for every client, actor, channel or version. */
-  readonly client: string;
-  readonly actor: string;
-  readonly channel: string;
-  readonly version: string;
-  /** Today, YYYY-MM-DD (UTC). */
-  readonly today: string;
-  /** next.sql's start event (?7, ?8). */
-  readonly startKind?: string;
-  readonly startName?: string;
-  /** The Sessions tab's (PEN-173): an install's 32 hex characters (?9), a session's 16 (?10). */
-  readonly install?: string;
-  readonly session?: string;
-  /** sessions.sql's page, from 1 (?11). */
-  readonly page?: number;
-}
+export type { QueryParams } from './params';
 
 /** The highest ?N in `sql`, comments aside: how many values it binds. */
 export function parameterCount(sql: string): number {
@@ -99,20 +77,7 @@ export function parameterCount(sql: string): number {
 
 /** The values to bind to `sql`, in order. */
 export function bindingsFor(sql: string, params: QueryParams): (string | number)[] {
-  const all = [
-    params.days,
-    params.client,
-    params.actor,
-    params.channel,
-    params.version,
-    params.today,
-    params.startKind ?? '',
-    params.startName ?? '',
-    params.install ?? '',
-    params.session ?? '',
-    params.page ?? 1,
-  ];
-  return all.slice(0, parameterCount(sql));
+  return queryValues(params).slice(0, parameterCount(sql));
 }
 
 /** Runs the named query `name` with `params`. */

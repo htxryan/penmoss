@@ -10,7 +10,7 @@ export type CredentialAnswer =
   | { readonly ok: true; readonly token: string }
   | { readonly ok: false; readonly reason: 'no_credential' | 'timeout' };
 
-export interface GitCredentialOptions {
+interface GitCredentialOptions {
   /** Extra environment for git (the suite's `GIT_CONFIG_GLOBAL`, config.gitEnv). */
   readonly gitEnv?: Readonly<Record<string, string>> | null;
   readonly timeoutMs?: number;

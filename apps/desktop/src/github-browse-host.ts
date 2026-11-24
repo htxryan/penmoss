@@ -18,13 +18,13 @@ import {
 import { gitHubCredential, type CredentialAnswer } from './git-credential';
 
 /** Which sign-in a call used: git's own, or Penmoss's (Sign in with GitHub, T82). */
-export type BrowseVia = 'git' | 'penmoss';
+type BrowseVia = 'git' | 'penmoss';
 
-export type ViaResult<T> =
+type ViaResult<T> =
   | { readonly ok: true; readonly value: T; readonly via: BrowseVia }
   | { readonly ok: false; readonly error: BrowseError };
 
-export interface GitHubBrowseHostOptions {
+interface GitHubBrowseHostOptions {
   readonly fetch: BrowseFetch;
   /** `config.githubApi`: the suite's fake, else api.github.com. */
   readonly api?: string | null;
@@ -57,7 +57,7 @@ const isString = (value: unknown, max = 300): value is string =>
  * Which of Penmoss's accounts a call is for (A1617): a login, `null` for an account GitHub never
  * named, or undefined for no choice (git's sign-in, else the first account).
  */
-export type BrowseAccount = string | null | undefined;
+type BrowseAccount = string | null | undefined;
 
 const accountOf = (value: unknown): BrowseAccount | false =>
   value === undefined || value === null ? value : isString(value, 100) ? value : false;

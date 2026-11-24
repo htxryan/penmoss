@@ -156,7 +156,8 @@ jobs:
     name: Site (penmoss.app and its docs)
     if: needs.pick.outputs.site == 'true'
     # T80.15, R13: builds the site (Astro, Starlight, the links validator, the docs' CSP hashes)
-    # and runs site/test under wrangler dev with the real _headers, on a free port.
+    # and runs site/test under wrangler dev with the real _headers, on this checkout's port
+    # (scripts/checkout-ports.mjs).
     needs: pick
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -178,10 +179,7 @@ jobs:
           package: '@penmoss/site'
 
       - name: Build the site and check it as served
-        run: |
-          PENMOSS_SITE_PORT="$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
-          export PENMOSS_SITE_PORT
-          task site:test
+        run: task site:test
 
   factory-ui:
     name: Factory UI (headless Chromium)

@@ -27,7 +27,7 @@ export interface TelemetryEnv {
 }
 
 /** What a batch's answer says (202): the clients mark the refused indexes refused. */
-export interface BatchAnswer {
+interface BatchAnswer {
   readonly accepted: number;
   readonly dropped: number;
   /** The index in the batch of each event dropped. */
@@ -35,7 +35,7 @@ export interface BatchAnswer {
 }
 
 /** Seconds a client waits after a 429 or a 503. */
-export const RETRY_AFTER_SECONDS = 60;
+const RETRY_AFTER_SECONDS = 60;
 
 const json = (body: unknown, status: number, headers: Record<string, string> = {}) =>
   Response.json(body, { status, headers: { 'cache-control': 'no-store', ...headers } });

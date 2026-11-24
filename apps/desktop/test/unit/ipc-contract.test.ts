@@ -62,7 +62,6 @@ const POLICY: Record<keyof typeof INVOKE, [Caller, 'none' | 'handler' | { refuse
   gitGithubGitLogin: ['main', 'none'],
   gitGithubCreate: ['main', { refused: BROWSE_NOT_CONFIRMED }],
   agentsList: ['main', 'none'],
-  agentsConnect: ['main', { refused: NEEDS_A_PERSON }],
   agentsDisconnect: ['main', { refused: NEEDS_A_PERSON }],
   cliStatus: ['main', 'none'],
   cliInstall: ['main', { refused: NEEDS_A_PERSON }],

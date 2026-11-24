@@ -1,7 +1,7 @@
 /** Multi-format clipboard entries (T29's clipboard bridge): text, HTML and Markdown. */
 import { clipboard, ClipboardItem } from 'electron';
 
-export const MAX_CLIPBOARD_CHARS = 64 * 1024 * 1024;
+const MAX_CLIPBOARD_CHARS = 64 * 1024 * 1024;
 
 const MARKDOWN_FORMAT: Partial<Record<NodeJS.Platform, string>> = {
   darwin: 'electron application/osclipboard;format="net.daringfireball.markdown"',

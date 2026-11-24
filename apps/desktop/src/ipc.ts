@@ -21,9 +21,9 @@ import {
 } from './ipc-contract';
 
 /** Whether a message's sender is one `from` allows (main.ts's `fromApp`, `fromAppWindow`, …). */
-export type CallerCheck = (from: Caller, event: IpcMainEvent | IpcMainInvokeEvent) => boolean;
+type CallerCheck = (from: Caller, event: IpcMainEvent | IpcMainInvokeEvent) => boolean;
 
-export interface IpcCall<E> {
+interface IpcCall<E> {
   readonly event: E;
   /** A key press or click had just happened in the page (the rule's `gesture`; else false). */
   readonly gesture: boolean;

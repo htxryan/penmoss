@@ -47,7 +47,7 @@ export type LogLevel = 'info' | 'warn' | 'error';
 
 export type LogLimits = Pick<Limits, 'logs.fileKb' | 'logs.files' | 'logs.days'>;
 
-export const LOG_FILE = 'penmoss.log';
+const LOG_FILE = 'penmoss.log';
 /** Bytes read at a time, backwards or forwards. */
 export const CHUNK = 64 * 1024;
 /** The longest message a line keeps (characters). */
@@ -63,7 +63,7 @@ export function logFileName(index: number): string {
   return index === 0 ? LOG_FILE : `penmoss.${index}.log`;
 }
 
-export interface LogFileOptions {
+interface LogFileOptions {
   readonly dir: string;
   readonly limits?: LogLimits;
   /** What scrub #1 knows: the GitHub login, the notebooks' names, repositories and branches. */
