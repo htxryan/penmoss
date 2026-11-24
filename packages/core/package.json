@@ -44,6 +44,7 @@
     "./mirror": "./src/mirror/index.ts",
     "./analytics": "./src/analytics/index.ts",
     "./analytics/node": "./src/analytics/node/index.ts",
+    "./node/home": "./src/node/home.ts",
     "./title-case": "./src/title-case.ts",
     "./ai-description": "./src/ai-description.ts"
   },

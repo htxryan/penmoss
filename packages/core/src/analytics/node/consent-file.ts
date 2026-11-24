@@ -5,16 +5,12 @@
  * in synced settings or a notebook.
  */
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { penmossHome } from '../../node/home';
 import { newConsentFile, parseConsentFile, type ConsentFile } from '../consent';
 
 /** Where the files live: `PENMOSS_HOME` (tests) or `~/.penmoss`. */
-export function penmossHome(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): string {
-  return env.PENMOSS_HOME?.trim() || join(homedir(), '.penmoss');
-}
+export { penmossHome };
 
 export function consentPath(env?: Readonly<Record<string, string | undefined>>): string {
   return join(penmossHome(env), 'analytics.json');
