@@ -33,6 +33,7 @@ import {
   cutLine,
   displayName,
   eventName,
+  fullNumber,
   kindName,
   osName,
   propsInWords,
@@ -384,7 +385,7 @@ function tableElement(spec: TableSpec, caption: string): HTMLTableElement {
         link.textContent = value.text;
         td.append(link);
       } else {
-        td.textContent = typeof value === 'number' ? value.toLocaleString('en-GB') : value;
+        td.textContent = typeof value === 'number' ? fullNumber(value) : value;
         if (typeof value === 'number') td.className = 'num';
       }
     }
@@ -412,7 +413,7 @@ function card(spec: CardSpec): HTMLElement {
   if (spec.count !== undefined) {
     const count = document.createElement('span');
     count.className = 'count';
-    count.textContent = spec.count.toLocaleString('en-GB');
+    count.textContent = fullNumber(spec.count);
     title.append(' ', count);
   }
   section.setAttribute('aria-labelledby', title.id);
@@ -881,7 +882,7 @@ function paths(answer: Answer): HTMLElement[] {
   for (const option of options) {
     const node = document.createElement('option');
     node.value = shownAs.get(option.event) ?? option.event;
-    node.label = `${eventName(option.event).id} · ${option.events.toLocaleString('en-GB')} ${
+    node.label = `${eventName(option.event).id} · ${fullNumber(option.events)} ${
       option.events === 1 ? 'time' : 'times'
     }`;
     list.append(node);
@@ -890,7 +891,7 @@ function paths(answer: Answer): HTMLElement[] {
   const occurrences = document.createElement('span');
   occurrences.className = 'occurrences';
   occurrences.textContent = chosen
-    ? `${chosen.events.toLocaleString('en-GB')} ${chosen.events === 1 ? 'time' : 'times'} in the period`
+    ? `${fullNumber(chosen.events)} ${chosen.events === 1 ? 'time' : 'times'} in the period`
     : '';
   input.addEventListener('change', () => {
     // A display name, or an id typed as recorded ("command:note.new").
@@ -1211,7 +1212,7 @@ function health(answer: Answer): HTMLElement[] {
     card({
       id: 'ingest',
       title: 'Events per Day',
-      note: `Rows written on the busiest day: ${peak.toLocaleString('en-GB')} of the ${cap.toLocaleString('en-GB')} a day D1's free plan allows (${((100 * peak) / cap).toFixed(1)}%).`,
+      note: `Rows written on the busiest day: ${fullNumber(peak)} of the ${fullNumber(cap)} a day D1's free plan allows (${((100 * peak) / cap).toFixed(1)}%).`,
       chart: (width) =>
         lineChart(
           { categories: days, series, label: 'Events accepted, dropped and written per day' },
@@ -1312,7 +1313,7 @@ const backLink = () => {
   return link;
 };
 
-const eventsWord = (n: number) => `${n.toLocaleString('en-GB')} ${n === 1 ? 'event' : 'events'}`;
+const eventsWord = (n: number) => `${fullNumber(n)} ${n === 1 ? 'event' : 'events'}`;
 const clientName = (client: unknown) => CLIENT_LABELS[String(client)] ?? titled(String(client));
 const screenCell = (name: Row[string] | undefined): Cell =>
   name ? eventName(`screen:${String(name)}`) : 'No Screens';
@@ -1337,11 +1338,7 @@ function sessionsList(answer: Answer): Rendered {
     before = node(
       'div',
       'pager',
-      node(
-        'span',
-        'pager-range',
-        `${from.toLocaleString('en-GB')}–${to.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')}`,
-      ),
+      node('span', 'pager-range', `${fullNumber(from)}–${fullNumber(to)} of ${fullNumber(total)}`),
       node(
         'span',
         'btn-row',

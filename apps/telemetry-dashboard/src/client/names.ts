@@ -616,7 +616,8 @@ export function sessionLength(session: {
   return duration(session.ended - session.started);
 }
 
-const count = (n: number) => n.toLocaleString('en-GB');
+/** A number in full, as the dashboard writes every count: 1,250. */
+export const fullNumber = (n: number) => n.toLocaleString('en-GB');
 
 /**
  * What This Install's Sessions holds when it is cut: "Showing 500 of 1,250: this session, the 250
@@ -629,13 +630,13 @@ export function cutLine(total: number, before: number, after: number): string {
     before === 0 && after === 0
       ? ''
       : before === 0
-        ? ` and the ${count(after)} after it`
+        ? ` and the ${fullNumber(after)} after it`
         : after === 0
-          ? ` and the ${count(before)} before it`
+          ? ` and the ${fullNumber(before)} before it`
           : before === after
-            ? ` and the ${count(before)} either side of it`
-            : `, the ${count(before)} before it and the ${count(after)} after it`;
-  return `Showing ${count(shown)} of ${count(total)}: this session${sides}.`;
+            ? ` and the ${fullNumber(before)} either side of it`
+            : `, the ${fullNumber(before)} before it and the ${fullNumber(after)} after it`;
+  return `Showing ${fullNumber(shown)} of ${fullNumber(total)}: this session${sides}.`;
 }
 
 /** An install as the page shows it: its first 8 hex characters (PEN-173). */

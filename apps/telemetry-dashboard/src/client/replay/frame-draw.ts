@@ -26,7 +26,7 @@ import {
   SETTINGS_INDEX,
   SETTINGS_PAGES,
 } from '@penmoss/web/src/pages/settings-index';
-import { displayName } from '../names';
+import { displayName, fullNumber } from '../names';
 import type { FrameData } from './frame-data';
 import { loremOf } from './lorem';
 import {
@@ -936,11 +936,11 @@ function noteScreen(draw: Draw, navInTitleBar: boolean, strip: boolean): string 
           'span',
           { class: 'status-counts' },
           tally
-            ? h('span', { 'data-field': 'words' }, `${tally.words.toLocaleString('en-GB')} words`) +
+            ? h('span', { 'data-field': 'words' }, `${fullNumber(tally.words)} words`) +
                 h(
                   'span',
                   { 'data-field': 'characters' },
-                  `${tally.characters.toLocaleString('en-GB')} characters`,
+                  `${fullNumber(tally.characters)} characters`,
                 )
             : '',
         ),

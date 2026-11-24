@@ -8,7 +8,7 @@
  */
 import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
 import { node } from '../dom';
-import { displayName, duration, eventName, sinceStart, titled } from '../names';
+import { displayName, duration, eventName, fullNumber, sinceStart, titled } from '../names';
 import type { Timeline, TimelineEvent } from '../timeline';
 import type { FrameMessage } from './frame-draw';
 import {
@@ -86,8 +86,8 @@ export function blockKind(token: string | undefined): string | undefined {
   return BLOCK_KINDS[kind.startsWith('li.') ? kind.slice(0, 4) : kind.split('.')[0]!];
 }
 
-const count = (n: number) => n.toLocaleString('en-GB');
-const plural = (n: number, one: string, many = `${one}s`) => `${count(n)} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many = `${one}s`) =>
+  `${fullNumber(n)} ${n === 1 ? one : many}`;
 
 /** One line of the As Recorded list: its label, its value and a muted line under it. */
 export interface RecordedLine {
@@ -134,7 +134,7 @@ export function recordedLines(
     lines.push({
       label: 'Event',
       value: name.title,
-      sub: `${name.id} · ${count(frame.current + 1)} of ${count(replay.events.length)}`,
+      sub: `${name.id} · ${fullNumber(frame.current + 1)} of ${fullNumber(replay.events.length)}`,
     });
   }
   const screen = frame.screen;
@@ -149,7 +149,7 @@ export function recordedLines(
   });
   lines.push({
     label: 'Window',
-    value: `${count(frame.window.width)} × ${count(frame.window.height)}`,
+    value: `${fullNumber(frame.window.width)} × ${fullNumber(frame.window.height)}`,
     ...(frame.window.recorded ? {} : { sub: 'Not Recorded' }),
   });
   const phone = frame.window.width <= NARROW_PX;
@@ -158,7 +158,7 @@ export function recordedLines(
     layout.sidebar === 'shown'
       ? phone
         ? 'Drawer Open'
-        : `Shown, ${count(layout.sidebarWidth ?? 0)} px`
+        : `Shown, ${fullNumber(layout.sidebarWidth ?? 0)} px`
       : layout.sidebar === 'rail'
         ? 'Rail'
         : phone
@@ -239,13 +239,14 @@ export function recordedLines(
       lines.push({
         label: 'Selection',
         value: `${plural(note.selection.chars, 'Character')} across ${plural(note.selection.span, 'Block')}`,
-        sub: `From Block ${count(note.selection.block)}`,
+        sub: `From Block ${fullNumber(note.selection.block)}`,
       });
     } else if (note?.caret !== null && note?.caret !== undefined) {
       const kind = note.caret === 'title' ? undefined : blockKind(note.blocks?.[note.caret]?.token);
       lines.push({
         label: 'Caret',
-        value: note.caret === 'title' ? 'In the Title' : `At the End of Block ${count(note.caret)}`,
+        value:
+          note.caret === 'title' ? 'In the Title' : `At the End of Block ${fullNumber(note.caret)}`,
         ...(kind ? { sub: kind } : {}),
       });
     }

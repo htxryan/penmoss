@@ -5,7 +5,7 @@
  * fills, hairline grid; text in text colours, never a series colour. Every value a tooltip shows
  * is also in the card's table.
  */
-import { eventName } from './names';
+import { eventName, fullNumber } from './names';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -29,9 +29,7 @@ export const formatNumber = (value: number) =>
     ? new Intl.NumberFormat('en-GB', { notation: 'compact', maximumFractionDigits: 1 }).format(
         value,
       )
-    : value.toLocaleString('en-GB');
-
-const fullNumber = (value: number) => value.toLocaleString('en-GB');
+    : fullNumber(value);
 
 /** "19 Nov" from YYYY-MM-DD. */
 export function shortDay(day: string): string {
