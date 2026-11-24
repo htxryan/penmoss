@@ -226,7 +226,6 @@ export interface Invokes {
   >;
   gitGithubGitLogin: Call<[], string | null>;
   agentsList: Call<[localId: string], GitAnswer<readonly LocalAgentInfo[]> | null>;
-  agentsConnect: Call<[localId: string, label: string], GitAnswer<LocalAgentInfo> | null>;
   agentsDisconnect: Call<[name: string, force: boolean], GitAnswer<null> | null>;
   cliStatus: Call<[], CliInfo | null>;
   cliInstall: Call<[], GitAnswer<CliInfo> | null>;
@@ -397,11 +396,6 @@ export const INVOKE = {
   },
   // Agents on this Mac with no account (T54, A992, A993): the main window's Settings only.
   agentsList: { channel: 'penmoss:agents:list', from: 'main' },
-  agentsConnect: {
-    channel: 'penmoss:agents:connect',
-    from: 'main',
-    gesture: { refused: NEEDS_A_PERSON },
-  },
   agentsDisconnect: {
     channel: 'penmoss:agents:disconnect',
     from: 'main',

@@ -131,7 +131,6 @@ const git = {
   },
   // Agents on this Mac (T54, A992, A993): main refuses them outside the main window.
   agents: (localId) => invoke('agentsList', String(localId)),
-  connectAgent: (localId, label) => invoke('agentsConnect', String(localId), String(label)),
   disconnectAgent: (name, force) => invoke('agentsDisconnect', String(name), force === true),
   cli: () => invoke('cliStatus'),
   installCli: () => invoke('cliInstall'),
