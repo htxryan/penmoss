@@ -153,19 +153,6 @@ export interface TrashEntry {
   readonly folderId?: string | null;
 }
 
-/** How long Trash shows a note's days left for (T21). */
-export const TRASH_DAYS = 30;
-
-/**
- * Whole days left of a note deleted at `deletedAt`: 30 the day it was deleted, never more, even
- * when it was deleted after `now` was read or by a device whose clock runs ahead (B9).
- */
-export function trashDaysLeft(deletedAt: number, now: number): number {
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  const left = Math.ceil((deletedAt + TRASH_DAYS * DAY_MS - now) / DAY_MS);
-  return Math.min(TRASH_DAYS, Math.max(0, left));
-}
-
 /**
  * How a source syncs (a git notebook's engine host, A860). The notes service's pill shows what
  * this says, and Delete for good goes through it.

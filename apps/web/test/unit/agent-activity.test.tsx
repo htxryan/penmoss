@@ -133,6 +133,30 @@ describe('deleted folders in Trash', () => {
     expect(byPhone).not.toContain('✦');
   });
 
+  // B9: deleted by a device whose clock runs ahead, or after the page read the clock.
+  it('never shows more days left than a folder is kept for', () => {
+    const ahead = render(
+      <DeletedFolderList
+        folders={[{ ...folder, deletedAt: folder.deletedAt + 3 * 24 * 60 * 60 * 1000 }]}
+        now={folder.deletedAt}
+        busy={false}
+        folderName={() => 'the top level'}
+        onRestore={() => {}}
+      />,
+    );
+    expect(text(ahead)).toContain('· 30 days left');
+    const gone = render(
+      <DeletedFolderList
+        folders={[folder]}
+        now={folder.deletedAt + 31 * 24 * 60 * 60 * 1000}
+        busy={false}
+        folderName={() => 'the top level'}
+        onRestore={() => {}}
+      />,
+    );
+    expect(text(gone)).toContain('· 0 days left');
+  });
+
   it('says what a restore did, and which notes it left where they are', () => {
     expect(
       restoredMessage('Garden', { restored: true, parentGone: false, notes: 3, skipped: [] }),

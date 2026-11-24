@@ -1,6 +1,6 @@
 import { Icon } from '@penmoss/ui/icons';
 import type { FolderNode } from '@penmoss/core/workspace';
-import { WorkspaceError } from '@penmoss/model/workspace';
+import { FOLDER_TRASH_DAYS, WorkspaceError } from '@penmoss/model/workspace';
 import {
   useCallback,
   useEffect,
@@ -1131,7 +1131,7 @@ function ConfirmDelete({
         {notes > 0
           ? `${notes === 1 ? 'Its note moves' : `Its ${notes} notes move`} to ${into}; no notes are deleted.`
           : 'It holds no notes.'}{' '}
-        You can restore it from Trash for 30 days.
+        You can restore it from Trash for {FOLDER_TRASH_DAYS} days.
       </p>
       <div className="confirm-actions">
         <button
