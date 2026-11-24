@@ -599,22 +599,18 @@ jobs:
       group: releases
       cancel-in-progress: false
     steps:
+      # A local action runs only once it is checked out: its folder comes first.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
             .github/scripts
             .github/actions/build-number
+            .github/actions/release-setup
           persist-credentials: false
 
-      - uses: ./.github/actions/build-number
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: ./.github/actions/release-setup
         with:
-          node-version-file: .node-version
-
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: penmoss-android-sideload
+          artifact: penmoss-android-sideload
           path: apk
 
       - name: Create the release, carry the newest Mac app, keep the last 10
@@ -682,22 +678,18 @@ jobs:
       group: releases
       cancel-in-progress: false
     steps:
+      # A local action runs only once it is checked out: its folder comes first.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
             .github/scripts
             .github/actions/build-number
+            .github/actions/release-setup
           persist-credentials: false
 
-      - uses: ./.github/actions/build-number
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: ./.github/actions/release-setup
         with:
-          node-version-file: .node-version
-
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: penmoss-mac
+          artifact: penmoss-mac
           path: dmg
 
       - name: Attach the Mac app to this commit's release and newer ones, then to alpha

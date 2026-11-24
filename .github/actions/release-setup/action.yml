@@ -1,0 +1,31 @@
+name: Release job setup
+description: >-
+  What ci.yml's android-release and mac-release do before they publish: the build number
+  (build-number, as PENMOSS_RUN), Node from .node-version for .github/scripts/releases.mjs, and
+  the build's artifact. The job checks out .github/scripts and these two actions first (sparse,
+  without credentials), since a local action must be in the workspace before it can run.
+inputs:
+  artifact:
+    description: The artifact to download (penmoss-android-sideload, penmoss-mac)
+    required: true
+  path:
+    description: The folder to put it in
+    required: true
+outputs:
+  build:
+    description: The build number
+    value: ${{ steps.number.outputs.build }}
+runs:
+  using: composite
+  steps:
+    - id: number
+      uses: ./.github/actions/build-number
+
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: .node-version
+
+    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ inputs.path }}
