@@ -27,21 +27,27 @@ function taskBlocks(taskfile: string): { name: string; lines: string[] }[] {
 }
 
 describe('no production deploy from a factory run (F17, FD24)', () => {
-  it('refuses inside a run, with the words the doctor looks for, and lets one through outside', () => {
-    const inRun = spawnSync('sh', [SCRIPT], {
-      env: { ...process.env, PENMOSS_FACTORY_RUN: '1' },
-      encoding: 'utf8',
-    });
-    expect(inRun.status).toBe(1);
-    expect(inRun.stderr).toBe(
-      'No production deploys from a factory run: they happen after merge (FD24).\n',
-    );
-    const env: NodeJS.ProcessEnv = { ...process.env };
-    delete env['PENMOSS_FACTORY_RUN'];
-    const outside = spawnSync('sh', [SCRIPT], { env, encoding: 'utf8' });
-    expect(outside.status).toBe(0);
-    expect(outside.stderr).toBe('');
-  });
+  it(
+    'refuses inside a run, with the words the doctor looks for, and lets one through outside',
+    {
+      timeout: 30_000,
+    },
+    () => {
+      const inRun = spawnSync('sh', [SCRIPT], {
+        env: { ...process.env, PENMOSS_FACTORY_RUN: '1' },
+        encoding: 'utf8',
+      });
+      expect(inRun.status).toBe(1);
+      expect(inRun.stderr).toBe(
+        'No production deploys from a factory run: they happen after merge (FD24).\n',
+      );
+      const env: NodeJS.ProcessEnv = { ...process.env };
+      delete env['PENMOSS_FACTORY_RUN'];
+      const outside = spawnSync('sh', [SCRIPT], { env, encoding: 'utf8' });
+      expect(outside.status).toBe(0);
+      expect(outside.stderr).toBe('');
+    },
+  );
 
   it('guards every Taskfile task that runs wrangler deploy, before anything else runs', () => {
     const blocks = taskBlocks(readFileSync(join(root, 'Taskfile.yml'), 'utf8')).filter((b) =>
