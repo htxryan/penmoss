@@ -523,7 +523,7 @@ export function safeHref(raw: string | null): string | null {
   } catch {
     return null; // Relative addresses mean nothing in a note.
   }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:' && url.protocol !== 'mailto:') {
+  if (!['http:', 'https:', 'mailto:', 'tel:'].includes(url.protocol)) {
     return null;
   }
   // Google Docs routes every link through a redirect: keep the destination.

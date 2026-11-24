@@ -155,8 +155,14 @@ describe('parseMarkdown', () => {
       });
     }
 
-    it('keeps web, mail, relative and fragment links as links', () => {
-      for (const href of ['https://a.example/x', 'mailto:r@example.com', '../n/other.md', '#top']) {
+    it('keeps web, mail, phone, relative and fragment links as links', () => {
+      for (const href of [
+        'https://a.example/x',
+        'mailto:r@example.com',
+        'tel:+441234567890',
+        '../n/other.md',
+        '#top',
+      ]) {
         const text = firstBlock(`[x](${href})`).firstChild!;
         expect(text.marks.map((mark) => mark.attrs['href'] as unknown)).toEqual([href]);
       }

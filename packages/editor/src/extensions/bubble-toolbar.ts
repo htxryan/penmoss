@@ -560,7 +560,8 @@ export class SelectionToolbar {
     }
     const href = normaliseHref(raw);
     if (!href) {
-      this.linkError.textContent = 'Enter a web address (https://…) or an email address.';
+      this.linkError.textContent =
+        'Enter a web address (https://…), an email address or a phone link (tel:…).';
       return;
     }
     this.backToNote();
