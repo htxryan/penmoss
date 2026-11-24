@@ -3,7 +3,8 @@ import { tabIntentOf, type TabIntent } from '../commands/tab-intent';
 import { DialogClose } from '../shell/DialogClose';
 import { Select } from '@penmoss/ui/controls/Select';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { PickerField, PickerListbox } from '../shell/picker';
+import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
 import { useNoteList } from '../notes/hooks';
 import { snippetParts } from '../notes/backlinks';
@@ -295,7 +296,7 @@ export function SearchOverlay({
           : '';
 
   return (
-    <PickerOverlay testId="search" className="palette search" label="Search" onClose={onClose}>
+    <ModalOverlay testId="search" className="palette search" label="Search" onClose={onClose}>
       <div className="dlg-search">
         <span className="search-icon" aria-hidden="true">
           <Icon name="search" />
@@ -512,6 +513,6 @@ export function SearchOverlay({
         </span>
         Close
       </div>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }

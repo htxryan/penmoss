@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef } from 'react';
-import { PickerListbox, PickerOverlay } from '../shell/picker';
+import { PickerListbox } from '../shell/picker';
+import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
 import { displayTitle, type NoteListEntry } from '../notes/list';
 import { Kbd } from './Kbd';
@@ -80,7 +81,7 @@ export function RecentSwitcher({
     optionName: 'recent',
   });
   return (
-    <PickerOverlay
+    <ModalOverlay
       testId="recent-switcher"
       className="mru"
       labelledBy={`${id}-title`}
@@ -124,6 +125,6 @@ export function RecentSwitcher({
           ))
         )}
       </PickerListbox>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }

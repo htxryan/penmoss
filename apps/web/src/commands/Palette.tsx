@@ -1,7 +1,8 @@
 import { tabIntentOf, type TabIntent } from './tab-intent';
 import { Icon } from '@penmoss/ui/icons';
 import { DialogClose } from '../shell/DialogClose';
-import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { PickerField, PickerListbox } from '../shell/picker';
+import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
 import { useMemo, useState } from 'react';
 import { displayTitle, type NoteListEntry } from '../notes/list';
@@ -131,7 +132,7 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
   const label = mode === 'all' ? 'Command Palette' : mode === 'newTab' ? 'New Tab' : 'Quick Open';
   let lastGroup: string | null = null;
   return (
-    <PickerOverlay
+    <ModalOverlay
       testId={mode === 'all' ? 'palette' : mode === 'newTab' ? 'new-tab-picker' : 'quick-open'}
       className="palette"
       label={label}
@@ -233,6 +234,6 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
         </span>
         Close
       </div>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }
