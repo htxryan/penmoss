@@ -289,7 +289,7 @@ test('A1353: Copy to Notebook asks whether the tags go, starting from the synced
       path: `${SHOTS}/copy-tags-setting.png`,
     });
   }
-  await page.getByRole('link', { name: 'Notes', exact: true }).click();
+  await page.locator('.settings-bar .back-link').click();
   await expect(rowIn(page, 'Personal', 'Plan')).toBeVisible();
 
   // Copy starts unticked now, and the copy is left without the tag.

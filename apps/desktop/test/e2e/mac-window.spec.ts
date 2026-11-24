@@ -671,7 +671,7 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   await expect(page.locator('.settings-bar')).toBeVisible();
   expect(await overLights(page)).toEqual([]);
   // Notes goes back to the tabs as they were (PEN-140): the active tab still shows the graph.
-  await page.getByRole('link', { name: 'Notes', exact: true }).click();
+  await page.locator('.settings-bar .back-link').click();
   await expect(page.getByTestId('app-bar')).toBeVisible();
   await expect(page.locator('.graph-page')).toBeVisible();
   expect(await overLights(page)).toEqual([]);

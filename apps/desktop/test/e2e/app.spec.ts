@@ -303,7 +303,7 @@ test('reopens the last note on launch, and Settings goes back to it (B13)', asyn
   // "← Notes" in Settings goes back to the note, not the empty home page.
   await again.page.keyboard.press('ControlOrMeta+Comma');
   await expect(again.page).toHaveURL(/\/settings/);
-  await again.page.getByRole('link', { name: 'Notes', exact: true }).click();
+  await again.page.locator('.settings-bar .back-link').click();
   await expect(again.page).toHaveURL(`app://penmoss/notes/${id}`);
   expect(again.errors).toEqual([]);
 });

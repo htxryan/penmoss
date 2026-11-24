@@ -304,7 +304,7 @@ test.describe('in Quanta, with two folders and two notes', () => {
     const id = await openNote(page, 'Personal', 'Test');
     await page.getByTestId('sidebar-settings').click();
     await expect(page).toHaveURL(/\/settings/);
-    await page.getByRole('link', { name: 'Notes', exact: true }).click();
+    await page.locator('.settings-bar .back-link').click();
     await expect(page).toHaveURL(new RegExp(`/notes/${id}$`));
     await expect(page.getByTestId('note-title')).toHaveValue('Test');
     expect(errors).toEqual([]);
