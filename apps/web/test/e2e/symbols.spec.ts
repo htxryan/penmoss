@@ -82,7 +82,7 @@ test('T44: slot keys toggle symbols in the margin, in list order, as plain text,
   await page.keyboard.press('Enter');
   await page.keyboard.type('Call the bank');
   const left = await textLeft(page, 'Call the bank');
-  // A note without symbols keeps no gutter (A-NEW-3).
+  // A note without symbols keeps no gutter (A1680).
   await expect(body(page)).not.toHaveAttribute('data-symbol-slots');
 
   await page.keyboard.press(SYMBOL(6));
@@ -90,7 +90,7 @@ test('T44: slot keys toggle symbols in the margin, in list order, as plain text,
   const margin = body(page).locator('p').nth(1).getByTestId('line-symbols');
   await expect(margin).toBeVisible();
   await expect(margin.locator('.pm-symbol')).toHaveText(['★', '→']);
-  // In the gutter, outside the text column, which made room for two (A-NEW-3): every line's
+  // In the gutter, outside the text column, which made room for two (A1680): every line's
   // text starts at the same place, the plain line's too.
   await expect(body(page)).toHaveAttribute('data-symbol-slots', '2');
   const column = (await body(page).boundingBox())!;
@@ -631,7 +631,7 @@ test('T52: symbols in a table cell, by key and the slash menu, before the cell�
   expect(errors).toEqual([]);
 });
 
-test('T52, A-NEW-3: the gutter holds three symbols at every width, past that two and "+N"', async ({
+test('T52, A1680: the gutter holds three symbols at every width, past that two and "+N"', async ({
   page,
 }) => {
   const errors = collectErrors(page);
@@ -719,7 +719,7 @@ test('T52, A-NEW-3: the gutter holds three symbols at every width, past that two
   expect(errors).toEqual([]);
 });
 
-test('A-NEW-1, A-NEW-2: a numbered item takes a box and a star, and a line is struck through', async ({
+test('A1678, A1679: a numbered item takes a box and a star, and a line is struck through', async ({
   page,
 }) => {
   const errors = collectErrors(page);
