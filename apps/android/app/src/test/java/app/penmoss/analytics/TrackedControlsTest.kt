@@ -234,7 +234,6 @@ class TrackedControlsTest {
             "updates.channel" to "the Mac's update channel; Google Play's tracks are the phone's",
             "meaning.enabled" to "Semantic Search runs on the Mac only",
             "tooltip.delay" to "tooltips show on hover; a phone has no pointer to hover with",
-            "home.dadJokes" to "the Mac's Home shows dad jokes; the phone's Home has none",
             "metadata.statusBar" to "the Mac's note status bar; the phone's note has none",
         )
     }

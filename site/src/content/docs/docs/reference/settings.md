@@ -46,7 +46,7 @@ Appearance, Sidebar and Note each have two tabs: **Settings**, which the page op
 | Interface Font, Note Font | The fonts over the theme's own                                                                                                                                    |
 | Note Font Size            | 12 to 28 px                                                                                                                                                       |
 | Show Tooltips After       | How long the pointer rests on a control before its tooltip shows: 0.5, 1 (the default), 1.5 or 2 seconds, or Never. Keyboard focus always shows a tooltip at once |
-| Dad Jokes                 | A dad joke as the heading when no note is open; on by default. Off, the heading reads Welcome to Penmoss                                                          |
+| Dad Jokes                 | A dad joke as the heading when no note is open; on by default. Off, the heading reads Welcome to Penmoss. On Android, the joke heads Home's notes list            |
 | Compact Title Bar         | The window's buttons in Penmoss's own top row; on by default (this Mac)                                                                                           |
 
 ### Sidebar
@@ -177,7 +177,7 @@ Open Settings from the **☰** menu. Each screen's title is large at the top and
 
 | Group         | Screen             | What it holds                                                                                                                                              |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts) and **Preview** (the app, fonts at real size)                                       |
+| Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts, **Dad Jokes**) and **Preview** (the app, fonts at real size)                        |
 | Look and Feel | Home               | Two tabs: **Settings** (shortcuts, sections, Recent Notes, Quick Access) and **Preview** (Home's shortcuts and the menu's sidebar)                         |
 | Look and Feel | Note               | Two tabs: **Settings** (Note Width, the description under the title) and **Preview** (the note at that width, at its real size)                            |
 | Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                                    |

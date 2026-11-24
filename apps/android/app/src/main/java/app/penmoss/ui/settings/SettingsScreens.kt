@@ -504,6 +504,9 @@ fun AppearanceScreen(
     notePreview: (@Composable (Modifier) -> Unit)? = null,
     /** Which of Home's shortcuts the preview's row shows, as Settings → Home leaves them. */
     homeShortcuts: HomeShortcuts = HomeShortcuts(),
+    /** Dad Jokes (PEN-10, the Mac's A1598): a joke heads Home; none when null. */
+    dadJokes: Boolean? = null,
+    onDadJokes: (Boolean) -> Unit = {},
 ) {
     var previewing by rememberSaveable { mutableStateOf(false) }
     // The tabs hold still under the title and each tab's page scrolls under them, as option 3 draws it.
@@ -551,9 +554,20 @@ fun AppearanceScreen(
                 else "Change ${editor.name}’s colours, fonts and note width. Your changes sync to your other devices.",
             )
         }
-        if (fonts != null) {
-            GroupTitle("Text", deviceOnly = true)
-            FontsGroup(fonts, enabled)
+        if (fonts != null || dadJokes != null) GroupTitle("Text", deviceOnly = true)
+        if (fonts != null) FontsGroup(fonts, enabled)
+        // Last in Text, as on the Mac, with its words (A1598).
+        if (dadJokes != null) {
+            Toggle(
+                "Dad Jokes",
+                "A joke in place of the heading when no note is open.",
+                dadJokes,
+                enabled,
+                "dadJokes",
+                Modifier.settingRow("dad-jokes"),
+                event = "settings.dad-jokes",
+                onChange = onDadJokes,
+            )
         }
         }
     }

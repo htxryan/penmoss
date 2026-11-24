@@ -32,7 +32,7 @@ Under **Text**:
 - **Interface Font** and **Note Font**: Theme Default, System, Serif, Rounded, Humanist, Monospace, or **Custom…** with the name of a font installed on the device. A font that is not installed falls back to the system font. Code always uses the theme's monospace font.
 - **Note Font Size**: 12 to 28 px, 16 by default on a Mac and 18 on Android. The preview shows the size as you drag. **Reset** puts it back.
 - **Show Tooltips After**: how long the pointer rests on a button before its name shows: 0.5, 1 (the default), 1.5 or 2 seconds, or **Never**. Moving to a button with the Tab key shows its name at once.
-- **Dad Jokes**: a dad joke as the heading of a window with no note open. On by default; turn it off and the heading reads **Welcome to Penmoss**. The two lines on where to start stay either way.
+- **Dad Jokes**: a dad joke as the heading of a window with no note open. On by default; turn it off and the heading reads **Welcome to Penmoss**. The two lines on where to start stay either way. On Android, a dad joke heads Home's notes list, under the bar with the notebook's name; turn it off and Home shows no joke. Each device has its own setting and deals its own jokes, none twice until you have seen them all.
 
 ## Note width
 

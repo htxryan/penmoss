@@ -34,6 +34,7 @@
     "./note-metadata": "./src/note-metadata.ts",
     "./sidebar-layout": "./src/sidebar-layout.ts",
     "./tooltips": "./src/tooltips.ts",
+    "./dad-jokes": "./src/dad-jokes.ts",
     "./titles": "./src/titles.ts",
     "./invisible": "./src/invisible.ts",
     "./diff-apply": "./src/markdown/diff-apply.ts",
