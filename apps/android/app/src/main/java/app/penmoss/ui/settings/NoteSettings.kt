@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.DeviceGraph
 import app.penmoss.analytics.TrackScroll
+import app.penmoss.engine.settings.LocalSettings
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.ui.common.roles
@@ -110,7 +111,7 @@ fun NoteSettingsScreen(
                 NotePreview(notePreview, noteFont, noteSize)
                 return@Column
             }
-            GroupTitle("Layout", deviceOnly = true)
+            GroupTitle("Layout", deviceOnly = LocalSettings.isLocal(SettingKeys.FULL_WIDTH))
             Text("Note Width", Modifier.settingRow("note-width").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
             Segments(
                 listOf("theme" to "The Theme’s Width", "full" to "Full Width"),
@@ -120,7 +121,7 @@ fun NoteSettingsScreen(
                 event = "settings.note.width",
             ) { onFullWidth(it == "full") }
             Help("The theme’s is $editorWidth rem. Kept on this phone. A phone already uses its whole width; this shows on a tablet or an unfolded phone. A hardware keyboard’s Toggle Full-Width Notes changes it too.")
-            GroupTitle("Under the Title", deviceOnly = true)
+            GroupTitle("Under the Title", deviceOnly = LocalSettings.isLocal(UNDER_TITLE))
             Toggle(
                 "Description",
                 "The note’s description, from its Metadata tab, under its title.",

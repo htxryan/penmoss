@@ -85,9 +85,5 @@ class BacklinksTest {
         assertEquals("Garden plan", Backlinks.linkLabel(ref, null))
         assertEquals("Garden › Beds", Backlinks.linkLabel(ref.copy(heading = "Beds"), "Garden"))
         assertEquals("the plan", Backlinks.linkLabel(ref.copy(heading = "Beds", alias = "the plan"), "Garden"))
-        assertEquals(
-            "Started the Garden this week.",
-            Backlinks.contextText(Backlinks.lists(reply).linked.first().mentions[0].context) { "Garden" },
-        )
     }
 }

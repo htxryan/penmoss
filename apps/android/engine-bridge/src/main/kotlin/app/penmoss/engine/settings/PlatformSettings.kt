@@ -4,7 +4,7 @@ package app.penmoss.engine.settings
  * The settings each platform keeps its own copy of (PEN-156, A1605): every phone shares one set,
  * every Mac another. The phone's engine page keeps them apart (`mobile/<key>` in the primary
  * notebook, the shared `device/<key>` showing while the phones have none), so the phone only
- * needs to know which they are, to mark them with the phone in Settings. Core's
+ * needs to know which they are. Settings' marks come from [LocalSettings] since A1626. Core's
  * `isPlatformSetting`, held to it by `contract/platform-settings-v1.json`.
  */
 object PlatformSettings {

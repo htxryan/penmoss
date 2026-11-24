@@ -50,10 +50,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.penmoss.NotebookGraph
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
-import app.penmoss.ui.settings.BackButton
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
+import app.penmoss.ui.common.BackButton
 
 /** The feedback screens' routes (T49; PEN-146). */
 object FeedbackRoutes {

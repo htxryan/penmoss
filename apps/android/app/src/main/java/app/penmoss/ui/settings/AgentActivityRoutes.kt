@@ -86,10 +86,6 @@ data class AgentActivityUi(
     val notebooks: List<Pair<String, String>> get() = items.orEmpty().associate { it.notebook to it.notebookName }.toList().sortedBy { it.second.lowercase() }
 }
 
-/** How many changes the list holds from the last [days] days, for the Settings row's summary. */
-internal fun recentChanges(items: List<ActivityItem>, now: Long, days: Int = 7): Int =
-    items.count { now - it.entry.at < days * 24 * 60 * 60_000L && it.entry.undoneAt == null }
-
 class AgentActivityModel(
     private val sources: () -> List<ActivitySource>,
     scope: CoroutineScope? = null,

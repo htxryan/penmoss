@@ -64,46 +64,11 @@ data class NoteFacts(
     val windows: Int = 1,
 )
 
-/** One version from the note's history: who, when, why, and the server's summary (filtered here). */
-data class EditFacts(
-    val at: Long,
-    val actors: List<String>,
-    val reason: String,
-    val summary: String,
-    /** The changes since the newest version, not in any version yet: listed first, with no change. */
-    val unversioned: Boolean = false,
-)
-
 object FeedbackContextBuilder {
     private val ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
     /** `2026-10-27T15:04:05.000Z`, as JavaScript's `toISOString`. */
     fun iso(time: Long): String = ISO.format(Instant.ofEpochMilli(time))
-
-    /** The summaries a version may carry that say only how much changed (A177): nothing else is sent. */
-    private val LINES = Regex("\\+[0-9]+ −[0-9]+ lines?$")
-    private val FIXED = listOf("Title and tags changed", "Title changed", "Tags changed", "No text changes")
-
-    /**
-     * The part of a version's summary that is only a size, as the web's `changeOf`: `+N −M
-     * line(s)` at its end, or a fixed phrase it ends with; never its other words, which can
-     * quote a heading.
-     */
-    fun change(summary: String): String =
-        LINES.find(summary)?.value ?: FIXED.firstOrNull { summary.endsWith(it) }.orEmpty()
-
-    /** What the edits table calls the changes not in any version yet. */
-    const val UNVERSIONED = "edits since the last version"
-
-    /** A version's reason in the web's words. */
-    fun kind(reason: String): String = when (reason) {
-        "auto" -> "typed"
-        "manual" -> "saved by hand"
-        "restore" -> "restore"
-        "revert" -> "revert"
-        "edit" -> "agent edit"
-        else -> reason.ifEmpty { "version" }
-    }
 
     /**
      * Every report comes from a git notebook (A826, A828, A889; PEN-137, O5): nothing of the
@@ -116,7 +81,6 @@ object FeedbackContextBuilder {
         where: WhereFacts,
         sync: SyncFacts,
         note: NoteFacts?,
-        edits: List<EditFacts>,
         errors: List<RecentErrors.Entry>,
         /** The open note's text as the phone holds it: only to drop errors that quote it. */
         noteText: String,

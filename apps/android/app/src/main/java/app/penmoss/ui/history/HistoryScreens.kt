@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -87,6 +85,7 @@ import app.penmoss.ui.common.roles
 import app.penmoss.ui.common.shortWhen
 import app.penmoss.ui.settings.SettingsIcons
 import kotlinx.coroutines.launch
+import app.penmoss.ui.common.BackButton
 
 /**
  * Version history (T40 P3b, NT16–NT20), laid out as the Mac's (Ryan's Android feedback, 15 Nov
@@ -132,11 +131,7 @@ fun HistoryScreen(
             if (!embedded) {
                 TopAppBar(
                     title = { Text("Version History") },
-                    navigationIcon = {
-                        IconButton(onClick = trackedClick("nav.back") { if (detailShown) open = false else onBack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
+                    navigationIcon = { BackButton(onBack = { if (detailShown) open = false else onBack() }) },
                 )
             }
         },

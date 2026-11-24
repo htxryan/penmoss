@@ -33,6 +33,7 @@ import app.penmoss.ai.AiDescriptionCopy
 import app.penmoss.ai.AiKeyState
 import app.penmoss.ai.AiKeys
 import app.penmoss.ai.AiResult
+import app.penmoss.engine.settings.LocalSettings
 import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.FilledTonalButton
 import app.penmoss.ui.common.OutlinedButton
@@ -223,7 +224,7 @@ fun AiDescriptionsScreen(
             )
         }
 
-        GroupTitle("AI Provider", Modifier.settingRow("ai-provider"), deviceOnly = true)
+        GroupTitle("AI Provider", Modifier.settingRow("ai-provider"), deviceOnly = LocalSettings.isLocal(AiKeys.PROVIDER))
         Column(Modifier.selectableGroup()) {
             ChoiceRow("Not Set Up", "Nothing is sent from this phone", provider == AiKeys.NONE, true, "aiProvider-none", event = "settings.ai.provider") { onProvider(AiKeys.NONE) }
             ChoiceRow("Anthropic (API Key)", "Calls go straight to Anthropic and are billed to the key", provider == AiKeys.ANTHROPIC, true, "aiProvider-anthropic", event = "settings.ai.provider") { onProvider(AiKeys.ANTHROPIC) }

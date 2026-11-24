@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedToggle
+import app.penmoss.engine.settings.LocalSettings
+import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SidebarLayout
 import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.home.HomeActions
@@ -78,9 +80,9 @@ fun DisplayScreen(
             return@Column
         }
         Help("A hidden shortcut still works from Search and a keyboard. Search always shows.")
-        GroupTitle("Shortcuts on Home", Modifier.settingRow("shortcuts-on-home"), deviceOnly = true)
+        GroupTitle("Shortcuts on Home", Modifier.settingRow("shortcuts-on-home"), deviceOnly = choices.all { LocalSettings.isLocal(it.key) })
         for (choice in choices) Toggle(choice.label, null, choice.shown, enabled, "display-${choice.key}", event = "settings.sidebar.item") { onChange(choice.key, it) }
-        GroupTitle("Sections", Modifier.settingRow("sections"), deviceOnly = true)
+        GroupTitle("Sections", Modifier.settingRow("sections"), deviceOnly = LocalSettings.isLocal(SettingKeys.SECTION_ORDER))
         Help("Drag a section by its handle to move it.")
         val home = layout.order.filter { it in HomeLayout.HOME_SECTIONS }
         ReorderableColumn(

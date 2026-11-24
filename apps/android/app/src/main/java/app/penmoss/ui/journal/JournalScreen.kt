@@ -39,6 +39,7 @@ import java.time.LocalDate
 import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
+import app.penmoss.ui.common.BackButton
 
 private val DAY_HEADS = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
 
@@ -78,7 +79,7 @@ fun JournalScreen(
             TopAppBar(
                 title = { Text("Journal") },
                 navigationIcon = {
-                    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    BackButton(onBack)
                 },
                 actions = {
                     TextButton(

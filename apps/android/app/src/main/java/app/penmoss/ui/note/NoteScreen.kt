@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -110,6 +109,7 @@ import app.penmoss.ui.journal.journalMarksOf
 import app.penmoss.ui.open
 import app.penmoss.ui.folders.refreshTagList
 import app.penmoss.ui.trash.titleOf
+import app.penmoss.ui.common.BackButton
 
 /**
  * An open note (T32; the writing screen, T33): the native top bar, the editor
@@ -226,7 +226,7 @@ fun NoteRoute(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    BackButton(onBack)
                 },
                 actions = {
                     if (!note.makingPeriodic) {

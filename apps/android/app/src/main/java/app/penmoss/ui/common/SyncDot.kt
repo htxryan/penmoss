@@ -11,10 +11,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +32,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -130,29 +127,3 @@ fun SyncStateDot(dot: SyncDot, modifier: Modifier = Modifier) {
 
 private val DOT_SIZE = 10.dp
 private val RING_WIDTH = 1.5.dp
-
-/** A section title with its source's dot at the row's far right (A933, A979). */
-@Composable
-fun SectionTitleWithDot(
-    text: String,
-    dot: SyncDot,
-    modifier: Modifier = Modifier,
-    dotTag: String = "syncDot",
-    /** Before the name: a notebook's badge (A1579). */
-    lead: (@Composable () -> Unit)? = null,
-) {
-    Row(modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (lead != null) {
-            lead()
-            androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
-        }
-        // The name takes the row, so the dot sits at its far right, as on the web (A979).
-        Text(
-            text,
-            Modifier.weight(1f).semantics { heading() },
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        SyncStateDot(dot, Modifier.testTag(dotTag))
-    }
-}

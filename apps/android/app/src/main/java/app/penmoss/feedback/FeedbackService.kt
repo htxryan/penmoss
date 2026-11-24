@@ -14,9 +14,6 @@ import app.penmoss.analytics.Analytics
 import app.penmoss.analytics.Limits
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.log.PenmossLog
-import app.penmoss.engine.api.HistoryAuthor
-import app.penmoss.engine.api.NoteHistory
-import app.penmoss.engine.api.PenmossJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,9 +80,8 @@ class FeedbackCollector(
                 outgoingLinks = extras?.outgoingLinks ?: dao.outgoingLinks(it.id),
             )
         }
-        val edits = note?.let { edits(it.id) }.orEmpty()
         val known = runCatching { names() }.getOrNull()
-        FeedbackContextBuilder.build(app(), where, sync(), facts, if (gitNotebook) emptyList() else edits, recent.all(), text, known)
+        FeedbackContextBuilder.build(app(), where, sync(), facts, recent.all(), text, known)
     }
 
     /**
@@ -113,20 +109,6 @@ class FeedbackCollector(
             current = folder.parentId
         }
         return chain.asReversed().joinToString(" / ").ifEmpty { null }
-    }
-
-    /** The last version list read for the note (the history cache, A435): who, when and why. */
-    private suspend fun edits(noteId: String): List<EditFacts> {
-        val cached = db.historyCache().get(noteId) ?: return emptyList()
-        val history = runCatching { PenmossJson.decodeFromString(NoteHistory.serializer(), cached.json) }.getOrNull() ?: return emptyList()
-        val unversioned = history.unversioned?.let { listOf(EditFacts(it.since, actors(it.authors), "", "", unversioned = true)) }.orEmpty()
-        return unversioned + history.versions.map { version -> EditFacts(version.createdAt, actors(version.authors), version.reason, version.summary) }
-    }
-
-    /** Who made a version, as the web lists them: an agent with " (agent)", a nameless author as Unknown. */
-    private fun actors(authors: List<HistoryAuthor>) = authors.map { author ->
-        val label = author.label.ifEmpty { "Unknown" }
-        if (author.kind == "agent") "$label (agent)" else label
     }
 
     companion object {

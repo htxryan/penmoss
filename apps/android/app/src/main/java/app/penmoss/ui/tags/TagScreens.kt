@@ -59,7 +59,6 @@ import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.notes.TagNode
 import app.penmoss.engine.notes.TagTree
 import app.penmoss.engine.notes.Tags
-import app.penmoss.ui.settings.BackButton
 import app.penmoss.ui.settings.SettingsRoutes
 import app.penmoss.ui.common.roles
 import app.penmoss.analytics.trackedToggle
@@ -99,6 +98,7 @@ import app.penmoss.ui.common.underSelectionBar
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.leave
 import app.penmoss.ui.open
+import app.penmoss.ui.common.BackButton
 
 /** "1 note", "3 notes". */
 internal fun notesCount(count: Int) = "$count ${if (count == 1) "note" else "notes"}"

@@ -205,10 +205,6 @@ object LineSymbols {
     /** The list as `PUT /api/settings` sends it. */
     fun toJson(symbols: List<LineSymbol>): JsonArray = JsonArray(symbols.map { it.copy(name = it.name.trim()).toJson() })
 
-    /** The list items not yet in [symbols], which Add offers (A1632). */
-    fun missingKinds(symbols: List<LineSymbol>): List<LineSymbol> =
-        KINDS.map { it.first }.filter { kind -> symbols.none { it.kind == kind } }.map(::kindSymbol)
-
     /** A glyph for a new symbol: the first suggestion the list does not have. */
     fun nextGlyph(symbols: List<LineSymbol>): String {
         val taken = symbols.filter { it.kind == null }.map { glyphKey(it.glyph) }.toSet()

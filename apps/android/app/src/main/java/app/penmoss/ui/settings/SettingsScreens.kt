@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +37,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DropdownMenu
@@ -88,7 +86,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -106,12 +103,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import app.penmoss.analytics.TrackScroll
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.typedLength
+import app.penmoss.engine.settings.LocalSettings
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLimits
 import app.penmoss.feedback.MarkdownPreviewView
@@ -122,7 +118,6 @@ import app.penmoss.ui.common.DotState
 import app.penmoss.ui.common.DotMark
 import app.penmoss.ui.common.FilledTonalButton
 import app.penmoss.ui.common.IconButton
-import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.SQUARE
 import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.common.mark
@@ -130,6 +125,7 @@ import app.penmoss.ui.common.roles
 import app.penmoss.ui.home.HomeShortcutRow
 import kotlinx.coroutines.delay
 import java.time.LocalDate
+import app.penmoss.ui.common.BackButton
 
 /*
  * Settings on the phone (T40 P1; PEN-146): one list in five groups (Look and Feel, Writing,
@@ -137,11 +133,6 @@ import java.time.LocalDate
  * Android's own Settings is laid out, with the same choices as the Mac's. Every change shows at
  * once and syncs through the primary notebook (A1014), offline too.
  */
-
-@Composable
-internal fun BackButton(onBack: () -> Unit) {
-    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
-}
 
 /**
  * One row of the Settings list (A415): a screen, a line saying what it holds now, and the route
@@ -543,7 +534,7 @@ fun AppearanceScreen(
             if (fonts != null) FontsAtSize(fonts, Modifier.padding(top = 12.dp), framed = false)
             return@Column
         }
-        GroupTitle("Theme", Modifier.settingRow("theme"), deviceOnly = true)
+        GroupTitle("Theme", Modifier.settingRow("theme"), deviceOnly = LocalSettings.isLocal(SettingKeys.THEME))
         Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, event = "settings.appearance.mode", onChoose = onMode)
         Help(
             if (mode == "system") "System follows this phone’s setting: ${if (systemDark) "dark" else "light"} right now."
@@ -560,7 +551,7 @@ fun AppearanceScreen(
                 else "Change ${editor.name}’s colours, fonts and note width. Your changes sync to your other devices.",
             )
         }
-        if (fonts != null || dadJokes != null) GroupTitle("Text", deviceOnly = true)
+        if (fonts != null || dadJokes != null) GroupTitle("Text", deviceOnly = LocalSettings.isLocal(SettingKeys.INTERFACE_FONT))
         if (fonts != null) FontsGroup(fonts, enabled)
         // Last in Text, as on the Mac (A1598); its help says where the phone shows it (A1676).
         if (dadJokes != null) {

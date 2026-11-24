@@ -66,8 +66,6 @@ class AgentActivityTest {
         val detail = activityDetail(theme, now = 2_000, notebook = "Quanta")
         assertTrue(detail, detail.startsWith("✦ Claude Code · Quanta · "))
         assertTrue(detail, detail.contains(" · Undone by Pixel 9 "))
-        // The week's changes not undone since: the Agents row's count.
-        assertEquals(2, recentChanges(all, now = 3_000))
     }
 
     private fun withModel(block: suspend (AgentActivityModel) -> Unit) = runBlocking {
