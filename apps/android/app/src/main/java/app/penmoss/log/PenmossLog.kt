@@ -408,14 +408,6 @@ object PenmossLog {
         return files?.outside(limits, now) ?: 0L
     }
 
-    /** Deletes what falls outside [limits] now, and waits for it. */
-    fun pruneNow(limits: Limits, now: Long = System.currentTimeMillis()) {
-        val log = files ?: return
-        log.limits = limits
-        onThread { log.prune(limits, now) }
-        drain()
-    }
-
     @Volatile
     private var crashHandler = false
 

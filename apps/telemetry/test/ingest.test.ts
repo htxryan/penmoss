@@ -14,8 +14,22 @@ let counter = 0;
 
 /** A fresh install id, so no test meets another's rate limit. */
 const newInstall = () => (++counter).toString(16).padStart(4, '0').repeat(8);
-/** A fresh documentation address (RFC 5737) per test, for the same reason. */
-const newIp = () => `198.51.100.${++counter % 250}`;
+/**
+ * A fresh address per test, for the same reason: from the 2001:db8::/32 documentation range
+ * (RFC 3849), which never runs out as a /24 of IPv4 would and so never meets another's count.
+ */
+const newIp = () => `2001:db8::${(++counter).toString(16)}`;
+
+/**
+ * The limiters count in windows aligned to the wall clock (`floor(now / period)`, as Cloudflare's
+ * do), so a test that crosses a window's end sees its count start again: the request past the
+ * limit then gets the answer to its body, not 429 (PEN-169). A test that fills a limit starts
+ * with at least `needMs` of the window left, waiting for the next one when it hasn't.
+ */
+async function freshWindow(periodS = 60, needMs = 20_000): Promise<void> {
+  const left = periodS * 1000 - (Date.now() % (periodS * 1000));
+  if (left < needMs) await new Promise((resolve) => setTimeout(resolve, left + 50));
+}
 
 function event(overrides: Partial<AnalyticsEvent> = {}): AnalyticsEvent {
   return {
@@ -249,20 +263,28 @@ describe('POST /v1/batch', () => {
     expect(limit('FORGET_LIMIT')).toBe('5');
   });
 
-  it('answers 429 with Retry-After past 60 batches a minute from one install', async () => {
-    const install = newInstall();
-    const statuses: number[] = [];
-    for (let seq = 0; seq < 60; seq++) {
-      statuses.push((await post('/v1/batch', { v: 1, install, events: [event({ seq })] })).status);
-    }
-    expect(statuses.every((status) => status === 202)).toBe(true);
-    const limited = await post('/v1/batch', { v: 1, install, events: [event({ seq: 99 })] });
-    expect(limited.status).toBe(429);
-    expect(limited.headers.get('retry-after')).toBe('60');
-    expect(await eventCount(install)).toBe(60);
-  });
+  it(
+    'answers 429 with Retry-After past 60 batches a minute from one install',
+    { timeout: 90_000 },
+    async () => {
+      await freshWindow();
+      const install = newInstall();
+      const statuses: number[] = [];
+      for (let seq = 0; seq < 60; seq++) {
+        statuses.push(
+          (await post('/v1/batch', { v: 1, install, events: [event({ seq })] })).status,
+        );
+      }
+      expect(statuses.every((status) => status === 202)).toBe(true);
+      const limited = await post('/v1/batch', { v: 1, install, events: [event({ seq: 99 })] });
+      expect(limited.status).toBe(429);
+      expect(limited.headers.get('retry-after')).toBe('60');
+      expect(await eventCount(install)).toBe(60);
+    },
+  );
 
-  it('answers 429 past 240 requests a minute from one address', async () => {
+  it('answers 429 past 240 requests a minute from one address', { timeout: 90_000 }, async () => {
+    await freshWindow();
     const ip = newIp();
     const statuses: number[] = [];
     for (let i = 0; i < 241; i++) {
@@ -469,16 +491,21 @@ describe('POST /v1/forget', () => {
     expect(await eventCount(install)).toBe(0);
   });
 
-  it('answers 400 to anything but a forget, and 429 past 5 a minute from one address', async () => {
-    expect((await post('/v1/forget', { v: 1, install: 'not-hex' })).status).toBe(400);
-    expect((await post('/v1/forget', 'nope')).status).toBe(400);
-    const ip = newIp();
-    const statuses: number[] = [];
-    for (let i = 0; i < 6; i++) {
-      statuses.push((await post('/v1/forget', { v: 1, install: newInstall() }, ip)).status);
-    }
-    expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
-  });
+  it(
+    'answers 400 to anything but a forget, and 429 past 5 a minute from one address',
+    { timeout: 90_000 },
+    async () => {
+      await freshWindow();
+      expect((await post('/v1/forget', { v: 1, install: 'not-hex' })).status).toBe(400);
+      expect((await post('/v1/forget', 'nope')).status).toBe(400);
+      const ip = newIp();
+      const statuses: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        statuses.push((await post('/v1/forget', { v: 1, install: newInstall() }, ip)).status);
+      }
+      expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
+    },
+  );
 });
 
 describe('every other route', () => {

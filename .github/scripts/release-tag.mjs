@@ -10,7 +10,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import { newestStable, parseReleaseTag } from './release-versions.mjs';
+import { compareVersions, newestStable, parseReleaseTag } from './release-versions.mjs';
 
 /**
  * @typedef {{
@@ -46,21 +46,12 @@ export function releaseProblems({ version, branch, dirty, head, upstream, tags, 
   if (tags.includes(tag)) problems.push(`The tag ${tag} already exists here.`);
   if (remoteHasTag) problems.push(`The tag ${tag} already exists on origin.`);
   const stable = newestStable(tags);
-  if (stable !== null && compare(parsed.core, stable) <= 0) {
+  if (stable !== null && compareVersions(parsed.core, stable) <= 0) {
     problems.push(
       `${parsed.core.join('.')} is not newer than the newest stable release, v${stable.join('.')}.`,
     );
   }
   return problems;
-}
-
-/** @param {number[]} a @param {number[]} b */
-function compare(a, b) {
-  for (let i = 0; i < 3; i += 1) {
-    const d = (a[i] ?? 0) - (b[i] ?? 0);
-    if (d !== 0) return d;
-  }
-  return 0;
 }
 
 /**

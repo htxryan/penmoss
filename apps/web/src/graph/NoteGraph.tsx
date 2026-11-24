@@ -18,6 +18,7 @@ import { useWorkspaceState } from '../workspace/hooks';
 import { GraphInputCache } from './data';
 import { graphPath } from './path';
 import './graph.css';
+import { counted } from '@penmoss/core/words';
 
 const DEPTHS = [1, 2, 3] as const;
 const DEPTH_KEY = 'penmoss.noteGraphDepth';
@@ -86,13 +87,12 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
         >
           {DEPTHS.map((value) => (
             <option key={value} value={value}>
-              {value === 1 ? '1 link' : `${value} links`}
+              {counted(value, 'link')}
             </option>
           ))}
         </Select>
         <span className="note-graph-count muted" data-testid="note-graph-count">
-          {others === 1 ? '1 note' : `${others} notes`} ·{' '}
-          {links === 1 ? '1 link' : `${links} links`}
+          {counted(others, 'note')} · {counted(links, 'link')}
         </span>
       </div>
       {known && others > 0 ? (
@@ -106,9 +106,7 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
               if (newTab) window.open(notePath(id), '_blank', 'noopener');
               else navigate(notePath(id));
             }}
-            label={`Local graph: ${others} ${others === 1 ? 'note' : 'notes'} within ${depth} ${
-              depth === 1 ? 'link' : 'links'
-            } of ${title}`}
+            label={`Local graph: ${counted(others, 'note')} within ${counted(depth, 'link')} of ${title}`}
           />
         </div>
       ) : (

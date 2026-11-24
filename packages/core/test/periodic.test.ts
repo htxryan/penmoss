@@ -3,7 +3,6 @@ import { isUlid, ulidTime } from '../src/ids';
 import {
   addDays,
   addWeeks,
-  dailyNotePath,
   DEFAULT_DAILY_TEMPLATE,
   DEFAULT_TIME_ZONE,
   DEFAULT_WEEKLY_TEMPLATE,
@@ -12,15 +11,16 @@ import {
   isoWeekday,
   isTimeZone,
   journalFolderId,
+  journalLevels,
   parseIsoWeek,
   parsePlainDate,
   periodicNoteId,
+  periodicSalt,
   plainDate,
   periodicClientId,
   startOfDayIn,
   todayIn,
   weekDays,
-  weeklyNotePath,
   weekMonday,
   weeksInYear,
 } from '../src/periodic';
@@ -56,13 +56,32 @@ describe('plainDate', () => {
   });
 });
 
-describe('dailyNotePath', () => {
-  it('files a daily note under Journal/<year>/<month>/', () => {
-    expect(dailyNotePath(plainDate(2026, 10, 22))).toBe('Journal/2026/10/2026-10-22.md');
+describe('journalLevels', () => {
+  it('files a daily note under Journal/<year>/<month>, the month zero-padded', () => {
+    expect(journalLevels('daily', '2026-10-22')).toEqual(['Journal', '2026', '10']);
+    expect(journalLevels('daily', '2027-03-09')).toEqual(['Journal', '2027', '03']);
   });
 
-  it('zero-pads the month folder', () => {
-    expect(dailyNotePath(plainDate(2027, 3, 9))).toBe('Journal/2027/03/2027-03-09.md');
+  it('files a weekly note under Journal/<ISO week year>/Weekly', () => {
+    expect(journalLevels('weekly', '2026-W43')).toEqual(['Journal', '2026', 'Weekly']);
+    // 2027-W01 starts on 4 January; 2026-W53 ends on 3 January 2027.
+    expect(journalLevels('weekly', '2026-W53')).toEqual(['Journal', '2026', 'Weekly']);
+  });
+});
+
+describe('periodicSalt (A828)', () => {
+  it('keeps the salt while its note was never deleted for good', () => {
+    expect(periodicSalt('daily', '2026-10-22', 'nb', () => false)).toBe('nb');
+  });
+
+  it('skips every purged id, however many, the same on every device', () => {
+    const purged = new Set<string>();
+    for (let round = 1; round <= 150; round++) {
+      purged.add(periodicNoteId('daily', '2026-10-22', round === 1 ? 'nb' : `nb#${round}`));
+    }
+    const salt = periodicSalt('daily', '2026-10-22', 'nb', (id) => purged.has(id));
+    expect(salt).toBe('nb#151');
+    expect(purged.has(periodicNoteId('daily', '2026-10-22', salt))).toBe(false);
   });
 });
 
@@ -104,10 +123,6 @@ describe('dates and ISO weeks (T19)', () => {
     expect(weeksInYear(2026)).toBe(53);
     expect(weeksInYear(2027)).toBe(52);
     expect(parseIsoWeek('2027-W53')).toBeNull();
-  });
-
-  it('files weekly notes under Journal/<year>/Weekly', () => {
-    expect(weeklyNotePath(parseIsoWeek('2026-W43')!)).toBe('Journal/2026/Weekly/2026-W43.md');
   });
 
   it("reads today in the settings time zone, not the device's", () => {

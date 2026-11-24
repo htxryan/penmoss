@@ -17,7 +17,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { press, select, type } from '../../../../packages/editor/test/support/editor';
-import { ATTACHMENT_URL_PREFIX, EditorHost, HOLD_MAX_MS, normaliseHref } from '../src/host';
+import { normaliseHref } from '@penmoss/editor';
+import { ATTACHMENT_URL_PREFIX, EditorHost, HOLD_MAX_MS } from '../src/host';
 import { parseToEditor, type FormatCommand, type FromEditor, type ToEditor } from '../src/protocol';
 
 const NOTE = '01JD2Z7Q8R4T6Y8W0E2R4T6YB1';
@@ -917,9 +918,16 @@ describe('normaliseHref', () => {
     expect(normaliseHref('penmoss.app')).toBe('https://penmoss.app');
     expect(normaliseHref(' http://x.test ')).toBe('http://x.test');
     expect(normaliseHref('mailto:me@x.test')).toBe('mailto:me@x.test');
+    expect(normaliseHref('tel:+15551234567')).toBe('tel:+15551234567');
     expect(normaliseHref('javascript:alert(1)')).toBeNull();
     expect(normaliseHref('data:text/html,hi')).toBeNull();
     expect(normaliseHref('')).toBeNull();
+  });
+
+  it('reads a bare email address as a mail link and refuses plain words, as the Mac does', () => {
+    expect(normaliseHref('me@x.test')).toBe('mailto:me@x.test');
+    expect(normaliseHref('just words')).toBeNull();
+    expect(normaliseHref('notes')).toBeNull();
   });
 });
 

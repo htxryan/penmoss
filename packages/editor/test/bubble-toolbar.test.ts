@@ -46,6 +46,7 @@ describe('normaliseHref', () => {
     expect(normaliseHref(' penmoss.app/notes?a=1 ')).toBe('https://penmoss.app/notes?a=1');
     expect(normaliseHref('ryan@example.com')).toBe('mailto:ryan@example.com');
     expect(normaliseHref('mailto:a@b.co')).toBe('mailto:a@b.co');
+    expect(normaliseHref('tel:+15551234567')).toBe('tel:+15551234567');
   });
 
   it('refuses anything else, including script URLs', () => {

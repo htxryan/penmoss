@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
@@ -59,7 +58,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.NotebookGraph
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.keys.Bindings
@@ -68,6 +66,7 @@ import app.penmoss.engine.keys.ShortcutCommand
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import app.penmoss.ui.common.BackButton
 
 /** What recording a combination for a command came to (the web's `ShortcutsSettings` rules). */
 sealed interface Recorded {
@@ -214,7 +213,7 @@ fun ShortcutsScreen(
         topBar = {
             TopAppBar(
                 title = { app.penmoss.ui.settings.PlatformHeadline("Keyboard Shortcuts", many = true) },
-                navigationIcon = { IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                navigationIcon = { BackButton(onBack) },
             )
         },
     ) { padding ->

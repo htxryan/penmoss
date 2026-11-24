@@ -53,7 +53,7 @@ export function resolveAsset(root: string, pathname: string): string | null {
 }
 
 /** Headers every response carries; pages also get the CSP. */
-export function securityHeaders(type: string): Record<string, string> {
+function securityHeaders(type: string): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': type,
     'X-Content-Type-Options': 'nosniff',

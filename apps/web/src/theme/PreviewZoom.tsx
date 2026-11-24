@@ -14,6 +14,7 @@ import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 import { DialogClose } from '../shell/DialogClose';
 import { useTrackedDialog } from '../analytics/dialog';
+import { ModalOverlay } from '../shell/ModalOverlay';
 
 export function PreviewZoom({
   name,
@@ -78,35 +79,26 @@ function PreviewDialog({
     dialog.current?.querySelector<HTMLElement>('.dlg-close')?.focus();
   }, []);
   return createPortal(
-    <div
-      className="overlay preview-zoom-overlay"
-      data-testid={`${testId}-backdrop`}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== 'Escape') return;
+    <ModalOverlay
+      testId={`${testId}-backdrop`}
+      overlayClassName="preview-zoom-overlay"
+      className="preview-zoom-dialog"
+      labelledBy={`${id}-title`}
+      dialogTestId={testId}
+      dialogRef={dialog}
+      onClose={onClose}
+      onEscape={(event) => {
         // Settings' own Escape (back to the note) waits for the next one.
-        event.preventDefault();
         event.stopPropagation();
         onClose();
       }}
     >
-      <div
-        ref={dialog}
-        className="dialog preview-zoom-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`${id}-title`}
-        data-testid={testId}
-      >
-        <div className="dlg-title">
-          <h2 id={`${id}-title`}>{`${name} Preview`}</h2>
-          <DialogClose label="Close" onClose={onClose} />
-        </div>
-        <div className="preview-zoom-body">{children}</div>
+      <div className="dlg-title">
+        <h2 id={`${id}-title`}>{`${name} Preview`}</h2>
+        <DialogClose label="Close" onClose={onClose} />
       </div>
-    </div>,
+      <div className="preview-zoom-body">{children}</div>
+    </ModalOverlay>,
     document.body,
   );
 }

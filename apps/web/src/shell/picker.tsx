@@ -1,49 +1,11 @@
 /**
- * The modal pickers' parts (their keys are `picker-list.ts`'s): an overlay whose scrim closes it
- * around a dialog, the search field (a combobox over the list, focused as the picker opens) and
- * the list, whose active row scrolls into view.
+ * The modal pickers' parts (their keys are `picker-list.ts`'s; their overlay is ModalOverlay):
+ * the search field (a combobox over the list, focused as the picker opens) and the list, whose
+ * active row scrolls into view.
  */
 import { useLayoutEffect, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { useTypedLength } from '../analytics/typed';
 import type { PickerList } from './picker-list';
-
-/** A picker's overlay and dialog: a press on the scrim closes it. */
-export function PickerOverlay({
-  testId,
-  className,
-  label,
-  labelledBy,
-  onClose,
-  children,
-}: {
-  readonly testId: string;
-  /** The dialog's classes besides `dialog`. */
-  readonly className: string;
-  readonly label?: string;
-  readonly labelledBy?: string;
-  readonly onClose: () => void;
-  readonly children: ReactNode;
-}) {
-  return (
-    <div
-      className="overlay"
-      data-testid={testId}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        className={`dialog ${className}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-        aria-labelledby={labelledBy}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
 
 /**
  * The search field over a picker's list, focused as the picker opens. What is typed in it is

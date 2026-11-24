@@ -5,6 +5,7 @@
  * GET /api/<view> answers JSON from the named queries (api.ts), cached for 5 minutes, and
  * anything else is the page's static files. It only reads: GET and HEAD, nothing else.
  */
+import { dayOf } from '@penmoss/telemetry/day';
 import type { AccessEnv, AccessVerifier } from './access';
 import { BadRequest, VIEWS, freshness, readFilters, viewData, type View } from './api';
 
@@ -21,7 +22,7 @@ export interface Deps {
 }
 
 /** How long an answer is kept in the Cache API. */
-export const CACHE_SECONDS = 300;
+const CACHE_SECONDS = 300;
 
 const headers = {
   'cache-control': 'private, no-store',
@@ -42,7 +43,7 @@ const CSP =
   "connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 /** The replay's frame: the one response the page itself may frame, and nothing else may. */
-export const FRAME_PATH = '/player';
+const FRAME_PATH = '/player';
 const FRAME_CSP = CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
 
 async function api(
@@ -82,7 +83,7 @@ async function api(
   const body = JSON.stringify({
     view,
     filters,
-    today: new Date(now).toISOString().slice(0, 10),
+    today: dayOf(now),
     // When this answer was made (it is cached up to CACHE_SECONDS), the newest event, the rollup.
     asOf: now,
     ...fresh,

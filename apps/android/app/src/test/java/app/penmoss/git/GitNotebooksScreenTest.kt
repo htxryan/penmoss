@@ -267,13 +267,13 @@ class GitNotebooksScreenTest {
         compose.onNodeWithTag("gitRemoveWords").assertTextContains("2 changes not pushed yet are lost.", substring = true)
         compose.onNodeWithTag("gitRemovePushFirst").assertIsDisplayed()
         compose.onNodeWithTag("gitRemoveConfirm").assertTextEquals("Remove Anyway")
-        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Keep It").performClick()
         // Not known (the notebook's page not open): it may lose changes, and Push first is offered.
         unsent = null
         compose.onNodeWithTag("gitRemove-$id").performScrollTo().performClick()
         compose.onNodeWithTag("gitRemoveWords").assertTextContains("Changes not pushed yet, if any, are lost.", substring = true)
         compose.onNodeWithTag("gitRemovePushFirst").assertIsDisplayed()
-        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Keep It").performClick()
         // Both pushed: Remove, and it says so.
         unsent = 0
         compose.onNodeWithTag("gitRemove-$id").performScrollTo().performClick()

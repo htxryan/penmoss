@@ -9,6 +9,7 @@ import {
   type LinkResolver,
 } from '@penmoss/core';
 import { schema } from '@penmoss/core/schema';
+import { AI_DESCRIPTION_FRONTMATTER } from '@penmoss/core/ai-description';
 import { parseAttachmentPath } from '@penmoss/core/attachments';
 import { blocksOf, reuseBlocks } from '@penmoss/core/diff-apply';
 import type { DocJson } from '@penmoss/core/links';
@@ -124,7 +125,7 @@ export function renderNote(
     ...(listed.length > 0 ? { tags: listed } : {}),
     ...(identity.kind && identity.kind !== 'note' ? { type: identity.kind } : {}),
     ...(state.description ? { description: state.description } : {}),
-    ...(state.aiDescription ? { 'ai-description': state.aiDescription } : {}),
+    ...(state.aiDescription ? { [AI_DESCRIPTION_FRONTMATTER]: state.aiDescription } : {}),
   });
   return {
     title,

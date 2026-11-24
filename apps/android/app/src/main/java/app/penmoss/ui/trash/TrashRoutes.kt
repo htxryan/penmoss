@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
+import app.penmoss.ui.common.counted
 import java.util.concurrent.TimeUnit
 import app.penmoss.ui.common.SnackbarTone
 import app.penmoss.ui.common.noneToTrash
@@ -117,7 +118,8 @@ private fun deleter(by: FolderDeleter?): Deleter? {
 
 private fun entry(id: String, title: String, deletedAt: Long, waiting: Boolean, now: Long, deletedBy: FolderDeleter? = null): TrashEntryUi {
     val left = deletedAt + TRASH_RETENTION_MS - now
-    val days = ((left + TimeUnit.DAYS.toMillis(1) - 1) / TimeUnit.DAYS.toMillis(1)).coerceAtLeast(0)
+    // Never more than the retention: a device whose clock runs ahead can date a deletion later than now (B9).
+    val days = ((left + TimeUnit.DAYS.toMillis(1) - 1) / TimeUnit.DAYS.toMillis(1)).coerceIn(0, TimeUnit.MILLISECONDS.toDays(TRASH_RETENTION_MS))
     fun detail(by: String) = when {
         waiting -> "Moved to Trash on this phone · not sent yet"
         deletedAt <= 0 -> "In Trash$by"
@@ -322,8 +324,6 @@ internal fun CoroutineScope.moveToTrashWithUndo(
 /** How long the server keeps a deleted folder in Trash (A560, the notes' 30 days). */
 internal val FOLDER_TRASH_RETENTION_MS = TimeUnit.DAYS.toMillis(30)
 
-private fun counted(count: Int, one: String, many: String) = "$count ${if (count == 1) one else many}"
-
 /** What a deleted folder held, in the web's words (`folderContents`): "3 notes, 1 subfolder". */
 internal fun folderContents(folder: TrashedFolderListed): String {
     val held = listOfNotNull(counted(folder.notes, "note", "notes"), folder.folders.takeIf { it > 0 }?.let { counted(it, "subfolder", "subfolders") })
@@ -338,7 +338,8 @@ internal fun folderContents(folder: TrashedFolderListed): String {
  */
 internal fun trashFolders(listed: List<TrashedFolderListed>, folderName: (String) -> String?, now: Long): List<TrashFolderUi> =
     listed.sortedByDescending { it.deletedAt }.map { folder ->
-        val left = ((folder.deletedAt + FOLDER_TRASH_RETENTION_MS - now + TimeUnit.DAYS.toMillis(1) - 1) / TimeUnit.DAYS.toMillis(1)).coerceAtLeast(0)
+        val left = ((folder.deletedAt + FOLDER_TRASH_RETENTION_MS - now + TimeUnit.DAYS.toMillis(1) - 1) / TimeUnit.DAYS.toMillis(1))
+            .coerceIn(0, TimeUnit.MILLISECONDS.toDays(FOLDER_TRASH_RETENTION_MS))
         val from = folder.parentId?.let { id -> folderName(id)?.let { "“$it”" } ?: "a deleted folder" } ?: "the top level"
         // The notes' chip (A574, A655): ✦ for an agent only, "(agent)" to TalkBack (A701).
         fun detail(by: String?) = "${folderContents(folder)} · Deleted ${shortWhen(folder.deletedAt, now)} from $from${by?.let { " by $it" }.orEmpty()} · $left ${if (left == 1L) "day" else "days"} left"

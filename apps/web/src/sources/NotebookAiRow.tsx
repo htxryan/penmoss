@@ -16,6 +16,7 @@ import { SettingRow } from '../theme/look-rows';
 import { useAppWorkspace } from './hooks';
 import { SourceScope } from './context';
 import type { GitSource } from './git-source';
+import { Segmented } from '../shell/Segmented';
 
 const CHOICES: readonly { readonly value: AiSetting; readonly label: string }[] = [
   { value: 'inherit', label: 'Inherit' },
@@ -49,27 +50,19 @@ export function NotebookAiRow({ source }: { source: GitSource }) {
       testId="notebook-ai"
     >
       <span className="ai-key-actions">
-        <div className="seg" role="radiogroup" aria-labelledby={`${id}-l`}>
-          {CHOICES.map((choice) => (
-            <label key={choice.value} className="seg-option">
-              <input
-                type="radio"
-                name={`${id}-ai`}
-                data-event="folder.ai.mode"
-                checked={value === choice.value}
-                onChange={() =>
-                  source.workspace.setSetting(
-                    AI_DESCRIPTION_NOTEBOOK_SETTING,
-                    choice.value === 'inherit' ? undefined : choice.value,
-                  )
-                }
-              />
-              <span className="bold-steady" data-label={choice.label}>
-                {choice.label}
-              </span>
-            </label>
-          ))}
-        </div>
+        <Segmented
+          name={`${id}-ai`}
+          labelledBy={`${id}-l`}
+          value={value}
+          options={CHOICES}
+          event="folder.ai.mode"
+          onChange={(choice) =>
+            source.workspace.setSetting(
+              AI_DESCRIPTION_NOTEBOOK_SETTING,
+              choice === 'inherit' ? undefined : choice,
+            )
+          }
+        />
         <button
           data-ui="submit"
           type="button"

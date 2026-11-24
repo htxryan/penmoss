@@ -12,6 +12,7 @@ import { windowDescriber, type TagDescriberSource, type TagGroup } from '../note
 import { generateAllWords, generateGroups } from './generate';
 import { linkHandler, settingsPath } from '../router';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
+import { counted } from '@penmoss/core/words';
 
 /** Generate All Tag Descriptions? over every notebook on the page. */
 export function GenerateTagsDialog({
@@ -24,23 +25,23 @@ export function GenerateTagsDialog({
   const describer = windowDescriber();
   const [replace, setReplace] = useState(false);
   // Counted when asked; fixed once it starts, so progress is out of what was confirmed.
-  const counted = useMemo(() => generateGroups(sources, replace), [sources, replace]);
+  const found = useMemo(() => generateGroups(sources, replace), [sources, replace]);
   const [going, setGoing] = useState<readonly TagGroup[] | null>(null);
   const [done, setDone] = useState<number | null>(null);
   const [failed, setFailed] = useState<{ count: number; message: string | null } | null>(null);
   const stop = useRef<AbortController | null>(null);
   useEffect(() => () => stop.current?.abort(), []);
-  const groups = going ?? counted;
+  const groups = going ?? found;
   const total = groups.reduce((sum, group) => sum + group.tags.length, 0);
   const finished = done !== null && done >= total;
   const start = () => {
     if (!describer || total === 0) return;
     const controller = new AbortController();
     stop.current = controller;
-    setGoing(counted);
+    setGoing(found);
     setDone(0);
     void describer
-      .describeTags(counted, { signal: controller.signal, onProgress: setDone })
+      .describeTags(found, { signal: controller.signal, onProgress: setDone })
       .then((out) => {
         if (out.failed > 0) setFailed({ count: out.failed, message: out.message });
       });
@@ -54,7 +55,7 @@ export function GenerateTagsDialog({
       done={done}
       stop={stop}
       startIcon="sparkle"
-      startLabel={total === 1 ? 'Generate 1 Description' : `Generate ${total} Descriptions`}
+      startLabel={`Generate ${counted(total, 'Description')}`}
       progress={{
         label: 'Tags described',
         running: (at, of) => `Generating ${at} of ${of}…`,
@@ -70,9 +71,7 @@ export function GenerateTagsDialog({
       after={
         finished && failed ? (
           <p className="ai-warn" role="alert" data-testid="generate-tags-failed">
-            {failed.count === 1
-              ? '1 couldn’t be described'
-              : `${failed.count} couldn’t be described`}
+            {`${failed.count} couldn’t be described`}
             {failed.message ? `: ${failed.message}` : '.'}
           </p>
         ) : null

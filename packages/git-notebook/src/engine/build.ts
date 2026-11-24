@@ -30,7 +30,7 @@ import {
   forkDoc,
   freshClientId,
   GIT_ORIGIN,
-  hasPending,
+  hasPendingStructs,
   ownFile,
 } from '../yjs';
 import type { BlobReader } from './blobs';
@@ -414,8 +414,8 @@ export class Build {
     const { replica, purged, byDoc } = this;
     if (!this.head) return;
     const stuck = [
-      ...(hasPending(replica.workspace) ? [''] : []),
-      ...replica.noteIds().filter((id) => !purged.has(id) && hasPending(replica.note(id)!)),
+      ...(hasPendingStructs(replica.workspace) ? [''] : []),
+      ...replica.noteIds().filter((id) => !purged.has(id) && hasPendingStructs(replica.note(id)!)),
     ].filter((id) => byDoc.has(id));
     if (stuck.length === 0) return;
     const paths = stuck.flatMap((id) => byDoc.get(id)!.map(([path]) => path));

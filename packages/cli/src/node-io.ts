@@ -2,13 +2,12 @@
 import { spawn } from 'node:child_process';
 import { closeSync, openSync, renameSync, statSync, writeSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import type { Io, MeaningIo, StdioIo } from './io';
 import { nodeAnalytics, type NodeAnalyticsOptions } from './node-analytics';
 import { nodeNotebooks } from './node-notebooks';
 import { childEnv } from './token-store';
-import { join } from 'node:path';
+import { penmossHome } from '@penmoss/core/node/home';
 
 /**
  * `self`: the arguments that run this CLI again after `process.execPath`, for a sync detached to
@@ -43,7 +42,7 @@ export function nodeIo(
     notebooks: nodeNotebooks({
       ...(options.meaning ? { meaning: options.meaning } : {}),
       terminal: terminalAvailable,
-      home: env['PENMOSS_HOME'] || join(homedir(), '.penmoss'),
+      home: penmossHome(env),
       env,
       platform: process.platform,
       ...(process.getuid ? { uid: process.getuid() } : {}),

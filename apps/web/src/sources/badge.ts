@@ -8,7 +8,8 @@
  * letter or digit of its name. Duplicates are expected (Personal and Penmoss are both P).
  * Copying settings between notebooks (A1137) skips both keys.
  */
-import { NOTEBOOK_BADGE_COLOURS, NOTEBOOK_BADGE_INK } from '@penmoss/ui/theme';
+import { fnv1a } from '@penmoss/core/fnv';
+import { NOTEBOOK_BADGE_COLOURS, NOTEBOOK_BADGE_INK, contrast } from '@penmoss/ui/theme';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { LUCIDE_PREFIX, lucideName } from '../shell/lucide';
 import type { Source } from './registry';
@@ -144,12 +145,7 @@ export const INK_DARK: string = NOTEBOOK_BADGE_INK.dark;
 
 /** A stable 32-bit hash of the notebook's id (FNV-1a): the same on every device. */
 export function idHash(id: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < id.length; index++) {
-    hash ^= id.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash >>> 0;
+  return fnv1a(id);
 }
 
 /** The default colour's preset: the one at hash(id) mod 10. */
@@ -235,21 +231,6 @@ export function badgeOf(
   };
 }
 
-/** WCAG relative luminance of `#rrggbb`. */
-function luminance(hex: string): number {
-  const channel = (at: number) => {
-    const c = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
-}
-
-/** The WCAG contrast ratio of two `#rrggbb` colours. */
-export function contrastRatio(a: string, b: string): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-  return (light + 0.05) / (dark + 0.05);
-}
-
 /** A notebook's badge now, from its synced settings and its name (not a hook: read it again). */
 export function badgeOfSource(source: Source): NotebookBadgeValue {
   return badgeOf(source.id, source.name, source.workspace.settings());
@@ -257,9 +238,9 @@ export function badgeOfSource(source: Source): NotebookBadgeValue {
 
 /** The glyph's colour on `hex`: white when it reaches 4.5:1, else whichever is clearer. */
 export function glyphInk(hex: string): string {
-  const white = contrastRatio(hex, INK_LIGHT);
+  const white = contrast(hex, INK_LIGHT);
   if (white >= 4.5) return INK_LIGHT;
-  return contrastRatio(hex, INK_DARK) > white ? INK_DARK : INK_LIGHT;
+  return contrast(hex, INK_DARK) > white ? INK_DARK : INK_LIGHT;
 }
 
 /** What a badge change writes: a part set to null goes back to its default. */

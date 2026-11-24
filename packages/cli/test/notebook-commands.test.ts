@@ -722,19 +722,26 @@ describe('penmoss mcp --notebook', () => {
     let threadId = '';
     const served = await cli(['mcp', '--notebook', 'nb', '--channel', '--name', 'laptop:/garden'], {
       lines: [
-        rpc(1, 'initialize', { protocolVersion: '2025-06-18', capabilities: {} }),
+        rpc(1, 'initialize', {
+          protocolVersion: '2025-06-18',
+          capabilities: {},
+          clientInfo: { name: 'claude-code' },
+        }),
         JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
         // The session is listed in the notebook; the Mac's Send to… sends the thread to it.
         async () => {
-          await vi.waitFor(async () => expect(await sessions()).toHaveLength(1), {
-            timeout: 20_000,
-            interval: 100,
-          });
+          // Named by the client that said who it is (PEN-157), once it has.
+          await vi.waitFor(
+            async () =>
+              expect(await sessions()).toEqual([
+                expect.objectContaining({
+                  name: 'laptop:/garden',
+                  label: 'Claude Code · laptop:/garden',
+                }),
+              ]),
+            { timeout: 20_000, interval: 100 },
+          );
           const [session] = await sessions();
-          expect(session).toMatchObject({
-            name: 'laptop:/garden',
-            label: 'Claude Code · laptop:/garden',
-          });
           threadId = (
             await sendFromMac({ ops: macOps, engine: mac }, noteId, 'garden', {
               writer: session!.writer,
@@ -821,7 +828,8 @@ describe('penmoss mcp --notebook', () => {
         '--name',
         `${name.toLowerCase()}-agent`,
         '--agent',
-        'Claude Code',
+        // Copies whose writers have different labels (PEN-157): the session's name is the same.
+        name === 'Personal' ? 'Claude Code' : 'Agent',
       ]);
       const engine = await GitNotebookEngine.open({
         transport: new MemoryTransport({
@@ -849,17 +857,27 @@ describe('penmoss mcp --notebook', () => {
     };
     const threads = new Map<string, string>();
     const lines = [
-      rpc(1, 'initialize', { protocolVersion: '2025-06-18', capabilities: {} }),
+      rpc(1, 'initialize', {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'claude-code' },
+      }),
       JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
       // The session is listed in both notebooks; each Mac sends a thread to it.
       async () => {
         for (const mac of macs) {
-          await vi.waitFor(async () => expect(await sessionsOf(mac)).toHaveLength(1), {
-            timeout: 20_000,
-            interval: 100,
-          });
+          // One name in every notebook, the client's (PEN-157), not each copy's writer's.
+          await vi.waitFor(
+            async () =>
+              expect(await sessionsOf(mac)).toEqual([
+                expect.objectContaining({
+                  name: 'laptop:/garden',
+                  label: 'Claude Code · laptop:/garden',
+                }),
+              ]),
+            { timeout: 20_000, interval: 100 },
+          );
           const [session] = await sessionsOf(mac);
-          expect(session).toMatchObject({ name: 'laptop:/garden' });
           const sent = await sendFromMac(mac, mac.noteId, 'garden', {
             writer: session!.writer,
             session: session!.key,

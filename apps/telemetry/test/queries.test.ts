@@ -5,7 +5,9 @@
  */
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { INSTALL_PATTERN, SESSION_PATTERN } from '@penmoss/core/analytics';
 import { dayOf } from '../src/day';
+import { INSTALL_HEX, SESSION_HEX, isDays, queryValues } from '../src/params';
 import {
   NAMED_QUERIES,
   QUERY_NAMES,
@@ -84,6 +86,18 @@ describe('every named query', () => {
       1,
     ]);
     expect(bindingsFor(NAMED_QUERIES.health, ALL)).toEqual([30, '', '', '', '', '2026-11-19']);
+  });
+
+  it('takes its parameters from params.ts, which Node reads too', () => {
+    // An unset start, install, session or page binds as '' or the first page.
+    expect(
+      queryValues({ days: 7, client: 'mac', actor: '', channel: '', version: '', today: 'x' }),
+    ).toEqual([7, 'mac', '', '', '', 'x', '', '', '', '', 1]);
+    expect([7, 30, 90, 365, 395].every(isDays)).toBe(true);
+    expect(isDays(12)).toBe(false);
+    // The ids' checks are core's, which scripts/query.mjs cannot import.
+    expect(INSTALL_HEX.source).toBe(INSTALL_PATTERN.source);
+    expect(SESSION_HEX.source).toBe(SESSION_PATTERN.source);
   });
 });
 

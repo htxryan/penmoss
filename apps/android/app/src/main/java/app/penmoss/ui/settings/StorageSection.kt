@@ -1,9 +1,7 @@
 package app.penmoss.ui.settings
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
 import androidx.compose.runtime.Composable
@@ -14,12 +12,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.WebPictureSetting
+import app.penmoss.ui.common.ConfirmDialog
 
-/** A size for people, as core's `formatBytes`: `512 B`, `1.5 KB`, `20 MB`. */
-fun formatBytes(bytes: Long): String {
+/**
+ * A file's or a store's size for people, as core's `formatBytes` in `attachments.ts`: `512 B`,
+ * `1.5 KB`, `20 MB`. Analytics' limits have their own ([app.penmoss.analytics.Limits.formatBytes]).
+ */
+fun attachmentSize(bytes: Long): String {
     val units = listOf("B", "KB", "MB", "GB")
     var value = bytes.toDouble()
     var unit = 0
@@ -63,14 +64,14 @@ fun StorageScreen(
             modifier = Modifier.settingRow("files-and-pictures-in-notes"),
             headlineContent = { Text("Files and Pictures in Notes") },
             // The upload queue's own rule (review PS2): a large file is not sent over mobile data.
-            supportingContent = { Text((use?.let { formatBytes(it.files) } ?: "Counting…") + " · files over 10 MB upload on Wi-Fi", Modifier.testTag("storageFiles")) },
+            supportingContent = { Text((use?.let { attachmentSize(it.files) } ?: "Counting…") + " · files over 10 MB upload on Wi-Fi", Modifier.testTag("storageFiles")) },
         )
         ListItem(
             modifier = Modifier.settingRow("pictures-from-the-web"),
             headlineContent = { Text("Pictures from the Web") },
             supportingContent = {
                 Text(
-                    use?.let { "${it.webPictureCount} kept to show again · ${formatBytes(it.webPictures)}" } ?: "Counting…",
+                    use?.let { "${it.webPictureCount} kept to show again · ${attachmentSize(it.webPictures)}" } ?: "Counting…",
                     Modifier.testTag("storageWebPictures"),
                 )
             },
@@ -91,18 +92,19 @@ fun StorageScreen(
         )
     }
     if (clearing) {
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { clearing = false },
-            title = { Text("Clear Pictures from the Web?") },
-            text = { Text("Penmoss fetches each one again the next time a note shows it. Your notes and their own files stay as they are.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("settings.storage.clear-web-pictures.confirm", tracked.done {
-                    clearing = false
-                    onClearWebPictures()
-                }), modifier = Modifier.testTag("confirmClearWebPictures")) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+        ConfirmDialog(
+            title = "Clear Pictures from the Web?",
+            body = "Penmoss fetches each one again the next time a note shows it. Your notes and their own files stay as they are.",
+            confirmLabel = "Clear",
+            confirmEvent = "settings.storage.clear-web-pictures.confirm",
+            cancelEvent = "settings.storage.clear-web-pictures.cancel",
+            onConfirm = {
+                clearing = false
+                onClearWebPictures()
             },
-            dismissButton = { TextButton(onClick = trackedClick("settings.storage.clear-web-pictures.cancel") { clearing = false }) { Text("Cancel") } },
+            onDismiss = { clearing = false },
+            destructive = true,
+            confirmTag = "confirmClearWebPictures",
         )
     }
 }

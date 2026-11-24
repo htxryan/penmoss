@@ -47,6 +47,7 @@ import { authorName, time } from './format';
 import { AuthorMark } from './parts';
 import type { HistoryDetail, HistorySource, HistoryVersion } from './source';
 import { useTrackedDialog } from '../analytics/dialog';
+import { pluralise } from '@penmoss/core/words';
 
 type Side = 'left' | 'right';
 
@@ -82,7 +83,7 @@ const MODE_NAMES: Record<ViewMode, { readonly long: string; readonly short: stri
 const shortSha = (commit: string) => commit.slice(0, 7);
 
 /** The folds' words: `⋯ 12 unchanged lines`. */
-const foldWords = (lines: number) => `⋯ ${lines} unchanged ${lines === 1 ? 'line' : 'lines'}`;
+const foldWords = (lines: number) => `⋯ ${lines} unchanged ${pluralise(lines, 'line')}`;
 
 /**
  * Shows the images in `host` (rendered with their path in `data-src`) as the editor does: a web

@@ -36,6 +36,7 @@ import { ChooseAiProviderDialog, GenerateTagsDialog } from './GenerateTagsDialog
 import { DeleteDialog, MergeDialog } from './TagDialogs';
 import { useTagChanges } from './tag-changes';
 import { TagDoneToast, type TagDone } from './TagDoneToast';
+import { counted } from '@penmoss/core/words';
 
 /** What choosing a tag's name does: what choosing it in the sidebar does, in its notebook. */
 export type ShowTag = (sourceId: string | null, tag: string) => void;
@@ -303,7 +304,7 @@ function NotebookTags({
   };
 
   const headingId = `tags-page-${sourceId}`;
-  const count = `${key ? `${shown.length} of ` : ''}${rows.length} ${rows.length === 1 ? 'Tag' : 'Tags'}`;
+  const count = `${key ? `${shown.length} of ` : ''}${counted(rows.length, 'Tag')}`;
   return (
     <section
       ref={sectionRef}

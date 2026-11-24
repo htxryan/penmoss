@@ -13,14 +13,14 @@ import { LineBudget } from '../log-file';
 import { analytics } from '../services';
 
 /** The page's lines in the log file: at most this many a minute, from every window together. */
-export const PAGE_LINES_PER_MINUTE = 50;
+const PAGE_LINES_PER_MINUTE = 50;
 
 /** The longest list of names a bug report's scrub #2 takes, and the longest name. */
 const MAX_NAMES = 20_000;
 const MAX_NAME = 300;
 
 /** The names the page sends for scrub #2 (note titles, folders, tags, attachments), checked. */
-export function parseNames(value: unknown): string[] {
+function parseNames(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return (value as unknown[])
     .slice(0, MAX_NAMES)

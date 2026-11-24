@@ -5,7 +5,7 @@
  * fills, hairline grid; text in text colours, never a series colour. Every value a tooltip shows
  * is also in the card's table.
  */
-import { eventName } from './names';
+import { eventName, fullNumber } from './names';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -29,9 +29,7 @@ export const formatNumber = (value: number) =>
     ? new Intl.NumberFormat('en-GB', { notation: 'compact', maximumFractionDigits: 1 }).format(
         value,
       )
-    : value.toLocaleString('en-GB');
-
-const fullNumber = (value: number) => value.toLocaleString('en-GB');
+    : fullNumber(value);
 
 /** "19 Nov" from YYYY-MM-DD. */
 export function shortDay(day: string): string {
@@ -50,9 +48,9 @@ export interface Series {
 }
 
 /** A tooltip's heading: its text, or a display name with its id in a muted line under it. */
-export type TipHead = string | { readonly title: string; readonly id: string };
+type TipHead = string | { readonly title: string; readonly id: string };
 
-export interface TipLine {
+interface TipLine {
   readonly value: string;
   readonly label: string;
   readonly color?: string;
@@ -93,7 +91,7 @@ const clamp = (value: number, low: number, high: number) =>
   Math.max(low, Math.min(value, Math.max(low, high)));
 
 /** Where the tooltip's top left corner goes for a pointer at (x, y). */
-export function tipPosition(
+function tipPosition(
   x: number,
   y: number,
   size: { width: number; height: number },
@@ -129,7 +127,7 @@ export function tipPosition(
 }
 
 /** Shows the tooltip for (x, y) in the viewport: a title, then each value before its label. */
-export function showTip(
+function showTip(
   x: number,
   y: number,
   title: TipHead,
@@ -245,7 +243,7 @@ function aboveFrom(chart: SVGSVGElement, target: SVGElement, from: number): () =
 // Scales and axes.
 
 /** A round maximum for an axis and its ticks. */
-export function niceScale(max: number, ticks = 4): { max: number; step: number } {
+function niceScale(max: number, ticks = 4): { max: number; step: number } {
   if (max <= 0) return { max: ticks, step: 1 };
   const raw = max / ticks;
   const power = 10 ** Math.floor(Math.log10(raw));
@@ -343,7 +341,7 @@ function barPath(
 // ---------------------------------------------------------------------------------------------
 // The charts.
 
-export interface TimeChart {
+interface TimeChart {
   readonly categories: readonly string[];
   readonly series: readonly Series[];
   readonly label: string;
@@ -545,7 +543,7 @@ export interface BarColumn {
   readonly width?: number;
 }
 
-export interface BarsSpec {
+interface BarsSpec {
   readonly label: string;
   readonly series: readonly Pick<Series, 'key' | 'label' | 'color'>[];
   readonly rows: readonly BarRow[];
@@ -688,7 +686,7 @@ export function bars(spec: BarsSpec, width: number): SVGSVGElement {
   return chart;
 }
 
-export interface FunnelStep {
+interface FunnelStep {
   readonly label: string;
   readonly value: number;
 }

@@ -696,18 +696,6 @@ export function dropUnknown(
   return { tabs, active: (after ?? tabs[tabs.length - 1]!).id, closed };
 }
 
-/** The note ids every tab (and closed tab) holds, for the kept editors (A1500). */
-export function notesInTabs(state: TabsState): Set<string> {
-  const ids = new Set<string>();
-  for (const tab of state.tabs) {
-    for (const item of tab.entries) {
-      const note = noteIdOfPath(item.path);
-      if (note !== null) ids.add(note);
-    }
-  }
-  return ids;
-}
-
 /** The notes tabs show now, most recently active first: the active tab's, then left to right. */
 export function shownNotes(state: TabsState): string[] {
   const order = [activeTab(state), ...state.tabs.filter((tab) => tab.id !== state.active)];

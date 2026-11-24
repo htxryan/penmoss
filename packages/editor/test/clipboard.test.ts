@@ -487,6 +487,7 @@ describe('sanitising', () => {
   it('keeps only safe link addresses', () => {
     expect(safeHref('https://example.com/a')).toBe('https://example.com/a');
     expect(safeHref('mailto:a@b.c')).toBe('mailto:a@b.c');
+    expect(safeHref('tel:+441234567890')).toBe('tel:+441234567890');
     expect(safeHref(`attachments/${HASH}.pdf`)).toBe(`attachments/${HASH}.pdf`);
     for (const bad of [
       'javascript:alert(1)',

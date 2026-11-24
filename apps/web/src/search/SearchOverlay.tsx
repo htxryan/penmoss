@@ -3,7 +3,8 @@ import { tabIntentOf, type TabIntent } from '../commands/tab-intent';
 import { DialogClose } from '../shell/DialogClose';
 import { Select } from '@penmoss/ui/controls/Select';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { PickerField, PickerListbox } from '../shell/picker';
+import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
 import { useNoteList } from '../notes/hooks';
 import { snippetParts } from '../notes/backlinks';
@@ -31,6 +32,7 @@ import {
 import type { Source } from '../sources/registry';
 import type { TagSearch } from './show-tag';
 import { useTrackedDialog } from '../analytics/dialog';
+import { counted } from '@penmoss/core/words';
 
 /** This device's words answer each keystroke at once (A111); Enter answers without waiting. */
 const TYPING_MS = 60;
@@ -285,17 +287,15 @@ export function SearchOverlay({
     : searching && !outcome
       ? 'Searching…'
       : outcome && browsing
-        ? `${hits.length} ${hits.length === 1 ? 'note' : 'notes'}${
-            filters.tag ? ` tagged #${filters.tag}` : ''
-          }`
+        ? `${counted(hits.length, 'note')}${filters.tag ? ` tagged #${filters.tag}` : ''}`
         : outcome
-          ? `${hits.length === 0 ? 'No results' : `${hits.length} ${hits.length === 1 ? 'result' : 'results'}`}${
+          ? `${hits.length === 0 ? 'No results' : counted(hits.length, 'result')}${
               outcome.preview ? '' : ' on this device'
             }`
           : '';
 
   return (
-    <PickerOverlay testId="search" className="palette search" label="Search" onClose={onClose}>
+    <ModalOverlay testId="search" className="palette search" label="Search" onClose={onClose}>
       <div className="dlg-search">
         <span className="search-icon" aria-hidden="true">
           <Icon name="search" />
@@ -512,6 +512,6 @@ export function SearchOverlay({
         </span>
         Close
       </div>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }

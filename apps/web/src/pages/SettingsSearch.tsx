@@ -11,6 +11,7 @@ import type { SettingEntry, SettingMatch } from './settings-index';
 import type { SettingsSearchState } from './settings-search';
 import { SettingsHeader } from './SettingsHeader';
 import { useTypedLength } from '../analytics/typed';
+import { counted } from '@penmoss/core/words';
 
 export function SettingsSearch({
   search,
@@ -75,7 +76,7 @@ export function SettingsSearchResults({
   const count =
     results.length === 0
       ? `No settings match “${shownQuery}”.`
-      : `${results.length} ${results.length === 1 ? 'setting matches' : 'settings match'} “${shownQuery}”.`;
+      : `${counted(results.length, 'setting matches', 'settings match')} “${shownQuery}”.`;
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Escape') return;
     const links = [...event.currentTarget.querySelectorAll<HTMLElement>('a')];

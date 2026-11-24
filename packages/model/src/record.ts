@@ -1,6 +1,11 @@
 /** What a client keeps per note (A7). DOM-free so non-browser code can share it. */
 import type { NoteLink } from '@penmoss/core/links';
-import type { EngineName } from './protocol';
+
+/**
+ * The Yjs stack a note is written with (D31: Yjs 14). It is fixed per note and stored with its
+ * record, so a future engine change can tell old notes apart.
+ */
+export type EngineName = 'yjs14';
 
 export interface NoteRecord {
   readonly noteId: string;

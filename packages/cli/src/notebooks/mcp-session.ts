@@ -8,7 +8,7 @@
 import { notebookTag } from '@penmoss/core/note-ref';
 import { MeaningIndex } from '@penmoss/core/search';
 import { LEASE_RETRY_MS, LeaseKeeper } from '@penmoss/embed/lease-keeper';
-import { NotebookOps } from '@penmoss/git-notebook';
+import { clientName, NotebookOps } from '@penmoss/git-notebook';
 import {
   CHANNEL_CHECK_MS,
   CHANNEL_INSTRUCTIONS,
@@ -179,9 +179,15 @@ export class McpSession {
         ? {
             channel: true,
             instructions: `${this.meaningOn ? LOCAL_MEANING_INSTRUCTIONS : LOCAL_INSTRUCTIONS}\n${CHANNEL_INSTRUCTIONS}`,
-            onInitialized: () => {
+            onInitialized: (client) => {
+              // Named by its client, as History names its edits (PEN-157).
+              const cwd = process.cwd();
+              channel.relabel(
+                `${clientName(client)} · ${this.channelOptions?.name ?? (basename(cwd) || cwd)}`,
+              );
               channel.start();
               void channel.tick();
+              void channel.heartbeat().catch(() => undefined);
             },
           }
         : {}),
@@ -281,7 +287,7 @@ export class McpSession {
       },
       {
         name: sessionName,
-        label: `${this.entry.writer.label} · ${this.channelOptions.name ?? (basename(cwd) || cwd)}`,
+        label: `${clientName(null)} · ${this.channelOptions.name ?? (basename(cwd) || cwd)}`,
         host: hostname(),
       },
     );

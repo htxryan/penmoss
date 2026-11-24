@@ -13,8 +13,8 @@ import {
   DEFAULT_WEEKLY_TEMPLATE,
   isoWeek,
   isTimeZone,
-  journalFolderId,
   parsePlainDate,
+  periodicSalt,
   todayIn,
   type PeriodKind,
 } from '@penmoss/core/periodic';
@@ -25,6 +25,7 @@ import { NOTE_ROOT } from '@penmoss/model/replica';
 import {
   createFolder,
   deleteFolder,
+  fileJournalNote,
   moveFolder,
   moveNote,
   NOTEBOOK_MAP,
@@ -196,10 +197,8 @@ export class NotebookOps {
           : DEFAULT_WEEKLY_TEMPLATE;
     // A day whose note was deleted for good gets a new one, under the next salt (`<id>#2`, …):
     // every device skips the same purged ids, so they still agree on it.
-    let note = periodicNote({ parseMarkdown }, kind, period, template, this.salt);
-    for (let round = 2; isPurged(this.workspace, note.id); round++) {
-      note = periodicNote({ parseMarkdown }, kind, period, template, `${this.salt}#${round}`);
-    }
+    const salt = periodicSalt(kind, period, this.salt, (id) => isPurged(this.workspace, id));
+    const note = periodicNote({ parseMarkdown }, kind, period, template, salt);
     const registered = readWorkspace(this.workspace).notes.some((entry) => entry.id === note.id);
     let created = false;
     let restoredFromTrash = false;
@@ -223,19 +222,7 @@ export class NotebookOps {
       setDeleted(existing, false);
       restoredFromTrash = true;
     }
-    if (!registered) {
-      const year = period.slice(0, 4);
-      const levels = ['Journal', year, kind === 'daily' ? period.slice(5, 7) : 'Weekly'];
-      let parentId: string | null = null;
-      for (let depth = 1; depth <= levels.length; depth++) {
-        const folderId = journalFolderId(levels.slice(0, depth).join('/'), this.salt);
-        if (!readWorkspace(this.workspace).folders.some((folder) => folder.id === folderId)) {
-          createFolder(this.workspace, { id: folderId, name: levels[depth - 1]!, parentId });
-        }
-        parentId = folderId;
-      }
-      registerNote(this.workspace, { id: note.id, folderId: parentId });
-    }
+    if (!registered) fileJournalNote(this.workspace, note.id, kind, period, this.salt);
     return {
       id: note.id,
       kind,

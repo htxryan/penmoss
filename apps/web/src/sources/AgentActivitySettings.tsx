@@ -7,11 +7,10 @@
  * next sync pushes; changed again since, it says what and changes nothing.
  */
 import { Select } from '@penmoss/ui/controls/Select';
-import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useState } from 'react';
 import { gitUndoMessage, type ActivityEntry } from '../agents/activity';
+import { ActivityList } from '../agents/AgentActivity';
 import { desktop } from '../desktop/bridge';
-import { shortWhen } from '../shell/when';
 import type { GitSource } from './git-source';
 import { useAllSources } from './hooks';
 import {
@@ -173,50 +172,15 @@ export function AgentActivitySettings() {
               : 'No change matches these filters.'}
         </p>
       ) : (
-        <ul className="trash-list" aria-label="Agent Activity" data-testid="agent-activity-list">
-          {shown.map((item) => {
+        <ActivityList
+          items={shown}
+          busy={busy !== null}
+          canUndo={(item) => sources.some((each) => each.id === item.notebookId)}
+          onUndo={(item) => {
             const source = sources.find((each) => each.id === item.notebookId);
-            const key = keyOf(item);
-            const label = `agent-activity-${item.notebookId}-${item.entry.id}`;
-            return (
-              <li
-                key={key}
-                className="trash-item"
-                data-activity-id={item.entry.id}
-                data-notebook-id={item.notebookId}
-                data-undone={item.entry.undoneAt ? 'true' : undefined}
-              >
-                <div className="trash-info">
-                  <span className="trash-title" id={label}>
-                    {item.entry.summary}
-                  </span>
-                  <span className="muted">
-                    ✦ {item.entry.actor.label} · {item.notebook} · {shortWhen(item.entry.at)}
-                    {item.entry.undoneAt
-                      ? ` · Undone${item.entry.undoneBy ? ` by ${item.entry.undoneBy}` : ''} ${shortWhen(item.entry.undoneAt)}`
-                      : ''}
-                  </span>
-                </div>
-                {item.entry.undoneAt || !source ? null : (
-                  <div className="trash-actions">
-                    <button
-                      data-event="settings.agent-activity.undo"
-                      type="button"
-                      className="btn"
-                      data-ui="item"
-                      disabled={busy !== null}
-                      aria-describedby={label}
-                      onClick={() => void undo(source, item)}
-                    >
-                      <Icon name="undo" />
-                      Undo
-                    </button>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+            if (source) void undo(source, item);
+          }}
+        />
       )}
     </section>
   );

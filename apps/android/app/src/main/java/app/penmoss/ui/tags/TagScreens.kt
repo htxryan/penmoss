@@ -59,7 +59,6 @@ import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.notes.TagNode
 import app.penmoss.engine.notes.TagTree
 import app.penmoss.engine.notes.Tags
-import app.penmoss.ui.settings.BackButton
 import app.penmoss.ui.settings.SettingsRoutes
 import app.penmoss.ui.common.roles
 import app.penmoss.analytics.trackedToggle
@@ -99,9 +98,10 @@ import app.penmoss.ui.common.underSelectionBar
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.leave
 import app.penmoss.ui.open
-
-/** "1 note", "3 notes". */
-internal fun notesCount(count: Int) = "$count ${if (count == 1) "note" else "notes"}"
+import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
+import app.penmoss.ui.common.noteCount
+import app.penmoss.ui.common.SheetTitle
 
 /** The rows the tree shows: each node and its depth, children only under an expanded parent. */
 internal fun tagRows(tree: List<TagNode>, expanded: Set<String>, depth: Int = 0): List<Pair<TagNode, Int>> =
@@ -194,7 +194,7 @@ fun TagsScreen(
                                     onClick = trackedClick("tags.pane.show") { onOpenTag(node.tag) },
                                 )
                                 .semantics(mergeDescendants = true) {
-                                    contentDescription = "#${node.tag}, ${notesCount(node.count)}" + (description?.let { ", $it" } ?: "")
+                                    contentDescription = "#${node.tag}, ${noteCount(node.count)}" + (description?.let { ", $it" } ?: "")
                                 }
                                 .padding(end = 16.dp, top = 12.dp, bottom = 12.dp)
                                 .testTag("tag-${node.tag}"),
@@ -244,7 +244,7 @@ fun TagMenuSheet(
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("tagMenu")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Text("#$tag", Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.roles.groupHead, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        SheetTitle("#$tag")
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp).testTag("tagMenu")) {
             SheetAction("Rename…", "tagAction-rename", "tags.pane.rename", tracked.done(onRename))
             SheetAction(if (described) "Edit Description…" else "Add Description…", "tagAction-describe", "tags.description.edit", tracked.done(onEditDescription))
@@ -323,15 +323,16 @@ fun GenerateAllTagsDialog(covers: TagsToDescribe, onGenerate: (replace: Boolean)
 /** Generating needs an AI provider on this phone: where to choose one, as a note's Describe Now says. */
 @Composable
 fun ChooseAiProviderDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
-    val tracked = rememberTrackedDialog("aiProvider")
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Choose an AI Provider") },
-        text = { Text(AiDescriptionCopy.text("chooseProvider.body"), style = MaterialTheme.roles.body) },
-        confirmButton = {
-            TextButton(onClick = trackedClick("tags.generate.open-settings", tracked.done(onOpenSettings)), modifier = Modifier.testTag("tagsOpenAiSettings")) { Text("Open Settings") }
-        },
-        dismissButton = { TextButton(onClick = trackedClick("tags.generate.cancel", onDismiss)) { Text("Cancel") } },
+    ConfirmDialog(
+        title = "Choose an AI Provider",
+        body = AiDescriptionCopy.text("chooseProvider.body"),
+        confirmLabel = "Open Settings",
+        confirmEvent = "tags.generate.open-settings",
+        cancelEvent = "tags.generate.cancel",
+        onConfirm = onOpenSettings,
+        onDismiss = onDismiss,
+        confirmTag = "tagsOpenAiSettings",
+        dialog = "aiProvider",
     )
 }
 
@@ -352,7 +353,7 @@ fun TaggedNotesScreen(tag: String, notes: List<NoteItem>, onBack: () -> Unit, on
                 title = {
                     Column {
                         Text("#$tag", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(notesCount(notes.size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(noteCount(notes.size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 navigationIcon = { BackButton(onBack) },
@@ -381,7 +382,7 @@ internal fun checkTagRename(from: String, value: String, known: Set<String>): Ta
 
 /** What the tag pane's status line says once a rename has started. */
 internal fun tagRenamedMessage(from: String, to: String, merge: Boolean, notes: Int): String =
-    if (merge) "Merged #$from into #$to in ${notesCount(notes)}" else "Renamed #$from to #$to in ${notesCount(notes)}"
+    if (merge) "Merged #$from into #$to in ${noteCount(notes)}" else "Renamed #$from to #$to in ${noteCount(notes)}"
 
 /** The words for a rename that did not start: the server's own for a refusal. */
 internal fun tagRenameError(error: Throwable): String = when (error) {

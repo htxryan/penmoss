@@ -33,6 +33,8 @@ import { useGitStatus, useSource, useSourcesState } from '../sources/hooks';
 import { timelineOf, type TimelineClient } from './client';
 import { timeMachinePath, type TimeMachineTab } from './path';
 import './time-machine.css';
+import { Select } from '@penmoss/ui/controls/Select';
+import { counted } from '@penmoss/core/words';
 
 /** A moment in the notebook's time zone: `3 Nov 2026, 14:05`. */
 function moment(ms: number, zone: string): string {
@@ -90,7 +92,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
           {sources.length > 1 ? (
             <label className="tm-notebook">
               <span>Notebook</span>
-              <select
+              <Select
                 data-event="time-machine.notebook"
                 value={source?.id ?? ''}
                 onChange={(event) => go({ source: event.currentTarget.value })}
@@ -100,7 +102,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
                     {each.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           ) : null}
           <div className="tm-tabs" role="tablist" aria-label="Time Machine">
@@ -646,7 +648,7 @@ function WhatChanged({ source, week }: { source: GitSource; week: string | null 
             ? 'Reading the notebook’s history…'
             : changes.notes.length === 0
               ? `Nothing changed from ${longDate(range.from)} to ${longDate(range.to)}.`
-              : `${changes.notes.length} ${changes.notes.length === 1 ? 'note' : 'notes'} changed in ${changes.commits} ${changes.commits === 1 ? 'commit' : 'commits'}, ${longDate(range.from)} to ${longDate(range.to)}.`}
+              : `${counted(changes.notes.length, 'note')} changed in ${counted(changes.commits, 'commit')}, ${longDate(range.from)} to ${longDate(range.to)}.`}
       </p>
       {changes && changes.notes.length > 0 ? (
         <ul className="tm-change-list" aria-label="Changed notes">

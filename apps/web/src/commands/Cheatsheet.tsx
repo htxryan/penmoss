@@ -5,6 +5,8 @@ import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
 import { useTrackedDialog } from '../analytics/dialog';
 import { SPACES_CLASH, symbolKeysMayClash } from '../notes/symbols';
+import { DialogClose } from '../shell/DialogClose';
+import { ModalOverlay } from '../shell/ModalOverlay';
 
 /** Typing shortcuts that are not commands (markdown and the slash menu), for reference. */
 const TYPED: ReadonlyArray<readonly [string, string]> = [
@@ -38,83 +40,65 @@ export function Cheatsheet({
   }
 
   return (
-    <div
-      className="overlay"
-      data-testid="cheatsheet"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== 'Escape') return;
-        event.preventDefault();
-        onClose();
-      }}
+    <ModalOverlay
+      testId="cheatsheet"
+      className="cheat-dlg"
+      labelledBy={`${id}-title`}
+      onClose={onClose}
+      onEscape={onClose}
     >
-      <div
-        className="dialog cheat-dlg"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`${id}-title`}
-      >
-        <div className="dlg-title">
-          <h2 id={`${id}-title`}>Keyboard Shortcuts</h2>
-          <div className="row">
-            <button
-              type="button"
-              className="btn"
-              data-command="app.shortcuts"
-              onClick={() => {
-                tracked.done();
-                onCustomise();
-              }}
-            >
-              <Icon name="keyboard" />
-              Customise
-            </button>
-            <button
-              ref={close}
-              type="button"
-              className="icon-btn"
-              data-ui="dismiss"
-              data-event="cheatsheet.close"
-              aria-label="Close"
-              data-tip="Close (Esc)"
-              onClick={onClose}
-            >
-              <Icon name="close" />
-            </button>
-          </div>
+      <div className="dlg-title">
+        <h2 id={`${id}-title`}>Keyboard Shortcuts</h2>
+        <div className="row">
+          <button
+            type="button"
+            className="btn"
+            data-command="app.shortcuts"
+            onClick={() => {
+              tracked.done();
+              onCustomise();
+            }}
+          >
+            <Icon name="keyboard" />
+            Customise
+          </button>
+          <DialogClose
+            ref={close}
+            label="Close Keyboard Shortcuts"
+            event="cheatsheet.close"
+            onClose={onClose}
+          />
         </div>
-        {/* It scrolls on a short window: focusable, so the keyboard can scroll it too. */}
-        <div className="cheat" role="region" aria-labelledby={`${id}-title`} tabIndex={0}>
-          {[...groups].map(([area, list]) => (
-            <section key={area}>
-              <h3>{area}</h3>
-              {area === 'Symbols' && symbolKeysMayClash((id) => commands.keysOf(id)) ? (
-                <p className="cheat-note">{SPACES_CLASH}</p>
-              ) : null}
-              {list.map((command) => (
-                <div className="cr" key={command.id}>
-                  <span>
-                    {command.title}
-                    {command.pending ? <span className="muted"> (soon)</span> : null}
-                  </span>
-                  <Kbd combo={commands.keysOf(command.id)[0]} />
-                </div>
-              ))}
-            </section>
-          ))}
-          <section>
-            <h3>Typing</h3>
-            {TYPED.map(([title, keys]) => (
-              <div className="cr" key={title}>
-                <span>{title}</span>
-                <code>{keys}</code>
+      </div>
+      {/* It scrolls on a short window: focusable, so the keyboard can scroll it too. */}
+      <div className="cheat" role="region" aria-labelledby={`${id}-title`} tabIndex={0}>
+        {[...groups].map(([area, list]) => (
+          <section key={area}>
+            <h3>{area}</h3>
+            {area === 'Symbols' && symbolKeysMayClash((id) => commands.keysOf(id)) ? (
+              <p className="cheat-note">{SPACES_CLASH}</p>
+            ) : null}
+            {list.map((command) => (
+              <div className="cr" key={command.id}>
+                <span>
+                  {command.title}
+                  {command.pending ? <span className="muted"> (soon)</span> : null}
+                </span>
+                <Kbd combo={commands.keysOf(command.id)[0]} />
               </div>
             ))}
           </section>
-        </div>
+        ))}
+        <section>
+          <h3>Typing</h3>
+          {TYPED.map(([title, keys]) => (
+            <div className="cr" key={title}>
+              <span>{title}</span>
+              <code>{keys}</code>
+            </div>
+          ))}
+        </section>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

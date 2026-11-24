@@ -17,6 +17,7 @@ import {
   eventsPath,
   readConsentFile,
 } from '@penmoss/core/analytics/node';
+import { penmossHome as resolvePenmossHome } from '@penmoss/core/node/home';
 import { AdminCheck, runHelper } from './admin-check';
 import { AiProviders } from './ai-provider';
 import { Analytics, macFields, watchConsent } from './analytics';
@@ -43,7 +44,7 @@ import { Updates, updateMode } from './updater';
  * ID itself where the Mac has it, else the signed helper in the app, which only answers with its
  * exit code.
  */
-export const adminCheck = new AdminCheck({
+const adminCheck = new AdminCheck({
   helper: config.authHelper,
   run: runHelper,
   // Main's own checks ask Touch ID itself where the Mac has it (T50, A855); the suite's stand-in
@@ -113,7 +114,7 @@ export const updates = new Updates({
   recordSetting,
 });
 /** The CLI's `~/.penmoss` (A992): agents' clones, and search by meaning's model and vectors. */
-const penmossHome = process.env['PENMOSS_HOME'] || join(homedir(), '.penmoss');
+const penmossHome = resolvePenmossHome();
 /**
  * Search by meaning (T76, A1152, A1157, A1158): the embedding service in a utilityProcess, which
  * downloads the model unless the setting is off, holds the indexing lease and answers the
@@ -332,7 +333,7 @@ export function startAnalytics(): void {
  * What the log file's scrubber knows (scrub #1): the GitHub logins and the notebooks' names,
  * repositories and branches, read again when they change.
  */
-export function refreshKnown(): void {
+function refreshKnown(): void {
   void Promise.all([
     gitNotebooks.list().catch(() => []),
     githubToken.logins().catch(() => [] as string[]),

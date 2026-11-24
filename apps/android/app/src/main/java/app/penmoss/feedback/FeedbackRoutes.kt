@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -48,12 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.penmoss.NotebookGraph
-import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
-import app.penmoss.ui.settings.BackButton
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
+import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
 
 /** The feedback screens' routes (T49; PEN-146). */
 object FeedbackRoutes {
@@ -290,25 +289,21 @@ fun GitHubScreen(
     }
     signingOut?.let { key ->
         val account = accounts.firstOrNull { it.login.orEmpty() == key }
-        val confirm = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { signingOut = null },
-            title = { Text("Sign Out of ${named(account?.login)}?") },
-            text = {
-                Text(
-                    "This phone forgets the account; notebooks added with it keep their own copy and keep syncing." +
-                        if (account?.primary == true) {
-                            if (accounts.size > 1) " Send Feedback moves to ${named(accounts[1].login)}." else " Feedback waits on the phone until you sign in again."
-                        } else "",
-                )
+        ConfirmDialog(
+            title = "Sign Out of ${named(account?.login)}?",
+            body = "This phone forgets the account; notebooks added with it keep their own copy and keep syncing." +
+                if (account?.primary == true) {
+                    if (accounts.size > 1) " Send Feedback moves to ${named(accounts[1].login)}." else " Feedback waits on the phone until you sign in again."
+                } else "",
+            confirmLabel = "Sign Out",
+            confirmEvent = "settings.github.sign-out.confirm",
+            cancelEvent = "settings.github.sign-out.cancel",
+            onConfirm = {
+                signingOut = null
+                onSignOut(account?.login)
             },
-            confirmButton = {
-                TextButton(onClick = trackedClick("settings.github.sign-out.confirm", confirm.done {
-                    signingOut = null
-                    onSignOut(account?.login)
-                }), Modifier.testTag("githubSignOutConfirm")) { Text("Sign Out") }
-            },
-            dismissButton = { TextButton(onClick = trackedClick("settings.github.sign-out.cancel") { signingOut = null }) { Text("Cancel") } },
+            onDismiss = { signingOut = null },
+            confirmTag = "githubSignOutConfirm",
         )
     }
 }
@@ -449,18 +444,20 @@ fun FeedbackOutboxList(
         }
     }
     discarding?.let { id ->
-        val confirm = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { discarding = null },
-            title = { Text("Discard This Feedback?") },
-            text = { Text("It is deleted from this phone and never sent.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("feedback-outbox.discard.confirm", confirm.done {
-                    discarding = null
-                    onDiscard(id)
-                }), modifier = Modifier.testTag("confirmDiscardQueued")) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+        ConfirmDialog(
+            title = "Discard This Feedback?",
+            body = "It is deleted from this phone and never sent.",
+            confirmLabel = "Discard",
+            confirmEvent = "feedback-outbox.discard.confirm",
+            cancelEvent = "feedback-outbox.discard.cancel",
+            onConfirm = {
+                discarding = null
+                onDiscard(id)
             },
-            dismissButton = { TextButton(onClick = trackedClick("feedback-outbox.discard.cancel") { discarding = null }) { Text("Keep It") } },
+            onDismiss = { discarding = null },
+            destructive = true,
+            cancelLabel = "Keep It",
+            confirmTag = "confirmDiscardQueued",
         )
     }
 }

@@ -2,6 +2,7 @@
 // the rows printed as a table. Running them is the workerd tests' (test/queries.test.ts).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { DAYS } from '../src/params.ts';
 import { inline, parseArgs, queryNames, querySql, table } from './query.mjs';
 
 test('every named query is listed, and each comes out with every ?N written in', () => {
@@ -54,6 +55,7 @@ test('a value that could end its literal is refused', () => {
   assert.throws(() => inline('SELECT ?2', [1]), /no safe value/);
   assert.throws(() => parseArgs(['active', '--client', "mac'"]), /--client/);
   assert.throws(() => parseArgs(['active', '--days', '12']), /--days/);
+  for (const days of DAYS) assert.equal(parseArgs(['active', '--days', String(days)]).days, days);
   assert.throws(() => parseArgs(['active', '--start', 'nope']), /--start/);
   assert.throws(() => parseArgs(['active', '--wat']), /unknown argument/);
   assert.equal(inline('SELECT ?1, ?2 -- ?3', [7, 'mac']), "SELECT 7, 'mac'");

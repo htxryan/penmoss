@@ -212,7 +212,7 @@ describe('Send to… in a git notebook (A1065)', () => {
       'Waiting for Claude Code · penmoss',
     );
     // Targeted: the first choice stops sending.
-    expect(picker(container)!.querySelector('option[value=""]')!.textContent).toBe('Stop sending');
+    expect(picker(container)!.querySelector('option[value=""]')!.textContent).toBe('Stop Sending');
   });
 
   it('a later comment by Ryan waits again, for that comment, and syncs at once', () => {
@@ -398,7 +398,7 @@ describe('a session gone a week (A1062)', () => {
       source,
     );
     expect(container.querySelector('[data-testid="comment-delivery"]')!.textContent).toBe(
-      'Not sent: the session is gone Send to again',
+      'Not sent: the session is gone Send Again',
     );
     expect(picker(container)).toBeNull();
     act(() =>

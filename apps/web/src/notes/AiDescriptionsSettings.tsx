@@ -43,6 +43,7 @@ import { SettingsHeader } from '../pages/SettingsHeader';
 import { GroupHead, SettingRow } from '../theme/look-rows';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import './ai-descriptions.css';
+import { Segmented } from '../shell/Segmented';
 
 const PAUSE_LABELS: Readonly<Record<number, string>> = {
   30: '30 Seconds',
@@ -51,44 +52,6 @@ const PAUSE_LABELS: Readonly<Record<number, string>> = {
   300: '5 Minutes',
   600: '10 Minutes',
 };
-
-function Segmented<T extends string>({
-  name,
-  labelledBy,
-  value,
-  options,
-  event,
-  onChange,
-  testId,
-}: {
-  name: string;
-  labelledBy: string;
-  value: T;
-  options: readonly { readonly value: T; readonly label: string }[];
-  event: string;
-  onChange: (value: T) => void;
-  testId: string;
-}) {
-  return (
-    <div className="seg" role="radiogroup" aria-labelledby={labelledBy} data-testid={testId}>
-      {options.map((option) => (
-        <label key={option.value} className="seg-option">
-          <input
-            type="radio"
-            name={name}
-            data-event={event}
-            value={option.value}
-            checked={value === option.value}
-            onChange={() => onChange(option.value)}
-          />
-          <span className="bold-steady" data-label={option.label}>
-            {option.label}
-          </span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export function AiDescriptionsSettings() {
   const workspace = useWorkspace();

@@ -49,15 +49,6 @@ object Backlinks {
         return if (!ref.heading.isNullOrEmpty()) "$name › ${ref.heading}" else name
     }
 
-    /** A context as plain text, each link shown by [titleOf] (its current title, or null). */
-    fun contextText(context: List<ContextPart>, titleOf: (String) -> String?): String =
-        context.joinToString("") { part ->
-            when (part) {
-                is ContextPart.Text -> part.text
-                is ContextPart.Link -> linkLabel(part.ref, part.ref.noteId?.let(titleOf))
-            }
-        }
-
     /** Splits a server snippet on its match markers, spaces folded, as the web's `snippetParts`. */
     fun snippetParts(snippet: String): List<SnippetPart> {
         val parts = mutableListOf<SnippetPart>()

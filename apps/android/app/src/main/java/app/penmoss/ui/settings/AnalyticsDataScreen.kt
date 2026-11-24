@@ -49,6 +49,7 @@ import app.penmoss.ui.common.TextButton
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import app.penmoss.ui.common.BackButton
 
 /** When an event happened, in the phone's time zone: `2026-11-19 11:54:16`. */
 private val TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")

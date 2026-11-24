@@ -90,13 +90,6 @@ object FeedbackPayload {
 
     private val reader = Json { ignoreUnknownKeys = true }
 
-    /**
-     * A payload as the form it came from, for Edit (T49 review): its type, priority, title,
-     * description and submission id, and the context it was sent with (the groups left out are
-     * not in it). Null for one that is not a payload.
-     */
-    fun formOf(payload: String): Pair<FeedbackDraft, FeedbackContextData>? = editOf(payload)?.let { it.draft to it.context }
-
     /** What Edit puts back: the form, the context it was sent with, and the logs it attached. */
     data class Sent(val draft: FeedbackDraft, val context: FeedbackContextData, val logs: List<String>)
 

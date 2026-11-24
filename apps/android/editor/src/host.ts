@@ -86,6 +86,8 @@ import {
   moveSelectedBlock,
   selectedTopLevelBlock,
   noteExtensions,
+  LINK_REFUSED,
+  normaliseHref,
   pastePlainText,
   setNativeClipboard,
   symbolPickerOpen,
@@ -384,15 +386,6 @@ const ACTIVE_CHECKS: ReadonlyArray<
   ['blockquote', 'blockquote', undefined],
   ['codeBlock', 'codeBlock', undefined],
 ];
-
-/** Web, mail and phone links only; a bare host name is taken as https. */
-export function normaliseHref(raw: string): string | null {
-  const href = raw.trim();
-  if (!href) return null;
-  if (/^(https?:|mailto:|tel:)/i.test(href)) return href;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return null;
-  return `https://${href.replace(/^\/+/, '')}`;
-}
 
 function hex(buffer: ArrayBuffer): string {
   return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -1721,7 +1714,7 @@ export class EditorHost {
     }
     const href = normaliseHref(raw);
     if (!href) {
-      this.notice(this.current?.noteId ?? null, 'Only web, mail and phone links can be added');
+      this.notice(this.current?.noteId ?? null, LINK_REFUSED);
       return;
     }
     const { empty } = editor.state.selection;

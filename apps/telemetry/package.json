@@ -6,15 +6,17 @@
   "type": "module",
   "description": "Usage analytics' ingest Worker (PEN-137) on t.penmoss.app: POST /v1/batch and /v1/forget into D1, a nightly rollup and prune, and the named queries",
   "exports": {
-    "./queries": "./src/queries.ts"
+    "./queries": "./src/queries.ts",
+    "./params": "./src/params.ts",
+    "./day": "./src/day.ts"
   },
   "scripts": {
-    "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs worker) --inspector-port $(node ../../scripts/ports.mjs inspector)",
+    "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs telemetry) --inspector-port $(node ../../scripts/ports.mjs inspector)",
     "types": "wrangler types",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run && node --test scripts/query.test.mjs",
     "query": "node scripts/query.mjs",
-    "deploy": "test -z \"$PENMOSS_FACTORY_RUN\" || { echo 'No production deploys from a factory run: they happen after merge (FD24).' >&2; exit 1; }; wrangler d1 migrations apply penmoss-telemetry --remote && wrangler deploy"
+    "deploy": "sh ../../scripts/no-factory-deploy.sh && wrangler d1 migrations apply penmoss-telemetry --remote && wrangler deploy"
   },
   "dependencies": {
     "@penmoss/core": "workspace:*"

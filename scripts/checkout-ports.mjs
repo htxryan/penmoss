@@ -7,8 +7,9 @@
  *
  * `PENMOSS_PORT_BLOCK=n` (the factory's slots, ports.mjs) uses that block's ports instead of the
  * hash. An environment variable still wins (CI's `mac-runner.sh pick-ports` sets the e2e ones):
- * `PENMOSS_E2E_PORT`, `PENMOSS_E2E_PREVIEW_PORT`, `PENMOSS_DESKTOP_FAKE_GITHUB_PORT`. Each is set
- * here when missing, so specs and fixtures read the same number in Playwright's workers.
+ * `PENMOSS_E2E_PORT`, `PENMOSS_E2E_PREVIEW_PORT`, `PENMOSS_DESKTOP_FAKE_GITHUB_PORT`,
+ * `PENMOSS_SITE_PORT`. Each is set here when missing, so specs and fixtures read the same number
+ * in Playwright's workers. The site's screenshots take the base + 5 (site/scripts).
  *
  * Node-only.
  */
@@ -71,4 +72,9 @@ export function webPreviewPort() {
 /** The Electron suite's fake GitHub (Send feedback). */
 export function desktopFakeGitHubPort() {
   return pick('PENMOSS_DESKTOP_FAKE_GITHUB_PORT', 2, 'fakeGithub');
+}
+
+/** penmoss.app under `wrangler dev` for the site's suite (site/playwright.config.ts). */
+export function sitePort() {
+  return pick('PENMOSS_SITE_PORT', 3, 'site');
 }

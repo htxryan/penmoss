@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { showToast } from '../toasts/toasts';
 import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
+import { counted } from '@penmoss/core/words';
 
 /** What a rename, merge or delete did (the Tags page, the sidebar's Tags), with its Undo. */
 export interface TagDone {
@@ -45,9 +46,7 @@ export function TagDoneToast({
     try {
       const notes = await done.undo();
       showToast({
-        text:
-          done.undone ??
-          `Undone: ${notes === 1 ? '1 note is' : `${notes} notes are`} as they were.`,
+        text: done.undone ?? `Undone: ${counted(notes, 'note is', 'notes are')} as they were.`,
         tone: 'done',
         testId: 'tag-undone-toast',
       });

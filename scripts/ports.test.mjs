@@ -17,6 +17,8 @@ test('block 0 keeps every port as it is today', () => {
     fakeGithub: 8791,
     inspector: 9229,
     dashboard: 8789,
+    site: 8788,
+    telemetry: 8790,
   });
   assert.deepEqual(ports({}), BASE_PORTS);
   assert.deepEqual(ports({ PENMOSS_PORT_BLOCK: '' }), BASE_PORTS);
@@ -30,6 +32,8 @@ test("block n is 20000 + 100·n + each port's offset", () => {
     fakeGithub: 20191,
     inspector: 20129,
     dashboard: 20189,
+    site: 20188,
+    telemetry: 20190,
   });
   assert.deepEqual(ports({ PENMOSS_PORT_BLOCK: '2' }), {
     vite: 20273,
@@ -38,6 +42,8 @@ test("block n is 20000 + 100·n + each port's offset", () => {
     fakeGithub: 20291,
     inspector: 20229,
     dashboard: 20289,
+    site: 20288,
+    telemetry: 20290,
   });
   assert.equal(portsFor(99).fakeGithub, 29991);
 });

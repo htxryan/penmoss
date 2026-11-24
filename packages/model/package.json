@@ -18,7 +18,6 @@
     "./comment-delivery": "./src/comment-delivery.ts",
     "./local-index": "./src/local-index.ts",
     "./record": "./src/record.ts",
-    "./protocol": "./src/protocol.ts",
     "./markdown": "./src/markdown.ts",
     "./edit-engine": "./src/edit-engine.ts",
     "./revert": "./src/revert.ts",

@@ -1,9 +1,10 @@
 /**
  * What the app's web contents may do (T29, A224). Pages run sandboxed with
  * context isolation and no Node; they may only be the bundled app
- * (`app://penmoss/`). A link to anywhere else opens in the default browser
- * (http, https and mailto only), never in the app; new windows, webviews
- * and permission prompts are refused, except writing to the clipboard. A
+ * (`app://penmoss/`). A link to anywhere else opens in the app the Mac
+ * gives it (http, https, mailto and tel only, A1684), never in the app; new
+ * windows, webviews and permission prompts are refused, except writing to the
+ * clipboard. A
  * download asks where to save it (R2-19).
  */
 import { extname, join } from 'node:path';
@@ -15,7 +16,7 @@ export const isAppUrl = (url: string): boolean => url.startsWith(`${PAGE_ORIGIN}
 export function isExternalUrl(url: string): boolean {
   try {
     const { protocol } = new URL(url);
-    return protocol === 'https:' || protocol === 'http:' || protocol === 'mailto:';
+    return ['https:', 'http:', 'mailto:', 'tel:'].includes(protocol);
   } catch {
     return false;
   }
@@ -55,7 +56,7 @@ export const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
 ]);
 
 /** What a download's save dialog shows (Electron's `SaveDialogOptions`, the parts used here). */
-export interface DownloadDialog {
+interface DownloadDialog {
   readonly title: string;
   readonly defaultPath: string;
   readonly filters?: { name: string; extensions: string[] }[];
@@ -85,7 +86,7 @@ export function downloadDialog(fileName: string, downloads: string): DownloadDia
 }
 
 /** The parts of an IPC event that say where it came from. */
-export interface IpcSource {
+interface IpcSource {
   readonly senderFrame: { readonly url: string } | null;
   readonly sender: { readonly mainFrame: unknown };
 }

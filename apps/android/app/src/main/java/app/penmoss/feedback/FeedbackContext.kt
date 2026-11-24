@@ -82,9 +82,6 @@ fun feedbackLabels(type: FeedbackType, priority: Int): List<String> =
 /** A group of named values' columns. */
 val FIELD_COLUMNS = listOf("Field", "Value")
 
-/** The recent-edits table's columns (group 5). */
-val EDIT_COLUMNS = listOf("Time", "Actor", "Kind", "Change")
-
 /** The recent-errors table's columns (group 6). */
 val ERROR_COLUMNS = listOf("Time", "Message", "Stack")
 

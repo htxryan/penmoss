@@ -76,6 +76,7 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import app.penmoss.ui.common.shortWhen
 import app.penmoss.ui.open
+import app.penmoss.ui.common.ConfirmDialog
 
 /*
  * The Comments sheet (T48, D40, A770–A784): the note's threads in document order, orphans last,
@@ -301,18 +302,19 @@ internal fun CommentsSheet(
         )
     }
     deleting?.let { threadId ->
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { deleting = null },
-            title = { Text("Delete This Thread?") },
-            text = { Text("Its comments are deleted on every device. To keep them, resolve it instead.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("comments.thread.delete.confirm", tracked.done {
-                    deleting = null
-                    onDeleteThread(threadId)
-                }), modifier = Modifier.testTag("commentDeleteConfirm")) { Text("Delete") }
+        ConfirmDialog(
+            title = "Delete This Thread?",
+            body = "Its comments are deleted on every device. To keep them, resolve it instead.",
+            confirmLabel = "Delete",
+            confirmEvent = "comments.thread.delete.confirm",
+            cancelEvent = "comments.thread.delete.cancel",
+            onConfirm = {
+                deleting = null
+                onDeleteThread(threadId)
             },
-            dismissButton = { TextButton(onClick = trackedClick("comments.thread.delete.cancel") { deleting = null }) { Text("Cancel") } },
+            onDismiss = { deleting = null },
+            destructive = true,
+            confirmTag = "commentDeleteConfirm",
         )
     }
 }
@@ -442,7 +444,7 @@ private fun ThreadCard(
         }
         // Not sent (the session is gone, A1062): pick another, as the Mac offers.
         if (editable && NoteComments.sendAgain(thread)) {
-            TextButton(onClick = trackedClick("comments.send-again", onSendTo), modifier = Modifier.testTag("commentSendAgain-${thread.id}")) { Text("Send to again") }
+            TextButton(onClick = trackedClick("comments.send-again", onSendTo), modifier = Modifier.testTag("commentSendAgain-${thread.id}")) { Text("Send Again") }
         }
         thread.comments.forEachIndexed { index, comment ->
             if (index > 0) HorizontalDivider()
@@ -604,7 +606,7 @@ internal fun SendToDialog(
                 }
                 item(key = "none") {
                     TargetRow(
-                        if (sent) "Stop sending" else "Nobody",
+                        if (sent) "Stop Sending" else "Nobody",
                         selected = current == null,
                         dimmed = false,
                         tag = "sendToNone",

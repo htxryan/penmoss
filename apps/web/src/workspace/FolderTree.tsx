@@ -1,6 +1,6 @@
 import { Icon } from '@penmoss/ui/icons';
 import type { FolderNode } from '@penmoss/core/workspace';
-import { WorkspaceError } from '@penmoss/model/workspace';
+import { FOLDER_TRASH_DAYS, WorkspaceError } from '@penmoss/model/workspace';
 import {
   useCallback,
   useEffect,
@@ -1108,10 +1108,6 @@ function notesIn(folder: FolderNode): string[] {
   return [...folder.notes.map((note) => note.id), ...folder.folders.flatMap(notesIn)];
 }
 
-function countNotes(folder: FolderNode): number {
-  return folder.notes.length + folder.folders.reduce((sum, child) => sum + countNotes(child), 0);
-}
-
 function ConfirmDelete({
   folder,
   destination,
@@ -1123,7 +1119,7 @@ function ConfirmDelete({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const notes = countNotes(folder);
+  const notes = notesIn(folder).length;
   const subfolders = folder.folders.length;
   const into = destination === 'The top level' ? 'the top level' : destination;
   return (
@@ -1135,7 +1131,7 @@ function ConfirmDelete({
         {notes > 0
           ? `${notes === 1 ? 'Its note moves' : `Its ${notes} notes move`} to ${into}; no notes are deleted.`
           : 'It holds no notes.'}{' '}
-        You can restore it from Trash for 30 days.
+        You can restore it from Trash for {FOLDER_TRASH_DAYS} days.
       </p>
       <div className="confirm-actions">
         <button

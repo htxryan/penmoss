@@ -91,15 +91,6 @@ object SessionDetail {
 
     private fun JsonElement.text(): String = (this as? JsonPrimitive)?.content ?: toString()
 
-    /** The characters typed and deleted between two values of a text: what differs between their common start and end. */
-    fun textChange(before: String, after: String): Pair<Int, Int> {
-        val max = minOf(before.length, after.length)
-        var start = 0
-        while (start < max && before[start] == after[start]) start++
-        var end = 0
-        while (end < max - start && before[before.length - 1 - end] == after[after.length - 1 - end]) end++
-        return (after.length - start - end) to (before.length - start - end)
-    }
 }
 
 /**

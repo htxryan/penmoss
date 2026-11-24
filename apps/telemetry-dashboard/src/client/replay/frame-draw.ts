@@ -26,7 +26,7 @@ import {
   SETTINGS_INDEX,
   SETTINGS_PAGES,
 } from '@penmoss/web/src/pages/settings-index';
-import { displayName } from '../names';
+import { displayName, fullNumber } from '../names';
 import type { FrameData } from './frame-data';
 import { loremOf } from './lorem';
 import {
@@ -936,11 +936,11 @@ function noteScreen(draw: Draw, navInTitleBar: boolean, strip: boolean): string 
           'span',
           { class: 'status-counts' },
           tally
-            ? h('span', { 'data-field': 'words' }, `${tally.words.toLocaleString('en-GB')} words`) +
+            ? h('span', { 'data-field': 'words' }, `${fullNumber(tally.words)} words`) +
                 h(
                   'span',
                   { 'data-field': 'characters' },
-                  `${tally.characters.toLocaleString('en-GB')} characters`,
+                  `${fullNumber(tally.characters)} characters`,
                 )
             : '',
         ),
@@ -1547,7 +1547,7 @@ function titledDialog(draw: Draw, dialog: FrameDialog, depth: number): string {
   );
 }
 
-export function dialogMarkup(draw: Draw, dialog: FrameDialog, depth: number): string {
+function dialogMarkup(draw: Draw, dialog: FrameDialog, depth: number): string {
   if (dialog.name === 'search') return searchDialog(draw, dialog);
   if (PICKERS.has(dialog.name)) return picker(draw, dialog, depth);
   if (dialog.name === 'confirm') return confirmDialog(dialog);
@@ -1602,7 +1602,7 @@ export function frameMarkup(frame: Frame, data: FrameData): string {
 }
 
 /** The theme a frame is drawn in: the recorded built-in one, or Penmoss. */
-export function themeOf(frame: Frame) {
+function themeOf(frame: Frame) {
   return BUILT_IN_THEMES.find((theme) => theme.id === frame.theme) ?? PENMOSS;
 }
 

@@ -19,14 +19,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import app.penmoss.analytics.trackedClick
-import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -74,6 +70,7 @@ import kotlinx.serialization.json.JsonObject
 import app.penmoss.ui.trash.titleOf
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.leave
+import app.penmoss.ui.common.BackButton
 
 /** The graph's route (T40 P7): every note, or `graph?note=<id>` for that note's local graph. */
 internal const val GRAPH_ROUTE = "graph?note={note}"
@@ -227,7 +224,7 @@ fun GraphScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    BackButton(onBack)
                 },
             )
         },

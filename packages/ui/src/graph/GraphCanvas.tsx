@@ -19,6 +19,7 @@ import {
   type Transform,
 } from './renderer';
 import { readTheme, watchTheme } from './theme';
+import { clampZoom, openingTicks } from './view';
 
 export interface GraphCanvasProps {
   readonly data: GraphData;
@@ -43,15 +44,8 @@ export interface GraphInspector {
   readonly nodeCount: number;
 }
 
-const MIN_ZOOM = 0.05;
-const MAX_ZOOM = 6;
 const CLICK_SLOP = 4;
 const TYPEAHEAD_MS = 800;
-
-const clampZoom = (k: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k));
-
-const reducedMotion = () =>
-  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 type Drag =
   | { kind: 'pan'; startX: number; startY: number; origin: Transform; moved: boolean }
@@ -199,8 +193,7 @@ export function GraphCanvas({ data, groups, centre, groupName, onOpen, label }: 
     state.hovered = null;
     state.focused = state.focused ? (byId.get(state.focused.node.id) ?? null) : null;
     // Small graphs open settled; big ones settle a little, then move into place.
-    const small = layout.nodes.length <= 300;
-    layout.settle(small || reducedMotion() ? 300 : 40);
+    layout.settle(openingTicks(layout.nodes.length));
     if (previous.size === 0) state.autoFit = true;
     if (state.autoFit) {
       state.transform = fitTransform(layout.nodes, state.size.width, state.size.height);

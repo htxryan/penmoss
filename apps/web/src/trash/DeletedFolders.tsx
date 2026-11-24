@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { folderContents, restoredMessage } from './deleted-folders';
 import { DeletedByChip } from './DeletedByChip';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { trashDaysLeft } from './days-left';
+import { counted } from '@penmoss/core/words';
 
 const deletedOn = (ms: number) =>
   new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -32,10 +32,7 @@ export function DeletedFolderList({
   return (
     <ul className="trash-list" aria-label="Deleted folders" data-testid="trash-folders">
       {folders.map((folder) => {
-        const left = Math.max(
-          0,
-          Math.ceil((folder.deletedAt + FOLDER_TRASH_DAYS * DAY_MS - now) / DAY_MS),
-        );
+        const left = trashDaysLeft(folder.deletedAt, now, FOLDER_TRASH_DAYS);
         return (
           <li key={folder.id} className="trash-item" data-folder-id={folder.id}>
             <div className="trash-info">
@@ -50,7 +47,7 @@ export function DeletedFolderList({
                     <DeletedByChip by={folder.deletedBy} />
                   </>
                 ) : null}{' '}
-                · {left} {left === 1 ? 'day' : 'days'} left
+                · {counted(left, 'day')} left
               </span>
             </div>
             <div className="trash-actions">

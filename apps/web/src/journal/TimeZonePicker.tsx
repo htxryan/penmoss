@@ -1,7 +1,8 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useMemo, useState } from 'react';
 import { DialogClose } from '../shell/DialogClose';
-import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { PickerField, PickerListbox } from '../shell/picker';
+import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
 import { useTrackedDialog } from '../analytics/dialog';
 import { deviceTimeZone, timeZones, utcOffset, zoneName } from './time-zones';
@@ -85,7 +86,7 @@ export function TimeZonePicker({
     onClose,
   });
   return (
-    <PickerOverlay
+    <ModalOverlay
       testId="time-zone-picker"
       className="palette zone-picker"
       label="Choose a Time Zone"
@@ -158,6 +159,6 @@ export function TimeZonePicker({
         </span>
         Cancel
       </div>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }

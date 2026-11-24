@@ -6,7 +6,6 @@ import {
   BADGE_PRESETS,
   badgeOf,
   badgeOfSource,
-  contrastRatio,
   defaultBadge,
   defaultGlyph,
   defaultPreset,
@@ -20,6 +19,7 @@ import {
 import { copySettings, type SettingsHolder } from '../../src/sources/copy-settings';
 import type { Source } from '../../src/sources/registry';
 import { isNotebookSetting } from '@penmoss/core/settings';
+import { contrast } from '@penmoss/ui/theme';
 
 // PEN-140: each notebook's badge, a colour and a glyph, its default from its id and name.
 
@@ -152,7 +152,7 @@ describe('stored badges', () => {
 describe('the glyph’s ink', () => {
   it('is white on every preset, at 4.5:1 or more', () => {
     for (const preset of BADGE_PRESETS) {
-      expect(contrastRatio(preset.hex, INK_LIGHT), preset.label).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(preset.hex, INK_LIGHT), preset.label).toBeGreaterThanOrEqual(4.5);
       expect(glyphInk(preset.hex)).toBe(INK_LIGHT);
     }
   });
@@ -160,7 +160,7 @@ describe('the glyph’s ink', () => {
   it('is near-black on a light custom colour', () => {
     for (const light of ['#ffeb3b', '#f5f5f5', '#9be7c4']) {
       expect(glyphInk(light)).toBe(INK_DARK);
-      expect(contrastRatio(light, INK_DARK)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(light, INK_DARK)).toBeGreaterThanOrEqual(4.5);
     }
     expect(glyphInk('#000000')).toBe(INK_LIGHT);
   });

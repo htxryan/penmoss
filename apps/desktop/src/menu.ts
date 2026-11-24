@@ -12,7 +12,7 @@
  */
 import type { MenuItemConstructorOptions } from 'electron';
 
-export interface MenuItemModel {
+interface MenuItemModel {
   readonly id: string;
   readonly title: string;
   readonly keys: readonly string[];
@@ -74,7 +74,7 @@ export function toAccelerator(combo: string): string | null {
   return [...modifiers, name].join('+');
 }
 
-export interface TemplateOptions {
+interface TemplateOptions {
   readonly platform: NodeJS.Platform;
   readonly appName: string;
   readonly devTools: boolean;
@@ -85,10 +85,10 @@ export interface TemplateOptions {
 }
 
 /** The page's Close Tab (PEN-140): a File menu with it belongs to a window with tabs. */
-export const CLOSE_TAB_ID = 'tab.close';
+const CLOSE_TAB_ID = 'tab.close';
 
 /** Window → Penmoss's id (T45). */
-export const SHOW_MAIN_ID = 'window.main';
+const SHOW_MAIN_ID = 'window.main';
 
 /** What a page may put in the menus (A222): enough for the registry, and no more. */
 export const MENU_LIMITS = { menus: 20, groups: 30, items: 120, total: 600, keys: 8 } as const;

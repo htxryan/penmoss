@@ -89,9 +89,6 @@ object AnalyticsFormat {
     val INSTALL = Regex("^[0-9a-f]{32}$")
     val SESSION = Regex("^[0-9a-f]{16}$")
 
-    /** A control's or event's id: lower case, dotted, never built from data. */
-    val EVENT_ID = Regex("^[a-z][a-z0-9-]*(\\.[a-z0-9-]+){1,4}$")
-
     private val random = java.security.SecureRandom()
 
     private fun randomHex(bytes: Int): String {

@@ -5,6 +5,7 @@
  * and schemas, so an agent's tool calls still mean the same. Also the advice given with a refusal.
  */
 import { SEARCH_MODES } from '@penmoss/core/search';
+import { STATUS_FILTERS } from '@penmoss/model/comment-delivery';
 import type { ObjectSchema, Schema } from './schema';
 
 /** What a tool is, without what it does. */
@@ -837,7 +838,7 @@ const COMMENT_BODY: Schema = {
 };
 const THREAD_STATUS: Schema = {
   type: 'string',
-  enum: ['open', 'resolved', 'all'],
+  enum: STATUS_FILTERS,
   description: 'open (default), resolved, or all. Resolved threads are kept for good.',
 };
 

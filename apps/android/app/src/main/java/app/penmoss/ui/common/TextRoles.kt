@@ -19,9 +19,6 @@ class TextRoles(type: Typography) {
     /** A screen's large title. */
     val pageTitle: TextStyle = type.headlineSmall
 
-    /** The title in a top app bar. */
-    val barTitle: TextStyle = type.titleLarge
-
     /** A section of a screen. */
     val sectionHead: TextStyle = type.titleLarge
 

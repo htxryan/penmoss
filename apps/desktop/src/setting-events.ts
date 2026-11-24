@@ -9,7 +9,7 @@ import { settingValueProps } from '@penmoss/core/analytics';
 import { analytics } from './services';
 
 /** The settings main records, each written where its comment says. */
-export type MacSettingName =
+type MacSettingName =
   /** A git notebook's Push After, Pull Every and Sign Commits (`ipc/git.ts`, gitUpdate). */
   | 'git.pushAfter'
   | 'git.pullEvery'

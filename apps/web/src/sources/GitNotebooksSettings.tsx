@@ -87,6 +87,8 @@ import './notebook-settings.css';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { withoutRecording } from '../analytics/track';
+import { useNow } from '../shell/use-now';
+import { counted } from '@penmoss/core/words';
 
 const when = (at: number | null) =>
   at === null
@@ -95,20 +97,12 @@ const when = (at: number | null) =>
 
 /** “3 notes have changes”, “The folders have changes”, “2 notes and the folders have changes”. */
 function unpushedWords(notes: number, folders: boolean): string {
-  const counted = notes === 1 ? '1 note' : `${notes} notes`;
   if (notes === 0) return 'The folders have changes';
-  return `${counted}${folders ? ' and the folders' : ''} ${notes === 1 && !folders ? 'has' : 'have'} changes`;
+  return `${counted(notes, 'note')}${folders ? ' and the folders' : ''} ${notes === 1 && !folders ? 'has' : 'have'} changes`;
 }
 
-/** Now, again every half minute, so "Synced 2 min ago" keeps up. */
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
+/** How often "Synced 2 min ago" is worked out again. */
+const TICK_MS = 30_000;
 
 /**
  * Git's own name and email on this Mac, read again whenever Penmoss comes to the front or a
@@ -315,7 +309,7 @@ function ReconfirmPurges({
             }}
           >
             <Icon name="key" size={14} />
-            Confirm {again.length === 1 ? '1 Note' : `${again.length} Notes`} with Touch ID
+            Confirm {counted(again.length, 'Note')} with Touch ID
           </button>
         ) : null}
         <button
@@ -457,7 +451,7 @@ function GitNotebookRow({ source }: { source: GitSource }) {
   const primary = useSourcesState().journal.id === source.id;
   const status = useShownGitStatus(source);
   const info = useGitInfo(source);
-  const now = useNow();
+  const now = useNow(TICK_MS);
   const path = gitNotebookPath(source.id);
   const stopped = status.phase === 'stopped' && status.detail;
   return (
@@ -766,7 +760,7 @@ function GitNotebookCard({
   const info = useGitInfo(source);
   const location = useLocation();
   const tab = notebookTab(location.search);
-  const now = useNow();
+  const now = useNow(TICK_MS);
   const card = useRef<HTMLElement>(null);
   /** The control a command asked for, focused once its tab shows. */
   const [wanted, setWanted] = useState<GitControl | null>(null);
@@ -1059,7 +1053,7 @@ function OverviewTab({
           setting="notebook-notes"
           label="Notes"
           testId="git-note-count"
-          help={notes === 1 ? '1 note' : `${notes.toLocaleString()} notes`}
+          help={counted(notes, 'note')}
         />
         <NotebookAiRow source={source} />
         {state.all.length > 1 ? (
@@ -1336,7 +1330,7 @@ function SyncTab({
             status.closing ? 'Pushing…' : PHASE_WORDS[status.phase],
             waiting === 0
               ? 'Nothing Waits to Be Pushed'
-              : `${waiting === 1 ? '1 Note Waits' : `${waiting} Notes Wait`} to Be Pushed`,
+              : `${counted(waiting, 'Note Waits', 'Notes Wait')} to Be Pushed`,
             status.lastSyncAt === null
               ? 'Never Synced'
               : `Last Synced ${agoWords(status.lastSyncAt, now)}`,
@@ -1349,7 +1343,7 @@ function SyncTab({
           Details
           {notices > 0 ? (
             <span className="chip" data-testid="git-details-count">
-              {notices === 1 ? '1 Notice' : `${notices} Notices`}
+              {counted(notices, 'Notice')}
             </span>
           ) : null}
         </summary>

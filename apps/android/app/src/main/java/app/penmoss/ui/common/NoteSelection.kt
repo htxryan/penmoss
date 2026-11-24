@@ -111,11 +111,9 @@ internal fun Modifier.underSelectionBar(): Modifier =
 /** The selection the lists' rows join while it is active; null where a list has none. */
 val LocalNoteSelection = staticCompositionLocalOf<NoteSelection?> { null }
 
-private fun pickedCount(count: Int) = if (count == 1) "1 note" else "$count notes"
-
 /** What the bar and its actions call the notes chosen: the title of one, else how many. */
 internal fun selectionName(picked: List<Picked>): String =
-    picked.singleOrNull()?.let { "“${titleOf(it.title)}”" } ?: pickedCount(picked.size)
+    picked.singleOrNull()?.let { "“${titleOf(it.title)}”" } ?: noteCount(picked.size)
 
 /** The folder picker's title for a Move of [picked]. */
 internal fun moveTitle(picked: List<Picked>): String =
@@ -235,7 +233,7 @@ internal suspend fun moveNotesAndSay(store: NoteStore, ids: List<String>, folder
     return when {
         noFolder == ids.size -> Said("$folderGone.", SnackbarTone.Error)
         refused == 0 && moved == 0 -> Said("Already in $folderName.", SnackbarTone.Info)
-        refused == 0 -> Said("Moved ${pickedCount(moved)} to $folderName.", SnackbarTone.Done)
+        refused == 0 -> Said("Moved ${noteCount(moved)} to $folderName.", SnackbarTone.Done)
         refused == ids.size -> Said(if (ids.size == 1) "This note can't be moved." else "None of the ${ids.size} notes could move to $folderName.", SnackbarTone.Error)
         moved == 0 -> Said("$already already in $folderName; $why.", SnackbarTone.Error)
         else -> Said("Moved $moved of ${ids.size} notes to $folderName; $why.", SnackbarTone.Error)
@@ -268,7 +266,7 @@ internal fun CoroutineScope.moveNotesToTrashWithUndo(
         return@launch
     }
     val missed = ids.size - moved.size
-    val said = if (missed == 0) "Moved ${pickedCount(moved.size)} to Trash" else "Moved ${moved.size} of ${ids.size} notes to Trash; $missed could not be: not on this phone any more"
+    val said = if (missed == 0) "Moved ${noteCount(moved.size)} to Trash" else "Moved ${moved.size} of ${ids.size} notes to Trash; $missed could not be: not on this phone any more"
     snackbar.currentSnackbarData?.dismiss()
     val undone = withTimeoutOrNull(undoFor) {
         snackbar.say(said, SnackbarTone.Trash, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
@@ -277,7 +275,7 @@ internal fun CoroutineScope.moveNotesToTrashWithUndo(
     if (undone) {
         val failed = moved.count { store.restoreFromTrash(it) == NoteStore.Restore.NOT_IN_TRASH }
         undoSaid = if (failed == 0) {
-            "Restored ${pickedCount(moved.size)}"
+            "Restored ${noteCount(moved.size)}"
         } else {
             "Restored ${moved.size - failed} of ${moved.size} notes; $failed could not be: not in Trash any more"
         }

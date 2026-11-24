@@ -93,7 +93,7 @@ function withoutConfirmation(entry: GitNotebookEntry): GitNotebookEntry {
   return rest as unknown as GitNotebookEntry;
 }
 
-export interface GitNotebookStoreOptions {
+interface GitNotebookStoreOptions {
   /** The app's data directory. */
   readonly dir: string;
   /** Encrypts with the Keychain's key; null when it cannot (then nothing is kept on disk). */

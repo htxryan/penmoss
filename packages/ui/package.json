@@ -15,6 +15,7 @@
     "./graph/layout": "./src/graph/layout.ts",
     "./graph/renderer": "./src/graph/renderer.ts",
     "./graph/theme": "./src/graph/theme.ts",
+    "./graph/view": "./src/graph/view.ts",
     "./icons": "./src/icons/Icon.tsx",
     "./theme": "./src/theme/index.ts"
   },

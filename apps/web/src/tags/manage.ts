@@ -5,6 +5,7 @@
  */
 import { normaliseTag, tagMatches, tagTree, type TagNode } from '@penmoss/core/tags';
 import type { TagChange } from '@penmoss/model/tags';
+import { counted } from '@penmoss/core/words';
 
 /** One row of the table: a tag, or a level other tags are nested under. */
 export interface TagRow {
@@ -60,7 +61,7 @@ export function rowMatches(row: TagRow, description: string, key: string): boole
 }
 
 /** `n notes`, `1 note`. */
-export const notesText = (n: number) => `${n} ${n === 1 ? 'note' : 'notes'}`;
+export const notesText = (n: number) => counted(n, 'note');
 
 /** `#a`, `#a and #b`, `#a, #b and #c`. */
 export function tagList(tags: readonly string[]): string {

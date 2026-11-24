@@ -37,9 +37,8 @@ The roadmap is the open issues in Linear's **Penmoss** team (`PEN`), which agent
 
 ```ts
 // packages/core/src/periodic.ts
-export function dailyNotePath(date: PlainDate): string {
-  const { year, month } = date;
-  return `Journal/${year}/${pad2(month)}/${date.toString()}.md`;
+export function journalLevels(kind: PeriodKind, period: string): readonly string[] {
+  return ['Journal', period.slice(0, 4), kind === 'daily' ? period.slice(5, 7) : 'Weekly'];
 }
 ```
 

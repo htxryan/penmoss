@@ -46,7 +46,7 @@ export const SAVE_BEFORE_CLOSE_MS = 3000;
  * And, with git notebooks on this Mac, for the push the page waits for as it closes (#170 F8:
  * the page's `CLOSING_SYNC_MS`, 10 s, and a little more); a page that answers sooner closes sooner.
  */
-export const GIT_PUSH_BEFORE_CLOSE_MS = 11_000;
+const GIT_PUSH_BEFORE_CLOSE_MS = 11_000;
 
 /**
  * Asks a page to store everything now (before it closes, or before the
@@ -172,7 +172,7 @@ function menusAfterClose(): void {
 }
 
 /** How long a closing window may take: longer while this Mac has git notebooks to push. */
-export async function closingWait(): Promise<number> {
+async function closingWait(): Promise<number> {
   const any = await gitNotebooks.list().then(
     (list) => list.length > 0,
     () => false,

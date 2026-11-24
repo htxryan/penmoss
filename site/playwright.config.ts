@@ -1,10 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { sitePort } from '../scripts/checkout-ports.mjs';
+
 /**
  * The built site under `wrangler dev`, with the real `_headers` (T80.15): run by `task site:test`,
- * which builds it first. `PENMOSS_SITE_PORT` picks another port when several worktrees run it.
+ * which builds it first. The port is this checkout's (A1177), so worktrees run it side by side, or
+ * the port block's `site` (scripts/ports.mjs), or `PENMOSS_SITE_PORT`.
  */
-const port = Number(process.env['PENMOSS_SITE_PORT'] ?? 8788);
+const port = sitePort();
 const isCI = Boolean(process.env['CI']);
 
 export default defineConfig({

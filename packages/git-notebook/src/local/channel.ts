@@ -61,7 +61,11 @@ export interface ChannelHost {
 export interface ChannelOptions {
   /** `--name`: the session's name, `<host>:<cwd>` by default. */
   readonly name: string;
-  /** What Send to… shows, e.g. "Claude Code · penmoss". */
+  /**
+   * What Send to… shows, e.g. "Claude Code · penmoss": the MCP client and the session's name, as
+   * History names its edits (PEN-157), never the agent copy's writer. `relabel` sets it once
+   * the client says who it is.
+   */
   readonly label: string;
   /** This machine's name. */
   readonly host: string;
@@ -105,12 +109,22 @@ export class CommentChannel {
   private readonly held = new Set<string>();
   private running: Promise<number> | null = null;
   private readonly clock: () => number;
+  private label: string;
 
   constructor(
     private readonly host: ChannelHost,
     private readonly options: ChannelOptions,
   ) {
     this.clock = options.clock ?? Date.now;
+    this.label = options.label;
+  }
+
+  /**
+   * The client said who it is (`initialize`): its sessions' entry is listed under that name from
+   * the next heartbeat, the same in every notebook (PEN-157).
+   */
+  relabel(label: string): void {
+    this.label = label;
   }
 
   /** The session's key once its entry is written (null before: the writer is not known yet). */
@@ -129,7 +143,7 @@ export class CommentChannel {
     const entry = {
       key,
       writer,
-      label: this.options.label,
+      label: this.label,
       name: this.options.name,
       host: this.options.host,
       lastSeen: this.clock(),
@@ -140,7 +154,7 @@ export class CommentChannel {
     if (this.session?.key !== key) {
       // A new writer (a retired one, A850) is a new session: look through every note again.
       this.scanned.clear();
-      this.host.log?.(`penmoss: comments sent to “${this.options.label}” arrive here`);
+      this.host.log?.(`penmoss: comments sent to “${this.label}” arrive here`);
     }
     this.session = { key, writer };
     return { ...entry, startedAt: entry.lastSeen };

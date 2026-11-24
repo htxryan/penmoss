@@ -2,6 +2,7 @@ package app.penmoss.git
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import app.penmoss.ui.common.noteCount
 
 /**
  * What came of Android clearing a git notebook's engine store (A886): when, the titles notes came
@@ -24,7 +25,7 @@ data class GitRecoveryNotice(
     fun words(): String = buildString {
         append("Android cleared this notebook's storage on the phone, as it does when space runs low. ")
         if (titles.isNotEmpty()) {
-            val count = if (titles.size == 1) "1 note" else "${titles.size} notes"
+            val count = noteCount(titles.size)
             append("$count held changes not pushed yet: they are back as notes of their own, ${list(titles)}. ")
             append("Compare each with its note and keep what you need. ")
         }

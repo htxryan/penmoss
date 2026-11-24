@@ -8,7 +8,7 @@ import {
   undoTrash,
   type Trashed,
 } from '../../src/trash/trashed';
-import { trashDaysLeft } from '../../src/notes/service';
+import { trashDaysLeft } from '../../src/trash/days-left';
 
 // T42 review S2: several notes go to Trash, and come back with Undo, each on its own.
 const notes = [

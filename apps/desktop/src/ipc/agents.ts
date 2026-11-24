@@ -4,7 +4,6 @@ import { localAgents } from '../services';
 
 export function registerAgentsIpc(ipc: IpcHandlers): void {
   ipc.handle('agentsList', (_call, localId) => localAgents.list(localId));
-  ipc.handle('agentsConnect', (_call, localId, label) => localAgents.connect(localId, label));
   ipc.handle('agentsDisconnect', (_call, name, force) => localAgents.disconnect(name, force));
   ipc.handle('cliStatus', () => localAgents.cliStatus());
   ipc.handle('cliInstall', () => localAgents.installCli());

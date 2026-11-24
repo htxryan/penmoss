@@ -266,8 +266,6 @@ export interface DesktopGit {
   onChange(listener: () => void): () => void;
   /** Agents connected to this notebook on this Mac: their clones in `~/.penmoss` (T54, A993). */
   agents(localId: string): Promise<GitAnswer<readonly LocalAgentInfo[]> | null>;
-  /** Connect an Agent: Touch ID, then the agent's own clone; only just after a click (A993). */
-  connectAgent(localId: string, label: string): Promise<GitAnswer<LocalAgentInfo> | null>;
   /**
    * Removes an agent's clone; refuses `unsynced_changes` when it has changes not pushed. `force`
    * loses them, after Touch ID. Only just after a click.

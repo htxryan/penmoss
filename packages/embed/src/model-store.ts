@@ -18,15 +18,13 @@ import {
   utimes,
   writeFile,
 } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import { penmossHome } from '@penmoss/core/node/home';
 import { manifestBytes, type ModelFile, type ModelManifest } from './manifest';
 
 /** Where Penmoss keeps notebooks, models and vectors (the CLI's PENMOSS_HOME). */
-export function penmossHome(env: NodeJS.ProcessEnv = process.env): string {
-  return env['PENMOSS_HOME'] || join(homedir(), '.penmoss');
-}
+export { penmossHome };
 
 export type ModelErrorCode = 'absent' | 'corrupt' | 'hash_mismatch' | 'download_failed' | 'aborted';
 

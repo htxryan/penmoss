@@ -10,17 +10,15 @@ import {
   COMPLETION_SCAN,
   completionPrefixes,
   completions,
-  ftsMatch,
   MATCH_END,
   MATCH_START,
   parseQuery,
-  searchWords,
   terms,
   withCompletions,
-  wordRange,
 } from '@penmoss/core/search';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { RANKING_CASES } from '../../core/test/support/search-ranking';
+import { ftsMatch, searchWords, wordRange } from '../../core/test/support/sqlite-fts';
 import { vaultDocuments } from '../../core/test/support/search-vault-docs';
 import { LocalSearchIndex, type LocalSearchDocument } from '../src/local-index';
 

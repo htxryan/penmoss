@@ -7,7 +7,7 @@
  * Plain data both ways: main and the preload share it, with no Electron in it.
  */
 
-export type StoreReason = 'close' | 'flush';
+type StoreReason = 'close' | 'flush';
 
 export interface StoreRequest {
   readonly id: number;
@@ -30,7 +30,7 @@ export function storeReply(value: unknown): StoreReply | null {
 }
 
 /** A request as the page receives it, or null for anything else. */
-export function storeRequest(value: unknown): StoreRequest | null {
+function storeRequest(value: unknown): StoreRequest | null {
   if (typeof value !== 'object' || value === null) return null;
   const { id, reason } = value as { id?: unknown; reason?: unknown };
   if (!isId(id)) return null;

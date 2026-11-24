@@ -675,7 +675,9 @@ export interface LocalServerPresentation {
   /** Declare `experimental: {'claude/channel': {}}` (A1063): Claude Code listens for its events. */
   readonly channel?: boolean;
   /** The client said `notifications/initialized`: a channel may notify from now on. */
-  readonly onInitialized?: () => void;
+  readonly onInitialized?: (
+    client: { readonly name?: unknown; readonly title?: unknown } | null,
+  ) => void;
   /**
    * The server's environment (PEN-152): Claude Code's `CLAUDE_CODE_SESSION_ID` names the session
    * of a call when its request carries none. Absent: no environment is read.
@@ -767,7 +769,9 @@ export class LocalMcpServer {
     if (jsonrpc !== '2.0') return rpcError(replyId, INVALID_REQUEST, 'Invalid request');
     if (typeof method !== 'string') return null;
     if (id === undefined || id === null) {
-      if (method === 'notifications/initialized') this.presentation.onInitialized?.();
+      if (method === 'notifications/initialized') {
+        this.presentation.onInitialized?.(this.clientInfo);
+      }
       return null;
     }
     try {

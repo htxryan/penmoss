@@ -30,8 +30,11 @@ export function newestStable(tags) {
   return best;
 }
 
-/** @param {number[]} a @param {number[]} b */
-function compareVersions(a, b) {
+/**
+ * Below zero, zero or above as version `a` is older than, the same as or newer than `b`.
+ * @param {number[]} a @param {number[]} b
+ */
+export function compareVersions(a, b) {
   for (let i = 0; i < 3; i += 1) {
     const d = (a[i] ?? 0) - (b[i] ?? 0);
     if (d !== 0) return d;

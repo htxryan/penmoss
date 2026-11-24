@@ -17,6 +17,7 @@ import { NOTE_BAR_BUTTON_INFO, NOTE_BAR_BUTTONS, useNoteBar } from './note-bar';
 import { NOTE_PANEL_MODES, useDefaultPanelMode } from './panel-mode';
 import { useFullWidth } from './width';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { Segmented } from '../shell/Segmented';
 
 /**
  * Settings → Note (PEN-146, the other half of Display, with Note Width and Note Panel from
@@ -224,33 +225,17 @@ function NoteWidthSetting({ name }: { name: string }) {
       }
       testId="note-width-setting"
     >
-      <div className="seg" role="radiogroup" aria-labelledby={`${id}-l`}>
-        <label className="seg-option">
-          <input
-            type="radio"
-            data-event="settings.note.width"
-            name={name}
-            checked={!full}
-            onChange={() => setFull(false)}
-          />
-          <span className="bold-steady" data-label={themes}>
-            {themes}
-          </span>
-        </label>
-        <label className="seg-option">
-          <input
-            type="radio"
-            data-event="settings.note.width"
-            name={name}
-            checked={full}
-            onChange={() => setFull(true)}
-          />
-          <Icon name="widthFull" size={14} />
-          <span className="bold-steady" data-label="Full Window">
-            Full Window
-          </span>
-        </label>
-      </div>
+      <Segmented
+        name={name}
+        labelledBy={`${id}-l`}
+        value={full ? 'full' : 'theme'}
+        options={[
+          { value: 'theme', label: themes },
+          { value: 'full', label: 'Full Window', icon: 'widthFull' },
+        ]}
+        event="settings.note.width"
+        onChange={(width) => setFull(width === 'full')}
+      />
     </SettingRow>
   );
 }
@@ -272,23 +257,14 @@ function NotePanelSetting({ name }: { name: string }) {
       help="How a note’s panel starts: backlinks, outline, comments and details beside the note. Each note then remembers its own."
       testId="note-panel-setting"
     >
-      <div className="seg" role="radiogroup" aria-labelledby={`${id}-l`}>
-        {NOTE_PANEL_MODES.map((item) => (
-          <label key={item.mode} className="seg-option">
-            <input
-              type="radio"
-              data-event="settings.note.panel-mode"
-              name={name}
-              value={item.mode}
-              checked={mode === item.mode}
-              onChange={() => setMode(item.mode)}
-            />
-            <span className="bold-steady" data-label={item.label}>
-              {item.label}
-            </span>
-          </label>
-        ))}
-      </div>
+      <Segmented
+        name={name}
+        labelledBy={`${id}-l`}
+        value={mode}
+        options={NOTE_PANEL_MODES.map((item) => ({ value: item.mode, label: item.label }))}
+        event="settings.note.panel-mode"
+        onChange={setMode}
+      />
     </SettingRow>
   );
 }

@@ -170,9 +170,6 @@ interface EventDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setMeta(row: MetaEntity)
 
-    @Query("SELECT COUNT(*) FROM events")
-    suspend fun countAll(): Long
-
     @Transaction
     suspend fun markAll(sent: List<Long>, refused: List<Long>, at: Long) {
         for (chunk in sent.chunked(CHUNK)) mark(chunk, EventState.WAITING.code, EventState.SENT.code, at)

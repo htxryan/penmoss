@@ -83,7 +83,7 @@ const BROWSE_NEEDS_A_PERSON = {
  * - `{ refused }`: main answers `refused` without a key press or click, before the handler runs;
  * - `'handler'`: the handler decides with it (a gate, or only some changes need a person).
  */
-export type GestureRule<R> = { readonly refused: R } | 'handler';
+type GestureRule<R> = { readonly refused: R } | 'handler';
 
 export interface InvokeRule<R> {
   readonly channel: string;
@@ -93,7 +93,7 @@ export interface InvokeRule<R> {
   readonly refused?: R;
 }
 
-export interface SendRule {
+interface SendRule {
   readonly channel: string;
   /** Null: main checks the sender itself (a store reply goes only to the ask that waits for it). */
   readonly from: Caller | null;
@@ -110,7 +110,7 @@ type TokenAnswer<T> = { readonly ok: true } & T;
 type TokenRefusal = { readonly ok: false; readonly message: string };
 
 /** Every call a page makes, as the page sends it and as main answers. */
-export interface Invokes {
+interface Invokes {
   menuCommandPending: Call<[], string | { readonly path: string } | null>;
   clipboardWrite: Call<[data: ClipboardWrite], boolean>;
   windowState: Call<[], MacWindowState | null>;
@@ -226,7 +226,6 @@ export interface Invokes {
   >;
   gitGithubGitLogin: Call<[], string | null>;
   agentsList: Call<[localId: string], GitAnswer<readonly LocalAgentInfo[]> | null>;
-  agentsConnect: Call<[localId: string, label: string], GitAnswer<LocalAgentInfo> | null>;
   agentsDisconnect: Call<[name: string, force: boolean], GitAnswer<null> | null>;
   cliStatus: Call<[], CliInfo | null>;
   cliInstall: Call<[], GitAnswer<CliInfo> | null>;
@@ -397,11 +396,6 @@ export const INVOKE = {
   },
   // Agents on this Mac with no account (T54, A992, A993): the main window's Settings only.
   agentsList: { channel: 'penmoss:agents:list', from: 'main' },
-  agentsConnect: {
-    channel: 'penmoss:agents:connect',
-    from: 'main',
-    gesture: { refused: NEEDS_A_PERSON },
-  },
   agentsDisconnect: {
     channel: 'penmoss:agents:disconnect',
     from: 'main',

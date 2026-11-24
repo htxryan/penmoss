@@ -1,6 +1,5 @@
 package app.penmoss.ui.trash
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,16 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.SheetAction
-import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -43,9 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +46,10 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.ui.common.EmptyMessage
 import app.penmoss.ui.common.FolderIcon
 import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.ConfirmDialog
+import app.penmoss.ui.common.SheetTitle
+import app.penmoss.ui.common.SectionTitle
 
 /** One note in Trash as the screen shows it (NT13). */
 data class TrashEntryUi(
@@ -129,7 +126,7 @@ fun TrashScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Trash") },
-                navigationIcon = { IconButton(onClick = trackedClick("nav.back", onBack)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                navigationIcon = { BackButton(onBack) },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
@@ -157,12 +154,12 @@ fun TrashScreen(
                     item { EmptyMessage("Trash is empty. Nothing has been deleted lately.", Modifier.testTag("trashEmpty")) }
                 }
                 if (folders.folders.isNotEmpty()) {
-                    item { TrashHeading("Folders") }
+                    item { SectionTitle("Folders") }
                     items(folders.folders, key = { "folder-${it.id}" }) { folder ->
                         TrashFolderRow(folder, enabled = !folders.busy, onRestore = { onRestoreFolder(folder) })
                         HorizontalDivider()
                     }
-                    if (ui.entries.isNotEmpty()) item { TrashHeading("Notes") }
+                    if (ui.entries.isNotEmpty()) item { SectionTitle("Notes") }
                 }
                 items(ui.entries, key = { it.id }) { entry ->
                     TrashRowView(entry, enabled = !ui.busy, onRestore = { onRestore(entry) }, onDelete = { confirming = entry })
@@ -172,30 +169,21 @@ fun TrashScreen(
         }
     }
     confirming?.let { entry ->
-        val tracked = rememberTrackedDialog("confirm")
-        AlertDialog(
-            onDismissRequest = { confirming = null },
-            title = { Text("Delete “${entry.title}” for Good?") },
-            text = { Text("It can’t be restored on this phone or any other device. You’ll be asked for your fingerprint, face or screen lock.") },
-            confirmButton = {
-                TextButton(onClick = trackedClick("trash.delete-for-good.confirm", tracked.done {
-                    confirming = null
-                    onDeleteForGood(entry)
-                }), modifier = Modifier.testTag("confirmDeleteForGood")) { Text("Delete for Good") }
+        ConfirmDialog(
+            title = "Delete “${entry.title}” for Good?",
+            body = "It can’t be restored on this phone or any other device. You’ll be asked for your fingerprint, face or screen lock.",
+            confirmLabel = "Delete for Good",
+            confirmEvent = "trash.delete-for-good.confirm",
+            cancelEvent = "trash.delete-for-good.cancel",
+            onConfirm = {
+                confirming = null
+                onDeleteForGood(entry)
             },
-            dismissButton = { TextButton(onClick = trackedClick("trash.delete-for-good.cancel") { confirming = null }) { Text("Cancel") } },
+            onDismiss = { confirming = null },
+            destructive = true,
+            confirmTag = "confirmDeleteForGood",
         )
     }
-}
-
-@Composable
-private fun TrashHeading(text: String) {
-    Text(
-        text,
-        Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-    )
 }
 
 @Composable
@@ -254,13 +242,7 @@ fun NoteActionsSheet(
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("noteMenu")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Text(
-            titleOf(title),
-            Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        SheetTitle(titleOf(title))
         Box(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Column(Modifier.fillMaxWidth()) {
                 onNewNoteHere?.let { SheetAction("New Note Here", "noteAction-newNote", event = "tree.note-menu.new-note", tracked.done(it)) }

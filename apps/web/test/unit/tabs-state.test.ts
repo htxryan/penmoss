@@ -20,7 +20,6 @@ import {
   moveTab,
   navigateActive,
   noteIdOfPath,
-  notesInTabs,
   openTab,
   reopenClosed,
   restoreTabs,
@@ -510,12 +509,11 @@ describe('notes renamed, moved or trashed while open, and notebooks closed', () 
     expect(strip(dropUnknown(state, () => false, ids))).toEqual(['*/']);
   });
 
-  it('tells the kept editors which notes the tabs hold, the active one first', () => {
+  it('tells the kept editors which notes the tabs show, the active one first', () => {
     const ids = counter();
     let state = tabsOn([note(A), note(B)], ids);
     state = activate(state, state.tabs[1]!.id);
     state = navigateActive(state, note(C), { ids });
     expect(shownNotes(state)).toEqual([C, A]);
-    expect([...notesInTabs(state)].sort()).toEqual([A, B, C].sort());
   });
 });

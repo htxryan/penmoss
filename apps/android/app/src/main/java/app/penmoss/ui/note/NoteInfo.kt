@@ -36,8 +36,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.NotebookGraph
 import app.penmoss.analytics.trackedClick
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -53,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import app.penmoss.data.BacklinkSource
-import app.penmoss.data.FolderEntity
 import app.penmoss.data.NoteStore
 import app.penmoss.editor.NoteCounts
 import app.penmoss.engine.api.ApiException
@@ -79,6 +76,7 @@ import java.time.OffsetDateTime
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.shortWhen
 import app.penmoss.ui.trash.titleOf
+import app.penmoss.ui.common.noteCount
 
 /*
  * The note's Info sheet on the phone (T40 P7, NT23, LK5, LK6; A474, A475): the web's Info panel
@@ -284,8 +282,7 @@ internal fun backlinksNote(view: BacklinksView?, now: Long = System.currentTimeM
 internal fun InfoButton(linked: Int, onClick: () -> Unit) {
     val description = when (linked) {
         0 -> "Info"
-        1 -> "Info, linked from 1 note"
-        else -> "Info, linked from $linked notes"
+        else -> "Info, linked from ${noteCount(linked)}"
     }
     // Its name on a long press (T51, A936); it opens the note panel's Metadata tab.
     TooltipBox(

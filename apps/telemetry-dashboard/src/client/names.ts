@@ -245,7 +245,7 @@ export const ACTOR_LABELS: Record<string, string> = {
   script: 'Script',
 };
 /** The MCP clients' fixed list (core's AGENT_CLIENTS), as people name them. */
-export const AGENT_CLIENT_LABELS: Record<string, string> = {
+const AGENT_CLIENT_LABELS: Record<string, string> = {
   'claude-code': 'Claude Code',
   'claude-desktop': 'Claude Desktop',
   codex: 'Codex',
@@ -527,7 +527,7 @@ export const NAME_PROP_WORDS: Readonly<Record<string, Readonly<Record<string, Pr
   },
 };
 
-export interface PropInWords {
+interface PropInWords {
   readonly label: string;
   readonly value: string;
 }
@@ -575,7 +575,7 @@ export function propsInWords(
 
 const pad = (n: number) => String(n).padStart(2, '0');
 /** The minus sign a negative gap starts with. */
-export const MINUS = '−';
+const MINUS = '−';
 
 /** Time since a session started: "0:12", "1:02", "1:02:03" past an hour. */
 export function sinceStart(ms: number): string {
@@ -616,7 +616,8 @@ export function sessionLength(session: {
   return duration(session.ended - session.started);
 }
 
-const count = (n: number) => n.toLocaleString('en-GB');
+/** A number in full, as the dashboard writes every count: 1,250. */
+export const fullNumber = (n: number) => n.toLocaleString('en-GB');
 
 /**
  * What This Install's Sessions holds when it is cut: "Showing 500 of 1,250: this session, the 250
@@ -629,13 +630,13 @@ export function cutLine(total: number, before: number, after: number): string {
     before === 0 && after === 0
       ? ''
       : before === 0
-        ? ` and the ${count(after)} after it`
+        ? ` and the ${fullNumber(after)} after it`
         : after === 0
-          ? ` and the ${count(before)} before it`
+          ? ` and the ${fullNumber(before)} before it`
           : before === after
-            ? ` and the ${count(before)} either side of it`
-            : `, the ${count(before)} before it and the ${count(after)} after it`;
-  return `Showing ${count(shown)} of ${count(total)}: this session${sides}.`;
+            ? ` and the ${fullNumber(before)} either side of it`
+            : `, the ${fullNumber(before)} before it and the ${fullNumber(after)} after it`;
+  return `Showing ${fullNumber(shown)} of ${fullNumber(total)}: this session${sides}.`;
 }
 
 /** An install as the page shows it: its first 8 hex characters (PEN-173). */
@@ -661,7 +662,7 @@ export interface StretchEvent {
 }
 
 /** A run of a session's events on one screen. */
-export interface Stretch {
+interface Stretch {
   /** The screen's display name, or what the run is ("Before Any Screen", "CLI Run"…). */
   readonly title: string;
   /** The screen's id ("screen:note"), or '' for a run with no screen. */

@@ -35,7 +35,7 @@ export type DesktopMeaningStatus =
       readonly error?: string;
     };
 
-export interface EmbeddingServiceOptions {
+interface EmbeddingServiceOptions {
   /** Forks the service (Electron's `utilityProcess.fork`). */
   readonly fork: () => ServiceProcess;
   readonly onStatus: (status: DesktopMeaningStatus) => void;

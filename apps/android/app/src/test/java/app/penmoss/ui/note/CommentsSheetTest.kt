@@ -177,7 +177,7 @@ class CommentsSheetTest {
         show(sendTo = SendToUi(sessions = listed))
         compose.onNodeWithTag("commentSendTo-T1").performClick()
         // T1 is sent to garden already: its row is chosen, and the first option stops sending.
-        compose.onNodeWithTag("sendToNone").assertTextContains("Stop sending")
+        compose.onNodeWithTag("sendToNone").assertTextContains("Stop Sending")
         compose.onNodeWithTag("sendTo-${idle.key}").performClick()
         compose.onNodeWithTag("commentSendTo-T1").performClick()
         compose.onNodeWithTag("sendToNone").performClick()
@@ -206,7 +206,7 @@ class CommentsSheetTest {
         val gone = open.copy(delivery = CommentDelivery(DeliveryState.FAILED, 3, DeliveryFailure.GONE))
         show(CommentsState(listOf(gone), open = 1, active = null, known = true), sendTo = SendToUi(sessions = listed))
         compose.onNodeWithTag("commentDelivery-T1", useUnmergedTree = true).assertTextEquals("Not sent: the session is gone")
-        compose.onNodeWithTag("commentSendAgain-T1").assertTextEquals("Send to again").performClick()
+        compose.onNodeWithTag("commentSendAgain-T1").assertTextEquals("Send Again").performClick()
         compose.onNodeWithTag("sendTo-${live.key}").performClick()
         assertEquals(listOf("load", "target T1 ${live.writer}/${live.key}/Claude Code · garden"), calls)
     }

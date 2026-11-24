@@ -166,11 +166,11 @@ tasks:
       - node build.mjs
 
   site:preview:
-    desc: 'penmoss.app: wrangler dev over site/dist with the real headers, on http://localhost:8788'
+    desc: 'penmoss.app: wrangler dev over site/dist with the real headers, on http://localhost:8788, or the site port of PENMOSS_PORT_BLOCK (scripts/ports.mjs)'
     deps: [site:build]
     dir: site
     cmds:
-      - pnpm exec wrangler dev --local --port 8788
+      - pnpm exec wrangler dev --local --port $(node ../scripts/ports.mjs site)
 
   site:test:
     desc: 'penmoss.app: build it, check the screenshots are there and within budget (A1210), then Playwright checks of the built site under wrangler dev (site/test)'
@@ -196,7 +196,7 @@ tasks:
     dir: site
     cmds:
       # First, before the build: deps would run ahead of it.
-      - test -z "$PENMOSS_FACTORY_RUN" || { echo 'No production deploys from a factory run; they happen after merge (FD24).' >&2; exit 1; }
+      - sh ../scripts/no-factory-deploy.sh
       - task: site:build
       - pnpm exec wrangler deploy {{.CLI_ARGS}}
 
@@ -421,8 +421,7 @@ tasks:
     desc: "Logo files (A402, docs/brand.md): write every icon from scripts/brand-assets.mjs, then render the Mac icon's and menu bar icon's PNGs"
     cmds:
       - node scripts/brand-assets.mjs
-      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-icon.mjs'
-      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-tray-icon.mjs'
+      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-icons.mjs'
 
   design-system:
     desc: 'The design system in Claude (PEN-138, docs/brand.md): write its tokens.json, bundle.css and themes.md from the real CSS and themes into dist/design-system, to publish to the artifact'

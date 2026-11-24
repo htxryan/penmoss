@@ -257,6 +257,21 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 /**
+ * A long-press sheet's or a picker sheet's title over its actions (a note's, a folder's, a tag's;
+ * Move to Folder, the tag filter): the group-head role, at most two lines.
+ */
+@Composable
+fun SheetTitle(text: String) {
+    Text(
+        text,
+        Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        style = MaterialTheme.roles.groupHead,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/**
  * One action in a long-press sheet (a note's, a folder's, a tag's): a full-width row of the
  * action's name, tapped to run [onClick], counted as [event] and found by tests as [tag].
  */

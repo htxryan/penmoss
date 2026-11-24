@@ -10,13 +10,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import app.penmoss.ui.common.Button
 import androidx.compose.material3.Card
-import app.penmoss.ui.common.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
 import androidx.compose.runtime.Composable
@@ -34,7 +31,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import app.penmoss.ui.common.DotState
 import app.penmoss.ui.settings.DotMarkOf
@@ -48,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
-import app.penmoss.analytics.trackedToggle
 import app.penmoss.engine.git.AddResult
 import app.penmoss.engine.git.GitEngineStatus
 import app.penmoss.engine.git.GitNotebookView
@@ -68,6 +63,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import app.penmoss.ui.common.Toggle
+import app.penmoss.ui.common.ConfirmDialog
 
 
 /** What the All Notebooks row says (T50 G7; PEN-146): what it holds, or how to start. */
@@ -353,21 +350,28 @@ private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions, o
     )
     if (several) {
         val primary = ui.rows.firstOrNull { it.view.localId == ui.journal } ?: ui.rows.first()
-        ListItem(
-            headlineContent = { DeviceOnlyHeadline("Keep Settings in Step") },
-            supportingContent = { Text("A change to ${primary.view.name}’s settings goes to the other notebooks") },
-            trailingContent = { Switch(checked = ui.inStep, onCheckedChange = null) },
-            modifier = Modifier.settingRow("keep-settings-in-step").testTag("gitSettingsInStep")
-                .toggleable(value = ui.inStep, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.in-step", actions.onInStep)),
+        Toggle(
+            "Keep Settings in Step",
+            "A change to ${primary.view.name}’s settings goes to the other notebooks",
+            ui.inStep,
+            enabled = true,
+            "gitSettingsInStep",
+            Modifier.settingRow("keep-settings-in-step"),
+            event = "settings.git-notebooks.in-step",
+            headline = { DeviceOnlyHeadline(it) },
+            onChange = actions.onInStep,
         )
     }
     if (ui.copyTags != null) {
-        ListItem(
-            headlineContent = { Text("Copy Tags When Copying Notes") },
-            supportingContent = { Text("Copy to Notebook on the Mac starts with this; it syncs from here.") },
-            trailingContent = { Switch(checked = ui.copyTags, onCheckedChange = null) },
-            modifier = Modifier.settingRow("copy-tags-when-copying-notes").testTag("gitCopyTags")
-                .toggleable(value = ui.copyTags, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.copy-tags", actions.onCopyTags)),
+        Toggle(
+            "Copy Tags When Copying Notes",
+            "Copy to Notebook on the Mac starts with this; it syncs from here.",
+            ui.copyTags,
+            enabled = true,
+            "gitCopyTags",
+            Modifier.settingRow("copy-tags-when-copying-notes"),
+            event = "settings.git-notebooks.copy-tags",
+            onChange = actions.onCopyTags,
         )
     }
     if (several) {
@@ -713,23 +717,18 @@ internal fun NewSigningKey(
         1 -> "${signing.single()} signs with it from its next commit."
         else -> "${signing.dropLast(1).joinToString(", ")} and ${signing.last()} sign with it from their next commits."
     }
-    val tracked = rememberTrackedDialog("confirm")
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Make ${if (ed25519) "an Ed25519" else "a New P-256"} Signing Key?") },
-        text = {
-            Text(
-                "This deletes this phone's signing key and makes $kind key in its place, for every git notebook on this phone. $who " +
-                    "Its commits show Unverified on GitHub until you add its public key to GitHub as a signing key (Settings → SSH and GPG keys); remove the old key there afterwards. Nothing in the repositories changes.",
-                Modifier.testTag("gitSigningKeyWords"),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.new.confirm", tracked.done { onConfirm(type) }), Modifier.testTag("gitSigningKeyConfirm")) { Text("Make the Key") }
-        },
-        dismissButton = {
-            TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.new.cancel", onDismiss), Modifier.testTag("gitSigningKeyCancel")) { Text("Cancel") }
-        },
+    ConfirmDialog(
+        title = "Make ${if (ed25519) "an Ed25519" else "a New P-256"} Signing Key?",
+        body = "This deletes this phone's signing key and makes $kind key in its place, for every git notebook on this phone. $who " +
+            "Its commits show Unverified on GitHub until you add its public key to GitHub as a signing key (Settings → SSH and GPG keys); remove the old key there afterwards. Nothing in the repositories changes.",
+        confirmLabel = "Make the Key",
+        confirmEvent = "settings.git-notebooks.signing-key.new.confirm",
+        cancelEvent = "settings.git-notebooks.signing-key.new.cancel",
+        onConfirm = { onConfirm(type) },
+        onDismiss = onDismiss,
+        confirmTag = "gitSigningKeyConfirm",
+        cancelTag = "gitSigningKeyCancel",
+        bodyTag = "gitSigningKeyWords",
     )
 }
 

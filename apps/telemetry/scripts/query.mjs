@@ -18,6 +18,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+// The parameters' order, periods and id checks the Worker and the dashboard use (Node strips
+// the file's types).
+import { DAYS, INSTALL_HEX, SESSION_HEX, isDays, queryValues } from '../src/params.ts';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const QUERIES = join(root, 'queries');
@@ -32,7 +35,6 @@ export function queryNames() {
 }
 
 const SAFE = /^[A-Za-z0-9._:+-]*$/;
-const DAYS = [7, 30, 90, 365, 395];
 
 /**
  * The options from the command line.
@@ -77,14 +79,14 @@ export function parseArgs(argv) {
     else if (!arg.startsWith('--') && options.name === undefined) options.name = arg;
     else throw new Error(`unknown argument ${arg}`);
   }
-  if (!DAYS.includes(options.days)) throw new Error(`--days is one of ${DAYS.join(', ')}`);
+  if (!isDays(options.days)) throw new Error(`--days is one of ${DAYS.join(', ')}`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(options.today)) throw new Error('--today is YYYY-MM-DD');
   if (!/^[a-z]+:[A-Za-z0-9_.-]+$/.test(options.start)) throw new Error('--start is kind:name');
   // The Sessions tab's (PEN-173): an install's 32 hex characters, a session's 16, a page 1–9999.
-  if (options.install !== '' && !/^[0-9a-f]{32}$/.test(options.install)) {
+  if (options.install !== '' && !INSTALL_HEX.test(options.install)) {
     throw new Error('--install is 32 hex characters');
   }
-  if (options.session !== '' && !/^[0-9a-f]{16}$/.test(options.session)) {
+  if (options.session !== '' && !SESSION_HEX.test(options.session)) {
     throw new Error('--session is 16 hex characters');
   }
   if (!Number.isInteger(options.page) || options.page < 1 || options.page > 9999) {
@@ -121,19 +123,22 @@ export function querySql(name, options) {
     throw new Error(`no query named "${name}" (${queryNames().join(', ')})`);
   }
   const [startKind, startName] = options.start.split(':');
-  return inline(readFileSync(join(QUERIES, `${name}.sql`), 'utf8'), [
-    options.days,
-    options.client,
-    options.actor,
-    options.channel,
-    options.version,
-    options.today,
-    startKind ?? '',
-    startName ?? '',
-    options.install,
-    options.session,
-    options.page,
-  ]);
+  return inline(
+    readFileSync(join(QUERIES, `${name}.sql`), 'utf8'),
+    queryValues({
+      days: options.days,
+      client: options.client,
+      actor: options.actor,
+      channel: options.channel,
+      version: options.version,
+      today: options.today,
+      startKind: startKind ?? '',
+      startName: startName ?? '',
+      install: options.install,
+      session: options.session,
+      page: options.page,
+    }),
+  );
 }
 
 /**

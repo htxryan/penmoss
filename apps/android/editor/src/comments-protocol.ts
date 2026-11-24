@@ -34,6 +34,7 @@
  */
 
 import { MAX_COMMENT_CHARS } from '@penmoss/model/comments';
+import { isRecord } from './guards';
 
 export { MAX_COMMENT_CHARS };
 
@@ -255,8 +256,6 @@ export const COMMENT_TO_EDITOR_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 const isString = (value: unknown): value is string => typeof value === 'string';
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const id = (value: unknown): value is string => isString(value) && COMMENT_ID.test(value);
 

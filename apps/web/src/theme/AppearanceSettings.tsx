@@ -22,6 +22,7 @@ import { TypeSpecimen } from './TypeSpecimen';
 import { GroupHead, SettingRow } from './look-rows';
 import { ThemeEditor } from './ThemeEditor';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { Segmented } from '../shell/Segmented';
 
 const MODES: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> = [
   { mode: 'light', label: 'Light', icon: 'sun' },
@@ -109,29 +110,19 @@ export function AppearanceSettings() {
                     : `Always ${state.mode}, whatever ${device} is set to.`
                 }
               >
-                <div
-                  className="seg"
-                  role="radiogroup"
-                  aria-labelledby={`${id}-mode`}
-                  data-testid="theme-mode"
-                >
-                  {MODES.map((item) => (
-                    <label key={item.mode} className="seg-option">
-                      <input
-                        type="radio"
-                        data-event="settings.appearance.mode"
-                        name={`${id}-mode`}
-                        value={item.mode}
-                        checked={state.mode === item.mode}
-                        onChange={() => setThemeMode(workspace, item.mode)}
-                      />
-                      <Icon name={item.icon} size={14} />
-                      <span className="bold-steady" data-label={item.label}>
-                        {item.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                <Segmented
+                  name={`${id}-mode`}
+                  labelledBy={`${id}-mode`}
+                  value={state.mode}
+                  options={MODES.map((item) => ({
+                    value: item.mode,
+                    label: item.label,
+                    icon: item.icon,
+                  }))}
+                  event="settings.appearance.mode"
+                  onChange={(mode) => setThemeMode(workspace, mode)}
+                  testId="theme-mode"
+                />
               </SettingRow>
             </div>
             <div

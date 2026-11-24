@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -13,7 +12,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,13 +33,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
-import app.penmoss.analytics.trackedToggle
 import app.penmoss.ui.common.Button
 import app.penmoss.ui.common.FilledTonalButton
 import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.settings.GroupTitle
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
+import app.penmoss.ui.common.Toggle
+import app.penmoss.ui.common.noteCount
 
 /** A notebook page's tabs (PEN-146), as its route names them. */
 object NotebookTab {
@@ -56,8 +54,7 @@ object NotebookTab {
 /** The Notes row's words (PEN-148): how many, or that they are not read yet. */
 internal fun noteCountWords(count: Int?): String = when (count) {
     null -> "Not Read Yet"
-    1 -> "1 note"
-    else -> String.format(java.util.Locale.US, "%,d notes", count)
+    else -> noteCount(count)
 }
 
 /** The repository as a line: `github.com/me/notes · branch · dir/`. */
@@ -294,12 +291,9 @@ private fun SyncTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAction
         Help("Left as they are, unreadable here: ${status.skipped.keys.take(5).joinToString(", ")}${if (status.skipped.size > 5) "…" else ""}")
     }
     if (passText != null) Help("Notes on this phone: ${passText.ifEmpty { "not read yet" }}")
-    ListItem(
-        headlineContent = { Text("Wi-Fi Only") },
-        supportingContent = { Text("In the background, sync this notebook only on Wi-Fi.") },
-        trailingContent = { Switch(checked = view.wifiOnly, onCheckedChange = null) },
-        modifier = Modifier.testTag("gitWifi-$id").toggleable(value = view.wifiOnly, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.wifi-only") { actions.onWifiOnly(id, it) }),
-    )
+    Toggle("Wi-Fi Only", "In the background, sync this notebook only on Wi-Fi.", view.wifiOnly, enabled = true, "gitWifi-$id", event = "settings.git-notebooks.wifi-only") {
+        actions.onWifiOnly(id, it)
+    }
     var push by rememberSaveable(id) { mutableStateOf(view.pushDelayS.toString()) }
     var pull by rememberSaveable(id) { mutableStateOf(view.pullEveryMin.toString()) }
     GroupTitle("How Often")
@@ -358,14 +352,14 @@ private fun GitTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions
         }
     }
     GroupTitle("Commits")
-    ListItem(
-        headlineContent = { Text("Sign Commits") },
-        supportingContent = {
-            Text("Sign every commit from this phone with its signing key (SSH), as a branch that requires signed commits needs. If it cannot sign, the sync stops: never an unsigned commit.")
-        },
-        trailingContent = { Switch(checked = view.signCommits, onCheckedChange = null) },
-        modifier = Modifier.testTag("gitSign-$id").toggleable(value = view.signCommits, role = Role.Switch, onValueChange = trackedToggle("settings.git-notebooks.sign-commits") { actions.onSignCommits(id, it) }),
-    )
+    Toggle(
+        "Sign Commits",
+        "Sign every commit from this phone with its signing key (SSH), as a branch that requires signed commits needs. If it cannot sign, the sync stops: never an unsigned commit.",
+        view.signCommits,
+        enabled = true,
+        "gitSign-$id",
+        event = "settings.git-notebooks.sign-commits",
+    ) { actions.onSignCommits(id, it) }
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SigningKey(ui, actions)
         // This notebook's own commit identity (#170 F6): a GitHub no-reply address keeps an email
@@ -432,9 +426,12 @@ private fun RemoveDialog(row: GitRow, actions: GitNotebooksActions, onDismiss: (
             val unpushed = pending != 0
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (unpushed) TextButton(onClick = trackedClick("settings.git-notebooks.remove.push-first", onPushFirst), Modifier.testTag("gitRemovePushFirst")) { Text("Push First") }
-                TextButton(onClick = trackedClick(if (unpushed) "settings.git-notebooks.remove.anyway" else "settings.git-notebooks.remove.confirm", tracked.done(onRemove)), Modifier.testTag("gitRemoveConfirm")) { Text(if (unpushed) "Remove Anyway" else "Remove") }
+                TextButton(onClick = trackedClick(if (unpushed) "settings.git-notebooks.remove.anyway" else "settings.git-notebooks.remove.confirm", tracked.done(onRemove)), Modifier.testTag("gitRemoveConfirm")) {
+                    Text(if (unpushed) "Remove Anyway" else "Remove", color = MaterialTheme.colorScheme.error)
+                }
             }
         },
-        dismissButton = { TextButton(onClick = trackedClick("settings.git-notebooks.remove.keep", onDismiss)) { Text("Cancel") } },
+        // "Keep It", as the Mac's Remove asks (GitNotebooksSettings).
+        dismissButton = { TextButton(onClick = trackedClick("settings.git-notebooks.remove.keep", onDismiss)) { Text("Keep It") } },
     )
 }

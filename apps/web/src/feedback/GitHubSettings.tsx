@@ -22,6 +22,7 @@ import { accountsOf } from './github-accounts';
 import { GroupHead, SettingRow } from '../theme/look-rows';
 import { useFeedback, useOutbox, type FeedbackService } from './service';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { counted } from '@penmoss/core/words';
 
 const REPO = `${FEEDBACK_REPO.owner}/${FEEDBACK_REPO.repo}`;
 
@@ -383,7 +384,7 @@ function FeedbackRow({ feedback }: { feedback: FeedbackService }) {
           {waiting > 0 ? (
             <span data-testid="github-feedback-waiting">
               {' '}
-              · {waiting} {waiting === 1 ? 'report' : 'reports'} waiting
+              · {counted(waiting, 'report')} waiting
             </span>
           ) : null}
         </>

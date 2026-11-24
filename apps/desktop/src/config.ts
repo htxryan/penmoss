@@ -15,7 +15,7 @@ export const APP_HOST = 'penmoss';
 export const PAGE_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
 export const DEEP_LINK_SCHEME = 'penmoss';
 
-export interface DesktopConfig {
+interface DesktopConfig {
   /** The bundled web app (index.html and its assets). */
   readonly webRoot: string;
   /** Overrides Electron's userData directory (tests run each launch in a fresh one). */

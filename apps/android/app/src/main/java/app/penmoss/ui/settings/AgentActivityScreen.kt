@@ -47,8 +47,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.trackedClick
-import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.common.BackButton
 
 /** The words for an empty list (#172, A920): read from each notebook's branch, so no tags. */
 internal const val NO_AGENT_ACTIVITY = "No agent has moved notes or changed folders or settings in your notebooks in the last 30 days."

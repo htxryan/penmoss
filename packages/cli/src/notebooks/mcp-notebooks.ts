@@ -10,7 +10,7 @@
  * pushed gets a detached `penmoss notebook sync` of its own (A847).
  */
 import { notebookTag } from '@penmoss/core/note-ref';
-import { NotebookOps } from '@penmoss/git-notebook';
+import { clientName, NotebookOps } from '@penmoss/git-notebook';
 import {
   CHANNEL_CHECK_MS,
   CommentChannel,
@@ -359,6 +359,14 @@ export class McpNotebooks {
 
   /** Whether the client said `notifications/initialized`: channels deliver from then on. */
   private initialized = false;
+  /** The client, once it said who it is: every notebook's Send to… names the session by it. */
+  private client: { readonly name?: unknown; readonly title?: unknown } | null = null;
+
+  /** One session, one name in every notebook (PEN-157): its client, then `--name` or the folder. */
+  private channelLabel(): string {
+    const cwd = process.cwd();
+    return `${clientName(this.client)} · ${this.channelOptions?.name ?? (basename(cwd) || cwd)}`;
+  }
 
   /**
    * The notebook's channel (PEN-154, amends A1063): the session listed under this server's one
@@ -383,7 +391,7 @@ export class McpNotebooks {
       },
       {
         name,
-        label: `${slot.entry.writer.label} · ${this.channelOptions.name ?? (basename(cwd) || cwd)}`,
+        label: this.channelLabel(),
         host: hostname(),
       },
     );
@@ -449,11 +457,15 @@ export class McpNotebooks {
       ...(channels
         ? {
             channel: true,
-            onInitialized: () => {
+            onInitialized: (client) => {
               this.initialized = true;
+              this.client = client;
               for (const slot of this.served) {
+                slot.channel?.relabel(this.channelLabel());
                 slot.channel?.start();
                 void slot.channel?.tick();
+                // Listed again at once under the client's name, not at the next heartbeat.
+                void this.heartbeat(slot);
               }
             },
           }

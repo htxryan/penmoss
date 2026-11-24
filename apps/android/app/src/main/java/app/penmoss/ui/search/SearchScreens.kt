@@ -13,12 +13,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -90,9 +88,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.alpha
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -108,6 +103,8 @@ import app.penmoss.ui.folders.FolderPickerSheet
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.SEARCH_ROUTE
 import app.penmoss.ui.leave
+import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.SheetTitle
 
 /** The Updated filter's choices, in the web's words (T40 P6, FD3): a label and its days back. */
 internal val DATE_RANGES: List<Pair<String, Int?>> = listOf(
@@ -205,7 +202,7 @@ fun SearchScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { app.penmoss.ui.settings.BackButton(onBack) },
+                navigationIcon = { BackButton(onBack) },
                 title = {
                     // The field is the bar itself, as in Android's own apps: no box inside the bar (T39).
                     TextField(
@@ -334,7 +331,7 @@ private fun TagFilterSheet(tags: List<String>, current: String?, onPick: (String
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("tagFilter")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Text("Tag", Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.titleMedium)
+        SheetTitle("Tag")
         LazyColumn(Modifier.fillMaxWidth().testTag("tagChoices")) {
             items(listOf<String?>(null) + tags, key = { it ?: "" }) { tag ->
                 val depth = tag?.count { it == '/' } ?: 0
