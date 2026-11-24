@@ -11,7 +11,7 @@
     "./day": "./src/day.ts"
   },
   "scripts": {
-    "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs worker) --inspector-port $(node ../../scripts/ports.mjs inspector)",
+    "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs telemetry) --inspector-port $(node ../../scripts/ports.mjs inspector)",
     "types": "wrangler types",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run && node --test scripts/query.test.mjs",

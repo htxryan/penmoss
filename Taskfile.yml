@@ -166,11 +166,11 @@ tasks:
       - node build.mjs
 
   site:preview:
-    desc: 'penmoss.app: wrangler dev over site/dist with the real headers, on http://localhost:8788'
+    desc: 'penmoss.app: wrangler dev over site/dist with the real headers, on http://localhost:8788, or the site port of PENMOSS_PORT_BLOCK (scripts/ports.mjs)'
     deps: [site:build]
     dir: site
     cmds:
-      - pnpm exec wrangler dev --local --port 8788
+      - pnpm exec wrangler dev --local --port $(node ../scripts/ports.mjs site)
 
   site:test:
     desc: 'penmoss.app: build it, check the screenshots are there and within budget (A1210), then Playwright checks of the built site under wrangler dev (site/test)'

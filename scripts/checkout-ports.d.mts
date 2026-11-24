@@ -4,3 +4,4 @@ export declare function checkoutPortBase(path?: string): number;
 export declare function webE2ePort(): number;
 export declare function webPreviewPort(): number;
 export declare function desktopFakeGitHubPort(): number;
+export declare function sitePort(): number;
