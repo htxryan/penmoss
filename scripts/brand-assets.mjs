@@ -1,6 +1,7 @@
 // The Moss Pen mark (A402, docs/brand.md): one geometry and one palette, written out as
 // every logo file the apps ship. Run `task brand` after changing anything here; it runs
-// this script, then renders the Mac icon's PNG (apps/desktop/scripts/render-icon.mjs).
+// this script, then renders the Mac icon's and menu bar icon's PNGs
+// (apps/desktop/scripts/render-icons.mjs).
 //
 // The geometry is option 05 of the logo canvas, unchanged: on a 1024 x 1024 tile with
 // corner radius 228, a fence (a rounded-square outline, its gate open at the top) and a
@@ -142,7 +143,7 @@ function macIcon() {
 /**
  * The Mac's menu bar icon (T51 item 17, A945): the fence and the moss in black on nothing, a
  * template image macOS tints for a light or dark menu bar. The mark spans 16 of the icon's 18
- * points (`TRAY_SIZE`); apps/desktop/scripts/render-icon.mjs renders it at 1x and 2x.
+ * points (`TRAY_SIZE`); apps/desktop/scripts/render-icons.mjs renders it at 1x and 2x.
  */
 const TRAY_SIZE = 18;
 function trayGlyph() {

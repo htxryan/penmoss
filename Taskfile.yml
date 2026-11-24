@@ -421,8 +421,7 @@ tasks:
     desc: "Logo files (A402, docs/brand.md): write every icon from scripts/brand-assets.mjs, then render the Mac icon's and menu bar icon's PNGs"
     cmds:
       - node scripts/brand-assets.mjs
-      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-icon.mjs'
-      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-tray-icon.mjs'
+      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-icons.mjs'
 
   design-system:
     desc: 'The design system in Claude (PEN-138, docs/brand.md): write its tokens.json, bundle.css and themes.md from the real CSS and themes into dist/design-system, to publish to the artifact'
