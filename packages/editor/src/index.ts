@@ -28,6 +28,7 @@ export {
 } from './lightbox';
 export { calloutKey, memoryFoldState, type FoldState } from './extensions/callout';
 export { CODE_LANGUAGES, resolveLanguage } from './extensions/highlight';
+export { normaliseHref } from './extensions/bubble-toolbar';
 export { copyText } from './clipboard/copy';
 export { indentCode } from './extensions/code-block';
 export {

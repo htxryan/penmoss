@@ -64,6 +64,8 @@ Select text to show the formatting toolbar: **Bold**, **Italic**, **Strikethroug
 
 The keys for each are on the [keyboard shortcuts](/docs/shortcuts/#formatting) page.
 
+**Link** takes a web address, an email address or a phone link, on the Mac and on Android alike. An address without `https://` gets it (`penmoss.app`), an email address becomes a mail link, and a phone link starts with `tel:`. Plain words and other kinds of link are refused.
+
 ## Blocks
 
 ### Lists and checklists

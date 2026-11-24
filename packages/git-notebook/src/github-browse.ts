@@ -6,6 +6,7 @@
  * Platform-free: an injected `fetch` that sees the method, the body and the response's headers
  * (Link paging, rate limits). The token is given per call and goes only to `api`.
  */
+import { fromBase64 } from './github';
 
 /** A fetch as this module needs it: `globalThis.fetch` and Electron's `net.fetch` both fit. */
 export type BrowseFetch = (
@@ -209,12 +210,6 @@ async function messageOf(response: { json(): Promise<unknown> }): Promise<string
   }
 }
 
-/** Decodes base64 (GitHub's blob content), platform-free. */
-function fromBase64(value: string): string {
-  const bytes = Uint8Array.from(atob(value.replace(/\s/g, '')), (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
 export interface GitHubBrowseOptions {
   readonly fetch: BrowseFetch;
   /** The API's origin (default `https://api.github.com`; tests point it at a fake). */
@@ -402,7 +397,9 @@ export class GitHubBrowse {
       if (!blob.ok) continue;
       try {
         const content = (await blob.response.json()) as { content?: unknown };
-        const parsed = JSON.parse(fromBase64(text(content.content) ?? '')) as {
+        const parsed = JSON.parse(
+          new TextDecoder().decode(fromBase64(text(content.content) ?? '')),
+        ) as {
           id?: unknown;
           name?: unknown;
         };

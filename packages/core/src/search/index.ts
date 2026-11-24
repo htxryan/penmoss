@@ -3,7 +3,6 @@ export { FOLD_EXCEPTIONS, SEPARATOR_RANGES } from './unicode-table';
 export {
   MAX_CLAUSES,
   MIN_PREFIX_LENGTH,
-  ftsMatch,
   parseQuery,
   queryMatcher,
   type ParseOptions,
@@ -20,9 +19,7 @@ export {
   compareCodePoints,
   completionPrefixes,
   completions,
-  searchWords,
   withCompletions,
-  wordRange,
 } from './completions';
 export { ELLIPSIS, MATCH_END, MATCH_START, highlight, searchText, snippet } from './snippet';
 export { RRF_K, reciprocalRankFusion, type Fused } from './rrf';
@@ -35,6 +32,7 @@ export {
   MemoryVectorCache,
   VectorIndex,
   chunkKey,
+  coverageNotice,
   dot,
   fakeEmbedder,
   fuseHybrid,
@@ -58,15 +56,7 @@ export {
   type NoteChunk,
   type NoteSection,
 } from './sections';
-export {
-  BM25_B,
-  BM25_K1,
-  FTS_COLUMNS,
-  FTS_RANK,
-  FTS_WEIGHTS,
-  type FtsColumn,
-  type SearchDocument,
-} from './fields';
+export { BM25_B, BM25_K1, FTS_COLUMNS, FTS_WEIGHTS, type FtsColumn } from './fields';
 export {
   MAX_NOTE_HEADINGS_BYTES,
   MAX_NOTE_TEXT_BYTES,

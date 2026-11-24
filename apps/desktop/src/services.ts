@@ -17,6 +17,7 @@ import {
   eventsPath,
   readConsentFile,
 } from '@penmoss/core/analytics/node';
+import { penmossHome as resolvePenmossHome } from '@penmoss/core/node/home';
 import { AdminCheck, runHelper } from './admin-check';
 import { AiProviders } from './ai-provider';
 import { Analytics, macFields, watchConsent } from './analytics';
@@ -113,7 +114,7 @@ export const updates = new Updates({
   recordSetting,
 });
 /** The CLI's `~/.penmoss` (A992): agents' clones, and search by meaning's model and vectors. */
-const penmossHome = process.env['PENMOSS_HOME'] || join(homedir(), '.penmoss');
+const penmossHome = resolvePenmossHome();
 /**
  * Search by meaning (T76, A1152, A1157, A1158): the embedding service in a utilityProcess, which
  * downloads the model unless the setting is off, holds the indexing lease and answers the

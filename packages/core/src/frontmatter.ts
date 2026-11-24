@@ -1,4 +1,5 @@
 import { Document, isMap, isScalar, isSeq, parseDocument, type ToStringOptions } from 'yaml';
+import { AI_DESCRIPTION_FRONTMATTER } from './ai-description';
 
 /**
  * A note's YAML frontmatter. It wraps a `yaml` Document so comments, key order,
@@ -25,7 +26,7 @@ export const KNOWN_FRONTMATTER_KEYS = [
   'tags',
   'aliases',
   'type',
-  'ai-description',
+  AI_DESCRIPTION_FRONTMATTER,
 ] as const;
 
 export interface NoteMeta {
@@ -39,7 +40,7 @@ export interface NoteMeta {
   /** What the note holds, for agents (PEN-161): written by AI Descriptions or by hand. */
   description?: string;
   /** The note's own AI Descriptions value (PEN-161); absent is Inherit. */
-  'ai-description'?: 'on' | 'off';
+  [AI_DESCRIPTION_FRONTMATTER]?: 'on' | 'off';
 }
 
 const TO_STRING: ToStringOptions = { lineWidth: 0, flowCollectionPadding: false };
@@ -122,8 +123,8 @@ export function readNoteMeta(frontmatter: Frontmatter): NoteMeta {
     const value = scalarString(contents.get(key, true));
     if (value !== undefined) meta[key] = value;
   }
-  const ai = scalarString(contents.get('ai-description', true));
-  if (ai === 'on' || ai === 'off') meta['ai-description'] = ai;
+  const ai = scalarString(contents.get(AI_DESCRIPTION_FRONTMATTER, true));
+  if (ai === 'on' || ai === 'off') meta[AI_DESCRIPTION_FRONTMATTER] = ai;
   for (const key of ['tags', 'aliases'] as const) {
     const value = stringList(contents.get(key, true));
     if (value !== undefined) meta[key] = value;

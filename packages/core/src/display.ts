@@ -22,7 +22,6 @@ export const sidebarSetting = (item: SidebarItem): string => `sidebar.${item}`;
  * them; each is a per-platform `sidebar.<item>` setting (A1605), true or false, unset shown.
  */
 export const PHONE_SHORTCUT_ITEMS = ['journal', 'capture'] as const;
-export type PhoneShortcutItem = (typeof PHONE_SHORTCUT_ITEMS)[number];
 
 /** The phone's own shortcuts' settings, in their order on the phone's row. */
 export const PHONE_SHORTCUT_SETTING_KEYS: readonly string[] = PHONE_SHORTCUT_ITEMS.map(

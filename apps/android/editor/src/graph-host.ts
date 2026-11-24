@@ -20,6 +20,7 @@ import {
   type Transform,
 } from '@penmoss/ui/graph/renderer';
 import { FALLBACK_THEME, readTheme } from '@penmoss/ui/graph/theme';
+import { clampZoom, openingTicks } from '@penmoss/ui/graph/view';
 import { applyThemeTo, builtInTheme, parseTheme } from '@penmoss/ui/theme';
 import {
   GRAPH_VERSION,
@@ -46,19 +47,10 @@ export interface GraphHostOptions {
   readonly cancelFrame?: (handle: number) => void;
 }
 
-const MIN_ZOOM = 0.05;
-const MAX_ZOOM = 6;
 /** How far a finger may move and still tap (CSS pixels): wider than a mouse's 4. */
 export const TAP_SLOP = 10;
 /** How far outside a node's circle a tap still hits it, on screen (a fingertip). */
 export const TOUCH_REACH = 14;
-/** Graphs this small open settled; larger ones settle a little, then move into place. */
-const SMALL = 300;
-
-const clampZoom = (k: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k));
-
-const reducedMotion = () =>
-  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 interface Point {
   x: number;
@@ -220,7 +212,7 @@ export class GraphHost {
     this.layout = layout;
     const kept = this.selected?.node.id;
     this.selected = kept ? (layout.nodes.find((node) => node.node.id === kept) ?? null) : null;
-    layout.settle(layout.nodes.length <= SMALL || reducedMotion() ? 300 : 40);
+    layout.settle(openingTicks(layout.nodes.length));
     if (previous.size === 0) this.autoFit = true;
     if (this.autoFit) this.fit();
     this.showChip();

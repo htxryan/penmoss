@@ -10,6 +10,7 @@
  * filer can check its shape and size without knowing what the page collects.
  */
 import { fitLogLines, logBlock } from './analytics/log-block';
+import { wholeWord } from './whole-word';
 
 /** The groups, in the order the issue lists them. */
 export const FEEDBACK_GROUP_IDS = ['app', 'where', 'sync', 'note', 'edits', 'errors'] as const;
@@ -331,8 +332,6 @@ const QUOTED = /“[^”]*”?|"(?:[^"\\]|\\.)*"?|'(?:[^'\\\n]|\\.){2,}'/g;
 /** Names shorter than this are not removed: "a" or "To" would eat the message. */
 const MIN_NAME = 3;
 
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 /**
  * An error message or stack line made safe to send (the redaction Android's error reports get,
  * A427, A791): tokens, bearer credentials, email addresses, URL queries, quoted text and every
@@ -349,10 +348,7 @@ export function redactText(text: string, names: readonly string[] = []): string 
     .filter((name) => name.length >= MIN_NAME)
     .sort((a, b) => b.length - a.length);
   for (const name of usable) {
-    out = out.replace(
-      new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(name)}(?![\\p{L}\\p{N}_])`, 'giu'),
-      REDACTED,
-    );
+    out = out.replace(wholeWord(name), REDACTED);
   }
   return out.replace(QUOTED, REDACTED);
 }

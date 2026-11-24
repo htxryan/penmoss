@@ -5,7 +5,7 @@
  * and again whenever the service starts afresh (a new `generation`). Every window asks it by
  * meaning. The page never embeds anything itself.
  */
-import { noteSections, type NoteSection } from '@penmoss/core/search';
+import { coverageNotice, noteSections, type NoteSection } from '@penmoss/core/search';
 import type { NoteRecord } from '@penmoss/model/record';
 import { bodyJson, createYjs14Replica } from '@penmoss/model/yjs14';
 import type { DesktopMeaning, DesktopMeaningHit, DesktopMeaningStatus } from '../desktop/bridge';
@@ -37,11 +37,6 @@ export const MEANING_DOWNLOADING: MeaningUnavailable = {
   wordsOnly: 'Semantic Search is downloading its model. Until then, results match your words.',
   semantic: `Semantic Search is downloading its model. ${AND_WORDS}`,
 };
-
-/** While some notes have no vectors yet (A1156). */
-export function coverageNotice(indexed: number, total: number): string {
-  return `Meaning covers ${indexed} of ${total} notes so far.`;
-}
 
 /** A note's title and heading sections, from its record's Yjs document (A1154). */
 export function sectionsOfRecord(record: NoteRecord): NoteSection[] {
@@ -137,7 +132,7 @@ export class NotebookMeaning {
   coverage(): string | null {
     const status = this.status;
     if (!status || status.total === 0 || status.indexed >= status.total) return null;
-    return coverageNotice(status.indexed, status.total);
+    return coverageNotice(status);
   }
 
   /** Notes changed: tell the service a moment after they settle. */

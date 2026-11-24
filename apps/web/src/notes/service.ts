@@ -33,7 +33,7 @@ import {
   readTitle,
   setDeleted,
 } from '@penmoss/model/note';
-import { periodicNoteId, type PeriodKind } from '@penmoss/core/periodic';
+import { periodicNoteId, periodicSalt, type PeriodKind } from '@penmoss/core/periodic';
 import {
   deleteRecord,
   linksField,
@@ -505,22 +505,12 @@ export class Notes {
    * notebook (A820), and past any id deleted for good there (`<salt>#2`, …, A828).
    */
   periodicId(kind: PeriodKind, period: string): string {
-    const salt = this.periodicSalt;
-    let id = periodicNoteId(kind, period, salt);
-    for (let round = 2; this.isPurged(id) && round < 100; round++) {
-      id = periodicNoteId(kind, period, `${salt}#${round}`);
-    }
-    return id;
+    return periodicNoteId(kind, period, this.saltOf(kind, period));
   }
 
-  /** The salt `periodicId` used for `id` (what makes the note's document match it). */
-  private saltOf(kind: PeriodKind, period: string, id: string): string {
-    const salt = this.periodicSalt;
-    for (let round = 1; round < 100; round++) {
-      const each = round === 1 ? salt : `${salt}#${round}`;
-      if (periodicNoteId(kind, period, each) === id) return each;
-    }
-    return salt;
+  /** The salt of a period's note in this source (what makes the note's document match its id). */
+  private saltOf(kind: PeriodKind, period: string): string {
+    return periodicSalt(kind, period, this.periodicSalt, this.isPurged);
   }
 
   /** The shared local store (the workspace keeps its record in it too, T7). */
@@ -1124,8 +1114,8 @@ export class Notes {
    * note with one copy of the template. Returns its id.
    */
   async ensurePeriodic(kind: PeriodKind, period: string, template: string): Promise<string> {
-    const id = this.periodicId(kind, period);
-    const salt = this.saltOf(kind, period, id);
+    const salt = this.saltOf(kind, period);
+    const id = periodicNoteId(kind, period, salt);
     if (this.entries.some((entry) => entry.id === id)) return id;
     const store = await this.localStore();
     const existing = await store.get(id);

@@ -11,6 +11,7 @@
  * `apps/android/contract/graph-v1.json` holds an example of every message;
  * this file's tests and the Kotlin `GraphProtocol` tests both check it.
  */
+import { isRecord } from './guards';
 import { NOTE_ID } from './protocol';
 
 export const GRAPH_VERSION = 1;
@@ -74,8 +75,6 @@ export type FromGraph =
   | { readonly v: 1; readonly type: 'open'; readonly noteId: string };
 
 const isString = (value: unknown): value is string => typeof value === 'string';
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 const isNoteId = (value: unknown): value is string => isString(value) && NOTE_ID.test(value);
 const isText = (value: unknown): value is string =>
   isString(value) && value.length <= MAX_GRAPH_TEXT;

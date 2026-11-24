@@ -8,6 +8,7 @@
  * letter or digit of its name. Duplicates are expected (Personal and Penmoss are both P).
  * Copying settings between notebooks (A1137) skips both keys.
  */
+import { fnv1a } from '@penmoss/core/fnv';
 import { NOTEBOOK_BADGE_COLOURS, NOTEBOOK_BADGE_INK } from '@penmoss/ui/theme';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { LUCIDE_PREFIX, lucideName } from '../shell/lucide';
@@ -144,12 +145,7 @@ export const INK_DARK: string = NOTEBOOK_BADGE_INK.dark;
 
 /** A stable 32-bit hash of the notebook's id (FNV-1a): the same on every device. */
 export function idHash(id: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < id.length; index++) {
-    hash ^= id.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash >>> 0;
+  return fnv1a(id);
 }
 
 /** The default colour's preset: the one at hash(id) mod 10. */

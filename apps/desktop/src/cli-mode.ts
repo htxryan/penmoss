@@ -6,10 +6,10 @@
  * binary runs only this code, never a script someone hands it.
  */
 import { spawn } from 'node:child_process';
-import { homedir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { app } from 'electron';
 import { channelOf, killGitOnSignals, nodeIo, run } from '@penmoss/cli/node';
+import { penmossHome } from '@penmoss/core/node/home';
 import { NodeMeaning } from '@penmoss/embed';
 import { CLI_FLAG } from './local-agents';
 
@@ -70,7 +70,7 @@ const self = process.argv.slice(1, at + 1).map((arg) => (arg === '.' ? app.getAp
 // Search by meaning (T75, A1152): onnxruntime-web's WASM and the embedding worker are bundled
 // beside this file (dist/ort, dist/embed-worker.cjs), inside app.asar.
 const meaning = new NodeMeaning({
-  home: process.env['PENMOSS_HOME'] || join(homedir(), '.penmoss'),
+  home: penmossHome(),
   wasmPaths: join(__dirname, 'ort'),
   workerPath: join(__dirname, 'embed-worker.cjs'),
 });

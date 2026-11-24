@@ -37,6 +37,7 @@ import {
   isPlatformSetting,
   type SettingsPlatform,
 } from '@penmoss/core/settings';
+import { journalFolderId, journalLevels, type PeriodKind } from '@penmoss/core/periodic';
 import { cleanTagDescription, normaliseTag } from '@penmoss/core/tags';
 import * as Y from '@y/y';
 
@@ -675,6 +676,56 @@ export function registerNote(
     node.setAttr('folder', note.folderId);
     node.setAttr('position', position);
   }, origin);
+}
+
+/**
+ * Files a daily or weekly note under `Journal/<year>/<month>` or `Journal/<year>/Weekly` (T19),
+ * creating the folders it needs with ids derived from their paths under the notebook's `salt`
+ * (A820), so two devices doing this offline make the same folders. A note already filed (by any
+ * device) stays where it is.
+ */
+export function fileJournalNote(
+  doc: Y.Doc,
+  id: string,
+  kind: PeriodKind,
+  period: string,
+  salt?: string,
+): void {
+  if (readWorkspace(doc).notes.some((entry) => entry.id === id)) return;
+  const levels = journalLevels(kind, period);
+  doc.transact(() => {
+    let parentId: string | null = null;
+    for (let depth = 1; depth <= levels.length; depth++) {
+      const folderId = journalFolderId(levels.slice(0, depth).join('/'), salt);
+      if (!readWorkspace(doc).folders.some((folder) => folder.id === folderId)) {
+        createFolder(doc, { id: folderId, name: levels[depth - 1]!, parentId });
+      }
+      parentId = folderId;
+    }
+    registerNote(doc, { id, folderId: parentId });
+  });
+}
+
+/** The top-level folder captures are filed in (T30). */
+export const INBOX = 'Inbox';
+
+/**
+ * The Inbox captured notes are filed in (T30): the notebook's own top-level `Inbox` (any case)
+ * if there is one, else one made with an id derived from its name under `salt`, so two devices
+ * capturing offline make one Inbox. Returns its id.
+ */
+export function inboxFolder(doc: Y.Doc, salt?: string): string {
+  const folders = readWorkspace(doc).folders;
+  const own = folders.find(
+    (folder) =>
+      folder.parentId === null && folder.name.trim().toLowerCase() === INBOX.toLowerCase(),
+  );
+  if (own) return own.id;
+  const id = journalFolderId(INBOX, salt);
+  if (!folders.some((folder) => folder.id === id)) {
+    createFolder(doc, { id, name: INBOX, parentId: null });
+  }
+  return id;
 }
 
 export function moveNote(

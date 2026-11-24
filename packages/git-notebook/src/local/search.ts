@@ -5,6 +5,7 @@
  */
 import {
   HYBRID_DEPTH,
+  coverageNotice,
   fuseHybrid,
   parseQuery,
   type MeaningCoverage,
@@ -78,8 +79,7 @@ export interface LocalBacklink {
 
 /** What hybrid says without meaning (A843), and what meaning says while it is indexing. */
 export const WORDS_ONLY_NOTICE = 'A git notebook searches words only: these are keyword results.';
-export const coverageNotice = ({ indexed, total }: MeaningCoverage) =>
-  `Meaning covers ${indexed} of ${total} notes so far.`;
+export { coverageNotice };
 
 /** `{ description }` when there is one, so results without one stay as they were. */
 const described = (description: string | null | undefined) => (description ? { description } : {});

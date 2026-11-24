@@ -88,11 +88,15 @@ export function shortcutLabel(keys: string): string {
   return parts.join(apple ? '' : '+');
 }
 
-/** A web address for what was typed into the link field (`example.com` gets https). */
+/**
+ * The address for what was typed into a link field, on the Mac and the phone alike: web, mail
+ * and phone (`tel:`) links as written, `example.com` with https, a bare email address with
+ * `mailto:`. Anything else (other schemes, plain words) is refused: null.
+ */
 export function normaliseHref(input: string): string | null {
   const value = input.trim();
   if (!value) return null;
-  if (/^(https?:|mailto:)/i.test(value)) return value;
+  if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
   if (/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(value)) return `mailto:${value}`;
   if (/^[\w-]+(\.[\w-]+)+([/?#:]|$)/.test(value)) return `https://${value}`;
   return null;
