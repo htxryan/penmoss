@@ -42,7 +42,7 @@ export type WindowEventName =
   | 'closed';
 
 /** Records one `app window`: its props, and the size class its width falls in. */
-export type RecordWindow = (props: Props, sizeClass: SizeClass) => void;
+type RecordWindow = (props: Props, sizeClass: SizeClass) => void;
 
 export interface Timers {
   setTimeout(run: () => void, ms: number): unknown;

@@ -15,7 +15,7 @@
 import { boundedExec } from './bounded-exec';
 
 /** What the page is told: done, or not done and why (shown as is). */
-export type AdminCheckAnswer =
+type AdminCheckAnswer =
   { readonly ok: true } | { readonly ok: false; readonly message: string };
 
 /** How a run of the helper ended. */
@@ -52,7 +52,7 @@ export const MESSAGES = {
 const refuse = (message: string): AdminCheckAnswer => ({ ok: false, message });
 
 /** Touch ID through Electron (`systemPreferences`), where the Mac has it. */
-export interface TouchId {
+interface TouchId {
   /** Whether Touch ID can be asked now (enrolled, not locked out). */
   can(): boolean;
   /** Resolves when the finger matched; rejects when it did not, or was cancelled. */

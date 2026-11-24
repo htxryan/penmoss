@@ -32,17 +32,17 @@ import type {
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-export const ANTHROPIC_API = 'https://api.anthropic.com';
+const ANTHROPIC_API = 'https://api.anthropic.com';
 const ANTHROPIC_VERSION = '2023-06-01';
 /** A description is short: the model is never asked for more than this. */
-export const MAX_OUTPUT_TOKENS = 300;
-export const DESCRIBE_TIMEOUT_MS = 30_000;
+const MAX_OUTPUT_TOKENS = 300;
+const DESCRIBE_TIMEOUT_MS = 30_000;
 /** The longest key taken (Anthropic's are about 108 characters). */
 const KEY_MAX = 400;
 /** The longest prompt sent (the page cuts notes to about 96,000 characters first). */
 const PROMPT_MAX = 200_000;
 
-export const PROVIDERS: readonly DesktopAiProvider[] = [
+const PROVIDERS: readonly DesktopAiProvider[] = [
   { id: 'anthropic', label: 'Anthropic (API Key)', signIn: 'key', models: ANTHROPIC_MODELS },
   {
     id: 'claude-code',
@@ -52,7 +52,7 @@ export const PROVIDERS: readonly DesktopAiProvider[] = [
   },
 ];
 
-export interface AiProvidersOptions {
+interface AiProvidersOptions {
   readonly dir: string;
   /** Encrypts with the Keychain's key; null when it cannot (then no key is kept). */
   readonly seal: (plain: string) => Promise<string | null>;

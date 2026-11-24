@@ -9,7 +9,7 @@ import { DEEP_LINK_SCHEME } from './config';
 
 const NOTE_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
 
-export type DeepLink =
+type DeepLink =
   { readonly kind: 'path'; readonly path: string } | { readonly kind: 'capture' };
 
 export function parseDeepLink(link: string): DeepLink | null {

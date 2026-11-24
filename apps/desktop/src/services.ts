@@ -43,7 +43,7 @@ import { Updates, updateMode } from './updater';
  * ID itself where the Mac has it, else the signed helper in the app, which only answers with its
  * exit code.
  */
-export const adminCheck = new AdminCheck({
+const adminCheck = new AdminCheck({
   helper: config.authHelper,
   run: runHelper,
   // Main's own checks ask Touch ID itself where the Mac has it (T50, A855); the suite's stand-in
@@ -332,7 +332,7 @@ export function startAnalytics(): void {
  * What the log file's scrubber knows (scrub #1): the GitHub logins and the notebooks' names,
  * repositories and branches, read again when they change.
  */
-export function refreshKnown(): void {
+function refreshKnown(): void {
   void Promise.all([
     gitNotebooks.list().catch(() => []),
     githubToken.logins().catch(() => [] as string[]),

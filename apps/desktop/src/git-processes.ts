@@ -17,7 +17,7 @@ import type { GitProcessListener } from '@penmoss/git-notebook/system-git';
  * What `ps` says about a pid: its process group, when it started (ms since the epoch, to the
  * second) and its command, or null when it is gone.
  */
-export type ProcessProbe = (
+type ProcessProbe = (
   pid: number,
 ) => { readonly pgid: number; readonly command: string; readonly started: number } | null;
 

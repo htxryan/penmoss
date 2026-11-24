@@ -93,13 +93,13 @@ export interface LimitsPreview {
 }
 
 /** The log file, as analytics uses it (`log-file.ts`). */
-export interface AnalyticsLogs {
+interface AnalyticsLogs {
   bytes(): Promise<number>;
   preview(limits: Limits): Promise<number>;
   apply(limits: Limits): Promise<void>;
 }
 
-export interface AnalyticsOptions {
+interface AnalyticsOptions {
   /** `~/.penmoss/analytics.json` (PENMOSS_HOME's). */
   readonly consentPath: string;
   readonly store: StoreApi;
@@ -129,7 +129,7 @@ export interface PageEventRefs {
 }
 
 /** An event from the page, before main stamps it (the page's `PageEvent`). */
-export interface PageEventInput {
+interface PageEventInput {
   readonly kind: EventKind;
   readonly name: string;
   readonly props?: Props;
@@ -155,7 +155,7 @@ function parseRefs(value: unknown): PageEventRefs | undefined {
 }
 
 /** At most this many events in one message from a page. */
-export const MAX_PAGE_EVENTS = 200;
+const MAX_PAGE_EVENTS = 200;
 /** A page's `at` further off than this from main's clock is replaced by main's. */
 const AT_SLACK_MS = 24 * 3_600_000;
 /** The most retired ref keys kept for late events (PEN-177). */

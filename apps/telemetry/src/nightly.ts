@@ -20,22 +20,22 @@ import { CATALOGUE } from '@penmoss/core/analytics';
 import { addDays, dayOf, monthsBefore } from './day';
 
 /** How many days before today are rebuilt each night. */
-export const ROLL_DAYS = 7;
+const ROLL_DAYS = 7;
 /** Events are kept 13 months; the rollups 25. */
-export const EVENT_MONTHS = 13;
-export const ROLLUP_MONTHS = 25;
+const EVENT_MONTHS = 13;
+const ROLLUP_MONTHS = 25;
 /** Rows deleted per statement, so no one statement runs long. */
 export const PRUNE_BATCH = 5000;
 /** At most this many prune statements per table a night; the rest waits for the next night. */
 const MAX_PRUNE_ROUNDS = 400;
 /** Session detail's kinds (PEN-177): kept DETAIL_DAYS, and pruned first. */
-export const DETAIL_KINDS = ['note', 'input', 'tree'] as const;
-export const DETAIL_DAYS = 90;
+const DETAIL_KINDS = ['note', 'input', 'tree'] as const;
+const DETAIL_DAYS = 90;
 /** Session detail's own prune statements a night, apart from the other kinds' MAX_PRUNE_ROUNDS. */
 export const MAX_DETAIL_ROUNDS = 400;
 const GB = 1_000_000_000;
 /** Past this size (80% of D1's 10 GB), the oldest session detail is pruned early… */
-export const PRUNE_FIRST_BYTES = 8 * GB;
+const PRUNE_FIRST_BYTES = 8 * GB;
 /** …down to an estimate of this. */
 export const PRUNE_TO_BYTES = 7.5 * GB;
 /** What the night logs when D1 is past PRUNE_FIRST_BYTES and no session detail is left. */
@@ -62,7 +62,7 @@ const ROLL_INSTALLS = `INSERT INTO daily_installs
     FROM events WHERE day = ?1
   ) WHERE latest = 1`;
 
-export interface NightlyReport {
+interface NightlyReport {
   readonly rolled: readonly string[];
   /** Note, input and tree events deleted: past DETAIL_DAYS, and early for D1's size. */
   readonly prunedDetail: number;
@@ -125,7 +125,7 @@ async function deleteRounds(
  * PRUNE_TO_BYTES: (size − PRUNE_TO_BYTES) ÷ (size ÷ the events' row count), worked out once.
  * Both share one budget of MAX_DETAIL_ROUNDS statements; what is left waits for the next night.
  */
-export async function pruneDetail(
+async function pruneDetail(
   db: D1Database,
   today: string,
   sizeBytes: number | null,

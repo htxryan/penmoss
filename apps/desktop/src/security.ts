@@ -55,7 +55,7 @@ export const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
 ]);
 
 /** What a download's save dialog shows (Electron's `SaveDialogOptions`, the parts used here). */
-export interface DownloadDialog {
+interface DownloadDialog {
   readonly title: string;
   readonly defaultPath: string;
   readonly filters?: { name: string; extensions: string[] }[];
@@ -85,7 +85,7 @@ export function downloadDialog(fileName: string, downloads: string): DownloadDia
 }
 
 /** The parts of an IPC event that say where it came from. */
-export interface IpcSource {
+interface IpcSource {
   readonly senderFrame: { readonly url: string } | null;
   readonly sender: { readonly mainFrame: unknown };
 }

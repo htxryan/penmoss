@@ -52,7 +52,7 @@ export {
 export { checkWords, fitWords, noteWords, repositoryName, repositoryWords } from './owner-words';
 
 /** What the page is told about a notebook: never its token. */
-export interface GitNotebookView {
+interface GitNotebookView {
   readonly localId: string;
   readonly notebookId: string;
   readonly salt?: string;
@@ -97,7 +97,7 @@ export type GitAnswer<T> =
  * but `remoteHead`, which only the CLI's sync asks. A method added to GitTransport fails to
  * compile here until it is listed, or named as one the page never calls.
  */
-export const TRANSPORT_OPS = [
+const TRANSPORT_OPS = [
   'fetch',
   'list',
   'sizes',
@@ -109,7 +109,7 @@ export const TRANSPORT_OPS = [
   'readDir',
   'maintain',
 ] as const satisfies readonly TransportMethod[];
-export type TransportOp = (typeof TRANSPORT_OPS)[number];
+type TransportOp = (typeof TRANSPORT_OPS)[number];
 type TransportMethod = Exclude<keyof GitTransport, 'root' | 'remoteHead'>;
 const EVERY_METHOD_LISTED: Exclude<TransportMethod, TransportOp> extends never ? true : never =
   true;
@@ -146,7 +146,7 @@ export interface GitNotebooksOptions {
 const SECRET = /^[A-Za-z0-9_.~+/=-]{8,1000}$/;
 const TOKEN_USER = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 /** A note a sync would delete for good, as Settings lists it before confirming again (A855). */
-export interface PendingPurge {
+interface PendingPurge {
   readonly id: string;
   /** Its title at head ('' for none). */
   readonly title: string;

@@ -33,7 +33,7 @@ import {
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 /** One GitHub account kept on this Mac (A1617): what the page may know of it. */
-export interface GitHubAccountStatus {
+interface GitHubAccountStatus {
   readonly login: string | null;
   /** The first account: Send Feedback files with it. */
   readonly primary: boolean;
@@ -42,7 +42,7 @@ export interface GitHubAccountStatus {
 }
 
 /** What the page may know of the token. */
-export interface GitHubTokenStatus {
+interface GitHubTokenStatus {
   /** Every account kept, the first (Send Feedback's) first (A1617). */
   readonly accounts: readonly GitHubAccountStatus[];
   readonly saved: boolean;
@@ -57,7 +57,7 @@ export interface GitHubTokenStatus {
 }
 
 /** What Save answered. */
-export type SaveAnswer =
+type SaveAnswer =
   | { readonly ok: true; readonly status: GitHubTokenStatus; readonly note: string | null }
   | { readonly ok: false; readonly message: string };
 
@@ -82,7 +82,7 @@ interface Kept {
   readonly account: Account;
 }
 
-export interface GitHubTokenOptions {
+interface GitHubTokenOptions {
   readonly dir: string;
   /** Encrypts with the Keychain's key; null when it cannot (then nothing is kept). */
   readonly seal: (plain: string) => Promise<string | null>;

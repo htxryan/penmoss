@@ -22,7 +22,7 @@ export interface Deps {
 }
 
 /** How long an answer is kept in the Cache API. */
-export const CACHE_SECONDS = 300;
+const CACHE_SECONDS = 300;
 
 const headers = {
   'cache-control': 'private, no-store',
@@ -43,7 +43,7 @@ const CSP =
   "connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 /** The replay's frame: the one response the page itself may frame, and nothing else may. */
-export const FRAME_PATH = '/player';
+const FRAME_PATH = '/player';
 const FRAME_CSP = CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
 
 async function api(

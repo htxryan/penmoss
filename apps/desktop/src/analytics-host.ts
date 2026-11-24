@@ -36,7 +36,7 @@ export type HostCall =
   | { readonly op: 'close' };
 
 /** What main tells it without waiting for an answer. */
-export type HostNote =
+type HostNote =
   | { readonly op: 'insert'; readonly events: readonly Inserted[] }
   | { readonly op: 'markSent'; readonly ids: readonly number[]; readonly at: number }
   | { readonly op: 'markRefused'; readonly ids: readonly number[] }
@@ -74,7 +74,7 @@ export interface HostOptions {
 }
 
 /** How many events may wait for a busy database before the oldest are dropped. */
-export const MAX_BUFFERED = 20_000;
+const MAX_BUFFERED = 20_000;
 
 const yieldNow = () => new Promise<void>((resolve) => setImmediate(resolve));
 

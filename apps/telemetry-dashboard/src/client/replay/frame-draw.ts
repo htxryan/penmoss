@@ -1547,7 +1547,7 @@ function titledDialog(draw: Draw, dialog: FrameDialog, depth: number): string {
   );
 }
 
-export function dialogMarkup(draw: Draw, dialog: FrameDialog, depth: number): string {
+function dialogMarkup(draw: Draw, dialog: FrameDialog, depth: number): string {
   if (dialog.name === 'search') return searchDialog(draw, dialog);
   if (PICKERS.has(dialog.name)) return picker(draw, dialog, depth);
   if (dialog.name === 'confirm') return confirmDialog(dialog);
@@ -1602,7 +1602,7 @@ export function frameMarkup(frame: Frame, data: FrameData): string {
 }
 
 /** The theme a frame is drawn in: the recorded built-in one, or Penmoss. */
-export function themeOf(frame: Frame) {
+function themeOf(frame: Frame) {
   return BUILT_IN_THEMES.find((theme) => theme.id === frame.theme) ?? PENMOSS;
 }
 

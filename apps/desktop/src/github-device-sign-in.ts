@@ -29,7 +29,7 @@ export type SignInState =
   | { readonly state: 'cancelled' }
   | { readonly state: 'failed'; readonly message: string };
 
-export interface DeviceSignInOptions {
+interface DeviceSignInOptions {
   readonly fetch: SignInFetch;
   /** Penmoss's OAuth app; null in a build without one (Sign in is not offered then). */
   readonly clientId: string | null;

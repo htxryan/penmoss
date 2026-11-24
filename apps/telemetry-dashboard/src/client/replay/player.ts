@@ -22,7 +22,7 @@ import {
 } from './state';
 
 /** The speeds, in order. */
-export const SPEEDS = [1, 2, 4] as const;
+const SPEEDS = [1, 2, 4] as const;
 /** How long "Skipped a … Pause" shows. */
 const SKIP_SHOWN_MS = 2000;
 /** The frame is at most this share of the window's height (O3). */
@@ -78,7 +78,7 @@ const BLOCK_KINDS: Readonly<Record<string, string>> = {
   hr: 'Divider',
   other: 'Other',
 };
-export function blockKind(token: string | undefined): string | undefined {
+function blockKind(token: string | undefined): string | undefined {
   if (!token) return undefined;
   const heading = token.match(/^h([1-6])\b/);
   if (heading) return `Heading ${heading[1]}`;
@@ -90,7 +90,7 @@ const plural = (n: number, one: string, many = `${one}s`) =>
   `${fullNumber(n)} ${n === 1 ? one : many}`;
 
 /** One line of the As Recorded list: its label, its value and a muted line under it. */
-export interface RecordedLine {
+interface RecordedLine {
   readonly label: string;
   readonly value: string;
   readonly sub?: string;

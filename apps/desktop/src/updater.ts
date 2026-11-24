@@ -62,7 +62,7 @@ export const FEED_URLS: Readonly<Record<UpdateChannel, string>> = {
 };
 
 /** electron-updater's channel for each: its feed is `<channel>-mac.yml`. */
-export const UPDATER_CHANNELS: Readonly<Record<UpdateChannel, string>> = {
+const UPDATER_CHANNELS: Readonly<Record<UpdateChannel, string>> = {
   stable: 'latest',
   alpha: 'alpha',
 };
@@ -83,7 +83,7 @@ export function point(updater: Updater, channel: UpdateChannel): void {
   updater.allowDowngrade = false;
 }
 
-export type UpdatePhase = DesktopUpdatePhase;
+type UpdatePhase = DesktopUpdatePhase;
 
 /** What Settings → Updates and the update notice show: the page's own type (ipc-contract.ts). */
 export type UpdateState = DesktopUpdateState;
@@ -130,7 +130,7 @@ export interface Updater {
   on(event: 'update-downloaded', listener: (info: { version: string }) => void): unknown;
 }
 
-export interface UpdatesOptions {
+interface UpdatesOptions {
   readonly mode: () => UpdateMode;
   /** This app's version (`app.getVersion()`). */
   readonly version?: () => string;

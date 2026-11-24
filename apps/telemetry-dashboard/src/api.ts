@@ -29,20 +29,20 @@ export const DEFAULT_KEYS: ReadonlyMap<string, readonly string[]> = new Map(
 );
 
 /** First Run and Paths read events, not rollups: at most this many days. */
-export const RAW_DAYS = 90;
+const RAW_DAYS = 90;
 /** A path seen in fewer sessions than this is never shown. */
 export const MIN_SESSIONS = 5;
 /** Sessions' list: this many a page (sessions.sql's LIMIT). */
-export const SESSIONS_PAGE = 50;
+const SESSIONS_PAGE = 50;
 /** A session's timeline shows at most this many events (session.sql reads one more). */
-export const MAX_EVENTS = 5000;
+const MAX_EVENTS = 5000;
 /** Rows written a day on D1's Workers Free plan (D20): the Health view's line. */
-export const DAILY_WRITE_CAP = 100_000;
+const DAILY_WRITE_CAP = 100_000;
 /**
  * Kinds Paths never starts from or steps through, as next.sql and starts.sql leave them out:
  * scroll positions (PEN-175) and session detail (PEN-177), which say where, not what was done.
  */
-export const NOT_PATH_KINDS: readonly string[] = ['scroll', 'note', 'input', 'tree'];
+const NOT_PATH_KINDS: readonly string[] = ['scroll', 'note', 'input', 'tree'];
 
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9.]{1,20})?$/;
 const FILTERS = ['days', 'client', 'actor', 'channel', 'version', 'start'] as const;

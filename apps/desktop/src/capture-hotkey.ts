@@ -15,7 +15,7 @@ import { recordSetting } from './setting-events';
 import { refreshTray } from './tray-control';
 import { showCapture } from './windows/capture-window';
 
-export interface HotkeyState {
+interface HotkeyState {
   readonly accelerator: string;
   readonly registered: boolean;
   /** False on a Mac: registered may still mean another app takes the keys first. */

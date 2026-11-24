@@ -56,14 +56,14 @@ export function cliScript(cli: readonly string[]): string {
 /** The CLI's rule for a notebook's name. */
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 /** The agent the app connects to every one of its notebooks by itself (D52). */
-export const AUTOMATIC_AGENT = 'Agent';
+const AUTOMATIC_AGENT = 'Agent';
 /** How long an automatic clone that could not be made waits before the next try (D52). */
 const RETRY_MS = 5 * 60_000;
 /** The same while the target holds no notebook yet: the app's first push is on its way. */
 const NOT_THERE_RETRY_MS = 15_000;
 
 /** How to give an agent an MCP server: Claude Code's commands and Codex's lines. */
-export interface AgentServerLines {
+interface AgentServerLines {
   /** The MCP server's name in the agent's configuration. */
   readonly server: string;
   /** `claude mcp add …`, to paste into a terminal. */
@@ -80,7 +80,7 @@ export interface AgentServerLines {
 }
 
 /** One agent connected to a git notebook: its clone's name and how to give it the MCP server. */
-export interface LocalAgentView extends AgentServerLines {
+interface LocalAgentView extends AgentServerLines {
   /** The clone's name in `~/.penmoss` (`penmoss … --notebook <name>`). */
   readonly name: string;
   /** The agent's name, as History and Agent activity show it. */
@@ -90,7 +90,7 @@ export interface LocalAgentView extends AgentServerLines {
 }
 
 /** The `penmoss` command on this Mac. */
-export interface CliView {
+interface CliView {
   /** Where the app writes it: `~/.local/bin/penmoss`. */
   readonly path: string;
   /**
@@ -117,7 +117,7 @@ export type OwnerCheck = (
   words: string,
 ) => Promise<{ readonly ok: true } | { readonly ok: false; readonly message: string }>;
 
-export interface LocalAgentsOptions {
+interface LocalAgentsOptions {
   /** The command that runs this app as the CLI: its binary, the app path in development, the switch. */
   readonly cli: readonly string[];
   /**
@@ -216,7 +216,7 @@ const ofNotebook = (entry: GitNotebookEntry, clone: NotebookEntry) =>
  * several of one notebook, every one after the first added (the one `penmoss mcp` serves,
  * A1097's order), so agents already using it keep it.
  */
-export function automaticToRemove(
+function automaticToRemove(
   app: readonly GitNotebookEntry[],
   clones: readonly NotebookEntry[],
 ): NotebookEntry[] {

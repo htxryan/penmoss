@@ -10,7 +10,7 @@ import { openInMain } from './windows/main-window';
 /** The clipboard is written only just after a key press or click, or a menu command (A224). */
 export const clipboardGate = new ClipboardGate();
 
-export function sendMenuCommand(id: string, accelerator: string | null): void {
+function sendMenuCommand(id: string, accelerator: string | null): void {
   // Not while the windows store and reopen for a new title bar (A724).
   if (state.holdingInput) return;
   // A menu click is a user's choice the page never sees: its copy command may write.

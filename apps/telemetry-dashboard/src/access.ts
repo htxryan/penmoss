@@ -22,7 +22,7 @@ export interface AccessKey extends JsonWebKey {
 /** Fetches the team's signing keys from `url`. Tests pass their own. */
 export type FetchCerts = (url: string) => Promise<{ keys: AccessKey[] }>;
 
-export interface AccessClaims {
+interface AccessClaims {
   readonly aud: string | string[];
   readonly iss: string;
   readonly exp: number;
@@ -41,7 +41,7 @@ const REFETCH_AFTER_MS = 60_000;
 /** Clock difference allowed for nbf. */
 const SKEW_S = 60;
 
-export const fetchCertsOverNetwork: FetchCerts = async (url) => {
+const fetchCertsOverNetwork: FetchCerts = async (url) => {
   const response = await fetch(url, { headers: { accept: 'application/json' } });
   if (!response.ok) throw new Error(`Access certs: ${response.status}`);
   const certs: unknown = await response.json();
