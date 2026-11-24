@@ -34,6 +34,7 @@ import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
+import app.penmoss.ui.common.Tip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -177,14 +178,17 @@ fun SymbolsScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Add ▾ (A1632): a symbol, or a list item the list does not have yet.
-            Box {
+            // Add ▾ (A1632): a symbol, or a list item the list does not have yet. Its tooltip is
+            // the Mac's, the name Search Settings finds it by (PEN-10).
+            Box(Modifier.settingRow("add-a-symbol-or-list-item")) {
                 var adding by remember { mutableStateOf(false) }
-                OutlinedButton(
-                    onClick = trackedClick("settings.symbols.add") { adding = true },
-                    enabled = enabled && symbols.size < LineSymbols.MAX,
-                    modifier = Modifier.testTag("symbol-add"),
-                ) { Text("+ Add ▾") }
+                Tip("Add a Symbol or List Item") {
+                    OutlinedButton(
+                        onClick = trackedClick("settings.symbols.add") { adding = true },
+                        enabled = enabled && symbols.size < LineSymbols.MAX,
+                        modifier = Modifier.testTag("symbol-add"),
+                    ) { Text("+ Add ▾") }
+                }
                 DropdownMenu(expanded = adding, onDismissRequest = { adding = false }) {
                     DropdownMenuItem(
                         text = { Text("Symbol") },
@@ -210,7 +214,12 @@ fun SymbolsScreen(
             }
             Text("${symbols.size} of ${LineSymbols.MAX}", Modifier.testTag("symbol-count"), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        // In the Mac's order: Change Their Shortcuts, then Restore Defaults.
         Row(Modifier.padding(horizontal = 8.dp)) {
+            TextButton(
+                onClick = trackedClick("settings.symbols.shortcuts-link", onShortcuts),
+                modifier = Modifier.settingRow("change-their-shortcuts").testTag("symbol-shortcuts"),
+            ) { Text("Change Their Shortcuts") }
             // Quiet, since it replaces the list (PEN-146).
             TextButton(
                 onClick = trackedClick("settings.symbols.restore-defaults") {
@@ -220,7 +229,6 @@ fun SymbolsScreen(
                 enabled = enabled && custom,
                 modifier = Modifier.settingRow("restore-default-symbols").testTag("symbol-reset"),
             ) { Text("Restore Defaults") }
-            TextButton(onClick = trackedClick("settings.symbols.shortcuts-link", onShortcuts), modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Shortcuts") }
         }
         Text(
             said ?: "A glyph is a symbol or emoji without letters, digits or markdown characters.",
