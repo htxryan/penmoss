@@ -110,7 +110,6 @@ export function AgentActivitySettings() {
       <SettingsHeader
         id={`${id}-h`}
         title="Agent Activity"
-        intro="What agents changed in your notebooks in the last 30 days, with Undo."
         actions={
           <div className="nset-filters" data-setting="agent-activity-filters">
             {sources.length > 1 ? (

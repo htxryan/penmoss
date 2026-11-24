@@ -59,11 +59,7 @@ export function QuickCaptureSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="quick-capture-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Quick Capture"
-        intro="Jot something down from anywhere without opening a note."
-      />
+      <SettingsHeader id={`${id}-h`} title="Quick Capture" />
       <GroupHead id={`${id}-saves`}>Saves To</GroupHead>
       <div
         className="lf-group"

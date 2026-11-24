@@ -60,7 +60,7 @@ export function AppearanceSettings() {
         aria-labelledby={`${id}-h`}
         data-testid="appearance-settings"
       >
-        <SettingsHeader id={`${id}-h`} title="Appearance" intro="Customize a theme of your own." />
+        <SettingsHeader id={`${id}-h`} title="Appearance" />
         <ThemeEditor theme={state.theme} themes={themes} onDone={() => setEditing(null)} />
       </section>
     );
@@ -88,11 +88,7 @@ export function AppearanceSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="appearance-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Appearance"
-        intro="The theme, fonts and tooltips. Every theme has a light and a dark variant."
-      />
+      <SettingsHeader id={`${id}-h`} title="Appearance" />
 
       <PreviewTabs
         name="Appearance"

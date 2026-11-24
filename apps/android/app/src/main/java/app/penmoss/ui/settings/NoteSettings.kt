@@ -110,7 +110,6 @@ fun NoteSettingsScreen(
                 NotePreview(notePreview, noteFont, noteSize)
                 return@Column
             }
-            Help("How a note is laid out.")
             GroupTitle("Layout", deviceOnly = true)
             Text("Note Width", Modifier.settingRow("note-width").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
             Segments(

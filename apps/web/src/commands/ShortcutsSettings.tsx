@@ -353,7 +353,6 @@ export function ShortcutsSettings() {
         title="Keyboard Shortcuts"
         // Kept for the Macs, apart from the phones (PEN-156, A1605).
         beside={<ScopeMarker many kind="platform" />}
-        intro="A shortcut needs ⌘, Ctrl or Alt, so typing never runs a command."
         actions={resetToDefaults('top')}
       />
       {clashes.length > 0 ? (

@@ -156,7 +156,6 @@ fun AiDescriptionsScreen(
     var describeSaid by remember { mutableStateOf<String?>(null) }
     var describing by remember { mutableStateOf(false) }
     SectionScreen("AI Descriptions", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
-        Help("Writes a short description into each note’s frontmatter, so agents can tell what a note holds before reading it. The closest notebook, folder or note setting wins.")
         Text("Describe Notes", Modifier.settingRow("describe-notes").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
         Segments(listOf("on" to "On", "off" to "Off"), if (global) "on" else "off", enabled, "aiGlobal", event = "settings.ai.global") { onGlobal(it == "on") }
         Help(

@@ -98,7 +98,6 @@ fun SymbolsScreen(
         return problem
     }
     SectionScreen("Symbols", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
-        Help(modifier = Modifier.settingRow("symbols"), text = "Type a symbol at the start of a line to mark it, as plain text (★ Call the bank), so agents and the repository see it too. Checkbox and list items are symbols too: their key turns the line into one. Up to ${LineSymbols.MAX}. Changes sync to your other devices.")
         ReorderableColumn(
             items = symbols.mapIndexed { index, symbol -> index to symbol },
             key = { (_, symbol) -> symbol.kind?.let { "kind:$it" } ?: symbol.glyph },

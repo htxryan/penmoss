@@ -1,5 +1,5 @@
-// Every Settings page's header (A1560, Ryan's chosen design): "Settings (i)", the page's title
-// large and one line; scrolled past the title, the row pins with the title small after a slash.
+// Every Settings page's header (A1560, Ryan's chosen design): "Settings (i)" and the page's title
+// large, with no subtitle (PEN-182); scrolled past the title, the row pins with the title small after a slash.
 import { expect, type Page, test } from './fixtures';
 import { collectErrors } from './support/app';
 
@@ -16,9 +16,8 @@ test('the title shrinks into a pinned bar as the page scrolls, and back at the t
   await page.goto('/settings/appearance');
   const title = page.getByRole('heading', { level: 1, name: 'Appearance' });
   await expect(title).toBeVisible();
-  await expect(page.getByTestId('settings-intro')).toHaveText(
-    'The theme, fonts and tooltips. Every theme has a light and a dark variant.',
-  );
+  // No subtitle under the title: Ryan finds them noise (PEN-182).
+  await expect(page.getByTestId('settings-intro')).toHaveCount(0);
   // No "Settings" title over the menu: Search Settings is the menu's first row.
   await expect(page.locator('.settings-title')).toHaveCount(0);
   await expect(bar(page)).toContainText('Settings');
@@ -128,15 +127,8 @@ test('every page and the search results open with the one header', async ({ page
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 }), path).toHaveText(name);
     await expect(bar(page), path).toBeVisible();
-    // One line under the title, at most.
-    const intro = page.getByTestId('settings-intro');
-    if ((await intro.count()) > 0) {
-      const lines = await intro.evaluate((element) => {
-        const height = parseFloat(getComputedStyle(element).lineHeight);
-        return Math.round(element.getBoundingClientRect().height / height);
-      });
-      expect(lines, path).toBe(1);
-    }
+    // No subtitle under the title (PEN-182): only a page's live state goes there.
+    await expect(page.getByTestId('settings-intro'), path).toHaveCount(0);
   }
   await page.getByRole('searchbox', { name: 'Search Settings' }).fill('font');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Search Results');

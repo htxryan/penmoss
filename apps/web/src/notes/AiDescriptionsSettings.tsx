@@ -104,11 +104,7 @@ export function AiDescriptionsSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="ai-descriptions-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="AI Descriptions"
-        intro="Writes a short description into each note’s frontmatter, so agents can tell what a note holds before reading it. The closest notebook, folder or note setting wins."
-      />
+      <SettingsHeader id={`${id}-h`} title="AI Descriptions" />
       <div className="lf-group">
         <SettingRow
           setting="describe-notes"

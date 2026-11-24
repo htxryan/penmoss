@@ -92,16 +92,7 @@ export function MeaningSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="meaning-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Semantic Search"
-        intro={
-          <>
-            Search finds notes by what they mean as well as by their words, here and for agents’{' '}
-            <code>penmoss</code>.
-          </>
-        }
-      />
+      <SettingsHeader id={`${id}-h`} title="Semantic Search" />
       <div className="lf-group">
         <SettingRow
           setting="semantic-search"

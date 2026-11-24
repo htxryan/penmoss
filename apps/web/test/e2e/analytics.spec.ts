@@ -247,9 +247,7 @@ test.describe('Settings → Privacy', () => {
 
     const section = page.getByTestId('privacy-settings');
     await expect(section.getByRole('heading', { level: 1 })).toHaveText('Privacy');
-    await expect(section.getByTestId('settings-intro')).toHaveText(
-      'Penmoss records what you do in it, by name, on this Mac, and never anything you write or name.',
-    );
+    await expect(section.getByTestId('settings-intro')).toHaveCount(0);
     await expect(section.locator('.lf-group > [data-setting]')).toHaveCount(4);
     expect(
       await section

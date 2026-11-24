@@ -59,11 +59,7 @@ export function SidebarSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="settings-sidebar"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Sidebar"
-        intro="What the sidebar shows, and in what order."
-      />
+      <SettingsHeader id={`${id}-h`} title="Sidebar" />
       <PreviewTabs
         name="Sidebar"
         testId="sidebar-tabs"

@@ -128,11 +128,7 @@ export function SymbolsSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="symbols-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Symbols"
-        intro="A symbol at the start of a line marks it; a Checkbox or list item makes the line one."
-      />
+      <SettingsHeader id={`${id}-h`} title="Symbols" />
       <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
         {symbols.map((symbol, index) => {
           const grip = (

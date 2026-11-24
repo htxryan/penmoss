@@ -85,9 +85,7 @@ test('Privacy is the last page of This Mac; Analytics Data pages the record; Off
 
   const section = page.getByTestId('privacy-settings');
   await expect(section.getByRole('heading', { level: 1 })).toHaveText('Privacy');
-  await expect(section.getByTestId('settings-intro')).toHaveText(
-    'Penmoss records what you do in it, by name, on this Mac, and never anything you write or name.',
-  );
+  await expect(section.getByTestId('settings-intro')).toHaveCount(0);
   expect(
     await section
       .locator('.lf-group > [data-setting], [data-setting="advanced"]')

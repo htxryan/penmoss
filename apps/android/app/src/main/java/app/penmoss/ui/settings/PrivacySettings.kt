@@ -139,7 +139,6 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
     // A search result inside Advanced opens it first (AC48).
     var advanced by rememberSaveable { mutableStateOf(mark.target in LIMIT_ROW_IDS.values || mark.target == "reset-to-defaults") }
     SectionScreen(AnalyticsCopy.text("privacy.title"), actions.onBack) {
-        Help(AnalyticsCopy.text("privacy.lead"), Modifier.testTag("privacyLead"))
         ListItem(
             headlineContent = { Text(AnalyticsCopy.text("privacy.share.label")) },
             supportingContent = { Text(AnalyticsCopy.text("privacy.share.hint")) },

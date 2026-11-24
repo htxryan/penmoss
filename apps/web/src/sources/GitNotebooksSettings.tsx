@@ -404,7 +404,6 @@ function AllNotebooks({
       <SettingsHeader
         id={headingId}
         title="All Notebooks"
-        intro="The notebooks on this Mac, and what goes between them."
         actions={
           <button
             data-event="settings.git-notebooks.add"
