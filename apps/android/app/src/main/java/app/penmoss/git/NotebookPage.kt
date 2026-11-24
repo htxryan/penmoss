@@ -426,9 +426,12 @@ private fun RemoveDialog(row: GitRow, actions: GitNotebooksActions, onDismiss: (
             val unpushed = pending != 0
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (unpushed) TextButton(onClick = trackedClick("settings.git-notebooks.remove.push-first", onPushFirst), Modifier.testTag("gitRemovePushFirst")) { Text("Push First") }
-                TextButton(onClick = trackedClick(if (unpushed) "settings.git-notebooks.remove.anyway" else "settings.git-notebooks.remove.confirm", tracked.done(onRemove)), Modifier.testTag("gitRemoveConfirm")) { Text(if (unpushed) "Remove Anyway" else "Remove") }
+                TextButton(onClick = trackedClick(if (unpushed) "settings.git-notebooks.remove.anyway" else "settings.git-notebooks.remove.confirm", tracked.done(onRemove)), Modifier.testTag("gitRemoveConfirm")) {
+                    Text(if (unpushed) "Remove Anyway" else "Remove", color = MaterialTheme.colorScheme.error)
+                }
             }
         },
-        dismissButton = { TextButton(onClick = trackedClick("settings.git-notebooks.remove.keep", onDismiss)) { Text("Cancel") } },
+        // "Keep It", as the Mac's Remove asks (GitNotebooksSettings).
+        dismissButton = { TextButton(onClick = trackedClick("settings.git-notebooks.remove.keep", onDismiss)) { Text("Keep It") } },
     )
 }

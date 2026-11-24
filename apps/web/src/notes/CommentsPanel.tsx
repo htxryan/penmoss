@@ -157,7 +157,7 @@ function SendTo({
   );
   return (
     <span className="comment-send">
-      <label htmlFor={id}>Send to</label>
+      <label htmlFor={id}>Send To</label>
       <Select
         id={id}
         ref={field}
@@ -169,7 +169,7 @@ function SendTo({
           onChange(chosen ? targetOf(chosen) : null);
         }}
       >
-        <option value="">{value && !draft ? 'Stop sending' : 'Nobody'}</option>
+        <option value="">{value && !draft ? 'Stop Sending' : 'Nobody'}</option>
         {value && !sessions.some((session) => session.key === value.session) ? (
           // Sent to a session no longer offered (not seen for a week): it stays named.
           <option value={value.session} disabled>
@@ -465,7 +465,7 @@ export function CommentThread({
                 data-testid="comment-send-again"
                 onClick={() => setAgain(true)}
               >
-                Send to again
+                Send Again
               </button>
             </>
           ) : null}

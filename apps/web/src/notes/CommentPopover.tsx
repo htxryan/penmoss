@@ -185,7 +185,7 @@ export function CommentPopover({
       onKeyDown={onKeyDown}
     >
       <DialogClose
-        label="Close"
+        label="Close Comment"
         event="comments.popover.close"
         className="comment-popover-close"
         size={14}

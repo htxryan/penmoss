@@ -88,7 +88,7 @@ import { SettingsHeader } from '../pages/SettingsHeader';
 import { ConfirmBlock } from '../shell/ConfirmBlock';
 import { withoutRecording } from '../analytics/track';
 import { useNow } from '../shell/use-now';
-import { counted, pluralise } from '@penmoss/core/words';
+import { counted } from '@penmoss/core/words';
 
 const when = (at: number | null) =>
   at === null
@@ -1053,7 +1053,7 @@ function OverviewTab({
           setting="notebook-notes"
           label="Notes"
           testId="git-note-count"
-          help={`${notes.toLocaleString()} ${pluralise(notes, 'note')}`}
+          help={counted(notes, 'note')}
         />
         <NotebookAiRow source={source} />
         {state.all.length > 1 ? (

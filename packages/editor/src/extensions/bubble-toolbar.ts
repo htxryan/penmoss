@@ -93,6 +93,10 @@ export function shortcutLabel(keys: string): string {
  * and phone (`tel:`) links as written, `example.com` with https, a bare email address with
  * `mailto:`. Anything else (other schemes, plain words) is refused: null.
  */
+/** What the link field says when `normaliseHref` refuses an address, on the Mac and the phone. */
+export const LINK_REFUSED =
+  'Enter a web address (https://…), an email address or a phone link (tel:…).';
+
 export function normaliseHref(input: string): string | null {
   const value = input.trim();
   if (!value) return null;
@@ -560,8 +564,7 @@ export class SelectionToolbar {
     }
     const href = normaliseHref(raw);
     if (!href) {
-      this.linkError.textContent =
-        'Enter a web address (https://…), an email address or a phone link (tel:…).';
+      this.linkError.textContent = LINK_REFUSED;
       return;
     }
     this.backToNote();

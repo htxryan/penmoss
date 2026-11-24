@@ -444,7 +444,7 @@ private fun ThreadCard(
         }
         // Not sent (the session is gone, A1062): pick another, as the Mac offers.
         if (editable && NoteComments.sendAgain(thread)) {
-            TextButton(onClick = trackedClick("comments.send-again", onSendTo), modifier = Modifier.testTag("commentSendAgain-${thread.id}")) { Text("Send to again") }
+            TextButton(onClick = trackedClick("comments.send-again", onSendTo), modifier = Modifier.testTag("commentSendAgain-${thread.id}")) { Text("Send Again") }
         }
         thread.comments.forEachIndexed { index, comment ->
             if (index > 0) HorizontalDivider()
@@ -606,7 +606,7 @@ internal fun SendToDialog(
                 }
                 item(key = "none") {
                     TargetRow(
-                        if (sent) "Stop sending" else "Nobody",
+                        if (sent) "Stop Sending" else "Nobody",
                         selected = current == null,
                         dimmed = false,
                         tag = "sendToNone",

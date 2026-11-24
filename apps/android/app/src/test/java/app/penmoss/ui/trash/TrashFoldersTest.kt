@@ -77,6 +77,12 @@ class TrashFoldersTest {
 
     /** #137 (review N5): TalkBack hears "(agent)" for the agent's ✦, and a folder's own name as it is. */
     @Test
+    fun aFolderDeletedByAClockAheadNeverShowsMoreThanThirtyDays() {
+        val ahead = trashFolders(listOf(loose.copy(deletedAt = now + 5 * day)), { null }, now).single()
+        assertTrue(ahead.detail, ahead.detail.endsWith(" · 30 days left"))
+    }
+
+    @Test
     fun aFoldersDeleterIsSpokenAsTheNotesAre() {
         val shown = trashFolders(listOf(projects), mapOf("home" to "Home ✦")::get, now).single()
         assertTrue(shown.detail, shown.detail.endsWith(" from “Home ✦” by Claude Code ✦ · 28 days left"))

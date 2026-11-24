@@ -454,6 +454,7 @@ describe('links and navigation', () => {
     expect(appPath(`app://penmoss/notes/${ID}?heading=Plan`)).toBe(`/notes/${ID}?heading=Plan`);
     expect(isExternalUrl('https://example.com')).toBe(true);
     expect(isExternalUrl('mailto:a@b.c')).toBe(true);
+    expect(isExternalUrl('tel:+441234567890')).toBe(true);
     for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'smb://x/y', 'penmoss://x']) {
       expect(isExternalUrl(url)).toBe(false);
     }

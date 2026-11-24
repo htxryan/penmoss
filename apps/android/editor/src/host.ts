@@ -86,6 +86,7 @@ import {
   moveSelectedBlock,
   selectedTopLevelBlock,
   noteExtensions,
+  LINK_REFUSED,
   normaliseHref,
   pastePlainText,
   setNativeClipboard,
@@ -1713,7 +1714,7 @@ export class EditorHost {
     }
     const href = normaliseHref(raw);
     if (!href) {
-      this.notice(this.current?.noteId ?? null, 'Only web, mail and phone links can be added');
+      this.notice(this.current?.noteId ?? null, LINK_REFUSED);
       return;
     }
     const { empty } = editor.state.selection;

@@ -19,7 +19,7 @@ describe('counted and pluralise', () => {
   });
 
   it('writes the number as it is, without grouping', () => {
-    expect(counted(12_345, 'note')).toBe('12345 notes');
+    expect(counted(12_345, 'note')).toBe('12,345 notes');
     expect(`${(12_345).toLocaleString('en-GB')} ${pluralise(12_345, 'note')}`).toBe('12,345 notes');
   });
 

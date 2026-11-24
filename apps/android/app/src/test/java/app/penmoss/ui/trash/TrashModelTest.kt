@@ -332,4 +332,10 @@ class TrashModelTest {
         assertTrue(entries[1].detail, entries[1].detail.endsWith("goes for good today"))
         assertEquals("Untitled", trashEntries(listOf(app.penmoss.data.TrashRow("c", "", 0, 0, 0)), emptyList(), now).single().title)
     }
+
+    @Test
+    fun aNoteDeletedByAClockAheadNeverShowsMoreThanThirtyDays() {
+        val ahead = trashEntries(emptyList(), listOf(TrashListed("a", "A", now + 5 * day)), now).single()
+        assertTrue(ahead.detail, ahead.detail.endsWith("goes for good in 30 days"))
+    }
 }

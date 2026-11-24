@@ -62,7 +62,12 @@ export function Cheatsheet({
             <Icon name="keyboard" />
             Customise
           </button>
-          <DialogClose ref={close} label="Close" event="cheatsheet.close" onClose={onClose} />
+          <DialogClose
+            ref={close}
+            label="Close Keyboard Shortcuts"
+            event="cheatsheet.close"
+            onClose={onClose}
+          />
         </div>
       </div>
       {/* It scrolls on a short window: focusable, so the keyboard can scroll it too. */}
