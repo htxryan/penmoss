@@ -15,11 +15,11 @@ import {
   CHANNELS,
   CLIENTS,
   FIRSTRUN_STEPS,
-  INSTALL_PATTERN,
   KINDS,
-  SESSION_PATTERN,
   isCatalogued,
 } from '@penmoss/core/analytics';
+import { dayOf } from '@penmoss/telemetry/day';
+import { DAYS, INSTALL_HEX, SESSION_HEX, isDays, type Days } from '@penmoss/telemetry/params';
 import { runQuery, type QueryName, type QueryParams } from '@penmoss/telemetry/queries';
 import shortcutsContract from '../../android/contract/shortcuts-v1.json';
 
@@ -28,7 +28,6 @@ export const DEFAULT_KEYS: ReadonlyMap<string, readonly string[]> = new Map(
   shortcutsContract.commands.map((command) => [command.id, command.keys]),
 );
 
-export const DAYS = [7, 30, 90, 365, 395] as const;
 /** First Run and Paths read events, not rollups: at most this many days. */
 export const RAW_DAYS = 90;
 /** A path seen in fewer sessions than this is never shown. */
@@ -68,7 +67,7 @@ export const VIEWS = [
 export type View = (typeof VIEWS)[number];
 
 export interface Filters {
-  readonly days: (typeof DAYS)[number];
+  readonly days: Days;
   readonly client: string;
   readonly actor: string;
   readonly channel: string;
@@ -97,8 +96,9 @@ export function readFilters(url: URL, view: View): Filters {
   }
   const get = (key: string) => url.searchParams.get(key) ?? '';
   const days = Number(get('days') || 30);
-  if (!(DAYS as readonly number[]).includes(days))
-    throw new BadRequest('days is 7, 30, 90, 365 or 395');
+  if (!isDays(days)) {
+    throw new BadRequest(`days is ${DAYS.slice(0, -1).join(', ')} or ${DAYS.at(-1)}`);
+  }
   const version = get('version');
   if (version !== '' && !VERSION.test(version)) throw new BadRequest('version is x.y.z');
   const start = get('start');
@@ -109,7 +109,7 @@ export function readFilters(url: URL, view: View): Filters {
     }
   }
   const filters: Filters = {
-    days: days as Filters['days'],
+    days,
     client: oneOf('client', get('client'), CLIENTS),
     actor: oneOf('actor', get('actor'), ACTORS),
     channel: oneOf('channel', get('channel'), CHANNELS),
@@ -124,8 +124,8 @@ export function readFilters(url: URL, view: View): Filters {
   if (view === 'session') {
     const install = get('install');
     const session = get('session');
-    if (!INSTALL_PATTERN.test(install)) throw new BadRequest('install is 32 hex characters');
-    if (!SESSION_PATTERN.test(session)) throw new BadRequest('session is 16 hex characters');
+    if (!INSTALL_HEX.test(install)) throw new BadRequest('install is 32 hex characters');
+    if (!SESSION_HEX.test(session)) throw new BadRequest('session is 16 hex characters');
     return { ...filters, install, session };
   }
   return filters;
@@ -173,9 +173,6 @@ export function pathTree(start: string, rows: readonly Row[]): PathNode | null {
   return { event: start, sessions, share: 100, children: level(1, [], sessions) };
 }
 
-/** Today in UTC, YYYY-MM-DD. */
-const todayOf = (now: number) => new Date(now).toISOString().slice(0, 10);
-
 /** One view's data under `filters`, at time `now`. */
 export async function viewData(
   db: D1Database,
@@ -183,7 +180,7 @@ export async function viewData(
   filters: Filters,
   now: number,
 ): Promise<Record<string, unknown>> {
-  const params: QueryParams = { ...filters, today: todayOf(now) };
+  const params: QueryParams = { ...filters, today: dayOf(now) };
   const run = (name: QueryName, overrides: Partial<QueryParams> = {}) =>
     runQuery<Row>(db, name, { ...params, ...overrides });
   const raw = { days: Math.min(filters.days, RAW_DAYS) };
@@ -324,7 +321,7 @@ export async function freshness(
     actor: '',
     channel: '',
     version: '',
-    today: todayOf(now),
+    today: dayOf(now),
   });
   const received = row?.['received_at'];
   const rolled = row?.['rolled_up_through'];

@@ -5,6 +5,7 @@
  * GET /api/<view> answers JSON from the named queries (api.ts), cached for 5 minutes, and
  * anything else is the page's static files. It only reads: GET and HEAD, nothing else.
  */
+import { dayOf } from '@penmoss/telemetry/day';
 import type { AccessEnv, AccessVerifier } from './access';
 import { BadRequest, VIEWS, freshness, readFilters, viewData, type View } from './api';
 
@@ -82,7 +83,7 @@ async function api(
   const body = JSON.stringify({
     view,
     filters,
-    today: new Date(now).toISOString().slice(0, 10),
+    today: dayOf(now),
     // When this answer was made (it is cached up to CACHE_SECONDS), the newest event, the rollup.
     asOf: now,
     ...fresh,

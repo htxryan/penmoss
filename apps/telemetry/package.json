@@ -6,7 +6,9 @@
   "type": "module",
   "description": "Usage analytics' ingest Worker (PEN-137) on t.penmoss.app: POST /v1/batch and /v1/forget into D1, a nightly rollup and prune, and the named queries",
   "exports": {
-    "./queries": "./src/queries.ts"
+    "./queries": "./src/queries.ts",
+    "./params": "./src/params.ts",
+    "./day": "./src/day.ts"
   },
   "scripts": {
     "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs worker) --inspector-port $(node ../../scripts/ports.mjs inspector)",

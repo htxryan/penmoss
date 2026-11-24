@@ -4,6 +4,7 @@
  * per install outside Sessions (PEN-173, A1661), which lists sessions and shows one session's
  * events and its install's sessions, the install shown only by its first 8 hex characters.
  */
+import { dayOf } from '@penmoss/telemetry/day';
 import {
   bars,
   formatNumber,
@@ -262,9 +263,7 @@ async function load<T>(path: string): Promise<T> {
 /** Every day of the period, oldest first, ending `today`. */
 function daysOf(today: string, days: number): string[] {
   const end = Date.parse(`${today}T00:00:00Z`);
-  return Array.from({ length: days }, (_, i) =>
-    new Date(end - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10),
-  );
+  return Array.from({ length: days }, (_, i) => dayOf(end - (days - 1 - i) * 86_400_000));
 }
 
 /** Rows of (day, key, value) as one series per key over `days`. */
