@@ -478,7 +478,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
             )
         }
     }
-    item { SheetHeading("Linked mentions ${linked.size}") }
+    item { SheetHeading("Linked Mentions ${linked.size}") }
     if (linked.isEmpty()) {
         item { EmptyLine(if (first) "Looking for links…" else "No other notes link here yet.", "noLinkedMentions") }
     }
@@ -494,7 +494,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
             }
         }
     }
-    item { SheetHeading("Unlinked mentions ${unlinked.size}") }
+    item { SheetHeading("Unlinked Mentions ${unlinked.size}") }
     if (unlinked.isEmpty()) {
         item { EmptyLine(if (first) "" else "No other notes mention this title.", "noUnlinkedMentions") }
     }

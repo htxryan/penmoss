@@ -99,11 +99,13 @@ export {
   setLineSymbols,
   symbolPickerOpen,
   toggleLineSymbol,
+  symbolGutterSlots,
+  toggleCheckbox,
   toggleListItem,
   toggleSymbolIn,
   type SymbolSource,
 } from './extensions/line-symbols';
-export { NOTE_LAYOUT_EVENT, noteLayoutChanged } from './extensions/symbol-overflow';
+
 export {
   ARROW_UP_INTO_TITLE,
   BACKSPACE_INTO_TITLE,

@@ -10,6 +10,8 @@ import androidx.navigation.compose.composable
 import app.penmoss.capture.RefusedCapturesScreen
 import app.penmoss.data.CapturesWaiting
 import app.penmoss.engine.bridge.ToEditor
+import app.penmoss.engine.settings.DadJokes
+import app.penmoss.engine.settings.JokeDeck
 import app.penmoss.engine.settings.QuickAccess
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.ui.Choosing
@@ -84,6 +86,10 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
         // The drawer's Notebooks (A1604): every notebook on this phone, with its badge.
         val notebookViews by graph.device.git.list.collectAsStateWithLifecycle()
         val badges by graph.device.git.badges.collectAsStateWithLifecycle(emptyMap())
+        // A dad joke for Home's heading (PEN-10): dealt each time Home shows, whether or not the
+        // setting shows it, as the Mac deals one each time its empty window shows (A1598).
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val joke = remember { JokeDeck(HomeJokes.store(context)).draw(DadJokes.ALL) }
         // The page shown (A1608): a notebook opens on its notes list; the drawer picks the others.
         var page by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(HomePage.NOTES) }
         HomeScreen(
@@ -113,6 +119,7 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 reordering = root.homeReordering,
                 shortcuts = HomeShortcuts.of(settingsNow.settings),
                 stopped = sync.stopped,
+                joke = joke.takeIf { DadJokes.on(settingsNow.settings) && it.isNotEmpty() },
             ),
             HomeActions(
                 onQuickAccessRemove = { id ->

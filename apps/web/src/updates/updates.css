@@ -114,8 +114,22 @@
   touch-action: none;
 }
 
+/*
+ * The sidebar's edge: the element stays inside the sidebar (3 px), and its ::before reaches 4 px
+ * past the edge, so the grip still straddles it (7 px, A1122) without the strip sticking out of
+ * the sidebar's box (PEN-182). Its line (::after) is where it was.
+ */
 .sidebar > .pane-resizer {
-  right: -4px;
+  right: 0;
+  width: 3px;
+}
+
+.sidebar > .pane-resizer::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 3px;
+  width: 4px;
 }
 
 /*

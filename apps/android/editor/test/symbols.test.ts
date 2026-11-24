@@ -153,7 +153,7 @@ describe('line symbols on the phone (T44, A747)', () => {
     expect(drawn?.classList.contains('pm-symbols-cell')).toBe(true);
   });
 
-  it('shows three symbols at most before a line’s text, then a "+N" chip (T52 item 3)', () => {
+  it('shows three symbols at most in the gutter, then a "+N" chip (T52 item 3, A1680)', () => {
     const { body } = opened([paragraph('★ ? ! 💡 → Everything')]);
     const drawn = body.querySelector<HTMLElement>('.pm-symbols')!;
     const shown = [...drawn.querySelectorAll<HTMLElement>(':scope > .pm-symbol')].filter(
@@ -166,6 +166,37 @@ describe('line symbols on the phone (T44, A747)', () => {
     expect(drawn.querySelector('.pm-symbols-label')?.textContent).toBe(
       '★ Important ? Question ! Follow-up 💡 Idea → Next: ',
     );
+  });
+
+  it('stacks a box and Strikethrough on a numbered item, its number kept (A1678, A1679)', () => {
+    vi.useFakeTimers();
+    const item = (text: string): JSONContent => ({ type: 'listItem', content: [paragraph(text)] });
+    const { host, sent, editor, body } = opened([
+      { type: 'orderedList', attrs: { start: 1 }, content: [item('★ First'), item('Second')] },
+    ]);
+    const prose = body.querySelector<HTMLElement>('.ProseMirror')!;
+    select(editor.view, at(host, 'First') + 2);
+    // The Checkbox (slot 1) and Strikethrough (slot 7) by default.
+    host.handle(message({ type: 'symbol', index: 0 }));
+    host.handle(message({ type: 'symbol', index: 6 }));
+    expect(lines(host)).toEqual(['☐ ★ ⊘ FirstSecond']);
+    const list = editor.state.doc.firstChild!;
+    expect(list.type.name).toBe('orderedList');
+    expect(list.childCount).toBe(2);
+    expect(body.querySelector('.pm-symbol-struck')?.textContent).toBe('First');
+    vi.runOnlyPendingTimers();
+    expect(states(sent).at(-1)).toMatchObject({ symbols: [0, 1, 6] });
+    // The gutter has room for the three, as on the Mac (A1680).
+    expect(prose.getAttribute('data-symbol-slots')).toBe('3');
+    // ⌃1 again ticks the box, keeping the number.
+    host.handle(message({ type: 'symbol', index: 0 }));
+    expect(lines(host)).toEqual(['☑ ★ ⊘ FirstSecond']);
+    expect(editor.state.doc.firstChild!.type.name).toBe('orderedList');
+  });
+
+  it('keeps no gutter in a note without symbols (A1680)', () => {
+    const { body } = opened([paragraph('Just words')]);
+    expect(body.querySelector('.ProseMirror')!.hasAttribute('data-symbol-slots')).toBe(false);
   });
 
   it('draws the list the app sends, and redraws when it changes, the note untouched', () => {

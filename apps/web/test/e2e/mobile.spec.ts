@@ -157,7 +157,7 @@ test('a phone reaches Settings → Notebooks, History and Trash from a note', as
 
   // Back to the note (the Mac app goes back to the note open before Settings, B13), then to
   // Trash through the note's sheet and the drawer.
-  await page.getByRole('link', { name: 'Notes', exact: true }).tap();
+  await page.locator('.settings-bar .back-link').tap();
   await expect(page).toHaveURL(ULID);
   await expect(page.getByTestId('note-title')).toHaveValue(title);
   // Opening a note closed the drawer.

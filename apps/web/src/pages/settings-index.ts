@@ -228,9 +228,14 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   at('ai-descriptions', 'AI Provider')('Model', {
     aliases: ['ai', 'claude', 'haiku', 'sonnet'],
   }),
-  at('ai-descriptions', 'Prompt')('Prompt', {
-    help: 'What the AI is asked, with tokens',
-    aliases: ['ai', 'description', 'claude', 'prompt'],
+  at('ai-descriptions', 'Note Prompt')('Note Prompt', {
+    help: 'What the AI is asked for each note, with tokens',
+    aliases: ['ai', 'description', 'claude', 'prompt', 'template'],
+  }),
+  // A tag's description (A1677): what the Tags page's Generate AI Description sends.
+  at('ai-descriptions', 'Tag Prompt')('Tag Prompt', {
+    help: 'What the AI is asked to generate a tag’s description, with tokens',
+    aliases: ['ai', 'claude', 'prompt', 'tags', 'tag description', 'template'],
   }),
   // All Notebooks.
   at('git-notebooks')('Add Notebook', { aliases: ['git', 'repository', 'clone', 'github'] }),

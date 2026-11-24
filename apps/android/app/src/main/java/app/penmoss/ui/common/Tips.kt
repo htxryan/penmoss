@@ -53,3 +53,18 @@ fun TipIconButton(
         }
     }
 }
+
+/**
+ * A long press shows [label] over [content], as the web's `title` on a button with a short name
+ * (Symbols' **Add**, whose tooltip is "Add a Symbol or List Item").
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Tip(label: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(label) } },
+        state = rememberTooltipState(),
+        modifier = modifier,
+    ) { content() }
+}

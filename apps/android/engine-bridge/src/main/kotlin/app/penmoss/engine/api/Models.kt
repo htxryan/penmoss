@@ -122,6 +122,11 @@ data class SyncTree(
      * account. Never from the Penmoss server.
      */
     val device: JsonObject? = null,
+    /**
+     * What each tag means (PEN-68, A1364): the notebook's `tagDescriptions`, tag → text, as the
+     * Tags screen shows them (A1677). Null from a page older than that: what Room has stands.
+     */
+    val tagDescriptions: JsonObject? = null,
 )
 
 /** A git notebook's device map after a read or a change (A1014). */
@@ -421,6 +426,13 @@ data class AiNoteStatus(val ready: Boolean = false, val effective: AiEffective =
     /** Where the setting comes from: `note`, `folder` (with its name), `notebook` or `global`. */
     @Serializable
     data class AiSource(val level: String = "global", val id: String? = null, val name: String? = null)
+}
+
+/** What Generate All covers (A1677): how many tags have no description, and how many there are. */
+@Serializable
+data class TagsToDescribe(val missing: Int = 0, val all: Int = 0) {
+    /** How many go: every tag when [replace], else those with no description. */
+    fun count(replace: Boolean): Int = if (replace) all else missing
 }
 
 /** What Describe Now came to: the description, or why not (`not-sent`, `offline`, `refused`…). */

@@ -34,6 +34,7 @@ import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
+import app.penmoss.ui.common.Tip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -98,14 +99,13 @@ fun SymbolsScreen(
         return problem
     }
     SectionScreen("Symbols", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
-        Help(modifier = Modifier.settingRow("symbols"), text = "Type a symbol at the start of a line to mark it, as plain text (★ Call the bank), so agents and the repository see it too. Checkbox and list items are symbols too: their key turns the line into one. Up to ${LineSymbols.MAX}. Changes sync to your other devices.")
         ReorderableColumn(
             items = symbols.mapIndexed { index, symbol -> index to symbol },
             key = { (_, symbol) -> symbol.kind?.let { "kind:$it" } ?: symbol.glyph },
             name = { (_, symbol) -> symbol.call },
             enabled = enabled,
             onMove = { from, to -> change(symbols.movedTo(from, to), "${symbols[from].call} is now symbol ${to + 1}.") },
-            modifier = Modifier.testTag("symbolList"),
+            modifier = Modifier.settingRow("symbols").testTag("symbolList"),
         ) { (index, symbol), _, handle ->
             val kind = symbol.kind
             if (kind != null) {
@@ -178,14 +178,17 @@ fun SymbolsScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Add ▾ (A1632): a symbol, or a list item the list does not have yet.
-            Box {
+            // Add ▾ (A1632): a symbol, or a list item the list does not have yet. Its tooltip is
+            // the Mac's, the name Search Settings finds it by (PEN-10).
+            Box(Modifier.settingRow("add-a-symbol-or-list-item")) {
                 var adding by remember { mutableStateOf(false) }
-                OutlinedButton(
-                    onClick = trackedClick("settings.symbols.add") { adding = true },
-                    enabled = enabled && symbols.size < LineSymbols.MAX,
-                    modifier = Modifier.testTag("symbol-add"),
-                ) { Text("+ Add ▾") }
+                Tip("Add a Symbol or List Item") {
+                    OutlinedButton(
+                        onClick = trackedClick("settings.symbols.add") { adding = true },
+                        enabled = enabled && symbols.size < LineSymbols.MAX,
+                        modifier = Modifier.testTag("symbol-add"),
+                    ) { Text("+ Add ▾") }
+                }
                 DropdownMenu(expanded = adding, onDismissRequest = { adding = false }) {
                     DropdownMenuItem(
                         text = { Text("Symbol") },
@@ -211,7 +214,12 @@ fun SymbolsScreen(
             }
             Text("${symbols.size} of ${LineSymbols.MAX}", Modifier.testTag("symbol-count"), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        // In the Mac's order: Change Their Shortcuts, then Restore Defaults.
         Row(Modifier.padding(horizontal = 8.dp)) {
+            TextButton(
+                onClick = trackedClick("settings.symbols.shortcuts-link", onShortcuts),
+                modifier = Modifier.settingRow("change-their-shortcuts").testTag("symbol-shortcuts"),
+            ) { Text("Change Their Shortcuts") }
             // Quiet, since it replaces the list (PEN-146).
             TextButton(
                 onClick = trackedClick("settings.symbols.restore-defaults") {
@@ -219,9 +227,8 @@ fun SymbolsScreen(
                     said = "Restored " + LineSymbols.DEFAULTS.joinToString(" ") { it.call } + "."
                 },
                 enabled = enabled && custom,
-                modifier = Modifier.settingRow("restore-default-symbols").testTag("symbol-reset"),
+                modifier = Modifier.settingRow("restore-defaults").testTag("symbol-reset"),
             ) { Text("Restore Defaults") }
-            TextButton(onClick = trackedClick("settings.symbols.shortcuts-link", onShortcuts), modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Keys…") }
         }
         Text(
             said ?: "A glyph is a symbol or emoji without letters, digits or markdown characters.",
@@ -257,12 +264,14 @@ fun SymbolsScreen(
     }
 }
 
-/** What a list item's key does (A1632), as its row says. */
+/** What a kind's key does (A1632, A1679), as its row says: the web's `KINDS` words. */
 internal fun kindDoes(kind: String): String = when (kind) {
     "checkbox" -> "☐ → ☑ → no box"
     "bullet" -> "Line ⇄ bulleted item"
+    "strike" -> "⊘ strikes the line through"
     else -> "Line ⇄ numbered item"
 }
+
 
 /** What a symbol's row says in place of its colour for an emoji, in its own colours (A1588). */
 internal const val OWN_COLOURS = "Its Own Colours"
@@ -295,8 +304,13 @@ private fun SymbolDialog(
     var refused by remember { mutableStateOf<String?>(null) }
     var picking by rememberSaveable { mutableStateOf(false) }
     val colours = LocalSymbolColours.current
-    val taken = others.map { LineSymbols.glyphKey(it.glyph) }.toSet()
-    val glyphProblem = LineSymbols.glyphProblem(glyph)
+    val taken = others.filter { it.kind == null }.map { LineSymbols.glyphKey(it.glyph) }.toSet()
+    // ☐, ☑ and ⊘ are how the Checkbox and Strikethrough are written on a line (A1678): a glyph
+    // of one's own may not take them while that kind is listed, unless it already had it.
+    val reserved = others.filter { it.kind != null }.flatMap { kind -> LineSymbols.kindGlyphs(kind.kind!!).map { it to kind.name } }.toMap()
+    fun usedBy(candidate: String): String? =
+        reserved[LineSymbols.glyphKey(candidate)]?.takeIf { LineSymbols.glyphKey(candidate) != LineSymbols.glyphKey(initial.glyph) || isNew }?.let { "Used by $it" }
+    val glyphProblem = usedBy(glyph) ?: LineSymbols.glyphProblem(glyph)
         ?: if (LineSymbols.glyphKey(glyph) in taken) "$glyph is already in the list" else null
     // An emoji comes in its own colours (A1588): no colour to choose, and the one it had is kept.
     val locked = ColourLock.isLocked(glyph)
@@ -304,7 +318,7 @@ private fun SymbolDialog(
         CharacterPicker(
             current = glyph,
             refusal = { candidate ->
-                if (LineSymbols.glyphKey(candidate) in taken) "Already in the list" else LineSymbols.glyphProblem(candidate)
+                usedBy(candidate) ?: if (LineSymbols.glyphKey(candidate) in taken) "Already in the list" else LineSymbols.glyphProblem(candidate)
             },
             onPick = {
                 glyph = it

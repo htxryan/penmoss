@@ -1,6 +1,7 @@
 /**
- * Analytics Data's entry in Settings' nav (PEN-137, ac36): under Privacy, set in so its icon sits
- * under the start of Privacy's label (privacy.css). `aria-current="page"` while it is open.
+ * Analytics Data's entry in Settings' nav (PEN-137, ac36): right after Privacy, flush with the
+ * other entries, its icon in their column as a notebook's is (Ryan, 21 Nov 2026).
+ * `aria-current="page"` while it is open.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { PRIVACY_DATA_ICON } from '../pages/settings-index';
@@ -13,7 +14,6 @@ export function PrivacyNavEntry({ current }: { readonly current: boolean }) {
   return (
     <a
       href={PRIVACY_DATA_PATH}
-      className="privacy-nav-entry"
       data-ui="item"
       data-event="privacy.view-data"
       data-testid="settings-privacy-data-entry"

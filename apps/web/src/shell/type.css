@@ -124,10 +124,19 @@
   /* A callout's type and title, in the interface font. */
   --pm-note-callout-type-size: 0.92rem;
   --pm-note-callout-title-size: 0.95rem;
-  /* The margin's symbols on a line, in em of that line, and their "+N". */
-  --pm-note-symbol-size: 0.9em;
+  /*
+   * The gutter's symbols (A1680): one size on every line, a little under the note's text, so
+   * the gutter's three slots hold a heading's too; their line height is the line's own, so they
+   * sit level with its text. Their "+N" in em of them.
+   */
+  --pm-note-symbol-size: calc(var(--pm-note-size, 16px) * 0.9);
+  --pm-note-symbol-leading: 1lh;
   --pm-note-symbol-more-size: 0.7em;
   --pm-note-symbol-badge-size: 0.6em;
+  /* A gutter slot in em of the note's text: a glyph's 1.1em and its gap, an emoji's width. */
+  --pm-note-symbol-slot: 1.125em;
+  /* The widget's padding and the gap it keeps from the text. */
+  --pm-note-symbol-gutter-gap: calc(0.2em + 0.3rem);
   /* An agent's name on its edit. */
   --pm-note-agent-label-size: 0.7em;
   /* Appearance's preview of a note, a little under the note's own sizes. */

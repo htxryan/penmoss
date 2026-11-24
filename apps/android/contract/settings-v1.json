@@ -55,6 +55,9 @@
         "glyph": "→",
         "name": "Next",
         "colour": "accent"
+      },
+      {
+        "kind": "strike"
       }
     ],
     "font.interface": "theme",
@@ -219,6 +222,16 @@
           },
           {
             "kind": "checkbox"
+          }
+        ],
+        [
+          {
+            "kind": "strike"
+          },
+          {
+            "glyph": "⊘",
+            "name": "⊘",
+            "colour": "muted"
           }
         ],
         [],

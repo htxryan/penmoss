@@ -138,19 +138,41 @@ If the note or the heading does not exist, the embed says so. A note that embeds
 
 ## Line symbols
 
-Line symbols are small marks at the start of a line, such as ★ for important or ? for a question, drawn in colour in the margin. They work on paragraphs, list and checklist items, headings and table cells.
+Line symbols are small marks at the start of a line, such as ★ for important or ? for a question, drawn in colour in the gutter left of your text. They work on paragraphs, list and checklist items, headings and table cells.
 
-The default symbols are the **Checkbox**, then ★ Important, ? Question, ! Follow-up, 💡 Idea and → Next. To add or remove one on the current line, or on every selected line:
+The default symbols are the **Checkbox**, then ★ Important, ? Question, ! Follow-up, 💡 Idea and → Next, then **Strikethrough**. To add or remove one on the current line, or on every selected line:
 
 - **On a Mac:** ⌃1 to ⌃9 toggle symbols 1 to 9, and ⌃0 opens the **Symbols…** picker.
 - **Elsewhere:** Alt+Shift+1 to Alt+Shift+9, and Alt+Shift+0 for the picker.
 - **Anywhere:** **Symbol** in the slash menu, or click a line's symbols.
 
-In the picker, ↑ and ↓ move, Enter or Space toggles, a digit toggles that symbol, and Escape closes. **Edit Symbols…** at its foot opens **Settings → Symbols**. Each row there shows its symbol's key (⌃1 for the first on a Mac, or the key you gave it in Keyboard Shortcuts), then its glyph and colour, which you can change. Clicking a glyph opens the symbol picker: search symbols and emoji by name or a word for them (`arrow`, `idea`, `flag`), or paste any symbol into the search to use it. One another symbol already has is greyed out, and one that can't be a symbol (a letter, a digit or a markdown character such as `#`) says why. **Recently Used** shows the ones you picked last. An emoji (💡, 🔥, ✅) comes in its own colours, so its colour is greyed out and the row says **This emoji’s colour can’t be changed.** The colour it had is kept: change the glyph back to a symbol such as ★ and that colour returns. Notebook badges are different: an emoji typed as a badge's **Letter** sits on the badge's colour, which you can still choose. On Android, tap a symbol in **Settings → Symbols**, then **Choose Symbol…** for the same picker. A symbol's key follows its place in the list, so moving a row changes its key: drag the row by its handle, or press Alt+↑ or Alt+↓ on it. **Add** adds a symbol, the Checkbox, a Bulleted List Item or a Numbered List Item, up to nine in all (the count shows beside it), and **Restore Defaults** puts back the six above. Removing a symbol leaves its glyph as plain text in your notes.
+In the picker, ↑ and ↓ move, Enter or Space toggles, a digit toggles that symbol, and Escape closes. **Edit Symbols…** at its foot opens **Settings → Symbols**. Each row there shows its symbol's key (⌃1 for the first on a Mac, or the key you gave it in Keyboard Shortcuts), then its glyph and colour, which you can change. Clicking a glyph opens the symbol picker: search symbols and emoji by name or a word for them (`arrow`, `idea`, `flag`), or paste any symbol into the search to use it. One another symbol already has is greyed out, and one that can't be a symbol (a letter, a digit or a markdown character such as `#`) says why. **Recently Used** shows the ones you picked last. An emoji (💡, 🔥, ✅) comes in its own colours, so its colour is greyed out and the row says **This emoji’s colour can’t be changed.** The colour it had is kept: change the glyph back to a symbol such as ★ and that colour returns. Notebook badges are different: an emoji typed as a badge's **Letter** sits on the badge's colour, which you can still choose. On Android, tap a symbol in **Settings → Symbols**, then **Choose Symbol…** for the same picker. A symbol's key follows its place in the list, so moving a row changes its key: drag the row by its handle, or press Alt+↑ or Alt+↓ on it. **Add** adds a symbol, the Checkbox, a Bulleted List Item, a Numbered List Item or Strikethrough, up to nine in all (the count shows beside it), and **Restore Defaults** puts back the seven above. **Change Their Shortcuts** opens Keyboard Shortcuts, where you can give each symbol another key. Removing a symbol leaves its glyph as plain text in your notes.
 
-The Checkbox isn't a mark: its key turns the line into a checklist item (☐), then ticks it (☑), then makes it a plain line again. **Bulleted List Item** and **Numbered List Item** work the same way, turning the line into that kind of list item or back. Each can take a slot from **Add** in **Settings → Symbols**, once.
+### Stacking symbols
 
-In markdown a symbol is plain text: the glyph and a space after the list marker, checkbox or `#`, as in `- [ ] ★ Send the form` or `## ? Open questions`.
+Symbols stack: a line can carry several, side by side, in the order of your list. Adding one never replaces another, and adding one a line already has takes it off again. The gutter shows up to three on a line; a line with more shows the first two and a count, such as **+2**, and hovering it (or tapping the count) shows them all.
+
+The gutter is only as wide as your note needs. In a note without symbols there is none, so your text starts at the edge of the page. It widens to fit the line with the most symbols, up to three, and narrows again as you remove them. Every line's text starts at the same place, with symbols or without, and typing on a line never moves it.
+
+The **Checkbox** stacks too. On a plain line its key turns the line into a checklist item (☐), then ticks it (☑), then makes it a plain line again. On a bulleted or numbered list item, a heading or a table cell it adds a box to the line instead, so the item keeps its bullet or number and the rest of the list stays as it is: the same key ticks it, then takes it off. Click a box in the gutter to tick or untick it.
+
+**Strikethrough** strikes the whole line's text through, while its other symbols stay as they are. Its key, or the picker, takes it off again.
+
+**Bulleted List Item** and **Numbered List Item** turn the line into that kind of list item, or back. Each kind can take a slot from **Add** in **Settings → Symbols**, once.
+
+### Symbols in markdown
+
+In markdown a symbol is plain text: the glyph and a space after the list marker, checkbox or `#`, as in `- [ ] ★ Send the form` or `## ? Open questions`. Stacked symbols are written in the order of your list:
+
+| On screen                               | In markdown             |
+| --------------------------------------- | ----------------------- |
+| A checklist item with ★                 | `- [ ] ★ Send the form` |
+| A bulleted item with a box              | `- ☐ Buy milk`          |
+| A numbered item with a ticked box and ★ | `1. ☑ ★ Call the bank`  |
+| A heading with a box                    | `## ☐ Open questions`   |
+| A struck-through line with ★            | `★ ⊘ Cancelled meeting` |
+
+A box on a list item is ☐, or ☑ once ticked, and Strikethrough is ⊘, so any other markdown app or GitHub shows the same marks, and your notes' history keeps them exactly.
 
 :::tip
 If ⌃ and a digit switch Spaces on your Mac, rebind the symbols in **Settings → Keyboard Shortcuts**.

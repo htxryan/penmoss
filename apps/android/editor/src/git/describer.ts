@@ -15,6 +15,7 @@ import {
   cleanDescription,
   cutForPrompt,
   DEFAULT_PROMPT,
+  DEFAULT_TAG_PROMPT,
   folderLevels,
   HAND_WRITTEN,
   parseAiSetting,
@@ -50,6 +51,8 @@ export interface AiConfig {
   readonly when: 'pause' | 'sync';
   readonly pauseS: number;
   readonly prompt: string;
+  /** The tag prompt (A1677): Generate AI Description on the Tags screen sends it. */
+  readonly tagPrompt: string;
 }
 
 export type AiAnswer =
@@ -89,6 +92,10 @@ export function parseAiConfig(value: unknown): AiConfig | null {
       typeof input['prompt'] === 'string' && input['prompt'].trim() !== ''
         ? input['prompt']
         : DEFAULT_PROMPT,
+    tagPrompt:
+      typeof input['tagPrompt'] === 'string' && input['tagPrompt'].trim() !== ''
+        ? input['tagPrompt']
+        : DEFAULT_TAG_PROMPT,
   };
 }
 

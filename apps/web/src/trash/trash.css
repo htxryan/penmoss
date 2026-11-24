@@ -94,6 +94,33 @@
   margin-bottom: 1.25rem;
 }
 
+/* The filter and Generate All… (A1677), side by side; the button wraps under a narrow filter. */
+.tags-page-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.tags-page-tools > .tags-page-filter {
+  flex: 0 1 22rem;
+  min-width: 12rem;
+  margin-bottom: 0;
+}
+
+.tags-generate-all {
+  flex: none;
+}
+
+/* Generate All's Replace Existing Descriptions, under what it says. */
+.tags-generate-replace {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
 .tags-page-notebook + .tags-page-notebook {
   margin-top: 2rem;
 }

@@ -69,7 +69,7 @@ On Android, pick Anthropic with a key, or leave it **Not Set Up**: your Mac desc
 
 ## The prompt
 
-**Prompt**, in Settings → AI Descriptions, is what is sent for each note. These tokens are replaced with the note's own:
+**Note Prompt**, in Settings → AI Descriptions, is what is sent for each note. These tokens are replaced with the note's own:
 
 | Token             | Replaced with                            |
 | ----------------- | ---------------------------------------- |
@@ -83,9 +83,29 @@ On Android, pick Anthropic with a key, or leave it **Not Set Up**: your Mac desc
 
 Click a token to insert it. A prompt without `{{body}}` gets a warning, since the model can't see the note. **Reset to Default** brings back Penmoss's prompt. The prompt syncs with your settings.
 
+## Tag descriptions
+
+A tag can have a description too, saying what the tag is for, so agents choose tags well (see [The Tags page](/docs/organise/#the-tags-page)). **Generate AI Description**, in a tag's menu on the Tags page, has your AI provider write one; **Generate All…** describes every tag that has none, after asking. It happens only when you ask, on the Mac and on Android, and needs only an AI provider: **Describe Notes** can stay Off.
+
+**Tag Prompt**, in Settings → AI Descriptions, is what is sent for a tag. These tokens are replaced with the tag's own:
+
+| Token             | Replaced with                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| `{{tag}}`         | The tag's name                                                                          |
+| `{{notes}}`       | Its notes, newest first, one line each: the title and description (or the text's start) |
+| `{{tags}}`        | The other tags on those notes, with how many notes have each                            |
+| `{{count}}`       | How many notes have the tag                                                             |
+| `{{notebook}}`    | Its notebook's name                                                                     |
+| `{{description}}` | Its description now, if it has one                                                      |
+| `{{date}}`        | Today's date                                                                            |
+
+`{{notes}}` lists up to 100 notes, each cut to 160 characters, and says how many more there are. A prompt without `{{notes}}` gets a warning. **Reset to Default** brings back Penmoss's prompt, and the prompt syncs with your settings.
+
 ## What is sent
 
 For each note described, the prompt, with the note's title, tags, folder path and text, goes to the provider you picked: to Anthropic directly, or to Claude Code on your Mac, which sends it to Anthropic. Nothing else is sent, and nothing at all is sent for a note whose setting comes to Off.
+
+For each tag you generate a description of, the tag prompt goes the same way, with the titles, tags and descriptions (or the first words of the text) of the notes that have the tag. A note's own Off setting is about its description, so its title can still be sent for a tag you ask about.
 
 The description comes back and is written into the note, which syncs through your repository as any change does.
 

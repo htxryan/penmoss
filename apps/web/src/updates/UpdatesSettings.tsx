@@ -64,11 +64,7 @@ export function UpdatesSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="updates-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Updates"
-        intro="The version you have, and how it updates."
-      />
+      <SettingsHeader id={`${id}-h`} title="Updates" />
       <div className="updates-card" data-setting="version" data-testid="updates-version">
         <div className="updates-card-head">
           <strong className="updates-card-name">

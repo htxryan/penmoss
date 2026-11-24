@@ -1,6 +1,6 @@
 import { isoWeek, longDate } from '@penmoss/core/periodic';
 import { useState } from 'react';
-import { DAD_JOKES } from './dad-jokes';
+import { DAD_JOKES } from '@penmoss/core/dad-jokes';
 import { useDadJokes } from './dad-jokes-state';
 import { deviceStorage } from './device-pref';
 import { drawJoke } from './joke-deck';

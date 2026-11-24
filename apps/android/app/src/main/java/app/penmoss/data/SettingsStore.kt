@@ -57,6 +57,27 @@ class SettingsStore(private val db: PenmossDatabase) {
         tree.capture?.timeZone?.let { settings.put(SettingEntity(CAPTURE_TIME_ZONE, it)) }
         // A git notebook's device map (A1014): the device's settings if this is the Journal.
         tree.device?.let { settings.put(SettingEntity(DEVICE_SETTINGS, it.toString())) }
+        // What each tag means (PEN-68, A1677): the Tags screen's descriptions, offline too.
+        tree.tagDescriptions?.let { settings.put(SettingEntity(TAG_DESCRIPTIONS, it.toString())) }
+    }
+
+    // --- tag descriptions (PEN-68, A1677) ---
+
+    /** Each described tag's description, by the tag's full path, as the last tree sent them. */
+    fun observeTagDescriptions(): Flow<Map<String, String>> = settings.observe(TAG_DESCRIPTIONS).map { json ->
+        objectOf(json).mapNotNull { (tag, value) ->
+            (value as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }?.let { tag to it }
+        }.toMap()
+    }
+
+    /**
+     * A description the engine page has just written (or cleared, with null), shown at once: the
+     * next tree brings the same.
+     */
+    suspend fun setTagDescriptionLocally(tag: String, description: String?) = db.withTransaction {
+        val now = objectOf(settings.get(TAG_DESCRIPTIONS)).toMutableMap()
+        if (description.isNullOrBlank()) now.remove(tag) else now[tag] = JsonPrimitive(description)
+        settings.put(SettingEntity(TAG_DESCRIPTIONS, JsonObject(now).toString()))
     }
 
     // --- quick capture (A336) ---
@@ -290,5 +311,8 @@ class SettingsStore(private val db: PenmossDatabase) {
 
         /** This phone's own look and layout (A1626). */
         const val LOCAL_SETTINGS = "localSettings"
+
+        /** The notebook's tag descriptions from its tree (PEN-68, A1677). */
+        const val TAG_DESCRIPTIONS = "tagDescriptions"
     }
 }

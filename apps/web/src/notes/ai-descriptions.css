@@ -206,3 +206,22 @@ a.ai-src-chip:hover {
 .ai-actions .btn {
   height: var(--pm-control-sm);
 }
+
+/*
+ * Side by side, the actions (Describe Now, Clear) and the answers (Keep Mine, Let Claude Update
+ * It) are equal and fill their row, as a bar's controls do (docs/ux-conventions.md, PEN-182).
+ */
+:is(.ai-actions, .ai-ask-buttons) > .btn {
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+/* Each row of them spans its block, so its buttons share the width equally. */
+.ai-row > .ai-actions {
+  align-self: stretch;
+}
+
+.ai-ask .ai-ask-buttons {
+  flex: 1 1 100%;
+  width: 100%;
+}

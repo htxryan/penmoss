@@ -9,7 +9,7 @@ import kotlinx.serialization.json.JsonElement
  * model never reach the page.
  */
 interface AiHost {
-    /** `{ready, global, when, pauseS, prompt}`, as the page's `parseAiConfig` reads it. */
+    /** `{ready, global, when, pauseS, prompt, tagPrompt}`, as the page's `parseAiConfig` reads it. */
     suspend fun config(): JsonElement
 
     /** `{ok: true, text}` or `{ok: false, code, message}`, as the page's `parseAiAnswer` reads it. */

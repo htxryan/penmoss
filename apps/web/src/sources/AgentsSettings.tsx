@@ -54,11 +54,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
       aria-labelledby={`${id}-h`}
       data-testid="agents-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Agents"
-        intro="Claude Code, Codex and other agents read and edit your notes through Penmoss on this Mac."
-      />
+      <SettingsHeader id={`${id}-h`} title="Agents" />
       <CommandLine git={git} />
       <AgentServer git={git} />
       <GroupHead scope>Agent Copies on This Mac</GroupHead>

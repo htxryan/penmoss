@@ -74,6 +74,8 @@ The **Tags** page is where you describe and tidy your tags: a table with a row f
 - **Find a tag:** type in the filter at the top. It narrows the tables to tags whose name or description has what you type. Escape clears it. Choose **Tag** or **Notes** at the top of a table to sort by it.
 - **See a tag's notes:** choose its name, or **Show Notes** in its ⋯ menu. Search opens on its notes, in that tag's notebook, as choosing it in the Tags section does.
 - **Describe a tag:** choose its description (or **Add a description**) and type. A row shows the first line of its description; while you edit it the box grows to show every line. It saves as you type: **Saving…**, then **Saved**. If it can't be saved, the row says **Not saved**; choose **Try Again**. Empty the box to remove the description.
+- **Generate a description:** **Generate AI Description** in a tag's ⋯ menu has your AI provider write one from the notes with that tag: their titles and descriptions, and the other tags they carry. It replaces the description the tag had, and the message at the bottom of the window offers **Undo**. Edit it afterwards as any description. **Clear Description** in the same menu removes one.
+- **Generate them all:** **Generate All…**, beside the filter, describes every tag that has no description, in every notebook. It asks first, saying how many tags and that each goes to your AI provider; tick **Replace Existing Descriptions** to describe every tag. It shows its progress, and **Stop** ends it. Both need an AI provider, chosen in **Settings → AI Descriptions** (see [Tag descriptions](/docs/ai-descriptions/#tag-descriptions)); without one, they offer **Open Settings**.
 - **Rename a tag:** **Rename…** in its ⋯ menu, or F2 on its row, turns the name into a box in its row. Press Return, or click away, and it is renamed in every note at once; Escape cancels. A tag with tags inside it offers to rename those too (**Also rename the tags inside it**, on unless you turn it off). Its description goes with it.
 - **Rename to a name that exists:** the row asks whether to merge the two, with how many notes end up with the tag. **Merge Into #name** opens the Merge dialog with that tag chosen; **Pick Another Name** lets you type again.
 - **Merge tags:** **Merge Into…** in a tag's ⋯ menu, or select tags with their checkboxes and choose **Merge…** at the top. For one tag, find and choose the tag to merge it into; for several, choose the one to keep or type a new name. The dialog says how many notes change, and which description is kept: the kept tag's, or, if it has none, the first merged tag's that has one. **Merge Tags** replaces the merged tags with the kept one in every note, and the tags inside them move along.
@@ -83,7 +85,7 @@ The **Tags** page is where you describe and tidy your tags: a table with a row f
 - **Each tag has its own description.** A parent's description says what the parent means, not its nested tags.
 - **Descriptions belong to the notebook.** They sync with it to your other devices, and agents read them with [`describe_tags`](/docs/reference/mcp/#what-tags-mean) to choose and understand tags.
 
-Android shows tags as before and keeps their descriptions when it syncs; describe and tidy tags on your Mac.
+On Android, **Tags** (a shortcut on Home, or in Commands) lists each tag with its count and the first line of its description. Long-press a tag for **Rename…**, **Add Description…** (or **Edit Description…**), **Generate AI Description** and **Clear Description**; the message at the bottom of the screen says what changed and offers **Undo**. **Generate All…** at the top asks as on the Mac, then describes the tags in the background, saying how many. The phone uses your Anthropic API key; without one, it offers **Open Settings**. Merge and delete tags on your Mac.
 
 ## Quick Access
 
@@ -105,7 +107,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 - **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
 - **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.
 
-⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and the tab strip starts with Back and Forward.
+⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and the tab strip starts with Back and Forward. The pin under the rail's shortcuts opens Quick Access beside the rail: choose a note to open it, or ⌘-click it to open it in a new tab.
 
 ## The note in Settings
 

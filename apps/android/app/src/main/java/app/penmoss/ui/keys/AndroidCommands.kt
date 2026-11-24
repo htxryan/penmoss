@@ -79,7 +79,8 @@ object AndroidCommands {
         "note.copyAgentReference" to Coverage.Native(NOTE),
         "app.trash" to Coverage.Native(ANYWHERE),
         // PEN-68: the Mac's Tags page, where tags are described; the phone keeps the descriptions as it syncs.
-        "app.tags" to Coverage.NotHere("Describing tags is the Mac app's (PEN-68): the phone's Tags lists them and their notes, and keeps their descriptions as it syncs."),
+        // Tags: each tag, its description, Generate AI Description and Generate All (A1677).
+        "app.tags" to Coverage.Native(ANYWHERE),
         // PEN-21: the Mac app's first version; a note's History is on the phone.
         "app.timeMachine" to Coverage.NotHere("The Time Machine reads a notebook's whole git history, which the Mac app has; the phone has each note's History (PEN-21)."),
         // T45 (D37, A710): note windows are the Mac app's and the web's; a phone has one screen.

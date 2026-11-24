@@ -14,6 +14,7 @@ import {
   fixedSymbols,
   openSymbolPicker,
   setLineSymbols,
+  symbolGutterSlots,
   toggleSymbolIn,
   type SymbolSource,
 } from '../src/extensions/line-symbols';
@@ -529,6 +530,211 @@ describe('list items on symbol slots (A1632)', () => {
   });
 });
 
+describe('stacked symbols: the Checkbox on a list item (A1678)', () => {
+  const ordered = (...items: string[]): JSONContent => ({
+    type: 'orderedList',
+    attrs: { start: 1 },
+    content: items.map((text) => ({ type: 'listItem', content: [paragraph(text)] })),
+  });
+  const slot = (id: number, editor: CollabEditor['editor']) =>
+    command(`editor.symbol${id}`).run({ editor });
+
+  it('steps a bulleted item through ☐, ☑ and no box, its bullet and the other items kept', () => {
+    const collab = openNote([bullets('One', 'Two', 'Three')]);
+    const { editor } = collab;
+    const { view } = editor;
+    select(view, lineStart(view, 1) + 1);
+    expect(slot(1, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('- One\n- ☐ Two\n- Three\n');
+    expect(drawn(view)).toEqual(['☐']);
+    expect(activeSymbols(editor.state)).toEqual([0]);
+    expect(slot(1, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('- One\n- ☑ Two\n- Three\n');
+    expect(drawn(view)).toEqual(['☑']);
+    expect(activeSymbols(editor.state)).toEqual([0]);
+    expect(slot(1, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('- One\n- Two\n- Three\n');
+    expect(activeSymbols(editor.state)).toEqual([]);
+    // Still one bulleted list of three items throughout.
+    expect(view.state.doc.firstChild!.type.name).toBe('bulletList');
+    expect(view.state.doc.firstChild!.childCount).toBe(3);
+    // The caret stays on its line's text.
+    expect(view.state.selection.$head.parent.textContent).toBe('Two');
+  });
+
+  it('stacks a box with a numbered item’s symbols, in list order, its number kept', () => {
+    const collab = openNote([ordered('★ First', 'Second')]);
+    const { editor } = collab;
+    const { view } = editor;
+    select(view, lineStart(view, 0) + 4);
+    expect(slot(1, editor)).toBe(true);
+    expect(slot(7, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('1. ☐ ★ ⊘ First\n2. Second\n');
+    expect(drawn(view)).toEqual(['☐★⊘']);
+    expect(activeSymbols(editor.state)).toEqual([0, 1, 6]);
+    // Applying a symbol already there takes it off, and only it.
+    expect(slot(2, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('1. ☐ ⊘ First\n2. Second\n');
+    expect(view.state.doc.firstChild!.type.name).toBe('orderedList');
+    expect(view.state.doc.firstChild!.childCount).toBe(2);
+  });
+
+  it('makes a plain line a checklist item, which keeps its symbols', () => {
+    const collab = openNote([paragraph('★ Call the bank')]);
+    const { editor } = collab;
+    select(editor.view, 4);
+    expect(slot(1, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('- [ ] ★ Call the bank\n');
+    // A symbol on a checklist item leaves it one.
+    expect(slot(3, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('- [ ] ★ ? Call the bank\n');
+    expect(activeSymbols(editor.state)).toEqual([0, 1, 2]);
+  });
+
+  it('takes a box as text on a heading, which stays a heading', () => {
+    const collab = openNote([heading(2, 'Open questions')]);
+    const { editor } = collab;
+    select(editor.view, 3);
+    expect(slot(1, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('## ☐ Open questions\n');
+    expect(slot(1, editor)).toBe(true);
+    expect(markdownOf(collab)).toBe('## ☑ Open questions\n');
+  });
+
+  it('gives every line of a mixed selection a box, then ticks them all, then clears them', () => {
+    const collab = openNote([paragraph('Plain'), bullets('Item'), tasks('Task')]);
+    const { editor } = collab;
+    const { view } = editor;
+    select(view, lineStart(view, 0) + 1, lineStart(view, 2) + 2);
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(markdownOf(collab)).toBe('- [ ] Plain\n\n* ☐ Item\n\n- [ ] Task\n');
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(markdownOf(collab)).toBe('- [x] Plain\n\n* ☑ Item\n\n- [x] Task\n');
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(markdownOf(collab)).toBe('Plain\n\n- Item\n\nTask\n');
+  });
+
+  it('ticks and unticks a box with a click on it, and opens the picker from the rest', () => {
+    const collab = openNote([bullets('☐ ★ Milk', 'Eggs')]);
+    const { editor } = collab;
+    const { view } = editor;
+    const click = (selector: string) =>
+      view.dom
+        .querySelector(selector)!
+        .dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+    click('.pm-symbol[data-box]');
+    expect(markdownOf(collab)).toBe('- ☑ ★ Milk\n- Eggs\n');
+    const box = view.dom.querySelector('.pm-symbol[data-box]')!;
+    expect(box.getAttribute('data-box')).toBe('ticked');
+    // Recorded under its own id (docs/analytics.md, Adding a tracked control).
+    expect(box.getAttribute('data-event')).toBe('editor.symbol.tick');
+    click('.pm-symbol[data-box]');
+    expect(markdownOf(collab)).toBe('- ☐ ★ Milk\n- Eggs\n');
+    // One undo step each.
+    expect(collab.undo()).toBe(true);
+    expect(markdownOf(collab)).toBe('- ☑ ★ Milk\n- Eggs\n');
+    click('.pm-symbol[data-symbol="2"]');
+    expect(document.querySelector<HTMLElement>('[data-testid="symbol-picker"]')?.hidden).toBe(
+      false,
+    );
+    expect(view.dom.querySelector('.pm-symbols-label')!.textContent).toBe(
+      '☑ Checkbox ★ Important: ',
+    );
+  });
+});
+
+describe('Strikethrough (A1679)', () => {
+  it('strikes the line’s text through, not its symbols, and comes off again', () => {
+    const collab = openNote([paragraph('★ Call the bank'), paragraph('Plain')]);
+    const { editor } = collab;
+    const { view } = editor;
+    select(view, 4);
+    expect(command('editor.symbol7').run({ editor })).toBe(true);
+    expect(markdownOf(collab)).toBe('★ ⊘ Call the bank\n\nPlain\n');
+    const struck = [...view.dom.querySelectorAll('.pm-symbol-struck')].map((s) => s.textContent);
+    expect(struck).toEqual(['Call the bank']);
+    expect(drawn(view)).toEqual(['★⊘']);
+    expect(view.dom.querySelector('.pm-symbols .pm-symbol-struck')).toBeNull();
+    // Typing at its end is struck too.
+    select(view, view.state.doc.firstChild!.nodeSize - 1);
+    type(view, ' today');
+    expect(view.dom.querySelector('.pm-symbol-struck')!.textContent).toBe('Call the bank today');
+    expect(command('editor.symbol7').run({ editor })).toBe(true);
+    expect(view.dom.querySelectorAll('.pm-symbol-struck')).toHaveLength(0);
+    expect(markdownOf(collab)).toBe('★ Call the bank today\n\nPlain\n');
+  });
+
+  it('strikes a checklist item, a list item and a table cell, each kept as it is', () => {
+    const collab = openNote([
+      tasks('⊘ Send the form'),
+      bullets('☐ ⊘ Buy milk'),
+      table(['⊘ Budget', 'Owner'], ['a', 'b']),
+    ]);
+    const { view } = collab.editor;
+    const struck = [...view.dom.querySelectorAll('.pm-symbol-struck')].map((s) => s.textContent);
+    expect(struck).toEqual(['Send the form', 'Buy milk', 'Budget']);
+    expect(markdownOf(collab)).toContain('- [ ] ⊘ Send the form\n');
+    // A bulleted list right after a checklist is written with `*`, so the two stay apart.
+    expect(markdownOf(collab)).toContain('\n* ☐ ⊘ Buy milk\n');
+    expect(markdownOf(collab)).toContain('| ⊘ Budget | Owner |');
+  });
+});
+
+describe('the symbol gutter (A1680)', () => {
+  const slots = (view: EditorView) => view.dom.getAttribute('data-symbol-slots');
+
+  it('is none in a note without symbols, and fits the widest stack up to three', () => {
+    const collab = openEditor([paragraph('One'), paragraph('Two'), table(['Cell'], ['x'])]);
+    const { view } = collab.editor;
+    expect(slots(view)).toBeNull();
+    expect(symbolGutterSlots(view.state)).toBe(0);
+    select(view, 2);
+    // A cell's symbols sit before its text: they take no slot.
+    select(view, lineStart(view, 2) + 1);
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(slots(view)).toBeNull();
+    select(view, 2);
+    expect(toggleSymbolIn(view, 0)).toBe(true);
+    expect(slots(view)).toBe('1');
+    expect(view.dom.style.getPropertyValue('--pm-symbol-slots')).toBe('1');
+    expect(toggleSymbolIn(view, 1)).toBe(true);
+    expect(slots(view)).toBe('2');
+    expect(toggleSymbolIn(view, 2)).toBe(true);
+    expect(slots(view)).toBe('3');
+    expect(toggleSymbolIn(view, 3)).toBe(true);
+    expect(slots(view)).toBe('3');
+    // Typing on a line without symbols never changes it.
+    select(view, lineStart(view, 1) + 3);
+    type(view, ' more words');
+    expect(slots(view)).toBe('3');
+    // It shrinks as symbols go, to none.
+    select(view, lineStart(view, 0) + 12);
+    for (const index of [3, 2]) toggleSymbolIn(view, index);
+    expect(slots(view)).toBe('2');
+    toggleSymbolIn(view, 1);
+    expect(slots(view)).toBe('1');
+    toggleSymbolIn(view, 0);
+    expect(slots(view)).toBeNull();
+  });
+
+  it('follows lines deleted, pasted and changed by the list', () => {
+    const collab = openEditor([paragraph('★ ? One'), paragraph('★ Two'), paragraph('Three')]);
+    const { view } = collab.editor;
+    expect(slots(view)).toBe('2');
+    // The two-symbol line deleted: the widest left is one.
+    const first = view.state.doc.firstChild!;
+    view.dispatch(view.state.tr.delete(0, first.nodeSize));
+    expect(slots(view)).toBe('1');
+    expect(texts(view)).toEqual(['★ Two', 'Three']);
+    // A glyph leaving the list: no symbols left.
+    setLineSymbols(
+      collab.editor,
+      GLYPHS.filter((symbol) => symbol.glyph !== '★'),
+    );
+    expect(slots(view)).toBeNull();
+  });
+});
+
 describe('the symbol picker (T44, A746)', () => {
   const picker = () => document.querySelector<HTMLElement>('[data-testid="symbol-picker"]');
   const items = () => [...picker()!.querySelectorAll<HTMLElement>('[role^="menuitem"]')];
@@ -691,7 +897,9 @@ describe('the symbol commands’ titles (T51 item 12, A940)', () => {
     expect(symbolCommandTitle('editor.symbol1', DEFAULT_SYMBOLS)).toBe('Toggle Checkbox');
     expect(symbolCommandTitle('editor.symbol2', DEFAULT_SYMBOLS)).toBe('Toggle Symbol ★');
     expect(symbolCommandTitle('editor.symbol5', DEFAULT_SYMBOLS)).toBe('Toggle Symbol 💡');
-    expect(symbolCommandTitle('editor.symbol7', DEFAULT_SYMBOLS)).toBeUndefined();
+    // Strikethrough closes the defaults (A1679); the slot after it is empty.
+    expect(symbolCommandTitle('editor.symbol7', DEFAULT_SYMBOLS)).toBe('Toggle Strikethrough');
+    expect(symbolCommandTitle('editor.symbol8', DEFAULT_SYMBOLS)).toBeUndefined();
     expect(symbolCommandTitle('editor.symbolPicker', DEFAULT_SYMBOLS)).toBeUndefined();
     expect(symbolCommandTitle('editor.bold', DEFAULT_SYMBOLS)).toBeUndefined();
   });

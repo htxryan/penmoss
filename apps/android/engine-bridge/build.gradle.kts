@@ -40,6 +40,13 @@ val characterResources = tasks.register<Copy>("characterResources") {
     into(layout.buildDirectory.dir("generated/character-resources"))
 }
 
+// The dad jokes Home's heading draws from (PEN-10): core's own list, the one copy the web app
+// imports too, so a joke added there reaches both apps.
+val jokeResources = tasks.register<Copy>("jokeResources") {
+    from(rootProject.file("../../packages/core/data/dad-jokes.json"))
+    into(layout.buildDirectory.dir("generated/joke-resources"))
+}
+
 // The open source notices (A1580): the web's file, which holds the Characters' notice and
 // Lucide's licence, shown by Settings → What's New.
 val noticeResources = tasks.register<Copy>("noticeResources") {
@@ -51,6 +58,7 @@ sourceSets {
     main {
         resources.srcDir(contractResources)
         resources.srcDir(characterResources)
+        resources.srcDir(jokeResources)
         resources.srcDir(noticeResources)
     }
 }

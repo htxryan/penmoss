@@ -65,6 +65,10 @@ test('Describe Now writes the description; a hand edit asks first', async ({ pag
   await expect(panel.getByTestId('ai-description')).toHaveValue(`A note about Groceries ${RUN}.`);
   await expect(panel.getByTestId('ai-description-by')).toHaveText('Written by AI Descriptions');
   await expect(panel.getByTestId('ai-status')).toContainText('Described');
+  // Describe Now and Clear are equal side by side (PEN-182).
+  const describeNow = (await panel.getByTestId('ai-describe-now').boundingBox())!;
+  const clear = (await panel.getByTestId('ai-clear').boundingBox())!;
+  expect(Math.abs(describeNow.width - clear.width)).toBeLessThanOrEqual(1);
   expect(await calls(page)).toBe(1);
   const prompt = await page.evaluate(
     () => (window as unknown as { __aiCalls: string[] }).__aiCalls[0],
@@ -78,6 +82,10 @@ test('Describe Now writes the description; a hand edit asks first', async ({ pag
   await field.press('Enter');
   await expect(panel.getByTestId('ai-ask')).toBeVisible();
   await expect(panel.getByTestId('ai-description-by')).toHaveText('Written by you');
+  // The two answers are equal (docs/ux-conventions.md, PEN-182).
+  const keep = (await panel.getByRole('button', { name: 'Keep Mine' }).boundingBox())!;
+  const update = (await panel.getByRole('button', { name: 'Let Claude Update It' }).boundingBox())!;
+  expect(Math.abs(keep.width - update.width)).toBeLessThanOrEqual(1);
   await panel.getByRole('button', { name: 'Keep Mine' }).click();
   await expect(panel.getByTestId('ai-ask')).toHaveCount(0);
   await expect(panel.getByRole('radio', { name: 'Off' })).toBeChecked();

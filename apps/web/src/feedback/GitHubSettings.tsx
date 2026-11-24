@@ -119,11 +119,7 @@ function GitHubSection({
           pick from.
         </p>
       ) : (
-        <SettingsHeader
-          id={`${id}-h`}
-          title="GitHub"
-          intro="Your GitHub accounts, such as a personal and a work one, kept in this Mac’s Keychain."
-        />
+        <SettingsHeader id={`${id}-h`} title="GitHub" />
       )}
       <div className="lf-group">
         {status === null ? null : accounts.length > 0 ? (

@@ -28,6 +28,7 @@ import { findSection } from '@penmoss/core/diff-apply';
 import { summarise } from '@penmoss/core/diff';
 import { matchNoteRef, notebookTag, noteRefNamer, parseNoteRef } from '@penmoss/core/note-ref';
 import { isTimeZone, type PeriodKind } from '@penmoss/core/periodic';
+import type { TagPromptNote } from '@penmoss/core/ai-description';
 import type { DescribedTag } from '@penmoss/core/tags';
 import type { SortMode } from '@penmoss/core/workspace';
 import {
@@ -623,6 +624,11 @@ export class LocalNotebook {
    */
   describeTags(wanted?: readonly string[]): { tags: DescribedTag[] } {
     return this.tagger.describeTags(wanted);
+  }
+
+  /** Every live note as a tag's AI description reads it (A1677), newest first. */
+  tagPromptNotes(): TagPromptNote[] {
+    return this.tagger.promptNotes();
   }
 
   /** `GET /api/tags?tag=`: the notes with a tag or one nested under it, newest first. */

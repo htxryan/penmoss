@@ -4,9 +4,11 @@ import { useCommands, useKeys } from '../commands/hooks';
 import { graphPath } from '../graph/path';
 import { thisWeek, today } from '../journal/journal';
 import { hasTabs, linkHandler, openIntent } from '../router';
+import { QuickAccessFlyout } from '../notes/QuickAccessFlyout';
 import { useSourcesState } from '../sources/hooks';
 import { useSidebarDisplay } from './display';
 import { withKeys } from './drawer';
+import { useSidebarLayout } from './sidebar-layout-state';
 import { SHORTCUTS, type Shortcut } from './sidebar-shortcuts';
 
 /**
@@ -16,13 +18,15 @@ import { SHORTCUTS, type Shortcut } from './sidebar-shortcuts';
  * keys; the rail has them as a column. Settings → Display hides any but New Note and Search, on
  * the sidebar and the rail alike (A576); a hidden one's command, keys and palette entry still
  * work. Today and This Week show as the page while today's or this week's note is open (T53
- * item 1), as Graph does on the graph and Tags on the Tags page.
+ * item 1), as Graph does on the graph and Tags on the Tags page. On the rail, Quick Access ends
+ * the column: a pin whose menu lists the pinned notes (Quanta feedback, PEN-182).
  */
 export function SidebarShortcuts({
   openNote,
   graphOpen,
   tagsOpen = false,
   shownNote,
+  rail = false,
 }: {
   /** The note the graph opens around (T17). */
   readonly openNote: string | null;
@@ -32,8 +36,12 @@ export function SidebarShortcuts({
   readonly tagsOpen?: boolean;
   /** The note the page shows, if it shows one. */
   readonly shownNote: string | null;
+  /** The sidebar is the icon rail (T41): Quick Access is a menu at the column's end. */
+  readonly rail?: boolean;
 }) {
   const { shows } = useSidebarDisplay();
+  // Quick Access hidden in Settings → Sidebar: no pin on the rail either (A1675).
+  const { hidden } = useSidebarLayout();
   const current = useCurrentJournal();
   return (
     <div className="sb-shortcuts" data-testid="sidebar-shortcuts">
@@ -53,6 +61,7 @@ export function SidebarShortcuts({
           />
         ),
       )}
+      {rail && !hidden.has('quickAccess') ? <QuickAccessFlyout /> : null}
     </div>
   );
 }

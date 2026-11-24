@@ -10,8 +10,8 @@ import kotlinx.serialization.json.JsonPrimitive
  * as `calloutWarning`, or any colour as `#rrggbb` or `#rrggbbaa`, T51 A939), as core's
  * `line-symbols.ts` has it. A symbol made since T51 has its glyph as its name (A940).
  *
- * Or a list item (A1632): [kind] is `checkbox`, `bullet` or `ordered`, its glyph and name only
- * how it is shown, and it is stored as `{ "kind": … }` alone.
+ * Or a kind (A1632, A1679): [kind] is `checkbox`, `bullet`, `ordered` or `strike`, its glyph
+ * and name how it is shown, and it is stored as `{ "kind": … }` alone.
  */
 data class LineSymbol(val glyph: String, val name: String, val colour: String, val kind: String? = null) {
     fun toJson(): JsonObject = if (kind != null) {
@@ -77,14 +77,32 @@ object LineSymbols {
     )
 
     /**
-     * The list items a slot can be (A1632), in the order Settings offers them: each kind, its
+     * The kinds a slot can be (A1632, A1679), in the order Settings offers them: each kind, its
      * glyph and its name, as core's `SYMBOL_KINDS`.
      */
     val KINDS: List<Triple<String, String, String>> = listOf(
         Triple("checkbox", "☐", "Checkbox"),
         Triple("bullet", "•", "Bulleted List Item"),
         Triple("ordered", "1.", "Numbered List Item"),
+        Triple("strike", "⊘", "Strikethrough"),
     )
+
+    /**
+     * The glyphs a kind is written as at a line's start (A1678, A1679; core `kindGlyphs`):
+     * the Checkbox's ☐ and ☑, Strikethrough's ⊘. A list item is never text.
+     */
+    fun kindGlyphs(kind: String): List<String> = when (kind) {
+        "checkbox" -> listOf("☐", "☑")
+        "strike" -> listOf("⊘")
+        else -> emptyList()
+    }
+
+    /**
+     * Glyphs a symbol of one's own may not take while [symbols] hold the kind that writes them
+     * (core `reservedGlyphs`): the dialog refuses them as taken, so a line's text means one symbol.
+     */
+    fun reservedGlyphs(symbols: List<LineSymbol>): Set<String> =
+        symbols.flatMap { symbol -> symbol.kind?.let(::kindGlyphs).orEmpty() }.toSet()
 
     /** The entry for a list item [kind] (core `kindSymbol`). */
     fun kindSymbol(kind: String): LineSymbol {
@@ -94,7 +112,10 @@ object LineSymbols {
 
     private fun isKind(kind: String) = KINDS.any { it.first == kind }
 
-    /** The list until a person changes it: Checkbox on the first slot, then the glyphs (A1632). */
+    /**
+     * The list until a person changes it: Checkbox on the first slot, then the glyphs (A1632),
+     * then Strikethrough (A1679).
+     */
     val DEFAULTS = listOf(
         kindSymbol("checkbox"),
         LineSymbol("★", "Important", "calloutWarning"),
@@ -102,6 +123,7 @@ object LineSymbols {
         LineSymbol("!", "Follow-up", "danger"),
         LineSymbol("💡", "Idea", "calloutTip"),
         LineSymbol("→", "Next", "accent"),
+        kindSymbol("strike"),
     )
 
     /** Glyphs offered for a new symbol, the first one the list does not have yet (as the web's). */

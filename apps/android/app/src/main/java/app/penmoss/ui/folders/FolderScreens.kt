@@ -40,6 +40,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import app.penmoss.ui.common.SheetAction
 import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -126,13 +127,13 @@ fun FolderSheet(
         Box(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             // Scrolls: with AI Descriptions (PEN-161) it can be taller than a small phone's sheet.
             Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState())) {
-                onNewNoteHere?.let { FolderSheetAction("New Note Here", "folderAction-newNote", event = "tree.folder-menu.new-note", tracked.done(it)) }
+                onNewNoteHere?.let { SheetAction("New Note Here", "folderAction-newNote", event = "tree.folder-menu.new-note", tracked.done(it)) }
                 // The web's name for it, beside New Note Here (T53 item 12).
-                FolderSheetAction("New Folder Here", "folderAction-subfolder", event = "tree.folder-menu.new-folder", tracked.done(onNewSubfolder))
-                FolderSheetAction("Rename", "folderAction-rename", event = "tree.folder-menu.rename", tracked.done(onRename))
-                FolderSheetAction("Move To…", "folderAction-move", event = "tree.folder-menu.move", tracked.done(onMove))
+                SheetAction("New Folder Here", "folderAction-subfolder", event = "tree.folder-menu.new-folder", tracked.done(onNewSubfolder))
+                SheetAction("Rename", "folderAction-rename", event = "tree.folder-menu.rename", tracked.done(onRename))
+                SheetAction("Move To…", "folderAction-move", event = "tree.folder-menu.move", tracked.done(onMove))
                 // The web's names, with "…" for what asks first (T39 pass 3, A891).
-                FolderSheetAction("Delete Folder…", "folderAction-delete", event = "tree.folder-menu.delete", tracked.done(onDelete))
+                SheetAction("Delete Folder…", "folderAction-delete", event = "tree.folder-menu.delete", tracked.done(onDelete))
                 ai?.let { FolderAiSection(it, tracked.done(it.onDescribeAll)) }
             }
         }
@@ -170,20 +171,7 @@ private fun FolderAiSection(ai: FolderAi, onDescribeAll: () -> Unit) {
             Text(label, Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyLarge)
         }
     }
-    FolderSheetAction("Describe Notes Now", "folderAction-describeAll", event = "folder.ai.describe-all", onDescribeAll)
-}
-
-@Composable
-private fun FolderSheetAction(text: String, tag: String, event: String, onClick: () -> Unit) {
-    Text(
-        text,
-        Modifier
-            .fillMaxWidth()
-            .combinedClickable(role = Role.Button, onClick = trackedClick(event, onClick))
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-            .testTag(tag),
-        style = MaterialTheme.typography.bodyLarge,
-    )
+    SheetAction("Describe Notes Now", "folderAction-describeAll", event = "folder.ai.describe-all", onDescribeAll)
 }
 
 /**

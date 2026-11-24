@@ -50,6 +50,9 @@ object CommandRoutes {
     const val PRIVACY = "settings/privacy"
     const val TRASH = "trash"
     const val JOURNAL = "journal"
+
+    /** Tags (T40 P6; A1677): the notebook's tags and what each means. */
+    const val TAGS = "tags"
 }
 
 /**
@@ -89,6 +92,7 @@ fun RootCommands(actions: RootActions, inbox: DeepLinkInbox) {
     RegisterCommand("theme.toggleDark") { actions.toggleDark() }
     RegisterCommand("note.fullWidth") { actions.toggleFullWidth() }
     RegisterCommand("app.graph") { actions.graph() }
+    RegisterCommand("app.tags") { actions.open(CommandRoutes.TAGS) }
 
     val launched by inbox.action.collectAsStateWithLifecycle()
     LaunchedEffect(launched) {

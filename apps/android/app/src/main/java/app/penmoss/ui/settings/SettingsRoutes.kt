@@ -23,6 +23,7 @@ import app.penmoss.NotebookGraph
 import app.penmoss.data.NoteStore
 import app.penmoss.engine.git.GitEngineStatus
 import app.penmoss.engine.git.GitNotebookView
+import app.penmoss.engine.settings.DadJokes
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLabels
 import app.penmoss.engine.settings.Settings
@@ -360,6 +361,9 @@ internal fun AppearanceRoute(graph: DeviceGraph, onEditTheme: (String) -> Unit, 
         // The note in the preview is the editor page itself, as the theme editor's (A418).
         notePreview = { modifier -> ThemePreview(resolved.theme, variant, modifier) },
         homeShortcuts = HomeShortcuts.of(settings),
+        // This phone's own (A1626): Home's heading a joke, or as it was.
+        dadJokes = DadJokes.on(settings),
+        onDadJokes = { graph.changeSetting(DadJokes.KEY, JsonPrimitive(it)) },
     )
 }
 

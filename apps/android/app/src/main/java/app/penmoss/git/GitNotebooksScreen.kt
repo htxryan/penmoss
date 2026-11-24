@@ -231,7 +231,7 @@ class GitNotebooksActions(
 /**
  * Settings → All Notebooks (T50 G7, G8; A856, A825, A855; PEN-146): the notebooks on this phone, one
  * row each with its sync dot (a tap opens its page), Add Notebook (its form shows only after Add),
- * Between Notebooks (the Primary Notebook first), Commits from This Phone and the background runs. It is
+ * Between Notebooks (the Primary Notebook first), Commit Identity and the background runs. It is
  * also the app's home (A828, A1040), titled Penmoss with Settings in its bar, where a row opens the
  * notebook: with no notebook yet, the first run asks to add or create one.
  */
@@ -296,7 +296,7 @@ fun GitNotebooksScreen(
         }
         if (ui.home) return@SectionScreen
         BetweenNotebooks(ui, actions, onPickPrimary = { picking = true })
-        CommitsFromThisPhone(ui, actions)
+        CommitIdentity(ui, actions)
         if (ui.rows.isNotEmpty()) {
             GroupTitle("Background Sync", Modifier.settingRow("background-sync"))
             Help(
@@ -734,15 +734,16 @@ internal fun NewSigningKey(
 }
 
 /**
- * Commits from This Phone (PEN-146): the name and email this phone commits as, and its signing key,
- * one row that opens in place. A notebook's own name and email are on its Git tab.
+ * Commit Identity (PEN-146; the Mac's words, PEN-10): the name and email this phone commits as,
+ * and its signing key, one row that opens in place. A notebook's own name and email are on its Git
+ * tab.
  */
 @Composable
-private fun CommitsFromThisPhone(ui: GitNotebooksUi, actions: GitNotebooksActions) {
+private fun CommitIdentity(ui: GitNotebooksUi, actions: GitNotebooksActions) {
     var open by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable(ui.identityName) { mutableStateOf(ui.identityName) }
     var email by rememberSaveable(ui.identityEmail) { mutableStateOf(ui.identityEmail) }
-    GroupTitle("Commits from This Phone", Modifier.settingRow("commits-from-this-phone"))
+    GroupTitle("Commit Identity", Modifier.settingRow("commit-identity"))
     ListItem(
         headlineContent = { Text(ui.identityName.ifBlank { "No Name Set" }) },
         supportingContent = {

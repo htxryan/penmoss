@@ -29,26 +29,34 @@ function NotebookNavEntry({ source, current }: { source: GitSource; current: boo
   const status = useShownGitStatus(source);
   const path = gitNotebookPath(source.id);
   const dot = dotState(status);
+  // Its sync line is the link's description, not part of its name: the name stays the
+  // notebook's, in Title Case as every nav entry is (PEN-182), and a screen reader still says it.
+  const describedBy = `nset-nav-sync-${source.id}`;
   return (
-    <a
-      data-event="settings.nav.notebook"
-      href={path}
-      className="nset-nav-entry"
-      data-ui="item"
-      data-testid="settings-notebook-entry"
-      data-notebook-id={source.id}
-      data-state={dot}
-      aria-current={current ? 'page' : undefined}
-      onClick={linkHandler(path)}
-    >
-      {/* Its badge (PEN-140), then its sync dot; the name after them says it aloud. */}
-      <NotebookBadge source={source} size={16} decorative />
-      <span className="nset-dot" data-state={dot} aria-hidden="true" />
-      {/* As wide as its bold self, as the other entries are (A988). */}
-      <span className="bold-steady" data-label={info.name}>
-        {info.name}
+    <>
+      <a
+        data-event="settings.nav.notebook"
+        href={path}
+        className="nset-nav-entry"
+        data-ui="item"
+        data-testid="settings-notebook-entry"
+        data-notebook-id={source.id}
+        data-state={dot}
+        aria-current={current ? 'page' : undefined}
+        aria-describedby={describedBy}
+        onClick={linkHandler(path)}
+      >
+        {/* Its badge (PEN-140), then its sync dot; the name after them says it aloud. */}
+        <NotebookBadge source={source} size={16} decorative />
+        <span className="nset-dot" data-state={dot} aria-hidden="true" />
+        {/* As wide as its bold self, as the other entries are (A988). */}
+        <span className="bold-steady" data-label={info.name}>
+          {info.name}
+        </span>
+      </a>
+      <span className="sr-only" id={describedBy}>
+        {syncLine(status)}
       </span>
-      <span className="sr-only">, {syncLine(status)}</span>
-    </a>
+    </>
   );
 }

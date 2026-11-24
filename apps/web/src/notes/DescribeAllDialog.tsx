@@ -5,8 +5,8 @@
  * AI Descriptions on never describes every note at once: this does, when asked.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { useSource } from '../sources/hooks';
+import { BatchDialog } from './BatchDialog';
 import { windowDescriber, type DescriberSource } from './describer';
 
 /** Some of a notebook's notes, to describe. */
@@ -69,9 +69,6 @@ export function DescribeNotesDialog({
   }, [groups, describer]);
   useEffect(() => () => stop.current?.abort(), []);
   const total = wanted?.reduce((sum, group) => sum + group.noteIds.length, 0) ?? null;
-  // Stop closes the dialog, so a stopped batch is never shown running.
-  const running = done !== null && total !== null && done < total;
-  const finished = done !== null && total !== null && done >= total;
   const start = () => {
     if (!describer || !wanted) return;
     const controller = new AbortController();
@@ -91,14 +88,25 @@ export function DescribeNotesDialog({
     })();
   };
   return (
-    <ConfirmDialog
+    <BatchDialog
       title={name === undefined ? 'Describe All Notes?' : `Describe Notes in “${name}”?`}
       testId="describe-all"
-      onCancel={() => {
-        stop.current?.abort();
-        onClose();
+      total={total}
+      done={done}
+      stop={stop}
+      startLabel={total ? `Describe ${total === 1 ? '1 Note' : `${total} Notes`}` : 'Describe'}
+      progress={{
+        label: 'Notes described',
+        running: (at, of) => `Describing ${at} of ${of}…`,
+        finished: (count, of) => `Described ${count} of ${of}.`,
       }}
-      onSubmit={() => (finished ? onClose() : start())}
+      events={{
+        stop: 'describe-all.stop',
+        cancel: 'describe-all.stop',
+        start: 'describe-all.start',
+      }}
+      onStart={start}
+      onClose={onClose}
     >
       {total === null ? (
         <p>Counting the notes to describe…</p>
@@ -107,68 +115,13 @@ export function DescribeNotesDialog({
           Every note here is described already, or AI Descriptions is off for it.
         </p>
       ) : (
-        <>
-          <p data-testid="describe-all-count">
-            {total === 1
-              ? '1 note has no description, or has changed since its description.'
-              : `${total} notes have no description, or have changed since theirs.`}{' '}
-            Each goes to your AI provider, two at a time.
-          </p>
-          {done !== null ? (
-            <>
-              <progress
-                className="ai-progress"
-                max={total}
-                value={done}
-                aria-label="Notes described"
-              />
-              <p className="muted" role="status" data-testid="describe-all-progress">
-                {finished
-                  ? `Described ${done} of ${total}.`
-                  : `Describing ${done + 1} of ${total}…`}
-              </p>
-            </>
-          ) : null}
-        </>
+        <p data-testid="describe-all-count">
+          {total === 1
+            ? '1 note has no description, or has changed since its description.'
+            : `${total} notes have no description, or have changed since theirs.`}{' '}
+          Each goes to your AI provider, two at a time.
+        </p>
       )}
-      <div className="confirm-actions">
-        {running ? (
-          <button
-            data-ui="dismiss"
-            type="button"
-            className="btn"
-            data-event="describe-all.stop"
-            onClick={() => {
-              stop.current?.abort();
-              onClose();
-            }}
-          >
-            Stop
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn"
-            data-ui="dismiss"
-            data-event="describe-all.stop"
-            onClick={onClose}
-            autoFocus
-          >
-            {finished ? 'Close' : 'Cancel'}
-          </button>
-        )}
-        {!finished && !running ? (
-          <button
-            type="submit"
-            className="btn primary"
-            data-ui="submit"
-            data-event="describe-all.start"
-            disabled={!total}
-          >
-            {total ? `Describe ${total === 1 ? '1 Note' : `${total} Notes`}` : 'Describe'}
-          </button>
-        ) : null}
-      </div>
-    </ConfirmDialog>
+    </BatchDialog>
   );
 }

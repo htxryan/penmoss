@@ -344,14 +344,6 @@
   background: color-mix(in oklab, var(--pm-success) 18%, transparent);
 }
 
-/*
- * Analytics Data's entry in the nav, set in under Privacy by one icon and its gap, so its icon
- * sits exactly under the start of Privacy's label (Ryan's review of PEN-178).
- */
-.settings-nav a.privacy-nav-entry {
-  padding-left: calc(var(--settings-nav-pad) + var(--settings-nav-icon) + var(--settings-nav-gap));
-}
-
 /* Analytics Data: the filters, the table and the pager. */
 .privacy-filters {
   display: flex;
@@ -468,7 +460,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Later and Earlier are a pair of equal answers: the same width (PEN-182). */
 .privacy-pager-buttons {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.4rem;
+}
+
+.privacy-pager-buttons > .btn {
+  justify-content: center;
 }

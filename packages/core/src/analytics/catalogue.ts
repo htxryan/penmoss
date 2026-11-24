@@ -321,6 +321,11 @@ export const DIALOG_NAMES: readonly string[] = [
   'symbolEditor',
   'tagFilter',
   'tagRename',
+  // A tag's description (A1677): its menu, the description, Generate All, no provider.
+  'tagMenu',
+  'tagDescription',
+  'tagsGenerate',
+  'aiProvider',
   'wordCount',
 ];
 
@@ -395,6 +400,7 @@ export const SETTING_NAMES: readonly string[] = [
   'ai.description.pause',
   'ai.description.model',
   'ai.description.prompt',
+  'ai.description.tagPrompt',
   'ai.provider',
   'home.dadJokes',
   'copyToNotebook.tags',
@@ -694,6 +700,8 @@ export const CLICK_NAMES: readonly string[] = [
   'sidebar.notebook.rename',
   'sidebar.notebook.settings',
   'sidebar.notebook.sync-status',
+  'sidebar.quick-access.flyout',
+  'sidebar.quick-access.flyout-empty',
   'sidebar.quick-access.note',
   'sidebar.quick-access.remove',
   'sidebar.recent.note',
@@ -866,6 +874,7 @@ export const CLICK_NAMES: readonly string[] = [
   'editor.format.symbol',
   'editor.format.symbol.edit',
   'editor.format.symbol.item',
+  'editor.symbol.tick',
   'editor.format.table',
   'editor.format.undo',
   'editor.link.apply',
@@ -1095,6 +1104,20 @@ export const CLICK_NAMES: readonly string[] = [
   'settings.ai.pause',
   'settings.ai.model',
   'settings.ai.save-prompt',
+  // A tag's AI description (A1677): the Tags page and screen, and the tag prompt in Settings.
+  'tags.row.generate',
+  'tags.row.clear-description',
+  'tags.generate-all',
+  'tags.generate.start',
+  'tags.generate.stop',
+  'tags.generate.cancel',
+  'tags.generate.replace',
+  'tags.generate.open-settings',
+  'tags.description.save',
+  'tags.description.cancel',
+  'settings.ai.tag-token',
+  'settings.ai.reset-tag-prompt',
+  'settings.ai.save-tag-prompt',
   // PEN-175: every control its own id. Controls the web and Android both have share one id.
   // The web's (the page, packages/ui and the editor's widgets):
   // The editor's own widgets (packages/editor; Android's editor page records the same ids).

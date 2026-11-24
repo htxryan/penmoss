@@ -91,6 +91,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
+import app.penmoss.ui.common.roles
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -187,6 +189,11 @@ data class HomeUi(
     val notebookId: String = "",
     /** The notebooks on this phone, the drawer's Notebooks (A1604). */
     val notebooks: List<DrawerNotebook> = emptyList(),
+    /**
+     * Dad Jokes (PEN-10, the Mac's A1576 and A1598): the joke heading the notes list, a new one
+     * each time Home shows; null with Settings → Appearance → Dad Jokes off, Home as it was.
+     */
+    val joke: String? = null,
 )
 
 /** What Home's taps, presses and pulls do (A6). */
@@ -437,6 +444,12 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                     state = homeList,
                     contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
                     header = {
+                        // The notes list's heading is a dad joke (PEN-10), as the Mac's window with
+                        // no note open has one; the bar keeps the notebook's name (A1613).
+                        val joke = ui.joke
+                        if (notesPage && joke != null) {
+                            item(key = "joke", contentType = "joke") { HomeJoke(joke) }
+                        }
                         item(key = "actions", contentType = "actions") {
                             if (ui.keptApart > 0) KeptApartNotice(ui.keptApart)
                             if (ui.capturesWaiting > 0 || ui.capturesRefused > 0) {
@@ -509,6 +522,21 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
         }
     }
     }
+}
+
+/** Home's dad joke (PEN-10): a heading, in the group-head role the Mac's empty window gives it. */
+@Composable
+private fun HomeJoke(joke: String) {
+    Text(
+        joke,
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .testTag("homeJoke")
+            .semantics { heading() },
+        style = MaterialTheme.roles.groupHead,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
 }
 
 /**

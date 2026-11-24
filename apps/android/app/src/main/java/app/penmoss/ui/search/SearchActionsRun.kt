@@ -42,6 +42,8 @@ internal fun runSearchAction(id: String, to: ActionTargets): Boolean {
         "app.home" -> to.home()
         // Every note's graph, as Home's ⋮ → Graph opens it (T40 P7, LK7).
         "app.graph" -> to.open(graphRoute(null))
+        // The notebook's tags, as Home's Tags opens them (A1677).
+        "app.tags" -> to.open(app.penmoss.ui.keys.CommandRoutes.TAGS)
         "note.new" -> to.newNote()
         "app.capture" -> to.capture()
         "app.trash" -> to.open(TrashRoutes.TRASH)

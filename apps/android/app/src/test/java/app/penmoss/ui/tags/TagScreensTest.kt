@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -42,8 +43,8 @@ class TagScreensTest {
     @Test
     fun listsTagsNestedWithCountsAndOpensOrRenamesOne() {
         val opened = mutableListOf<String>()
-        val renamed = mutableListOf<String>()
-        compose.setContent { PenmossTheme { TagsScreen(tree, onBack = {}, onOpenTag = { opened += it }, onRename = { renamed += it }) } }
+        val menus = mutableListOf<String>()
+        compose.setContent { PenmossTheme { TagsScreen(tree, onBack = {}, onOpenTag = { opened += it }, onMenu = { menus += it }) } }
         // A parent counts each note under it once; its children wait until it is opened.
         compose.onNodeWithContentDescription("#area, 2 notes").assertIsDisplayed()
         compose.onNodeWithContentDescription("#soup, 2 notes").assertIsDisplayed()
@@ -56,14 +57,17 @@ class TagScreensTest {
         compose.onNodeWithContentDescription("Collapse #area").performClick()
         compose.onNodeWithTag("tag-area/cooking").assertDoesNotExist()
         assertEquals(listOf("area/cooking"), opened)
-        assertEquals(listOf("soup"), renamed)
+        // A long press opens the tag's menu (A1677), where Rename… is.
+        assertEquals(listOf("soup"), menus)
     }
 
     @Test
     fun saysHowToMakeATagWhenThereIsNone() {
-        compose.setContent { PenmossTheme { TagsScreen(emptyList(), onBack = {}, onOpenTag = {}, onRename = {}, status = "Renamed #a to #b in 2 notes") } }
-        compose.onNodeWithText("No tags").assertIsDisplayed()
-        compose.onNodeWithTag("tagStatus").assertIsDisplayed()
+        compose.setContent { PenmossTheme { TagsScreen(emptyList(), onBack = {}, onOpenTag = {}, onMenu = {}, onGenerateAll = {}) } }
+        // Nothing to describe: no Generate All….
+        compose.onNodeWithTag("tagsGenerateAll").assertDoesNotExist()
+        // The Mac's Tags page's empty state, its heading and line as one.
+        compose.onNodeWithTag("tagsEmpty").assertTextEquals("No tags yet. Tag a note with #name in its text, and the tag shows here.")
     }
 
     @Test
@@ -200,6 +204,7 @@ class TagScreensTest {
             compose.setContent { PenmossTheme { TagsRoute(store, renamer, onBack = {}, onOpenTag = {}) } }
             compose.waitUntil(5_000) { compose.onAllNodesWithTag("tag-soup").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("tag-soup").performTouchInput { longClick() }
+            compose.onNodeWithTag("tagAction-rename").performClick()
             compose.waitUntil(5_000) { compose.onAllNodesWithTag("tagRenameSyncFirst").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Sync first: this phone has an edit not sent yet.").assertIsDisplayed()
             compose.onNodeWithTag("tagRenameSync").performClick()

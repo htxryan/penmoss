@@ -46,7 +46,7 @@ Appearance, Sidebar and Note each have two tabs: **Settings**, which the page op
 | Interface Font, Note Font | The fonts over the theme's own                                                                                                                                    |
 | Note Font Size            | 12 to 28 px                                                                                                                                                       |
 | Show Tooltips After       | How long the pointer rests on a control before its tooltip shows: 0.5, 1 (the default), 1.5 or 2 seconds, or Never. Keyboard focus always shows a tooltip at once |
-| Dad Jokes                 | A dad joke as the heading when no note is open; on by default. Off, the heading reads Welcome to Penmoss                                                          |
+| Dad Jokes                 | A dad joke as the heading when no note is open; on by default. Off, the heading reads Welcome to Penmoss. On Android, the joke heads Home's notes list            |
 | Compact Title Bar         | The window's buttons in Penmoss's own top row; on by default (this Mac)                                                                                           |
 
 ### Sidebar
@@ -70,7 +70,7 @@ Appearance, Sidebar and Note each have two tabs: **Settings**, which the page op
 
 ### Symbols
 
-The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour (an emoji keeps its own colours, so its colour can't be changed), their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add** (a symbol, the Checkbox, a Bulleted List Item or a Numbered List Item; up to nine in all) and **Restore Defaults**.
+The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour (an emoji keeps its own colours, so its colour can't be changed), their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add** (a symbol, the Checkbox, a Bulleted List Item, a Numbered List Item or Strikethrough; up to nine in all) and **Restore Defaults**. A symbol of your own can't use ☐, ☑ or ⊘ while the Checkbox or Strikethrough is in the list, since those are how they are written.
 
 ## Writing
 
@@ -107,7 +107,8 @@ Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs
 | AI Provider       | Not Set Up, Anthropic (API Key) or Claude Code on This Mac (this Mac)              |
 | Anthropic API Key | Save, Test Key and Remove; kept on this Mac, encrypted                             |
 | Model             | The provider's model; the fastest is picked for you                                |
-| Prompt            | What is sent for each note, with its tokens and **Reset to Default**               |
+| Note Prompt       | What is sent for each note, with its tokens and **Reset to Default**               |
+| Tag Prompt        | What is sent for a tag's **Generate AI Description**, with its tokens              |
 
 See [AI Descriptions](/docs/ai-descriptions/).
 
@@ -175,23 +176,23 @@ What Penmoss records about how you use it, on this Mac, and whether it is shared
 
 Open Settings from the **☰** menu. Each screen's title is large at the top and shrinks into the bar as you scroll; the ⓘ in the bar says which notebook your settings are synced through. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
 
-| Group         | Screen             | What it holds                                                                                                                                              |
-| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts) and **Preview** (the app, fonts at real size)                                       |
-| Look and Feel | Home               | Two tabs: **Settings** (shortcuts, sections, Recent Notes, Quick Access) and **Preview** (Home's shortcuts and the menu's sidebar)                         |
-| Look and Feel | Note               | Two tabs: **Settings** (Note Width, the description under the title) and **Preview** (the note at that width, at its real size)                            |
-| Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                                    |
-| Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                                             |
-| Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                                        |
-| Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                                          |
-| Writing       | AI Descriptions    | Describe Notes, when, the AI provider (Anthropic with a key, or Not Set Up), the model and the prompt ([AI Descriptions](/docs/ai-descriptions/))          |
-| Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks))                         |
-| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits from This Phone**, the signing key and background sync                         |
-| Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                                                      |
-| This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                                               |
-| This Phone    | GitHub             | Your GitHub accounts (**Add Account**, or a token), and what they are used for, such as **Send Feedback**                                                  |
-| This Phone    | What’s New         | The version, open source notices, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                            |
-| This Phone    | Privacy            | **Share Usage Data**, **View Analytics Data**, the analytics ID, **Share Log File** and **Advanced**, as on the Mac ([Usage data](/docs/help/usage-data/)) |
+| Group         | Screen             | What it holds                                                                                                                                                          |
+| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Look and Feel | Appearance         | Two tabs: **Settings** (mode, theme and **Customize Penmoss…**, fonts, **Dad Jokes**) and **Preview** (the app, fonts at real size)                                    |
+| Look and Feel | Home               | Two tabs: **Settings** (shortcuts, sections, Recent Notes, Quick Access) and **Preview** (Home's shortcuts and the menu's sidebar)                                     |
+| Look and Feel | Note               | Two tabs: **Settings** (Note Width, the description under the title) and **Preview** (the note at that width, at its real size)                                        |
+| Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                                                |
+| Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                                                         |
+| Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                                                    |
+| Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                                                      |
+| Writing       | AI Descriptions    | Describe Notes, when, the AI provider (Anthropic with a key, or Not Set Up), the model, the Note Prompt and the Tag Prompt ([AI Descriptions](/docs/ai-descriptions/)) |
+| Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks))                                     |
+| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commit Identity**, the signing key and background sync                                             |
+| Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                                                                  |
+| This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                                                           |
+| This Phone    | GitHub             | Your GitHub accounts (**Add Account**, or a token), and what they are used for, such as **Send Feedback**                                                              |
+| This Phone    | What’s New         | The version, open source notices, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                                        |
+| This Phone    | Privacy            | **Share Usage Data**, **View Analytics Data**, the analytics ID, **Share Log File** and **Advanced**, as on the Mac ([Usage data](/docs/help/usage-data/))             |
 
 ## For a notebook, from the CLI or an agent
 

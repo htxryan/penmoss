@@ -99,7 +99,8 @@ class PrivacyScreenTest {
         compose.onNodeWithTag("privacyShare").assertIsOn()
         compose.onNodeWithText("Waiting to Send 2 · Sent 41 · Not Shared 212").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("5c0e8f6a…7a96").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Penmoss records what you do in it, by name, on this phone, and never anything you write or name.").performScrollTo().assertIsDisplayed()
+        // No subtitle under the title (PEN-182).
+        assertEquals(0, compose.onAllNodes(hasText("Penmoss records what you do in it", substring = true)).fetchSemanticsNodes().size)
         // Advanced is closed until opened, a disclosure with its hint and a down chevron.
         assertEquals(0, compose.onAllNodes(hasTestTag("privacyLimits")).fetchSemanticsNodes().size)
         compose.onNodeWithText("How long and how much Penmoss keeps on this phone").performScrollTo().assertIsDisplayed()

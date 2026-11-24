@@ -256,6 +256,23 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * One action in a long-press sheet (a note's, a folder's, a tag's): a full-width row of the
+ * action's name, tapped to run [onClick], counted as [event] and found by tests as [tag].
+ */
+@Composable
+fun SheetAction(text: String, tag: String, event: String, onClick: () -> Unit) {
+    Text(
+        text,
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(role = Role.Button, onClick = trackedClick(event, onClick))
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .testTag(tag),
+        style = MaterialTheme.roles.rowLabel,
+    )
+}
+
 @Composable
 fun EmptyMessage(text: String, modifier: Modifier = Modifier) {
     Text(

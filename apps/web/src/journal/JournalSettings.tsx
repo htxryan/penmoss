@@ -51,11 +51,7 @@ export function JournalSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="journal-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Daily Notes"
-        intro="A note for each day and each week, made from these templates."
-      />
+      <SettingsHeader id={`${id}-h`} title="Daily Notes" />
       <div className="lf-group">
         <TimeZoneRow settings={settings} />
       </div>

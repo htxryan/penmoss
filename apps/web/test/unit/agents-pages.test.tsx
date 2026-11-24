@@ -241,7 +241,10 @@ describe('Each notebook in Settings’ nav (PEN-146)', () => {
     ]);
     expect(entries.map((each) => each.dataset['state'])).toEqual(['ok', 'error']);
     expect(entries.map((each) => each.getAttribute('aria-current'))).toEqual([null, 'page']);
-    expect(entries[1]!.textContent).toContain('Penmoss Docs, Sync Stopped');
+    // Its name is the notebook's alone (Title Case, PEN-182); its sync line is its description.
+    expect(entries[1]!.textContent).toBe('Penmoss Docs');
+    const described = entries[1]!.getAttribute('aria-describedby');
+    expect(root.querySelector(`#${described}`)?.textContent).toBe('Sync Stopped');
     // Each starts with its notebook's badge (PEN-140), its default letter, beside the dot.
     expect(
       entries.map((each) =>

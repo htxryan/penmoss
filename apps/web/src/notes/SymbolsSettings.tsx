@@ -9,6 +9,7 @@ import {
   glyphKey,
   kindSymbol,
   glyphProblem,
+  reservedGlyphs,
   symbolColourLabel,
   symbolColourVar,
   symbolInk,
@@ -31,17 +32,19 @@ import { SettingsHeader } from '../pages/SettingsHeader';
 
 /** The glyph a new symbol gets: the first preset the list does not have yet (A939). */
 function nextGlyph(symbols: readonly LineSymbol[]): string {
-  const taken = new Set(
-    symbols.filter((symbol) => !symbol.kind).map((symbol) => glyphKey(symbol.glyph)),
-  );
+  const taken = new Set([
+    ...symbols.filter((symbol) => !symbol.kind).map((symbol) => glyphKey(symbol.glyph)),
+    ...reservedGlyphs(symbols).keys(),
+  ]);
   return SYMBOL_GLYPH_PRESETS.find((glyph) => !taken.has(glyphKey(glyph))) ?? '•';
 }
 
-/** A list item row's icon, and what its shortcut does (A1632). */
+/** A kind's row icon, and what its shortcut does (A1632, A1679): Android's `kindDoes` too. */
 const KINDS: Readonly<Record<SymbolKind, { icon: IconName; does: string }>> = {
   checkbox: { icon: 'checklist', does: '☐ → ☑ → no box' },
   bullet: { icon: 'list', does: 'Line ⇄ bulleted item' },
   ordered: { icon: 'hash', does: 'Line ⇄ numbered item' },
+  strike: { icon: 'strike', does: '⊘ strikes the line through' },
 };
 
 /** A row's key among the rows: its glyph, or its kind for a list item. */
@@ -115,8 +118,14 @@ export function SymbolsSettings() {
       );
     },
   });
-  /** The other symbol with this glyph, said as a sentence, or null. */
+  /**
+   * The other symbol with this glyph, said as a sentence, or null: a glyph of one's own, or the
+   * ☐, ☑ or ⊘ that the Checkbox or Strikethrough writes on a line (A1678).
+   */
+  const reserved = reservedGlyphs(symbols);
   const takenBy = (index: number) => (glyph: string) => {
+    const kind = reserved.get(glyphKey(glyph));
+    if (kind) return `Used by ${kind.name}`;
     const other = symbols.findIndex(
       (symbol, at) => at !== index && !symbol.kind && glyphKey(symbol.glyph) === glyphKey(glyph),
     );
@@ -128,11 +137,7 @@ export function SymbolsSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="symbols-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Symbols"
-        intro="A symbol at the start of a line marks it; a Checkbox or list item makes the line one."
-      />
+      <SettingsHeader id={`${id}-h`} title="Symbols" />
       <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
         {symbols.map((symbol, index) => {
           const grip = (
@@ -213,10 +218,15 @@ export function SymbolsSettings() {
                 testId={`symbol-glyph-${index + 1}`}
                 disabled={disabled}
                 takenBy={takenBy(index)}
-                problemOf={(glyph) =>
-                  sentence(glyphProblem(glyph)) ??
-                  (takenBy(index)(glyph) ? `${glyph} is already in the list.` : null)
-                }
+                problemOf={(glyph) => {
+                  const kind = reserved.get(glyphKey(glyph));
+                  if (kind && glyphKey(glyph) !== glyphKey(symbol.glyph))
+                    return `${glyph} is used by ${kind.name}.`;
+                  return (
+                    sentence(glyphProblem(glyph)) ??
+                    (takenBy(index)(glyph) && !kind ? `${glyph} is already in the list.` : null)
+                  );
+                }}
                 // The glyph is its name too (A940), for builds that still show names.
                 onChoose={(glyph) => update(index, { glyph, name: glyph })}
               />

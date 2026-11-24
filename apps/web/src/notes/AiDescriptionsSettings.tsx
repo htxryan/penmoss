@@ -3,26 +3,33 @@
  * (the global value, Off unset), when (After a Pause, or At Sync), the pause, this device's AI
  * Provider (filled from the providers the Mac offers; Not Set Up until chosen, never synced), the
  * model, and the prompt with its tokens and Reset to Default. Describe All Notes describes every
- * notebook's notes that want it now, as a notebook's Describe Notes Now does for one.
+ * notebook's notes that want it now, as a notebook's Describe Notes Now does for one. The Tag
+ * Prompt (A1677) is what the Tags page's Generate AI Description sends, edited the same way.
  */
 import {
+  AI_DESCRIPTION_COPY,
   AI_DESCRIPTION_GLOBAL_SETTING,
   AI_DESCRIPTION_MODEL_SETTING,
   AI_DESCRIPTION_PAUSE_SETTING,
   AI_DESCRIPTION_PROMPT_SETTING,
   AI_DESCRIPTION_WHEN_SETTING,
   AI_PROVIDER_SETTING,
+  AI_TAG_PROMPT_SETTING,
   aiGlobalOf,
   aiProviderOf,
   DEFAULT_PROMPT,
+  DEFAULT_TAG_PROMPT,
   describeWhenOf,
   modelOf,
   modelsOf,
   PAUSE_CHOICES_SECONDS,
   pauseSecondsOf,
   promptHasBody,
+  promptHasNotes,
   promptOf,
   PROMPT_TOKENS,
+  tagPromptOf,
+  TAG_PROMPT_TOKENS,
   type AiProviderId,
 } from '@penmoss/core/ai-description';
 import { Select } from '@penmoss/ui/controls/Select';
@@ -104,11 +111,7 @@ export function AiDescriptionsSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="ai-descriptions-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="AI Descriptions"
-        intro="Writes a short description into each note’s frontmatter, so agents can tell what a note holds before reading it. The closest notebook, folder or note setting wins."
-      />
+      <SettingsHeader id={`${id}-h`} title="AI Descriptions" />
       <div className="lf-group">
         <SettingRow
           setting="describe-notes"
@@ -278,14 +281,27 @@ export function AiDescriptionsSettings() {
           </SettingRow>
         ) : null}
       </div>
-      <GroupHead>Prompt</GroupHead>
+      <GroupHead>Note Prompt</GroupHead>
       <PromptEditor
+        kind={NOTE_PROMPT}
         prompt={prompt}
         custom={settings[AI_DESCRIPTION_PROMPT_SETTING] !== undefined}
         onSave={(next) =>
           workspace.setSetting(
             AI_DESCRIPTION_PROMPT_SETTING,
             next === DEFAULT_PROMPT ? undefined : next,
+          )
+        }
+      />
+      <GroupHead>Tag Prompt</GroupHead>
+      <PromptEditor
+        kind={TAG_PROMPT}
+        prompt={tagPromptOf(settings)}
+        custom={settings[AI_TAG_PROMPT_SETTING] !== undefined}
+        onSave={(next) =>
+          workspace.setSetting(
+            AI_TAG_PROMPT_SETTING,
+            next === DEFAULT_TAG_PROMPT ? undefined : next,
           )
         }
       />
@@ -460,12 +476,65 @@ function ProviderDetail({
   );
 }
 
-/** The prompt, its token buttons (inserted at the cursor) and Reset to Default. */
+/** What tells the note prompt's editor from the tag prompt's: words, tokens, default, ids. */
+interface PromptKind {
+  readonly label: string;
+  /** Its row's `data-setting`, the label in kebab case. */
+  readonly setting: string;
+  readonly help: string;
+  readonly tokens: readonly string[];
+  readonly fallback: string;
+  readonly ready: (prompt: string) => boolean;
+  readonly missing: string;
+  /** Test ids' and tracked ids' parts. */
+  readonly testId: string;
+  readonly tokenId: string;
+  readonly tokenEvent: string;
+  readonly resetId: string;
+  readonly resetEvent: string;
+  readonly warnId: string;
+}
+
+const NOTE_PROMPT: PromptKind = {
+  label: 'Note Prompt',
+  setting: 'note-prompt',
+  help: 'Sent for each note. The tokens are replaced with the note’s own.',
+  tokens: PROMPT_TOKENS,
+  fallback: DEFAULT_PROMPT,
+  ready: promptHasBody,
+  missing: AI_DESCRIPTION_COPY['notePrompt.missing'],
+  testId: 'ai-prompt',
+  tokenId: 'ai-token',
+  tokenEvent: 'settings.ai.token',
+  resetId: 'ai-reset-prompt',
+  resetEvent: 'settings.ai.reset-prompt',
+  warnId: 'ai-no-body',
+};
+
+const TAG_PROMPT: PromptKind = {
+  label: 'Tag Prompt',
+  setting: 'tag-prompt',
+  help: 'Sent for a tag when you generate its description on the Tags page. The tokens are replaced with the tag’s own.',
+  tokens: TAG_PROMPT_TOKENS,
+  fallback: DEFAULT_TAG_PROMPT,
+  ready: promptHasNotes,
+  missing: AI_DESCRIPTION_COPY['tagPrompt.missing'],
+  testId: 'ai-tag-prompt',
+  tokenId: 'ai-tag-token',
+  tokenEvent: 'settings.ai.tag-token',
+  resetId: 'ai-reset-tag-prompt',
+  resetEvent: 'settings.ai.reset-tag-prompt',
+  warnId: 'ai-no-notes',
+};
+
+/** A prompt, its token buttons (inserted at the cursor) and Reset to Default. */
 function PromptEditor({
+  kind,
   prompt,
   custom,
   onSave,
 }: {
+  kind: PromptKind;
   prompt: string;
   custom: boolean;
   onSave: (prompt: string) => void;
@@ -479,15 +548,20 @@ function PromptEditor({
     if (next !== prompt) onSave(next);
   };
   return (
-    <div className="ai-prompt-field" data-setting="prompt" data-testid="ai-prompt-setting">
+    <div
+      className="ai-prompt-field"
+      data-setting={kind.setting}
+      data-testid={`${kind.testId}-setting`}
+    >
       <label className="lf-row-label" htmlFor={`${id}-prompt`}>
-        Prompt
+        {kind.label}
       </label>
+      <p className="lf-help">{kind.help}</p>
       <textarea
         ref={area}
         id={`${id}-prompt`}
         className="input ai-prompt"
-        data-testid="ai-prompt"
+        data-testid={kind.testId}
         value={text}
         spellCheck={false}
         onChange={(event) => setDraft(event.target.value)}
@@ -495,14 +569,14 @@ function PromptEditor({
       />
       <div className="ai-tokens">
         <span className="muted">Insert:</span>
-        {PROMPT_TOKENS.map((token) => (
+        {kind.tokens.map((token) => (
           <button
             data-ui="submit"
-            data-event="settings.ai.token"
+            data-event={kind.tokenEvent}
             key={token}
             type="button"
             className="btn ai-token"
-            data-testid={`ai-token-${token}`}
+            data-testid={`${kind.tokenId}-${token}`}
             // Keeps the cursor where it is in the prompt.
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => {
@@ -523,22 +597,22 @@ function PromptEditor({
         ))}
         <button
           data-ui="submit"
-          data-event="settings.ai.reset-prompt"
+          data-event={kind.resetEvent}
           type="button"
           className="btn ai-reset"
-          data-testid="ai-reset-prompt"
+          data-testid={kind.resetId}
           disabled={!custom && draft === null}
           onClick={() => {
             setDraft(null);
-            onSave(DEFAULT_PROMPT);
+            onSave(kind.fallback);
           }}
         >
           Reset to Default
         </button>
       </div>
-      {!promptHasBody(text) ? (
-        <p className="ai-warn" role="alert" data-testid="ai-no-body">
-          This prompt has no {'{{body}}'} token, so Claude won’t see the note’s text.
+      {!kind.ready(text) ? (
+        <p className="ai-warn" role="alert" data-testid={kind.warnId}>
+          {kind.missing}
         </p>
       ) : null}
     </div>

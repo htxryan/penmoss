@@ -35,11 +35,7 @@ export function NoteSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="note-settings"
     >
-      <SettingsHeader
-        id={`${id}-h`}
-        title="Note"
-        intro="How a note is laid out and what its bars show."
-      />
+      <SettingsHeader id={`${id}-h`} title="Note" />
       <PreviewTabs
         name="Note"
         testId="note-tabs"

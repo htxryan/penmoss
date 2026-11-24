@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DAD_JOKES } from '../../src/shell/dad-jokes';
+import { DAD_JOKES } from '@penmoss/core/dad-jokes';
 import { drawJoke, JOKE_DECK_KEY, resetJokeDeck, shuffled } from '../../src/shell/joke-deck';
 import type { KeyValueStore } from '../../src/shell/key-value';
 

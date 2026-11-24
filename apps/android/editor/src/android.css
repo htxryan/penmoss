@@ -96,21 +96,10 @@ body {
 }
 
 /*
- * Line symbols (T44, A747): the phone's note has a 1rem gutter, too narrow for the web's margin
- * glyphs at any width (a tablet's too), so they sit before the line's text, as on a narrow
- * browser window, still outside the caret's path. Relative, so a line with more than three shows
- * its "+N" chip's popover below them (T52 item 3); in a table cell blocks.css keeps them static.
+ * Line symbols (T44, A747): drawn in the note's symbol gutter as on the Mac (A1680), the web's
+ * blocks.css: the editor keeps room for its widest stack, up to three, left of the text, and
+ * none in a note without symbols, so every line's text starts at the same place.
  */
-.android-note .pm-symbols {
-  position: relative;
-  z-index: auto; /* no layer of its own, or a table's toolbar below the line sits under it */
-  margin-inline-end: 0.3em;
-  transform: none;
-}
-
-.android-note .pm-symbols:is(.is-open, .is-overflowing:hover) {
-  z-index: 6;
-}
 
 /*
  * The image lightbox (T51, A948) on the phone: the app gives it the whole screen (its bars step

@@ -10,6 +10,8 @@ export interface TagDone {
   readonly text: string;
   /** Puts it back; resolves with the notes it changed. */
   readonly undo: () => Promise<number>;
+  /** What the toast says once undone, when not the notes' count (a tag's description, A1677). */
+  readonly undone?: string;
 }
 
 /** How long the toast shows while neither pointed at nor focused. */
@@ -43,7 +45,9 @@ export function TagDoneToast({
     try {
       const notes = await done.undo();
       showToast({
-        text: `Undone: ${notes === 1 ? '1 note is' : `${notes} notes are`} as they were.`,
+        text:
+          done.undone ??
+          `Undone: ${notes === 1 ? '1 note is' : `${notes} notes are`} as they were.`,
         tone: 'done',
         testId: 'tag-undone-toast',
       });

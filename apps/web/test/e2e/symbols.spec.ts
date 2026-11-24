@@ -82,17 +82,25 @@ test('T44: slot keys toggle symbols in the margin, in list order, as plain text,
   await page.keyboard.press('Enter');
   await page.keyboard.type('Call the bank');
   const left = await textLeft(page, 'Call the bank');
+  // A note without symbols keeps no gutter (A1680).
+  await expect(body(page)).not.toHaveAttribute('data-symbol-slots');
 
   await page.keyboard.press(SYMBOL(6));
   await page.keyboard.press(SYMBOL(2));
   const margin = body(page).locator('p').nth(1).getByTestId('line-symbols');
   await expect(margin).toBeVisible();
   await expect(margin.locator('.pm-symbol')).toHaveText(['★', '→']);
-  // In the margin, outside the text column: the text did not move (no layout shift).
+  // In the gutter, outside the text column, which made room for two (A1680): every line's
+  // text starts at the same place, the plain line's too.
+  await expect(body(page)).toHaveAttribute('data-symbol-slots', '2');
   const column = (await body(page).boundingBox())!;
   const box = (await margin.boundingBox())!;
   expect(box.x + box.width).toBeLessThanOrEqual(column.x + 1);
-  expect(Math.abs((await textLeft(page, 'Call the bank')) - left)).toBeLessThan(0.5);
+  expect(box.x).toBeGreaterThanOrEqual(left - 1);
+  expect(
+    Math.abs((await textLeft(page, 'Call the bank')) - (await textLeft(page, 'Before'))),
+  ).toBeLessThan(0.5);
+  expect(await textLeft(page, 'Call the bank')).toBeGreaterThan(left);
   // Coloured with the theme's tokens.
   const colour = await margin
     .locator('.pm-symbol')
@@ -274,14 +282,16 @@ test('A1632: ⌃1 steps a line through ☐, ☑ and no box; list items come from
       /Checkbox/,
       'Bulleted List Item',
       'Numbered List Item',
+      /Strikethrough/,
     ]);
     await expect(menu.getByRole('menuitem', { name: /Checkbox/ })).toBeDisabled();
+    await expect(menu.getByRole('menuitem', { name: /Strikethrough/ })).toBeDisabled();
     // Wholly inside the settings column, which would clip it.
     const column = (await page.locator('.settings-content').boundingBox())!;
     const box = (await menu.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(column.x);
     await menu.getByRole('menuitem', { name: 'Numbered List Item' }).click();
-    await expect(rows).toHaveCount(7);
+    await expect(rows).toHaveCount(8);
     await expect
       .poll(async () =>
         ((await storedSetting(page, 'symbols.list')) as unknown[] | undefined)?.at(-1),
@@ -289,7 +299,7 @@ test('A1632: ⌃1 steps a line through ☐, ☑ and no box; list items come from
       .toEqual({ kind: 'ordered' });
   } finally {
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(6);
+    await expect(rows).toHaveCount(7);
   }
   expect(errors).toEqual([]);
 });
@@ -303,7 +313,16 @@ test('T44: the picker, the slash menu, the palette and a click in the margin', a
   const picker = page.getByRole('menu', { name: 'Symbols' });
   await expect(picker).toBeVisible();
   // Each named by its glyph (T51 item 12, A940), after the Checkbox on slot 1 (A1632).
-  await expect(picker.getByRole('menuitemcheckbox')).toHaveText([/☐/, /★/, /\?/, /!/, /💡/, /→/]);
+  await expect(picker.getByRole('menuitemcheckbox')).toHaveText([
+    /☐/,
+    /★/,
+    /\?/,
+    /!/,
+    /💡/,
+    /→/,
+    /⊘/,
+  ]);
+  await expect(picker.getByRole('menuitemcheckbox').last()).toHaveAccessibleName('Strikethrough');
   await expect(picker.getByRole('menuitemcheckbox').first()).toHaveAccessibleName('Checkbox');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
@@ -389,12 +408,12 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
   try {
     // A shared workspace: start from the defaults.
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(6);
+    await expect(rows).toHaveCount(7);
     await expect(settings.getByTestId('symbol-keys-2')).toHaveText(/⌃2|Alt\+Shift\+2/);
     // No names to give (A940): a row is its keys, its glyph and its colour.
     await expect(rows.first().getByRole('textbox')).toHaveCount(0);
     // A focused control in the last row stays clear of the buttons below (T51 item 11).
-    const last = settings.getByTestId('symbol-glyph-6');
+    const last = settings.getByTestId('symbol-remove-7');
     await last.focus();
     const lastBox = (await last.boundingBox())!;
     const addBox = (await settings.getByTestId('symbol-add').boundingBox())!;
@@ -436,7 +455,7 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
 
     // Show the Keys (PEN-146): the count against the limit, and a row moved by its handle from
     // the keyboard, which keeps focus, says its new place, and back again.
-    await expect(settings.getByTestId('symbols-count')).toHaveText('6 of 9');
+    await expect(settings.getByTestId('symbols-count')).toHaveText('7 of 9');
     await settings.getByTestId('symbol-move-2').focus();
     await page.keyboard.press('Alt+ArrowDown');
     await expect(settings.getByTestId('symbol-glyph-3')).toHaveText('⚑');
@@ -446,13 +465,14 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
     await expect(settings.getByTestId('symbol-glyph-2')).toHaveText('⚑');
 
     await settings.getByRole('button', { name: 'Remove ?' }).click();
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(6);
     const edited = [
       { kind: 'checkbox' },
       { glyph: '⚑', name: '⚑', colour: 'calloutFailure' },
       { glyph: '!', name: 'Follow-up', colour: '#3366cc80' },
       { glyph: '💡', name: 'Idea', colour: 'calloutTip' },
       { glyph: '→', name: 'Next', colour: 'accent' },
+      { kind: 'strike' },
     ];
     await expect.poll(() => storedSetting(page, 'symbols.list')).toEqual(edited);
     // Synced: the notebook's device settings reach its remote (A827).
@@ -470,7 +490,7 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
     await page.goto('/settings/symbols');
     await expect(settings.getByTestId('symbol-glyph-2')).toBeEnabled();
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(6);
+    await expect(rows).toHaveCount(7);
     await expect.poll(() => storedSetting(page, 'symbols.list')).toBeUndefined();
     // Synced with the defaults back.
     await page.locator('.settings-bar .back-link').click();
@@ -493,7 +513,7 @@ test('A1588: an emoji keeps its own colours, so its colour is disabled with a no
   await expect(settings.getByTestId('symbol-glyph-2')).toBeEnabled();
   try {
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(6);
+    await expect(rows).toHaveCount(7);
     // 💡, a default: its colour is disabled, the note beside it and describing it, and the
     // glyph drawn without its colour.
     const idea = settings.getByTestId('symbol-colour-5');
@@ -538,7 +558,7 @@ test('A1588: an emoji keeps its own colours, so its colour is disabled with a no
     await expect(settings.getByTestId('symbol-glyph-2')).toHaveAttribute('style', /color/);
   } finally {
     if (await restore.isEnabled()) await restore.click();
-    await expect(rows).toHaveCount(6);
+    await expect(rows).toHaveCount(7);
   }
   expect(errors).toEqual([]);
 });
@@ -611,11 +631,10 @@ test('T52: symbols in a table cell, by key and the slash menu, before the cell�
   expect(errors).toEqual([]);
 });
 
-test('T52: more symbols than the gutter holds show as many as fit, a "+N" chip and a popover', async ({
+test('T52, A1680: the gutter holds three symbols at every width, past that two and "+N"', async ({
   page,
 }) => {
   const errors = collectErrors(page);
-  // A window whose pane leaves the theme's column a wide gutter once the panel is hidden.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const id = await newNote(page, `Symbol overflow ${RUN}`);
@@ -626,50 +645,56 @@ test('T52: more symbols than the gutter holds show as many as fit, a "+N" chip a
   const line = body(page).locator('p').nth(1);
   const margin = line.getByTestId('line-symbols');
   await expect(margin.locator('.pm-symbol')).toHaveText(['!', '💡', '→']);
-  // Beside the side panel (open, the default) the text column fills what is left of the pane,
-  // so its gutter is the 3rem one: close the panel (this note only, A960, A985) to give it room.
+  await expect(body(page)).toHaveAttribute('data-symbol-slots', '3');
+  /** All three show, in the gutter: not over the text, which starts where a plain line's does. */
+  const expectAllInGutter = async () => {
+    await expect(margin.locator('.pm-symbol:visible')).toHaveCount(3);
+    await expect(margin.locator('.pm-symbols-more')).toHaveCount(0);
+    await expect(margin).not.toHaveClass(/\bis-badge\b/);
+    const column = (await body(page).boundingBox())!;
+    const box = (await margin.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(column.x + 1);
+    expect(
+      Math.abs((await textLeft(page, 'Three symbols')) - (await textLeft(page, 'Plain line'))),
+    ).toBeLessThan(0.5);
+    await expectHandleClear(page, line, margin);
+  };
+  // Beside the side panel (open, the default) and without it.
   const columns = page.locator('.note-columns');
   await expect(columns).toHaveAttribute('data-panel', 'open');
+  await expectAllInGutter();
   await page.getByTestId('note-panel-close').click();
   await expect(columns).toHaveAttribute('data-panel', 'closed');
-  // The theme's width leaves a wide gutter: all three show, the drag handle's slot left clear.
-  await expect(margin.locator('.pm-symbol:visible')).toHaveCount(3);
-  await expect(margin.locator('.pm-symbols-more')).toHaveCount(0);
-  await expectHandleClear(page, line, margin);
+  await expectAllInGutter();
 
   const toggle = page.getByTestId('toggle-full-width');
   if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
   try {
     await toggle.click();
     await expect(page.getByTestId('note-view')).toHaveAttribute('data-width', 'full');
-    // Full width: the 3rem gutter, less the drag handle's 24 px, holds one slot (A969): the
-    // first symbol with "+2" as a badge on its corner, and the handle beside it, not over it.
-    const more = margin.locator('.pm-symbols-more');
-    await expect(more).toBeVisible();
-    await expect(margin.locator('.pm-symbol:visible')).toHaveText(['!']);
-    await expect(more).toHaveText('+2');
-    await expect(margin).toHaveClass(/\bis-badge\b/);
-    await expectHandleClear(page, line, margin);
-    // Inside the gutter: not over the text, nor past the pane's edge.
-    const column = (await body(page).boundingBox())!;
+    // Full width: the gutter still holds the three, inside the pane (A969 drew one and a badge).
+    await expectAllInGutter();
     const pane = (await page
       .locator('.note-main', { has: page.getByTestId('note-body') })
       .boundingBox())!;
-    const box = (await margin.boundingBox())!;
-    expect(box.x + box.width).toBeLessThanOrEqual(column.x + 1);
-    expect(box.x).toBeGreaterThanOrEqual(pane.x);
-    // The text column never moves: the line's text starts where a plain line's does.
-    expect(
-      Math.abs((await textLeft(page, 'Three symbols')) - (await textLeft(page, 'Plain line'))),
-    ).toBeLessThan(0.5);
-    // Every symbol is still named for screen readers.
-    await expect(margin.locator('.pm-symbols-label')).toHaveText(/! Follow-up 💡 Idea → Next/);
-    // Hovering shows them all.
+    expect((await margin.boundingBox())!.x).toBeGreaterThanOrEqual(pane.x);
+
+    // A fourth: the first two and "+2", every symbol named and in the popover.
+    await line.click();
+    await page.keyboard.press(SYMBOL(2));
+    await expect(margin.locator('.pm-symbol')).toHaveText(['★', '!', '💡', '→']);
+    await expect(margin.locator('.pm-symbol:visible')).toHaveText(['★', '!']);
+    const more = margin.locator('.pm-symbols-more');
+    await expect(more).toHaveText('+2');
+    await expect(body(page)).toHaveAttribute('data-symbol-slots', '3');
+    await expect(margin.locator('.pm-symbols-label')).toHaveText(
+      /★ Important ! Follow-up 💡 Idea → Next/,
+    );
     const popover = margin.locator('.pm-symbols-popover');
     await expect(popover).toBeHidden();
     await margin.hover();
     await expect(popover).toBeVisible();
-    await expect(popover.locator('.pm-symbols-popover-glyph')).toHaveText(['!', '💡', '→']);
+    await expect(popover.locator('.pm-symbols-popover-glyph')).toHaveText(['★', '!', '💡', '→']);
     // A click still opens the picker for the line.
     await margin.click();
     await expect(page.getByRole('menu', { name: 'Symbols' })).toBeVisible();
@@ -681,47 +706,83 @@ test('T52: more symbols than the gutter holds show as many as fit, a "+N" chip a
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await expect.poll(() => storedSetting(page, 'note.fullWidth'), { timeout: 10_000 }).toBe(false);
   }
-  await expect(margin.locator('.pm-symbols-more')).toHaveCount(0);
 
-  // A phone's width: before the text, three slots at most.
+  // A phone's width: the same gutter, three slots at most.
   await page.setViewportSize({ width: 390, height: 800 });
-  await expect(margin.locator('.pm-symbol:visible')).toHaveCount(3);
-  await body(page).locator('p').nth(1).click();
-  await page.keyboard.press(SYMBOL(2));
-  await expect(margin.locator('.pm-symbol')).toHaveText(['★', '!', '💡', '→']);
   await expect(margin.locator('.pm-symbol:visible')).toHaveText(['★', '!']);
   await expect(margin.locator('.pm-symbols-more')).toHaveText('+2');
+  const column = (await body(page).boundingBox())!;
+  expect((await margin.boundingBox())!.x + (await margin.boundingBox())!.width).toBeLessThanOrEqual(
+    column.x + 1,
+  );
+  expect((await margin.boundingBox())!.x).toBeGreaterThanOrEqual(0);
   expect(errors).toEqual([]);
 });
 
-test('T52: showing or hiding the side panel refits the margin, though the column keeps its width', async ({
+test('A1678, A1679: a numbered item takes a box and a star, and a line is struck through', async ({
   page,
 }) => {
   const errors = collectErrors(page);
-  // Wide enough that the theme's column keeps its width beside the panel and the strip of tab
-  // icons that is always at the note's edge (T53 item 9): only its place moves.
-  await page.setViewportSize({ width: 1700, height: 900 });
   await page.goto('/');
-  await newNote(page, `Symbol panel ${RUN}`);
-  await page.keyboard.type('Three symbols');
-  for (const slot of [4, 5, 6]) await page.keyboard.press(SYMBOL(slot));
-  const margin = body(page).getByTestId('line-symbols');
-  const panel = page.locator('.note-columns');
-  const column = async () => (await body(page).boundingBox())!;
-  await expect(panel).toHaveAttribute('data-panel', 'open');
-  // Beside the panel, the gutter is the 3rem one: the first symbol and "+2".
-  await expect(margin.locator('.pm-symbols-more')).toHaveText('+2');
-  const beside = await column();
-  await page.getByTestId('note-panel-close').click();
-  await expect(panel).toHaveAttribute('data-panel', 'closed');
-  await expect.poll(async () => (await column()).x).toBeGreaterThan(beside.x + 100);
-  expect((await column()).width).toBeCloseTo(beside.width, 0);
-  // The wide gutter holds all three.
-  await expect(margin.locator('.pm-symbol:visible')).toHaveCount(3);
-  await expect(margin.locator('.pm-symbols-more')).toHaveCount(0);
-  // Open again from a tab's icon: back to "+2".
-  await page.getByTestId('note-tab-info').click();
-  await expect(panel).toHaveAttribute('data-panel', 'open');
-  await expect(margin.locator('.pm-symbols-more')).toHaveText('+2');
+  await newNote(page, `Stacked symbols ${RUN}`);
+  await page.keyboard.type('1. Call the bank');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Book the train');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Cancelled meeting');
+  const plainLeft = await textLeft(page, 'Cancelled meeting');
+  await expect(body(page)).not.toHaveAttribute('data-symbol-slots');
+
+  // On the first item: ★, then the Checkbox. The box goes first (slot 1), the number stays,
+  // and the other item is untouched.
+  await body(page).getByText('Call the bank').click();
+  await page.keyboard.press(SYMBOL(2));
+  await page.keyboard.press(SYMBOL(1));
+  const items = body(page).locator('ol > li');
+  await expect(items).toHaveCount(2);
+  const first = items.first().getByTestId('line-symbols');
+  await expect(first.locator('.pm-symbol')).toHaveText(['☐', '★']);
+  await expect(items.nth(1).getByTestId('line-symbols')).toHaveCount(0);
+  await expect(body(page).locator('li[data-checked]')).toHaveCount(0);
+  await expect(body(page)).toHaveAttribute('data-symbol-slots', '2');
+  // ⌃1 again ticks it, the number kept; a click on the box unticks it.
+  await page.keyboard.press(SYMBOL(1));
+  await expect(first.locator('.pm-symbol')).toHaveText(['☑', '★']);
+  await expect(body(page).locator('ol > li')).toHaveCount(2);
+  await first.locator('.pm-symbol[data-box]').click();
+  await expect(first.locator('.pm-symbol')).toHaveText(['☐', '★']);
+
+  // Strikethrough on the plain line: its text struck through, its ⊘ in the gutter.
+  await body(page).getByText('Cancelled meeting').click();
+  await page.keyboard.press(SYMBOL(7));
+  const struck = body(page).locator('.pm-symbol-struck');
+  await expect(struck).toHaveText('Cancelled meeting');
+  await expect(struck).toHaveCSS('text-decoration-line', 'line-through');
+  const plain = body(page).locator('p', { hasText: 'Cancelled meeting' });
+  await expect(plain.getByTestId('line-symbols').locator('.pm-symbol')).toHaveText(['⊘']);
+  // Every line's text starts at the same place, in a column moved right by the gutter.
+  expect(await textLeft(page, 'Cancelled meeting')).toBeGreaterThan(plainLeft);
+  const symbolsBox = (await first.boundingBox())!;
+  expect(symbolsBox.x + symbolsBox.width).toBeLessThanOrEqual(
+    (await body(page).boundingBox())!.x + 1,
+  );
+
+  await expectMarkdown(page, '1. ☐ ★ Call the bank', '2. Book the train', '⊘ Cancelled meeting');
+
+  // Off again: no symbols, no gutter.
+  await body(page).getByText('Cancelled meeting').click();
+  await page.keyboard.press(SYMBOL(7));
+  await expect(struck).toHaveCount(0);
+  await body(page).getByText('Call the bank').click();
+  // ☐ → ☑ → none, then the ★ off.
+  await page.keyboard.press(SYMBOL(1));
+  await expect(first.locator('.pm-symbol')).toHaveText(['☑', '★']);
+  await page.keyboard.press(SYMBOL(1));
+  await expect(first.locator('.pm-symbol')).toHaveText(['★']);
+  await page.keyboard.press(SYMBOL(2));
+  await expect(body(page).getByTestId('line-symbols')).toHaveCount(0);
+  await expect(body(page)).not.toHaveAttribute('data-symbol-slots');
+  expect(Math.abs((await textLeft(page, 'Cancelled meeting')) - plainLeft)).toBeLessThan(0.5);
   expect(errors).toEqual([]);
 });

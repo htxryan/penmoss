@@ -11,6 +11,8 @@
  *   overwritten (unless the person asks with Describe Now).
  * - Failures are shown for the note (`status`) and never retried in a loop: the next change, or
  *   Describe Now, tries again.
+ * - A tag's description (A1677) is written only when asked (Generate AI Description and
+ *   Generate All on the Tags page), with the same provider and model, from the tag prompt.
  */
 import {
   aiGlobalOf,
@@ -27,8 +29,13 @@ import {
   promptOf,
   renderPrompt,
   resolveAiDescription,
+  tagPrompt,
+  tagPromptOf,
+  TAG_PROMPT_MAX_NOTES,
   type AiEffective,
+  type TagPromptNote,
 } from '@penmoss/core/ai-description';
+import { tagMatches } from '@penmoss/core/tags';
 import { folderPath } from '@penmoss/core/workspace';
 import {
   needsDescription,
@@ -96,6 +103,44 @@ export interface DescriberOptions {
   readonly today?: () => string;
 }
 
+/**
+ * A notebook as a tag's description needs it (A1677): its notes' list (title, the start of
+ * the text, tags, when changed) and where its tag descriptions are kept.
+ */
+export interface TagDescriberSource extends DescriberSource {
+  readonly notes: DescriberSource['notes'] & {
+    list(): readonly {
+      readonly id: string;
+      readonly title: string;
+      readonly excerpt: string;
+      readonly updatedAt: number;
+      readonly tags: readonly string[];
+    }[];
+  };
+  readonly workspace: DescriberSource['workspace'] & {
+    setTagDescription(tag: string, text: string): void;
+    flush(): Promise<void>;
+  };
+}
+
+/** What Generate AI Description came to: the text written and what it replaced, or why not. */
+export type TagAnswer =
+  | { readonly ok: true; readonly text: string; readonly before: string }
+  | { readonly ok: false; readonly code: string; readonly message: string };
+
+/** Nothing is sent without a provider: where to choose one. */
+export const NO_PROVIDER = {
+  ok: false,
+  code: 'no-provider',
+  message: 'Choose an AI provider in Settings → AI Descriptions.',
+} as const;
+
+/** One notebook's tags for Generate All. */
+export interface TagGroup {
+  readonly source: TagDescriberSource;
+  readonly tags: readonly string[];
+}
+
 export type DescribeStatus =
   | { readonly state: 'idle' }
   | { readonly state: 'waiting'; readonly at: number }
@@ -113,6 +158,7 @@ export class Describer {
   private readonly statuses = new Map<string, DescribeStatus>();
   private readonly listeners = new Set<() => void>();
   private readonly running = new Map<string, Promise<AiAnswer | null>>();
+  private readonly tagsRunning = new Map<string, Promise<TagAnswer>>();
   private offs: Array<() => void> = [];
   private offSources: (() => void) | null = null;
   private leading = false;
@@ -243,6 +289,134 @@ export class Describer {
   private setStatus(sourceId: string, noteId: string, status: DescribeStatus): void {
     this.statuses.set(this.key(sourceId, noteId), status);
     for (const listener of this.listeners) listener();
+  }
+
+  /** The notebook's tags whose description is being generated now. */
+  tagsBusyIn(sourceId: string): string[] {
+    const prefix = `${sourceId}#`;
+    return [...this.tagsRunning.keys()]
+      .filter((key) => key.startsWith(prefix))
+      .map((key) => key.slice(prefix.length))
+      .sort();
+  }
+
+  /** Whether a tag's description is being generated now (the Tags page's row says so). */
+  tagBusy(sourceId: string, tag: string): boolean {
+    return this.tagsRunning.has(`${sourceId}#${tag}`);
+  }
+
+  /**
+   * Generate AI Description (A1677): the tag prompt, with the notes carrying the tag (newest
+   * first; their descriptions, read from the notes, or the start of their text) and the other
+   * tags on them, sent to the provider; the answer is written into the notebook's
+   * `tagDescriptions`. `cache` keeps the notes' descriptions across a Generate All.
+   */
+  describeTag(
+    source: TagDescriberSource,
+    tag: string,
+    cache: Map<string, string | null> = new Map(),
+  ): Promise<TagAnswer> {
+    const key = `${source.id}#${tag}`;
+    const running = this.tagsRunning.get(key);
+    if (running) return running;
+    const work = this.runTag(source, tag, cache).finally(() => {
+      this.tagsRunning.delete(key);
+      for (const listener of this.listeners) listener();
+    });
+    this.tagsRunning.set(key, work);
+    for (const listener of this.listeners) listener();
+    return work;
+  }
+
+  /**
+   * Generate All (A1677): each notebook's tags, two at a time. `onProgress` hears each one
+   * done; the answer counts those written and says the last failure.
+   */
+  async describeTags(
+    groups: readonly TagGroup[],
+    options: { readonly signal?: AbortSignal; readonly onProgress?: (done: number) => void } = {},
+  ): Promise<{ written: number; failed: number; message: string | null }> {
+    const jobs = groups.flatMap((group) =>
+      group.tags.map((tag) => ({ source: group.source, tag })),
+    );
+    const caches = new Map<string, Map<string, string | null>>();
+    let next = 0;
+    let done = 0;
+    const out = { written: 0, failed: 0, message: null as string | null };
+    const work = async () => {
+      while (next < jobs.length && !options.signal?.aborted) {
+        const job = jobs[next++]!;
+        const cache = caches.get(job.source.id) ?? new Map<string, string | null>();
+        caches.set(job.source.id, cache);
+        const answer = await this.describeTag(job.source, job.tag, cache);
+        if (answer.ok) out.written += 1;
+        else {
+          out.failed += 1;
+          out.message = answer.message;
+        }
+        done += 1;
+        options.onProgress?.(done);
+      }
+    };
+    await Promise.all(Array.from({ length: BATCH_AT_ONCE }, work));
+    return out;
+  }
+
+  private async runTag(
+    source: TagDescriberSource,
+    tag: string,
+    cache: Map<string, string | null>,
+  ): Promise<TagAnswer> {
+    const bridge = this.options.bridge;
+    const settings = this.options.settings();
+    const provider = aiProviderOf(settings);
+    const model = modelOf(settings, provider);
+    if (!bridge || provider === 'none' || !model) return NO_PROVIDER;
+    const carrying = [...source.notes.list()]
+      .filter((note) => note.tags.some((each) => tagMatches(each, tag)))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+    const notes: TagPromptNote[] = [];
+    for (const [index, note] of carrying.entries()) {
+      // Only the notes the prompt lists are read for their descriptions; the rest count.
+      let description: string | null = null;
+      if (index < TAG_PROMPT_MAX_NOTES) {
+        if (!cache.has(note.id)) {
+          cache.set(
+            note.id,
+            await this.withDoc(source, note.id, (doc) => readDescription(doc)).catch(() => null),
+          );
+        }
+        description = cache.get(note.id) ?? null;
+      }
+      notes.push({ title: note.title, tags: note.tags, description, text: note.excerpt });
+    }
+    const described = () => source.workspace.getState().snapshot.tagDescriptions?.[tag] ?? '';
+    const prompt = tagPrompt(tagPromptOf(settings), {
+      tag,
+      notes,
+      notebook: source.name,
+      description: described(),
+      date: this.options.today?.() ?? new Date().toISOString().slice(0, 10),
+    });
+    const answer = await bridge.describe(provider, model, prompt).catch((error: unknown) => ({
+      ok: false as const,
+      code: 'failed',
+      message: error instanceof Error ? error.message : String(error),
+    }));
+    if (!answer) return NO_PROVIDER;
+    if (!answer.ok) return answer;
+    const text = cleanDescription(answer.text);
+    if (!text) {
+      return {
+        ok: false,
+        code: 'failed',
+        message: 'The AI provider answered with no description.',
+      };
+    }
+    const before = described();
+    source.workspace.setTagDescription(tag, text);
+    await source.workspace.flush().catch(() => undefined);
+    return { ok: true, text, before };
   }
 
   /** Describes one note now (Describe Now): no pause, and whatever its text's stamp. */

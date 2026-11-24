@@ -69,6 +69,8 @@ class AnalyticsCopyContractTest {
             "consent.policy.label",
         )
         for (key in keys) compose.onNodeWithText(text(key), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        // No lead under the title (A1674): it is Settings search's help for the row now.
+        compose.onNodeWithText(text("privacy.lead"), useUnmergedTree = true).assertDoesNotExist()
         // The answers stay in view below the words.
         for (key in listOf("consent.share.button", "consent.dontShare.button")) compose.onNodeWithText(text(key), useUnmergedTree = true).assertIsDisplayed()
         val mac = contract.getValue("copy").jsonObject.getValue("consent.recorded.4").jsonObject.getValue("mac").jsonPrimitive.content
@@ -82,11 +84,13 @@ class AnalyticsCopyContractTest {
     fun privacyShowsTheSameWords() {
         compose.setContent { PenmossTheme { PrivacyScreen(PrivacyUi(install = "0".repeat(32)), PrivacyActions()) } }
         val keys = listOf(
-            "privacy.lead", "privacy.share.label", "privacy.share.hint", "privacy.viewData.label", "privacy.id.label",
+            "privacy.share.label", "privacy.share.hint", "privacy.viewData.label", "privacy.id.label",
             "privacy.id.hint", "privacy.resetId.button", "privacy.forget.button", "privacy.logs.label", "privacy.logs.button",
             "privacy.advanced.label", "privacy.advanced.hint", "privacy.policy.label",
         )
         for (key in keys) compose.onNodeWithText(text(key), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        // No lead under the title (A1674): it is Settings search's help for the row now.
+        compose.onNodeWithText(text("privacy.lead"), useUnmergedTree = true).assertDoesNotExist()
         // The title, in the top bar (drawn large and small).
         assertTrue(compose.onAllNodes(hasText(text("privacy.title")), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         compose.onNodeWithText(text("privacy.logs.hint").replace("{days}", "7"), useUnmergedTree = true).performScrollTo().assertIsDisplayed()

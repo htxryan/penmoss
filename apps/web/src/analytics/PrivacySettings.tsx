@@ -31,7 +31,7 @@ export function PrivacySettings() {
       aria-labelledby={`${id}-h`}
       data-testid="privacy-settings"
     >
-      <SettingsHeader id={`${id}-h`} title={copy('privacy.title')} intro={copy('privacy.lead')} />
+      <SettingsHeader id={`${id}-h`} title={copy('privacy.title')} />
       {status ? <PrivacyRows analytics={analytics} status={status} /> : null}
       <p className="privacy-policy">
         <PrivacyPolicyLink event="privacy.policy" />

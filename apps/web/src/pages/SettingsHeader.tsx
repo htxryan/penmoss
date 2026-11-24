@@ -17,7 +17,8 @@ import { thesePlatforms, thisDevice } from '../theme/device-only';
 
 /**
  * Every Settings page's header (Ryan's chosen design, A1560): a small "Settings" with an (i) that
- * says where settings are kept, the page's title large, and one line under it. Once the title has
+ * says where settings are kept, the page's title large, and nothing under it but a page's live state (Search's count, a
+ * notebook's sync, Analytics Data's summary): no subtitle that only describes the page (PEN-182). Once the title has
  * scrolled out of sight the row with "Settings (i)" stays pinned at the top of the content column
  * and the title joins it, small, after a slash, with a hairline and a soft shadow; the line under
  * the title scrolls away. One component for every page, the search results too.
@@ -39,7 +40,7 @@ export function SettingsHeader({
   readonly title: ReactNode;
   /** The title in the pinned row, when `title` is more than words (a notebook's badge). */
   readonly barTitle?: string | undefined;
-  /** One line about the page, under its title. */
+  /** A page's live state under its title (a count, a sync line); never a description of the page. */
   readonly intro?: ReactNode | undefined;
   /** Just after the title, outside the heading: a notebook's Primary chip. */
   readonly beside?: ReactNode | undefined;

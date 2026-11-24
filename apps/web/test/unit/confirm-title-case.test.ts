@@ -20,7 +20,12 @@ const WEB = fileURLToPath(new URL('../../src', import.meta.url));
 const DESKTOP = fileURLToPath(new URL('../../../desktop/src', import.meta.url));
 
 /** The components that frame a confirmation, by the name the page writes. */
-const CONFIRMS = new Set(['ConfirmBlock', 'ConfirmDialog']);
+const CONFIRMS = new Set(['ConfirmBlock', 'ConfirmDialog', 'BatchDialog']);
+/**
+ * Frames built on one of those that pass their own `title` prop through (A1677's BatchDialog):
+ * their callers' titles are read; their buttons are read here.
+ */
+const FRAMES = new Set(['notes/BatchDialog.tsx']);
 /** Where `role="alertdialog"` may be written: inside those components. */
 const ALERT_DIALOG_HOMES = new Set(['shell/ConfirmBlock.tsx']);
 
@@ -187,7 +192,9 @@ function confirmations(): { titles: Found[]; buttons: Found[]; unread: string[];
         const tag = opening.tagName.getText(file);
         if (CONFIRMS.has(tag)) {
           const title = attribute(opening, 'title');
-          if (title?.initializer) add(titles, title, title.initializer);
+          if (FRAMES.has(name)) {
+            // The frame's own title is its caller's, read there.
+          } else if (title?.initializer) add(titles, title, title.initializer);
           else unread.push(where(opening));
           buttonsIn(node);
         }

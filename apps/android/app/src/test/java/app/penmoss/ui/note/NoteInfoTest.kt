@@ -382,7 +382,7 @@ class NoteInfoTest {
         compose.onNodeWithText("See Garden").assertExists()
         compose.onNodeWithTag("linked-review").performClick()
         list.performScrollToNode(hasTestTag("unlinked-shop"))
-        compose.onNodeWithText("Unlinked mentions 1").assertExists()
+        compose.onNodeWithText("Unlinked Mentions 1").assertExists()
         compose.onNodeWithTag("unlinked-shop").performClick()
         assertEquals(listOf("tags", "open:review", "open:shop"), events)
     }
