@@ -13,6 +13,7 @@
  * I and L as 1). The Android app ports this in `NoteRef.kt`, matched by the contract
  * `apps/android/contract/agent-reference-v1.json`.
  */
+import { fnv1a } from './fnv';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const ULID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
@@ -24,16 +25,6 @@ export const NOTEBOOK_TAG_LENGTH = 4;
 
 /** `<notebook>-<note>`: an 8-character note part, or the whole ULID after a clash. */
 const SHORT = /^([0-9A-Z]{4})-([0-9A-Z]{8}|[0-9A-Z]{26})$/;
-
-/** 32-bit FNV-1a of `text`'s UTF-16 code units (notebook ids are ASCII ULIDs). */
-function fnv1a(text: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash >>> 0;
-}
 
 /** Upper case, with Crockford's look-alikes as the digits they stand for. */
 function normalise(text: string): string {

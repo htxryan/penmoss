@@ -19,6 +19,7 @@
  *   name ending in `~` and a hash of the folder's id.
  */
 
+import { fnv1a } from '../fnv';
 import { stripInvisible } from '../invisible';
 
 /** Longest name, in UTF-8 bytes, before a suffix and `.md` (filesystems allow 255). */
@@ -168,12 +169,7 @@ function cutName(base: string, id: string, max: number, attempt = 0): string {
 
 /** FNV-1a, 6 base-36 characters: tells cut names apart, nothing more. */
 function shortHash(text: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(36).padStart(7, '0').slice(-6);
+  return fnv1a(text).toString(36).padStart(7, '0').slice(-6);
 }
 
 /**

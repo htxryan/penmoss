@@ -4,6 +4,8 @@
  * `Journal/2026/Weekly/2026-W43.md`), templates, and the ids that make two
  * devices creating the same day's note offline create one note (A4).
  */
+import { FNV_BASIS, fnv1a } from './fnv';
+
 /** A calendar date with no time or zone, shaped like `Temporal.PlainDate`. */
 export interface PlainDate {
   readonly year: number;
@@ -248,14 +250,9 @@ export function fillTemplate(template: string, kind: PeriodKind, period: string)
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (whole, name: string) => values[name] ?? whole);
 }
 
-/** 32-bit FNV-1a over UTF-16 code units, salted, for deterministic ids and client ids. */
-function fnv1a(text: string, seed: number): number {
-  let hash = (0x811c9dc5 ^ seed) >>> 0;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash >>> 0;
+/** 32-bit FNV-1a over UTF-16 code units (or bytes), seeded, for deterministic ids and client ids. */
+function seededFnv(input: string | Uint8Array, seed: number): number {
+  return fnv1a(input, (FNV_BASIS ^ seed) >>> 0);
 }
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
@@ -268,7 +265,7 @@ function deterministicUlid(time: number, name: string): string {
     rest = Math.floor(rest / 32);
   }
   // Four salted 32-bit hashes give 128 bits; 16 characters take 5 bits each.
-  const words = [1, 2, 3, 4].map((seed) => fnv1a(name, seed));
+  const words = [1, 2, 3, 4].map((seed) => seededFnv(name, seed));
   for (let i = 0; i < 16; i++) {
     const word = words[i >> 2]!;
     out += ALPHABET[(word >>> ((i & 3) * 8)) & 31];
@@ -323,11 +320,7 @@ export function periodicClientId(
   content: Uint8Array,
   salt?: string,
 ): number {
-  let hash = (0x811c9dc5 ^ 13) >>> 0;
-  for (const byte of content) {
-    hash ^= byte;
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
+  const hash = seededFnv(content, 13);
   // Yjs client ids are 31-bit (as random ones are), never 0.
-  return fnv1a(salted(salt, `${kind}:${period}:${hash.toString(16)}`), 11) & 0x7fffffff || 1;
+  return seededFnv(salted(salt, `${kind}:${period}:${hash.toString(16)}`), 11) & 0x7fffffff || 1;
 }

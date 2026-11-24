@@ -5,6 +5,7 @@
  * notebooks' chunks and finds each note's best one; `MeaningIndex` keeps the two in step with the
  * notes; `fuseHybrid` merges meaning with the words' ranking.
  */
+import { fnv1a } from '../fnv';
 import { MATCH_START } from './snippet';
 import { reciprocalRankFusion } from './rrf';
 import { chunkNote, type NoteSection } from './sections';
@@ -81,16 +82,6 @@ export function dot(a: Float32Array, b: Float32Array): number {
   return sum;
 }
 
-/** FNV-1a, for the fake embedder's feature hashing. */
-function fnv(text: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
-}
-
 export const FAKE_DIMENSIONS = 1024;
 /**
  * The fake embedder's floor (A571's, kept): made-up words score at most about 0.10 against the
@@ -108,7 +99,7 @@ export function fakeEmbedder(options: { delayMs?: number } = {}): Embedder {
   const embed = (text: string) => {
     const vector = new Float32Array(FAKE_DIMENSIONS);
     const add = (feature: string, weight: number) => {
-      const hash = fnv(feature);
+      const hash = fnv1a(feature);
       vector[hash % FAKE_DIMENSIONS]! += hash & 0x80000000 ? -weight : weight;
     };
     for (const term of terms(text)) {

@@ -13,6 +13,7 @@
     "./attachments": "./src/attachments.ts",
     "./fuzzy": "./src/fuzzy.ts",
     "./ids": "./src/ids.ts",
+    "./fnv": "./src/fnv.ts",
     "./links": "./src/links.ts",
     "./line-symbols": "./src/line-symbols.ts",
     "./characters": "./src/characters.ts",

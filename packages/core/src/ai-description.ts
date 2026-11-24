@@ -18,6 +18,7 @@
  *   from the Tags page into the notebook's `tagDescriptions` (PEN-68).
  */
 
+import { FNV_BASIS, FNV_PRIME, fnv1a } from './fnv';
 import { describeTags, tagMatches } from './tags';
 import { effectiveParents, type FolderRecord } from './workspace/tree';
 
@@ -283,18 +284,9 @@ export function cutForPrompt(body: string, tokenLimit: number = PROMPT_TOKEN_LIM
 export function describedTextHash(title: string, tags: readonly string[], body: string): string {
   const text = `${title}\u0000${[...tags].sort().join(' ')}\u0000${body}`;
   return (
-    fnv(text, 0x811c9dc5).toString(16).padStart(8, '0') +
-    fnv(text, 0x01000193).toString(16).padStart(8, '0')
+    fnv1a(text, FNV_BASIS).toString(16).padStart(8, '0') +
+    fnv1a(text, FNV_PRIME).toString(16).padStart(8, '0')
   );
-}
-
-function fnv(text: string, seed: number): number {
-  let hash = seed >>> 0;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash >>> 0;
 }
 
 /**
