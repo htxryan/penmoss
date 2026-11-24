@@ -1,5 +1,7 @@
 /* Commands (T20): palette, quick open, recent-notes switcher, cheat sheet and shortcut editor. */
-.sr-only {
+/* Read only by a screen reader; never shown (the editor's symbols label uses it too). */
+.sr-only,
+.pm-symbols-label {
   position: absolute;
   width: 1px;
   height: 1px;

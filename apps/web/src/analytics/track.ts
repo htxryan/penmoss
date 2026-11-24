@@ -17,16 +17,9 @@ import type { Route } from '../router';
 import { record } from './record';
 
 /** How a command came to run, as the catalogue names it. */
-export type CommandSource = 'key' | 'palette' | 'button' | 'menu' | 'tray' | 'hotkey' | 'editor';
-const SOURCES: ReadonlySet<string> = new Set([
-  'key',
-  'palette',
-  'button',
-  'menu',
-  'tray',
-  'hotkey',
-  'editor',
-]);
+const COMMAND_SOURCES = ['key', 'palette', 'button', 'menu', 'tray', 'hotkey', 'editor'] as const;
+export type CommandSource = (typeof COMMAND_SOURCES)[number];
+const SOURCES: ReadonlySet<string> = new Set<CommandSource>(COMMAND_SOURCES);
 
 /** The editor's key names where the event format spells them out ("Up" → "ArrowUp"). */
 const ARROWS: Readonly<Record<string, string>> = {

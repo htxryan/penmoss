@@ -205,7 +205,7 @@ export function CreateRepo({
                 {owner || '…'} /
               </span>
               <label className="fr-grow">
-                <span className="fr-hidden">Repository name</span>
+                <span className="sr-only">Repository name</span>
                 <input
                   className={problem?.taken ? 'input fr-invalid' : 'input'}
                   maxLength={100}
@@ -257,7 +257,7 @@ export function CreateRepo({
             </span>
             {changing ? (
               <label className="fr-owner">
-                <span className="fr-hidden">Owner</span>
+                <span className="sr-only">Owner</span>
                 <Select
                   data-event="firstrun.owner"
                   value={owner}
@@ -678,7 +678,7 @@ export function RepoTree({
     <Frame name="list" state="ready" step={2} title="Pick Repository" back={back}>
       {accountLines}
       <label className="fr-filter">
-        <span className="fr-hidden">Filter</span>
+        <span className="sr-only">Filter</span>
         <Icon name="search" size={14} />
         <input
           type="search"
@@ -1020,7 +1020,7 @@ export function RepoPicked({
             <strong>Start Another Notebook in a Folder</strong>
             <span className="fr-row">
               <label className="fr-grow">
-                <span className="fr-hidden">Folder name</span>
+                <span className="sr-only">Folder name</span>
                 <input
                   className="input"
                   placeholder="journal"
@@ -1216,7 +1216,7 @@ export function FolderPick({
       </div>
       <span className="fr-row">
         <label className="fr-grow">
-          <span className="fr-hidden">New folder</span>
+          <span className="sr-only">New folder</span>
           <input
             className="input"
             placeholder="New folder, such as journal"

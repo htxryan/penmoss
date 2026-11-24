@@ -256,8 +256,7 @@ a.save-status[data-state='stopped']:hover {
  * (Reading Time, Token Count), not each list's own widest name, which differed once the
  * monospace font had loaded. A longer name wraps.
  */
-.info-list,
-.info-frontmatter {
+.info-list {
   display: grid;
   grid-template-columns: 6.75rem minmax(0, 1fr);
   gap: 0.3rem 0.9rem;
@@ -268,33 +267,13 @@ a.save-status[data-state='stopped']:hover {
   color: var(--pm-muted);
 }
 
-.info-list dt,
-.info-frontmatter dt {
+.info-list dt {
   overflow-wrap: anywhere;
 }
 
-.info-list dd,
-.info-frontmatter dd {
+.info-list dd {
   margin: 0;
   overflow-wrap: anywhere;
-}
-
-.info-frontmatter > div {
-  display: contents;
-}
-
-.info-frontmatter dt,
-.info-frontmatter dd {
-  font-family: var(--pm-mono);
-  font-size: var(--pm-text-code);
-}
-
-.info-frontmatter dt {
-  color: var(--pm-muted);
-}
-
-.info-frontmatter dt::after {
-  content: ':';
 }
 
 .note-info .note-tags {

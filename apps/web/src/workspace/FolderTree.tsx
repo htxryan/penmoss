@@ -1108,10 +1108,6 @@ function notesIn(folder: FolderNode): string[] {
   return [...folder.notes.map((note) => note.id), ...folder.folders.flatMap(notesIn)];
 }
 
-function countNotes(folder: FolderNode): number {
-  return folder.notes.length + folder.folders.reduce((sum, child) => sum + countNotes(child), 0);
-}
-
 function ConfirmDelete({
   folder,
   destination,
@@ -1123,7 +1119,7 @@ function ConfirmDelete({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const notes = countNotes(folder);
+  const notes = notesIn(folder).length;
   const subfolders = folder.folders.length;
   const into = destination === 'The top level' ? 'the top level' : destination;
   return (

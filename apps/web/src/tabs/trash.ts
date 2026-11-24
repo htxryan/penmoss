@@ -25,9 +25,6 @@ export function closeTabsOfTrashed(ids: readonly string[]): boolean {
   return true;
 }
 
-/** The tabs a trash closed for note `id`, or none (for the toast that says so). */
-export const tabsClosedFor = (id: string): readonly ClosedTab[] => closedFor.get(id) ?? [];
-
 /** Reopens the tabs a trash closed for `id`; false when there were none (show it in this tab). */
 export function reopenTabsOfRestored(id: string): boolean {
   const tabs = mainTabs();

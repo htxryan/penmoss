@@ -164,9 +164,6 @@ export class LayoutTracker {
 
 let tracker = new LayoutTracker();
 
-/** The page's tracker. */
-export const layoutTracker = (): LayoutTracker => tracker;
-
 /** A fresh tracker (tests). */
 export function resetLayoutTracking(next = new LayoutTracker()): void {
   tracker = next;

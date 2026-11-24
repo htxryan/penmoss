@@ -310,18 +310,7 @@ export function SidebarUpdateNotice({
       >
         What's New
       </button>
-      <button
-        data-event="updates.sidebar.dismiss"
-        type="button"
-        className="icon-btn sb-update-close"
-        data-ui="dismiss"
-        aria-label="Dismiss"
-        data-tip="Dismiss"
-        onClick={notice.dismiss}
-        data-testid="updated-dismiss"
-      >
-        <Icon name="close" size={14} />
-      </button>
+      <DismissNotice onClick={notice.dismiss} testId="updated-dismiss" />
     </div>
   ) : (
     <div
@@ -344,19 +333,27 @@ export function SidebarUpdateNotice({
           >
             Install and Restart
           </button>
-          <button
-            data-event="updates.sidebar.dismiss"
-            type="button"
-            className="icon-btn sb-update-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            data-tip="Dismiss"
-            onClick={notice.dismiss}
-          >
-            <Icon name="close" size={14} />
-          </button>
+          <DismissNotice onClick={notice.dismiss} />
         </>
       ) : null}
     </div>
+  );
+}
+
+/** The sidebar notice's ×, the same whichever notice it closes. */
+function DismissNotice({ onClick, testId }: { onClick: () => void; testId?: string }) {
+  return (
+    <button
+      data-event="updates.sidebar.dismiss"
+      type="button"
+      className="icon-btn sb-update-close"
+      data-ui="dismiss"
+      aria-label="Dismiss"
+      data-tip="Dismiss"
+      onClick={onClick}
+      data-testid={testId}
+    >
+      <Icon name="close" size={14} />
+    </button>
   );
 }
