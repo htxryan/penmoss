@@ -717,7 +717,8 @@ export const INBOX = 'Inbox';
 export function inboxFolder(doc: Y.Doc, salt?: string): string {
   const folders = readWorkspace(doc).folders;
   const own = folders.find(
-    (folder) => folder.parentId === null && folder.name.trim().toLowerCase() === INBOX.toLowerCase(),
+    (folder) =>
+      folder.parentId === null && folder.name.trim().toLowerCase() === INBOX.toLowerCase(),
   );
   if (own) return own.id;
   const id = journalFolderId(INBOX, salt);

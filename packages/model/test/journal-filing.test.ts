@@ -80,7 +80,9 @@ describe('inboxFolder', () => {
     const doc = new Y.Doc();
     expect(inboxFolder(doc, SALT)).toBe('0000000000A9WAXEW6RP7DK6Z8');
     expect(inboxFolder(doc, SALT)).toBe('0000000000A9WAXEW6RP7DK6Z8');
-    expect(folders(doc)).toEqual([{ id: '0000000000A9WAXEW6RP7DK6Z8', name: INBOX, parentId: null }]);
+    expect(folders(doc)).toEqual([
+      { id: '0000000000A9WAXEW6RP7DK6Z8', name: INBOX, parentId: null },
+    ]);
     expect(inboxFolder(new Y.Doc())).toBe('0000000000ER2EH9S3C9F6Z509');
   });
 

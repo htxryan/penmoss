@@ -397,7 +397,9 @@ export class GitHubBrowse {
       if (!blob.ok) continue;
       try {
         const content = (await blob.response.json()) as { content?: unknown };
-        const parsed = JSON.parse(new TextDecoder().decode(fromBase64(text(content.content) ?? ''))) as {
+        const parsed = JSON.parse(
+          new TextDecoder().decode(fromBase64(text(content.content) ?? '')),
+        ) as {
           id?: unknown;
           name?: unknown;
         };

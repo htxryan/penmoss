@@ -56,13 +56,7 @@ export {
   type NoteChunk,
   type NoteSection,
 } from './sections';
-export {
-  BM25_B,
-  BM25_K1,
-  FTS_COLUMNS,
-  FTS_WEIGHTS,
-  type FtsColumn,
-} from './fields';
+export { BM25_B, BM25_K1, FTS_COLUMNS, FTS_WEIGHTS, type FtsColumn } from './fields';
 export {
   MAX_NOTE_HEADINGS_BYTES,
   MAX_NOTE_TEXT_BYTES,
