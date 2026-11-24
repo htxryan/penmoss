@@ -1,6 +1,14 @@
 package app.penmoss.analytics
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -15,6 +23,9 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Sending (PEN-137, AC12, AC17): only waiting events, oldest first, 200 at most in a batch of at
@@ -113,6 +124,71 @@ class AnalyticsSenderTest {
         assertFalse(service.sendDue())
         assertEquals(30_000L, phone.scheduled.last())
         assertEquals(2L, count(EventState.WAITING))
+    }
+
+    /**
+     * An event recorded just after the answer is stored as answered, however the first read of the
+     * consent store and the answer interleave (PEN-182's CI: the 429 test's events were stored as
+     * not yet answered once, so it sent nothing). The service's first read is held until the answer
+     * is in, then its watch on the store is held too, so only the store itself has the answer.
+     */
+    @Test
+    fun anEventJustAfterTheAnswerIsStoredAsAnswered() = runBlocking<Unit> {
+        val real = PreferenceDataStoreFactory.create(scope = phone.scope) { File(phone.dir, "held.preferences_pb") }
+        // An install that has its ID already, as every one has after its first start.
+        ConsentStore(real).now()
+        val held = HeldStore(real)
+        val service = AnalyticsService(
+            store = phone.store,
+            consent = ConsentStore(held),
+            sender = phone.sender,
+            scope = phone.scope,
+            fields = { ClientFields(version = "0.4.2", channel = "stable", osVersion = "17", sizeClass = "compact") },
+            now = { phone.clock },
+            schedule = {},
+            onLimits = {},
+            onDropped = { problem, kind, name -> throw AssertionError("Dropped $kind $name: $problem") },
+        )
+        held.firstRead.await()
+        service.answer(ConsentAnswer.YES, "0.4.2")
+        held.holdNext.set(true)
+        held.releaseFirst.complete(Unit)
+        // The first read has finished (with the state from before the answer) once the watch begins.
+        held.nextRead.await()
+        assertEquals(ConsentAnswer.YES, service.state.value?.consent)
+        check(service.record("click", "privacy.view-data"))
+        service.flush()
+        assertEquals(1L, count(EventState.WAITING))
+        held.releaseNext.complete(Unit)
+    }
+
+    /** A store whose first read, and the one after [holdNext] is set, wait to be let go. */
+    private class HeldStore(private val real: DataStore<Preferences>) : DataStore<Preferences> {
+        val firstRead = CompletableDeferred<Unit>()
+        val releaseFirst = CompletableDeferred<Unit>()
+        val holdNext = AtomicBoolean(false)
+        val nextRead = CompletableDeferred<Unit>()
+        val releaseNext = CompletableDeferred<Unit>()
+        private val reads = AtomicInteger()
+
+        override val data: Flow<Preferences> = flow {
+            when {
+                reads.incrementAndGet() == 1 -> {
+                    val before = real.data.first()
+                    firstRead.complete(Unit)
+                    releaseFirst.await()
+                    emit(before)
+                }
+                holdNext.compareAndSet(true, false) -> {
+                    nextRead.complete(Unit)
+                    releaseNext.await()
+                    emitAll(real.data)
+                }
+                else -> emitAll(real.data)
+            }
+        }
+
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences = real.updateData(transform)
     }
 
     @Test

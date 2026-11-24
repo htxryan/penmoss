@@ -2,7 +2,11 @@ import { MATCH_END, MATCH_START } from '@penmoss/core/search';
 import type { NoteRecord } from '@penmoss/model/record';
 import { describe, expect, it, vi } from 'vitest';
 import { vaultDocuments } from '../../../../packages/core/test/support/search-vault-docs';
-import { MEANING_ELSEWHERE } from '../../src/search/meaning';
+import {
+  MEANING_ELSEWHERE,
+  type MeaningNotes,
+  type NotebookMeaning,
+} from '../../src/search/meaning';
 import {
   NO_FILTERS,
   SearchService,
@@ -139,6 +143,42 @@ describe('search in the app (T22, T23)', () => {
     );
     service.invalidate();
     expect(ids((await service.search(request('aphids'))).hits)).toEqual([]);
+  });
+
+  it('sends meaning versions that have a change made while it was catching up (PEN-182)', async () => {
+    // Meaning's side, which asks for every note's version a moment after notes change.
+    let notes: MeaningNotes | null = null;
+    const meaning = {
+      attach: (given: MeaningNotes) => (notes = given),
+      schedule: () => undefined,
+      ready: () => false,
+    } as unknown as NotebookMeaning;
+    const { service, store } = setup({ meaning });
+    expect(ids((await service.search(request('aphids'))).hits)).toEqual(['pests']);
+    // A catch-up starts and is held where it lists the notes, before the change below.
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const listMeta = store.listMeta.bind(store);
+    vi.spyOn(store, 'listMeta').mockImplementationOnce(async () => {
+      const metas = await listMeta();
+      await held;
+      return metas;
+    });
+    service.invalidate();
+    const first = service.refresh();
+    await Promise.resolve();
+    store.records.set(
+      'pests',
+      recordOf(
+        docs.find((d) => d.id === 'pests')!,
+        { text: 'Zanzibar aphids', updatedAt: 99 },
+      ),
+    );
+    service.invalidate();
+    const versions = notes!.versions();
+    release();
+    await first;
+    expect((await versions).get('pests')).toBe(99);
   });
 });
 

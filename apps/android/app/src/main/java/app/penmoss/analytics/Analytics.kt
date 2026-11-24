@@ -7,7 +7,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -95,13 +94,20 @@ class AnalyticsService(
 
     init {
         scope.launch {
-            _state.value = consent.now()
+            // The first read, unless an answer (or a reset) got there first: begun before it, this
+            // read can finish after it, and would put back the state from before.
+            _state.compareAndSet(null, consent.now())
             consent.state.collect { read -> if (AnalyticsFormat.INSTALL.matches(read.install)) _state.value = read }
         }
     }
 
-    /** The answer once it is read. */
-    suspend fun stateNow(): ConsentState = state.filterNotNull().first()
+    /**
+     * The answer as stored now, for what is recorded and sent: read from the store itself, never
+     * from [state], which follows it a moment behind. Through [state], an event recorded just after
+     * an answer could be stored in the state from before it (PEN-182's CI: a 429 test's events were
+     * stored as not yet answered, so nothing was sent).
+     */
+    suspend fun stateNow(): ConsentState = consent.now()
 
     /** Records one event; false when it was dropped. */
     fun record(kind: String, name: String, props: Map<String, Any?> = emptyMap()): Boolean = keep(kind, name, props, emptyMap(), false)
