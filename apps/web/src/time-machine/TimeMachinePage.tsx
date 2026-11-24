@@ -33,6 +33,7 @@ import { useGitStatus, useSource, useSourcesState } from '../sources/hooks';
 import { timelineOf, type TimelineClient } from './client';
 import { timeMachinePath, type TimeMachineTab } from './path';
 import './time-machine.css';
+import { Select } from '@penmoss/ui/controls/Select';
 
 /** A moment in the notebook's time zone: `3 Nov 2026, 14:05`. */
 function moment(ms: number, zone: string): string {
@@ -90,7 +91,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
           {sources.length > 1 ? (
             <label className="tm-notebook">
               <span>Notebook</span>
-              <select
+              <Select
                 data-event="time-machine.notebook"
                 value={source?.id ?? ''}
                 onChange={(event) => go({ source: event.currentTarget.value })}
@@ -100,7 +101,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
                     {each.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           ) : null}
           <div className="tm-tabs" role="tablist" aria-label="Time Machine">

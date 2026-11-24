@@ -22,6 +22,7 @@ import {
   type LocalAgentInfo,
 } from '../desktop/bridge';
 import { ConfirmBlock } from '../shell/ConfirmBlock';
+import { Switch } from '../theme/look-rows';
 
 function CopyBlock({ label, text, testId }: { label: string; text: string; testId: string }) {
   const [copied, setCopied] = useState<boolean | null>(null);
@@ -86,10 +87,8 @@ export function AgentServer({ git }: { git: DesktopGit }) {
         named in History by the app and session that made them.
       </p>
       <label className="local-agent-channel">
-        <input
+        <Switch
           data-event="settings.agents.server-channel"
-          type="checkbox"
-          role="switch"
           checked={channel}
           data-testid="agents-server-channel"
           onChange={(event) => setChannel(event.target.checked)}
