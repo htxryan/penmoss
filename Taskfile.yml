@@ -196,7 +196,7 @@ tasks:
     dir: site
     cmds:
       # First, before the build: deps would run ahead of it.
-      - test -z "$PENMOSS_FACTORY_RUN" || { echo 'No production deploys from a factory run; they happen after merge (FD24).' >&2; exit 1; }
+      - sh ../scripts/no-factory-deploy.sh
       - task: site:build
       - pnpm exec wrangler deploy {{.CLI_ARGS}}
 

@@ -1,15 +1,19 @@
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
  * F17, FD24: production deploys happen after merge, never from a run. Every repo command that
- * runs `wrangler deploy` checks `PENMOSS_FACTORY_RUN` (which every sandbox sets) before it, so
- * `task site:deploy` or `pnpm run deploy` inside a run stops before it reaches Cloudflare.
+ * runs `wrangler deploy` runs `scripts/no-factory-deploy.sh` first, which refuses when
+ * `PENMOSS_FACTORY_RUN` (which every sandbox sets) is set, so `task site:deploy` or `pnpm run
+ * deploy` inside a run stops before it reaches Cloudflare.
  */
 const root = join(import.meta.dirname, '../../..');
 const DEPLOY = /\bwrangler\s+deploy\b/;
-const GUARD = /test -z "?\$PENMOSS_FACTORY_RUN"?/;
+const SCRIPT = join(root, 'scripts', 'no-factory-deploy.sh');
+/** The guard, run so that a refusal stops the command: first, then `&&` or its own command. */
+const GUARD = /\bsh (\.\.\/)+scripts\/no-factory-deploy\.sh(\s*&&|\s*$)/;
 
 /** Each task in the Taskfile, as its own block of lines. */
 function taskBlocks(taskfile: string): { name: string; lines: string[] }[] {
@@ -23,6 +27,22 @@ function taskBlocks(taskfile: string): { name: string; lines: string[] }[] {
 }
 
 describe('no production deploy from a factory run (F17, FD24)', () => {
+  it('refuses inside a run, with the words the doctor looks for, and lets one through outside', () => {
+    const inRun = spawnSync('sh', [SCRIPT], {
+      env: { ...process.env, PENMOSS_FACTORY_RUN: '1' },
+      encoding: 'utf8',
+    });
+    expect(inRun.status).toBe(1);
+    expect(inRun.stderr).toBe(
+      'No production deploys from a factory run: they happen after merge (FD24).\n',
+    );
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    delete env['PENMOSS_FACTORY_RUN'];
+    const outside = spawnSync('sh', [SCRIPT], { env, encoding: 'utf8' });
+    expect(outside.status).toBe(0);
+    expect(outside.stderr).toBe('');
+  });
+
   it('guards every Taskfile task that runs wrangler deploy, before anything else runs', () => {
     const blocks = taskBlocks(readFileSync(join(root, 'Taskfile.yml'), 'utf8')).filter((b) =>
       b.lines.some((l) => DEPLOY.test(l) && !/^\s*desc:/.test(l)),
