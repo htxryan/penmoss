@@ -1,5 +1,5 @@
 import type { NoteLink } from '@penmoss/core/links';
-import type { EngineName } from './protocol';
+import type { EngineName } from './record';
 
 /**
  * Name of the shared root type that holds a note's ProseMirror document.

@@ -8,9 +8,6 @@
  * file's tests and Kotlin's `GitFrames` tests both read.
  */
 
-/** The frames' version: the app and the page ship in one APK, so it grows by adding calls. */
-export const GIT_FRAMES_VERSION = 1;
-
 /** The longest header (JSON) a frame may carry. */
 export const MAX_HEADER_BYTES = 16 * 1024 * 1024;
 

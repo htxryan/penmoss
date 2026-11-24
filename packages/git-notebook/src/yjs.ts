@@ -9,15 +9,6 @@ export const ENGINE_ORIGIN = Symbol('penmoss-git-engine');
 /** Changes the engine reads back from the device's store (the Mac app's windows, A851): local. */
 export const LOCAL_STORE_ORIGIN = Symbol('penmoss-git-store');
 
-export function sameBytes(
-  a: Uint8Array | null | undefined,
-  b: Uint8Array | null | undefined,
-): boolean {
-  if (!a || !b || a.byteLength !== b.byteLength) return false;
-  for (let i = 0; i < a.byteLength; i++) if (a[i] !== b[i]) return false;
-  return true;
-}
-
 const isEmpty = (ids: Y.ContentIds) => ids.inserts.isEmpty() && ids.deletes.isEmpty();
 
 /** `Y.mergeUpdates` over bytes from anywhere (a file, a fetch). */
@@ -156,11 +147,4 @@ export function isUpdate(bytes: Uint8Array): boolean {
   } catch {
     return false;
   }
-}
-
-/** Content ids are equal: the same inserts and deletes (converged replicas). */
-export function sameContent(a: Y.Doc, b: Y.Doc): boolean {
-  const x = Y.createContentIdsFromDoc(a, true);
-  const y = Y.createContentIdsFromDoc(b, true);
-  return Y.equalIdSets(x.inserts, y.inserts) && Y.equalIdSets(x.deletes, y.deletes);
 }

@@ -22,7 +22,6 @@ import {
   MemoryStorage,
   MemoryTransport,
   NotebookOps,
-  sameContent,
   type SyncOptions,
   type SyncReport,
   type WriterKind,
@@ -745,6 +744,13 @@ function noteContent(doc: Y.Doc): string {
     meta: doc.get('meta').getAttrs() as Record<string, unknown>,
     body: (noteBody(doc)?.toJSON() ?? null) as unknown,
   });
+}
+
+/** Content ids are equal: the same inserts and deletes (converged replicas). */
+function sameContent(a: Y.Doc, b: Y.Doc): boolean {
+  const x = Y.createContentIdsFromDoc(a, true);
+  const y = Y.createContentIdsFromDoc(b, true);
+  return Y.equalIdSets(x.inserts, y.inserts) && Y.equalIdSets(x.deletes, y.deletes);
 }
 
 function sameStateVector(a: Y.Doc, b: Y.Doc): boolean {

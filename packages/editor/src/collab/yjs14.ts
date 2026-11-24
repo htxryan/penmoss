@@ -25,7 +25,7 @@ import {
   type DeltaNode,
 } from '@penmoss/model/unsupported';
 
-export interface Yjs14EditorOptions {
+export interface CollabEditorOptions {
   readonly element: HTMLElement;
   readonly extensions: AnyExtension[];
   readonly replica?: Yjs14Replica;
@@ -41,7 +41,7 @@ export interface Yjs14EditorOptions {
  * Throws `UnsupportedContentError`, before anything is mounted or written,
  * when the note holds node types the extensions' schema does not have (A158).
  */
-export function createYjs14Editor(options: Yjs14EditorOptions): CollabEditor {
+export function createCollabEditor(options: CollabEditorOptions): CollabEditor {
   const replica = options.replica ?? createYjs14Replica();
   const ytype = replica.doc.get(NOTE_ROOT);
   // An empty origin set tracks the sync plugin's own writes: only this editor's edits are undoable.

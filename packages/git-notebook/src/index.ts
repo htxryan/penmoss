@@ -25,8 +25,6 @@ export {
   LOCAL_STORE_ORIGIN,
   mergeUpdates,
   ownFile,
-  sameBytes,
-  sameContent,
 } from './yjs';
 export * from './ops';
 export * from './timeline';
