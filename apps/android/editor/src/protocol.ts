@@ -25,7 +25,7 @@ import {
   type FontChoice,
 } from '@penmoss/core/fonts';
 import { COMMAND_ID_PATTERN } from '@penmoss/editor/keys';
-import { isRecord } from './guards';
+import { isRecord, isString } from './guards';
 import {
   COMMENT_TO_EDITOR_TYPES,
   parseCommentAuthor,
@@ -886,7 +886,6 @@ export type FromEditor =
   /** Comment threads (T48): `comments-protocol.ts`. */
   | CommentFromEditor;
 
-const isString = (value: unknown): value is string => typeof value === 'string';
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 export const NOTE_ID = /^[A-Za-z0-9_-]{1,80}$/;
 /** What `insertImages` may name: attachments only (A304). */

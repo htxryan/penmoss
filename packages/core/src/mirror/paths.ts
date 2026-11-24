@@ -49,12 +49,6 @@ export const ATTACHMENTS_DIR = 'attachments';
  */
 // eslint-disable-next-line no-control-regex -- control characters are exactly what it removes
 const FORBIDDEN = /[\\/:*?"<>|#^[\]\u0000-\u001f\u007f]/g;
-/**
- * The naming rules' version (A930): 2 since names lost their bidi and format characters (#170
- * F11). A mirror that named its files under an older one renames them once, in a commit of its
- * own, before anything else is written.
- */
-export const NAMING_VERSION = 2;
 const WINDOWS_DEVICE = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i;
 const encoder = new TextEncoder();
 

@@ -9,10 +9,10 @@ import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import type { Embedder, VectorCache } from '@penmoss/core/search';
 import type { EmbedWorkerData, EmbedWorkerHello } from './embed-worker';
-import { FileVectorCache, vectorsDir } from './file-cache';
+import { FileVectorCache, removeOtherVectors, vectorsDir } from './file-cache';
 import { Lease } from './lease';
 import { EMBEDDING_GEMMA, modelId, type ModelManifest } from './manifest';
-import { fetchModel, modelStatus, openModel, removeModel } from './model-store';
+import { fetchModel, modelStatus, openModel, otherModels, removeModel } from './model-store';
 import { createOnnxEmbedder } from './onnx-embedder';
 import { remoteEmbedder } from './remote-embedder';
 
@@ -142,9 +142,23 @@ export class NodeMeaning {
   }
 
   /**
+   * Deletes what other models left on this Mac: their folders and partial downloads in
+   * `~/.penmoss/models`, and their vectors in `~/.penmoss/vectors` (the lease stays). After an
+   * update pins a new model, the old one (about 200 MB) and its vectors are never read again.
+   * `open` calls it, so it runs once the new model is here. Answers the paths it removed.
+   */
+  async removeOthers(): Promise<string[]> {
+    const models = await otherModels(this.manifest, this.home);
+    for (const path of models) await rm(path, { recursive: true, force: true });
+    const vectors = await removeOtherVectors(this.home, modelId(this.manifest));
+    return [...models, ...vectors];
+  }
+
+  /**
    * The model and vectors for `writer`, or null when Search by Meaning is off or the model is not
    * here. Throws `ModelError('corrupt')` when a file fails its checksum (it is deleted, so a fetch
-   * gets it again). With `thread`, inference runs in a worker thread.
+   * gets it again). With `thread`, inference runs in a worker thread. Opening the model first
+   * removes other models' files (`removeOthers`), so a model change frees the old one's space.
    */
   async open(
     writer: 'cli' | 'mcp' | 'app',
@@ -153,6 +167,8 @@ export class NodeMeaning {
     const status = await this.status();
     if (!status.enabled || status.state !== 'ready') return null;
     const dir = await openModel(this.manifest, this.home);
+    // Best effort: a file another process holds open is removed next time.
+    await this.removeOthers().catch(() => []);
     const threads = this.options.threads ?? 4;
     let embedder: Embedder;
     let close: () => Promise<void>;

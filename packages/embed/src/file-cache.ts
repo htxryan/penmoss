@@ -294,7 +294,7 @@ export class FileVectorCache implements VectorCache {
   }
 }
 
-/** Deletes the vectors of every model but `keep` (after a model change, or Delete for good). */
+/** Deletes the vectors of every model but `keep` (`NodeMeaning.removeOthers`, after a model change). */
 export async function removeOtherVectors(home: string, keep: string): Promise<string[]> {
   const root = join(home, 'vectors');
   const own = vectorsDir(home, keep);

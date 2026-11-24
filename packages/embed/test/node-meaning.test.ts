@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -83,6 +83,31 @@ describe('NodeMeaning (T75)', () => {
     await setMeaningEnabled(home, true);
     const opened = await node.open('mcp');
     expect(opened).not.toBeNull();
+    await opened!.close();
+  });
+
+  it('frees an older model and its vectors once the new model opens', async () => {
+    const node = meaning();
+    // What the model before an update left: its folder, a partial download and its vectors.
+    const oldModel = join(home, 'models', 'tiny@fedcba9876543210');
+    const oldPartial = join(home, 'models', '.tiny@fedcba9876543210.partial');
+    const oldVectors = join(home, 'vectors', 'tiny_fedcba98_4_p1');
+    for (const dir of [oldModel, oldPartial, oldVectors]) mkdirSync(dir, { recursive: true });
+    writeFileSync(join(oldModel, 'model.onnx'), 'old');
+    writeFileSync(join(oldVectors, 'app.seg'), 'old');
+    await node.fetch();
+    // Fetched but not opened yet: nothing is removed.
+    expect(existsSync(oldModel)).toBe(true);
+    const opened = await node.open('app');
+    await opened!.cache.put(new Map([['a'.repeat(64), new Float32Array(4).fill(0.5)]]));
+    const lease = await opened!.lease();
+    expect(lease).toBeDefined();
+    for (const dir of [oldModel, oldPartial, oldVectors]) expect(existsSync(dir)).toBe(false);
+    // This model, its vectors and the lease stay.
+    expect((await node.status()).state).toBe('ready');
+    expect(await node.indexBytes()).toBeGreaterThan(0);
+    expect(existsSync(join(home, 'vectors', 'indexer.lease'))).toBe(true);
+    expect(await node.removeOthers()).toEqual([]);
     await opened!.close();
   });
 });
