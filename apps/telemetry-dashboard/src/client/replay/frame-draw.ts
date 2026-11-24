@@ -1076,7 +1076,8 @@ function settingsScreen(draw: Draw): string {
             entry += h(
               'a',
               {
-                class: 'privacy-nav-entry',
+                // Flush with the other entries, so it has no class of its own (A1673).
+                'data-entry': 'privacy-data',
                 'aria-current': page === 'privacy-data' ? 'page' : undefined,
                 tabindex: -1,
               },

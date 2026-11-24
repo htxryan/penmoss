@@ -14,7 +14,6 @@ export function PrivacyNavEntry({ current }: { readonly current: boolean }) {
   return (
     <a
       href={PRIVACY_DATA_PATH}
-      className="privacy-nav-entry"
       data-ui="item"
       data-event="privacy.view-data"
       data-testid="settings-privacy-data-entry"

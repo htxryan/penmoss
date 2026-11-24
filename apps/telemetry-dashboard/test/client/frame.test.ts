@@ -150,12 +150,14 @@ describe('the other screens', () => {
     expect(root.querySelector('.notes-app')).toBeNull();
     expect(iconsIn(root, '.settings-bar')).toEqual(['navBack', 'navForward', 'arrowL']);
     const nav = root.querySelector('.settings-nav')!;
-    const entries = [...nav.querySelectorAll(':scope > .settings-nav-group > a:not([class])')];
+    const entries = [
+      ...nav.querySelectorAll(':scope > .settings-nav-group > a:not([class]):not([data-entry])'),
+    ];
     expect(entries.map((a) => a.querySelector('svg')?.getAttribute('data-icon'))).toEqual(
       SETTINGS_PAGES.map((page) => page.icon),
     );
     expect(nav.querySelector('a[aria-current="page"]')?.textContent).toBe('Appearance');
-    expect(nav.querySelector('.privacy-nav-entry svg')?.getAttribute('data-icon')).toBe(
+    expect(nav.querySelector('[data-entry="privacy-data"] svg')?.getAttribute('data-icon')).toBe(
       'checklist',
     );
     expect(nav.querySelector('.nset-nav-entry .nb-badge')).not.toBeNull();
@@ -204,7 +206,9 @@ describe('the other screens', () => {
     expect(storage.querySelector('.settings-head-title')?.textContent).toBe('Storage');
     expect(storage.querySelectorAll('.lf-row')).toHaveLength(0);
     const data = draw({ ...base, screen: 'settings.privacy-data' });
-    expect(data.querySelector('.privacy-nav-entry')?.getAttribute('aria-current')).toBe('page');
+    expect(data.querySelector('[data-entry="privacy-data"]')?.getAttribute('aria-current')).toBe(
+      'page',
+    );
     const notebook = draw({ ...base, screen: 'settings.git-notebook' });
     expect(notebook.querySelector('.nset-nav-entry')?.getAttribute('aria-current')).toBe('page');
   });
