@@ -136,7 +136,7 @@ export function applyKeepingId(doc: Y.Doc, update: Uint8Array, origin: unknown):
  * only that struct's own update brings it back, so the engine applies the doc's files again.
  * Pending deletions do not count (@penmoss/model's `hasPending` says why).
  */
-export function hasPending(doc: Y.Doc): boolean {
+export function hasPendingStructs(doc: Y.Doc): boolean {
   return holdsBack(doc, { deletes: false });
 }
 
