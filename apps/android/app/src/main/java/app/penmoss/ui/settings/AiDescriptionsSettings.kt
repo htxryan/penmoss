@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.penmoss.ai.AiDescriptionCopy
 import app.penmoss.ai.AiKeyState
 import app.penmoss.ai.AiKeys
 import app.penmoss.ai.AiResult
@@ -328,7 +329,7 @@ private class PromptKind(
     val help: String,
     val tokens: List<String>,
     val default: String,
-    /** The token without which the model sees nothing to describe, and what is said when it is missing. */
+    /** The token without which the model sees nothing to describe (spaces inside its braces allowed, as core's `promptHasBody`), and what is said when it is missing (core's words). */
     val needs: String,
     val missing: String,
     /** Test tags' prefix (`aiPrompt`, `aiTagPrompt`), and the tokens' (`aiToken`, `aiTagToken`). */
@@ -344,7 +345,7 @@ private val NOTE_PROMPT = PromptKind(
     tokens = AI_PROMPT_TOKENS,
     default = DEFAULT_AI_PROMPT,
     needs = "{{body}}",
-    missing = "This prompt has no {{body}}, so the model can’t see the note’s text.",
+    missing = AiDescriptionCopy.text("notePrompt.missing"),
     tag = "aiPrompt",
     tokenTag = "aiToken",
     tokenEvent = "settings.ai.token",
@@ -357,7 +358,7 @@ private val TAG_PROMPT = PromptKind(
     tokens = AI_TAG_PROMPT_TOKENS,
     default = DEFAULT_AI_TAG_PROMPT,
     needs = "{{notes}}",
-    missing = "This prompt has no {{notes}}, so the model can’t see the tag’s notes.",
+    missing = AiDescriptionCopy.text("tagPrompt.missing"),
     tag = "aiTagPrompt",
     tokenTag = "aiTagToken",
     tokenEvent = "settings.ai.tag-token",
@@ -392,7 +393,7 @@ private fun PromptEditor(prompt: String, custom: Boolean, enabled: Boolean, kind
             ) { Text(token, fontFamily = FontFamily.Monospace) }
         }
     }
-    if (kind.needs !in draft.text) {
+    if (!Regex("\\{\\{\\s*${kind.needs.trim('{', '}')}\\s*\\}\\}").containsMatchIn(draft.text)) {
         Text(
             kind.missing,
             Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("${kind.tag}Warning"),

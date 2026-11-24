@@ -68,6 +68,18 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import app.penmoss.ai.AiDescriptionCopy
+import app.penmoss.ai.TAG_DESCRIPTION_MAX
+import app.penmoss.engine.api.TagsToDescribe
+import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.common.SheetAction
+import app.penmoss.ui.common.SnackbarTone
+import app.penmoss.ui.common.say
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -108,7 +120,8 @@ internal fun descriptionLine(description: String): String {
  * how many notes carry it or a tag under it and the first line of what it means, as the Mac's
  * Tags page; offline too. A tap opens its notes (TG2), a long press its menu (Rename…, its
  * description, Generate AI Description), the arrow opens or closes its nested tags, and
- * Generate All… asks before it describes every tag with none.
+ * Generate All… asks before it describes every tag with none. What a change did is said in
+ * [snackbar], with Undo, as the Mac's toast.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -118,20 +131,19 @@ fun TagsScreen(
     onOpenTag: (String) -> Unit,
     /** A long press: the tag's menu. */
     onMenu: (String) -> Unit,
-    /** What the last rename or description did, said under the list (the web's tag-status line). */
-    status: String? = null,
+    /** Where what a rename or description did is said, with its Undo (the Mac's tag toast). */
+    snackbar: SnackbarHostState = remember { SnackbarHostState() },
     /** Each described tag's description, by its full path. */
     descriptions: Map<String, String> = emptyMap(),
     /** The tags whose description is being generated now. */
     generating: Set<String> = emptySet(),
     /** Generate All… in the top bar; none offered when null. */
     onGenerateAll: (() -> Unit)? = null,
-    /** Puts back what the status says was done; no Undo when null. */
-    onUndo: (() -> Unit)? = null,
 ) {
     var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
     val haptics = LocalHapticFeedback.current
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
         topBar = {
             TopAppBar(
                 title = { Text("Tags") },
@@ -145,20 +157,9 @@ fun TagsScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            if (status != null) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        status,
-                        Modifier.weight(1f).padding(vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }.testTag("tagStatus"),
-                        style = MaterialTheme.roles.body,
-                    )
-                    if (onUndo != null) {
-                        TextButton(onClick = trackedClick("tags.toast.undo", onUndo), modifier = Modifier.testTag("tagUndo")) { Text("Undo") }
-                    }
-                }
-            }
             if (tree.isEmpty()) {
-                EmptyMessage("No tags")
+                // The Mac's Tags page's empty state, its heading and line as one (as Trash's, A895).
+                EmptyMessage(NO_TAGS, Modifier.testTag("tagsEmpty"))
                 return@Column
             }
             LazyColumn(Modifier.fillMaxWidth().testTag("tagTree")) {
@@ -229,7 +230,7 @@ fun TagsScreen(
  * the Mac's row has it: Add or Edit Description…, Generate AI Description, and Clear Description
  * once it has one.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagMenuSheet(
     tag: String,
@@ -245,26 +246,12 @@ fun TagMenuSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Text("#$tag", Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.roles.groupHead, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp).testTag("tagMenu")) {
-            TagMenuAction("Rename…", "tagAction-rename", "tags.pane.rename", tracked.done(onRename))
-            TagMenuAction(if (described) "Edit Description…" else "Add Description…", "tagAction-describe", "tags.description.edit", tracked.done(onEditDescription))
-            TagMenuAction("Generate AI Description", "tagAction-generate", "tags.row.generate", tracked.done(onGenerate))
-            if (described) TagMenuAction("Clear Description", "tagAction-clear", "tags.row.clear-description", tracked.done(onClear))
+            SheetAction("Rename…", "tagAction-rename", "tags.pane.rename", tracked.done(onRename))
+            SheetAction(if (described) "Edit Description…" else "Add Description…", "tagAction-describe", "tags.description.edit", tracked.done(onEditDescription))
+            SheetAction("Generate AI Description", "tagAction-generate", "tags.row.generate", tracked.done(onGenerate))
+            if (described) SheetAction("Clear Description", "tagAction-clear", "tags.row.clear-description", tracked.done(onClear))
         }
     }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun TagMenuAction(text: String, tag: String, event: String, onClick: () -> Unit) {
-    Text(
-        text,
-        Modifier
-            .fillMaxWidth()
-            .combinedClickable(role = Role.Button, onClick = trackedClick(event, onClick))
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-            .testTag(tag),
-        style = MaterialTheme.roles.rowLabel,
-    )
 }
 
 /** What a tag means, written or changed by hand (A1364's limit); blank text clears it. */
@@ -291,32 +278,26 @@ fun TagDescriptionDialog(tag: String, initial: String, onSave: (String) -> Unit,
     )
 }
 
-/** The longest tag description kept (core's `TAG_DESCRIPTION_MAX`, A1364). */
-internal const val TAG_DESCRIPTION_MAX = 2000
-
-/** What Generate All… says it covers: how many tags, and that each goes to the AI provider. */
-internal fun generateAllWords(count: Int, replace: Boolean): String = when {
-    count == 0 && replace -> "There are no tags to describe."
-    count == 0 -> "Every tag has a description already."
-    replace -> "${if (count == 1) "1 tag" else "$count tags"} will be described, replacing any description they have. Each goes to your AI provider with its notes’ titles and descriptions, two at a time."
-    else -> "${if (count == 1) "1 tag has" else "$count tags have"} no description. Each goes to your AI provider with its notes’ titles and descriptions, two at a time."
-}
+/** Tags' empty state: the Mac's Tags page's heading and its line, as one sentence pair. */
+internal const val NO_TAGS = "No tags yet. Tag a note with #name in its text, and the tag shows here."
 
 /**
- * Generate All… (A1677): how many tags it describes and that each goes to the AI provider,
- * asked before anything is sent. Replace Existing Descriptions takes in the tags described already.
+ * Generate All… (A1677): how many tags it describes and that each goes to the AI provider
+ * (core's words), asked before anything is sent. Replace Existing Descriptions takes in the tags
+ * described already. [covers] is the engine page's count, by core's set, so the number asked
+ * about is the number described.
  */
 @Composable
-fun GenerateAllTagsDialog(count: (replace: Boolean) -> Int, onGenerate: (replace: Boolean) -> Unit, onDismiss: () -> Unit) {
+fun GenerateAllTagsDialog(covers: TagsToDescribe, onGenerate: (replace: Boolean) -> Unit, onDismiss: () -> Unit) {
     var replace by rememberSaveable { mutableStateOf(false) }
     val tracked = rememberTrackedDialog("tagsGenerate")
-    val going = count(replace)
+    val going = covers.count(replace)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Generate All Tag Descriptions?") },
         text = {
             Column {
-                Text(generateAllWords(going, replace), Modifier.testTag("tagsGenerateCount"), style = MaterialTheme.roles.body)
+                Text(AiDescriptionCopy.generateAllWords(going, replace), Modifier.testTag("tagsGenerateCount"), style = MaterialTheme.roles.body)
                 Row(
                     Modifier.fillMaxWidth().padding(top = 12.dp)
                         .toggleable(value = replace, role = Role.Checkbox, onValueChange = trackedToggle("tags.generate.replace") { replace = it })
@@ -346,7 +327,7 @@ fun ChooseAiProviderDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Choose an AI Provider") },
-        text = { Text("Generating a description sends the tag’s notes to your AI provider. Choose one in Settings → AI Descriptions first.", style = MaterialTheme.roles.body) },
+        text = { Text(AiDescriptionCopy.text("chooseProvider.body"), style = MaterialTheme.roles.body) },
         confirmButton = {
             TextButton(onClick = trackedClick("tags.generate.open-settings", tracked.done(onOpenSettings)), modifier = Modifier.testTag("tagsOpenAiSettings")) { Text("Open Settings") }
         },
@@ -542,6 +523,9 @@ internal interface TagDescriber {
     /** Generate AI Description: what came of it, written when it worked. */
     suspend fun generate(tag: String): AiNowAnswer
 
+    /** What Generate All covers, by core's set on the engine page: asked before its dialog shows. */
+    suspend fun toDescribe(): TagsToDescribe
+
     /** Generate All: how many tags go, described in the background. */
     suspend fun generateAll(replace: Boolean): Int
 
@@ -556,6 +540,8 @@ private class GraphTagDescriber(private val graph: NotebookGraph) : TagDescriber
 
     override suspend fun generate(tag: String): AiNowAnswer = graph.api.describeTag(tag)
 
+    override suspend fun toDescribe(): TagsToDescribe = graph.api.tagsToDescribe()
+
     override suspend fun generateAll(replace: Boolean): Int = graph.api.describeAllTags(replace)
 
     override fun synced() = graph.sync.requestSync()
@@ -569,8 +555,8 @@ internal fun TagsRoute(graph: NotebookGraph, onBack: () -> Unit, onOpenTag: (Str
     TagsRoute(graph.store, renamer, onBack, onOpenTag, describer, onOpenAiSettings)
 }
 
-/** What the Tags screen's status line says, and what its Undo puts back. */
-private data class TagSaid(val text: String, val undo: (suspend () -> Unit)? = null)
+/** How long a tag change's Undo is offered, as the Mac's tag toast (`TAG_DONE_MS`). */
+internal const val TAG_UNDO_MS = 8_000L
 
 @Composable
 internal fun TagsRoute(
@@ -580,6 +566,8 @@ internal fun TagsRoute(
     onOpenTag: (String) -> Unit,
     describer: TagDescriber? = null,
     onOpenAiSettings: () -> Unit = {},
+    /** How long Undo is offered; tests hold it open. */
+    undoFor: Long = TAG_UNDO_MS,
 ) {
     // One Room read for both the tree and the dialog's known tags, coalesced while a first fill writes (review nit).
     val scope = rememberCoroutineScope()
@@ -592,15 +580,37 @@ internal fun TagsRoute(
     // Every edit this phone has not sent, to any note (review S4): one that typed the old tag
     // offline is on a note no tag list here may name yet.
     val unsent by remember(store) { store.observeUnsent().distinctUntilChanged() }.collectAsStateWithLifecycle(0)
+    val snackbar = remember { SnackbarHostState() }
     var menu by rememberSaveable { mutableStateOf<String?>(null) }
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
     var describing by rememberSaveable { mutableStateOf<String?>(null) }
-    var askingAll by rememberSaveable { mutableStateOf(false) }
+    var askingAll by remember { mutableStateOf<TagsToDescribe?>(null) }
     var noProvider by rememberSaveable { mutableStateOf(false) }
     var generating by remember { mutableStateOf(setOf<String>()) }
-    var said by remember { mutableStateOf<TagSaid?>(null) }
 
-    /** Writes [text] as [tag]'s description and shows it at once; what was there, for Undo. */
+    /**
+     * Says what a change did in the snackbar, as the Mac's tag toast; with [undo], offers Undo
+     * for [undoFor], and says what Undo did. A snackbar still showing goes first.
+     */
+    fun say(text: String, tone: SnackbarTone, undo: (suspend () -> String?)? = null) {
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            if (undo == null) {
+                snackbar.say(text, tone, duration = SnackbarDuration.Long)
+                return@launch
+            }
+            val undone = withTimeoutOrNull(undoFor) {
+                snackbar.say(text, tone, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
+            } == SnackbarResult.ActionPerformed
+            if (!undone) {
+                snackbar.currentSnackbarData?.dismiss()
+                return@launch
+            }
+            undo()?.let { snackbar.say(it, SnackbarTone.Done, duration = SnackbarDuration.Long) }
+        }
+    }
+
+    /** Writes [text] as [tag]'s description and shows it at once; false (and said) when it failed. */
     suspend fun write(tag: String, text: String): Boolean {
         val d = describer ?: return false
         return try {
@@ -609,12 +619,13 @@ internal fun TagsRoute(
             true
         } catch (error: Exception) {
             if (error is kotlinx.coroutines.CancellationException) throw error
-            said = TagSaid("Couldn’t save the description of #$tag: ${error.message ?: "the notebook didn’t answer"}")
+            say("Couldn’t save the description of #$tag: ${error.message ?: "the notebook didn’t answer"}", SnackbarTone.Error)
             false
         }
     }
 
-    val undoTo = { tag: String, before: String -> suspend { write(tag, before); said = TagSaid("The description of #$tag is as it was.") } }
+    /** Undo for a description changed from [before]: writes it back, and says so. */
+    val undoTo = { tag: String, before: String -> suspend { if (write(tag, before)) "The description of #$tag is as it was." else null } }
 
     fun generate(tag: String) {
         val d = describer ?: return
@@ -624,7 +635,6 @@ internal fun TagsRoute(
         }
         val before = descriptions[tag] ?: ""
         generating = generating + tag
-        said = null
         scope.launch {
             val answer = try {
                 d.generate(tag)
@@ -637,9 +647,9 @@ internal fun TagsRoute(
             if (answer.ok && text != null) {
                 store.setTagDescriptionLocally(tag, text)
                 d.synced()
-                said = TagSaid("Wrote a description of #$tag.", undoTo(tag, before))
+                say("Wrote a description of #$tag.", SnackbarTone.Done, undoTo(tag, before))
             } else {
-                said = TagSaid("Couldn’t generate a description of #$tag: ${answer.message ?: "the AI provider didn’t answer"}")
+                say("Couldn’t generate a description of #$tag: ${answer.message ?: "the AI provider didn’t answer"}", SnackbarTone.Error)
             }
         }
     }
@@ -648,23 +658,26 @@ internal fun TagsRoute(
         tree,
         onBack,
         onOpenTag,
-        onMenu = { said = null; menu = it },
-        status = said?.text,
+        onMenu = { menu = it },
+        snackbar = snackbar,
         descriptions = descriptions,
         generating = generating,
         onGenerateAll = describer?.let { d ->
             {
                 if (d.ready) {
-                    askingAll = true
+                    // How many go, by core's set on the engine page, before the dialog asks.
+                    scope.launch {
+                        askingAll = try {
+                            d.toDescribe()
+                        } catch (error: Exception) {
+                            if (error is kotlinx.coroutines.CancellationException) throw error
+                            say(GENERATE_ALL_FAILED, SnackbarTone.Error)
+                            null
+                        }
+                    }
                 } else {
                     noProvider = true
                 }
-            }
-        },
-        onUndo = said?.undo?.let { undo ->
-            {
-                scope.launch { undo() }
-                Unit
             }
         },
     )
@@ -678,7 +691,7 @@ internal fun TagsRoute(
             onClear = {
                 menu = null
                 val before = descriptions[tag] ?: ""
-                scope.launch { if (write(tag, "")) said = TagSaid("Cleared the description of #$tag.", undoTo(tag, before)) }
+                scope.launch { if (write(tag, "")) say("Cleared the description of #$tag.", SnackbarTone.Done, undoTo(tag, before)) }
             },
             onDismiss = { menu = null },
         )
@@ -690,33 +703,36 @@ internal fun TagsRoute(
             initial = before,
             onSave = { text ->
                 describing = null
-                scope.launch { if (write(tag, text)) said = TagSaid(if (text.isBlank()) "Cleared the description of #$tag." else "Saved the description of #$tag.", undoTo(tag, before)) }
+                scope.launch {
+                    if (write(tag, text)) say(if (text.isBlank()) "Cleared the description of #$tag." else "Saved the description of #$tag.", SnackbarTone.Done, undoTo(tag, before))
+                }
             },
             onDismiss = { describing = null },
         )
     }
-    if (askingAll && describer != null) {
+    askingAll?.let { covers ->
+        val d = describer ?: return@let
         GenerateAllTagsDialog(
-            count = { replace -> tagsToDescribe(tree, descriptions, replace).size },
+            covers = covers,
             onGenerate = { replace ->
-                askingAll = false
+                askingAll = null
                 scope.launch {
-                    said = try {
-                        val count = describer.generateAll(replace)
-                        TagSaid(
-                            when (count) {
+                    try {
+                        say(
+                            when (val count = d.generateAll(replace)) {
                                 0 -> "Nothing to describe: every tag has a description."
                                 1 -> "Generating a description of 1 tag in the background."
                                 else -> "Generating descriptions of $count tags in the background."
                             },
+                            SnackbarTone.Info,
                         )
                     } catch (error: Exception) {
                         if (error is kotlinx.coroutines.CancellationException) throw error
-                        TagSaid("Couldn’t start generating. Try again once the notebook is open.")
+                        say(GENERATE_ALL_FAILED, SnackbarTone.Error)
                     }
                 }
             },
-            onDismiss = { askingAll = false },
+            onDismiss = { askingAll = null },
         )
     }
     if (noProvider) {
@@ -730,7 +746,7 @@ internal fun TagsRoute(
             onRename = { to, merge ->
                 when (val outcome = renameTag(store, renamer, from, to)) {
                     is Result.Success -> {
-                        said = TagSaid(tagRenamedMessage(from, to, merge, outcome.notes))
+                        say(tagRenamedMessage(from, to, merge, outcome.notes), SnackbarTone.Done)
                         renaming = null
                         null
                     }
@@ -743,21 +759,8 @@ internal fun TagsRoute(
     }
 }
 
-/**
- * The tags Generate All covers (core's `tagsToDescribe`): every tag and level the tree shows,
- * without those described already unless [replace]. The engine page works out the same set.
- */
-internal fun tagsToDescribe(tree: List<TagNode>, descriptions: Map<String, String>, replace: Boolean): List<String> {
-    val all = mutableListOf<String>()
-    fun walk(nodes: List<TagNode>) {
-        for (node in nodes) {
-            all += node.tag
-            walk(node.children)
-        }
-    }
-    walk(tree)
-    return all.sorted().filter { replace || descriptions[it].isNullOrBlank() }
-}
+/** What Generate All says when the engine page could not start it. */
+private const val GENERATE_ALL_FAILED = "Couldn’t start generating. Try again once the notebook is open."
 
 private sealed interface Result {
     data class Success(val notes: Int) : Result

@@ -61,7 +61,7 @@ class HomeJokeTest {
     }
 
     @Test
-    fun theSwitchIsLastInTextWithTheMacsWordsAndChangesTheSetting() {
+    fun theSwitchIsLastInTextSaysWhereThePhoneShowsItAndChangesTheSetting() {
         var on by mutableStateOf(true)
         val changed = mutableListOf<Boolean>()
         compose.setContent {
@@ -76,7 +76,7 @@ class HomeJokeTest {
                 )
             }
         }
-        compose.onNodeWithText("A joke in place of the heading when no note is open.").performScrollTo()
+        compose.onNodeWithText("A joke at the top of Home’s notes list.").performScrollTo()
         compose.onNodeWithTag("dadJokes").performScrollTo().assertIsOn().performClick()
         compose.onNodeWithTag("dadJokes").assertIsOff().performClick()
         assertEquals(listOf(false, true), changed)
@@ -87,7 +87,7 @@ class HomeJokeTest {
         val entry = SETTINGS_INDEX.single { it.id == "dad-jokes" }
         assertEquals("Dad Jokes", entry.label)
         assertEquals(SettingsRoutes.APPEARANCE, entry.route)
-        assertEquals("A joke in place of the heading when no note is open", entry.help)
+        assertEquals("A joke at the top of Home’s notes list", entry.help)
         for (word in listOf("joke", "welcome", "empty window")) assertTrue(word, searchSettings(SETTINGS_INDEX, word).any { it.id == "dad-jokes" })
     }
 

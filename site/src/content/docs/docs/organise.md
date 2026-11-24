@@ -85,7 +85,7 @@ The **Tags** page is where you describe and tidy your tags: a table with a row f
 - **Each tag has its own description.** A parent's description says what the parent means, not its nested tags.
 - **Descriptions belong to the notebook.** They sync with it to your other devices, and agents read them with [`describe_tags`](/docs/reference/mcp/#what-tags-mean) to choose and understand tags.
 
-On Android, **Tags** (a shortcut on Home, or in Commands) lists each tag with its count and the first line of its description. Long-press a tag for **Rename…**, **Add Description…** (or **Edit Description…**), **Generate AI Description** and **Clear Description**. **Generate All…** at the top asks as on the Mac, then describes the tags in the background, saying how many. The phone uses your Anthropic API key; without one, it offers **Open Settings**. Merge and delete tags on your Mac.
+On Android, **Tags** (a shortcut on Home, or in Commands) lists each tag with its count and the first line of its description. Long-press a tag for **Rename…**, **Add Description…** (or **Edit Description…**), **Generate AI Description** and **Clear Description**; the message at the bottom of the screen says what changed and offers **Undo**. **Generate All…** at the top asks as on the Mac, then describes the tags in the background, saying how many. The phone uses your Anthropic API key; without one, it offers **Open Settings**. Merge and delete tags on your Mac.
 
 ## Quick Access
 

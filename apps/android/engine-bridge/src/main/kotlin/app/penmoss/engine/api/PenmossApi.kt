@@ -135,6 +135,12 @@ interface PenmossApi {
     suspend fun describeAllTags(replace: Boolean): Int = throw UnsupportedOperationException("describeAllTags")
 
     /**
+     * What Generate All covers (`GET /api/ai/tags/to-describe`), asked before its dialog shows:
+     * how many tags have no description, and how many there are, by core's set on the engine page.
+     */
+    suspend fun tagsToDescribe(): TagsToDescribe = throw UnsupportedOperationException("tagsToDescribe")
+
+    /**
      * Deletes a folder and its subfolders (`DELETE /api/folders/:id`, T40 P4, NT4): their notes
      * move up. Idempotent: a missing folder answers false.
      */
@@ -450,6 +456,8 @@ class HttpPenmossApi(
         val body = buildJsonObject { put("replace", replace) }
         return send("POST", url("api/ai/tags/describe-all"), body.toString().toRequestBody(JSON_TYPE), AiCount.serializer()).count
     }
+
+    override suspend fun tagsToDescribe(): TagsToDescribe = get(url("api/ai/tags/to-describe"), TagsToDescribe.serializer())
 
     @Serializable
     private data class TagDescribed(val tag: String = "", val description: String? = null)

@@ -408,6 +408,12 @@ const val SETTINGS_WAIT = "These settings can be changed once Penmoss has read t
 /** Shown instead while there is no notebook on the phone, so nothing holds them yet (PEN-146). */
 const val SETTINGS_NO_NOTEBOOK = "These settings are kept in your primary notebook. Add a notebook to change them."
 
+/**
+ * Dad Jokes' help (A1676): where the phone shows the joke. The Mac's says "in place of the
+ * heading when no note is open"; the phone's joke heads Home's notes list instead.
+ */
+const val DAD_JOKES_HELP = "A joke at the top of Home’s notes list."
+
 /** What a screen whose settings cannot be changed yet says: no notebook, or not read yet. */
 internal fun settingsWait(noNotebook: Boolean) = if (noNotebook) SETTINGS_NO_NOTEBOOK else SETTINGS_WAIT
 
@@ -556,11 +562,11 @@ fun AppearanceScreen(
         }
         if (fonts != null || dadJokes != null) GroupTitle("Text", deviceOnly = true)
         if (fonts != null) FontsGroup(fonts, enabled)
-        // Last in Text, as on the Mac, with its words (A1598).
+        // Last in Text, as on the Mac (A1598); its help says where the phone shows it (A1676).
         if (dadJokes != null) {
             Toggle(
                 "Dad Jokes",
-                "A joke in place of the heading when no note is open.",
+                DAD_JOKES_HELP,
                 dadJokes,
                 enabled,
                 "dadJokes",

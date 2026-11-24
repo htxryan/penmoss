@@ -7,6 +7,7 @@
  * Prompt (A1677) is what the Tags page's Generate AI Description sends, edited the same way.
  */
 import {
+  AI_DESCRIPTION_COPY,
   AI_DESCRIPTION_GLOBAL_SETTING,
   AI_DESCRIPTION_MODEL_SETTING,
   AI_DESCRIPTION_PAUSE_SETTING,
@@ -501,7 +502,7 @@ const NOTE_PROMPT: PromptKind = {
   tokens: PROMPT_TOKENS,
   fallback: DEFAULT_PROMPT,
   ready: promptHasBody,
-  missing: 'This prompt has no {{body}} token, so Claude won’t see the note’s text.',
+  missing: AI_DESCRIPTION_COPY['notePrompt.missing'],
   testId: 'ai-prompt',
   tokenId: 'ai-token',
   tokenEvent: 'settings.ai.token',
@@ -517,7 +518,7 @@ const TAG_PROMPT: PromptKind = {
   tokens: TAG_PROMPT_TOKENS,
   fallback: DEFAULT_TAG_PROMPT,
   ready: promptHasNotes,
-  missing: 'This prompt has no {{notes}} token, so Claude won’t see the tag’s notes.',
+  missing: AI_DESCRIPTION_COPY['tagPrompt.missing'],
   testId: 'ai-tag-prompt',
   tokenId: 'ai-tag-token',
   tokenEvent: 'settings.ai.tag-token',

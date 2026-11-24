@@ -20,6 +20,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.ui.common.SheetAction
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -271,19 +272,6 @@ fun NoteActionsSheet(
             }
         }
     }
-}
-
-@Composable
-private fun SheetAction(text: String, tag: String, event: String, onClick: () -> Unit) {
-    Text(
-        text,
-        Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = trackedClick(event, onClick))
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-            .testTag(tag),
-        style = MaterialTheme.typography.bodyLarge,
-    )
 }
 
 /** A row's detail read out as [spoken] where it differs from what the row shows (A701). */

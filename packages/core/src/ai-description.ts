@@ -465,3 +465,42 @@ export function tagsToDescribe(
     .filter((tag) => replace || tag.description === null)
     .map((tag) => tag.name);
 }
+
+/**
+ * The words the Mac and Android say about descriptions (A1677), kept once here and exported to
+ * Android in `apps/android/contract/ai-descriptions-v1.json` (A1646): each prompt's warning
+ * without the token that carries the text, Generate All's confirmation, and Choose an AI
+ * Provider's body. A `{count}` is filled in by the client.
+ */
+export const AI_DESCRIPTION_COPY = {
+  'notePrompt.missing': 'This prompt has no {{body}} token, so Claude won’t see the note’s text.',
+  'tagPrompt.missing': 'This prompt has no {{notes}} token, so Claude won’t see the tag’s notes.',
+  'generateAll.none': 'There are no tags to describe.',
+  'generateAll.allDescribed': 'Every tag has a description already.',
+  'generateAll.replace.one': '1 tag will be described, replacing any description they have.',
+  'generateAll.replace.many':
+    '{count} tags will be described, replacing any description they have.',
+  'generateAll.missing.one': '1 tag has no description.',
+  'generateAll.missing.many': '{count} tags have no description.',
+  'generateAll.each':
+    'Each goes to your AI provider with its notes’ titles and descriptions, two at a time.',
+  'chooseProvider.body':
+    'Generating a description sends the tag’s notes to your AI provider. Choose one in Settings → AI Descriptions first.',
+} as const;
+
+/**
+ * What Generate All says it covers before anything is sent (A1677): how many tags, and that each
+ * goes to the AI provider; with none, why not.
+ */
+export function generateAllTagsWords(count: number, replace: boolean): string {
+  const copy = AI_DESCRIPTION_COPY;
+  if (count === 0) return replace ? copy['generateAll.none'] : copy['generateAll.allDescribed'];
+  const lead = replace
+    ? count === 1
+      ? copy['generateAll.replace.one']
+      : copy['generateAll.replace.many']
+    : count === 1
+      ? copy['generateAll.missing.one']
+      : copy['generateAll.missing.many'];
+  return `${lead.replace('{count}', String(count))} ${copy['generateAll.each']}`;
+}

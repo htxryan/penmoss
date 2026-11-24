@@ -4,6 +4,7 @@
  * and Stop, as Describe Notes Now does for notes; and the ask for a provider when there is none,
  * pointing to Settings → AI Descriptions, as a note's Describe Now does.
  */
+import { AI_DESCRIPTION_COPY } from '@penmoss/core/ai-description';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { windowDescriber, type TagDescriberSource, type TagGroup } from '../notes/describer';
@@ -137,10 +138,7 @@ export function ChooseAiProviderDialog({ onClose }: { readonly onClose: () => vo
       onCancel={onClose}
       onSubmit={onClose}
     >
-      <p>
-        Generating a description sends the tag’s notes to your AI provider. Choose one in Settings →
-        AI Descriptions first.
-      </p>
+      <p>{AI_DESCRIPTION_COPY['chooseProvider.body']}</p>
       <div className="confirm-actions">
         <button
           type="button"

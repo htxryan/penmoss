@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AI_DESCRIPTION_COPY,
   aiDescriptionSettingProblem,
   AI_DESCRIPTION_SETTING_KEYS,
   AI_TAG_PROMPT_SETTING,
   DEFAULT_TAG_PROMPT,
+  generateAllTagsWords,
   promptHasNotes,
   renderTagPrompt,
   tagPrompt,
@@ -204,5 +206,29 @@ describe('tagsToDescribe', () => {
 
   it('replaces the described ones too when asked', () => {
     expect(tagsToDescribe(notes, { garden: 'Beds.' }, true)).toHaveLength(5);
+  });
+});
+
+describe('the words the Mac and Android share (A1677)', () => {
+  it('says how many tags Generate All sends, and that each goes to the AI provider', () => {
+    expect(generateAllTagsWords(0, false)).toBe('Every tag has a description already.');
+    expect(generateAllTagsWords(0, true)).toBe('There are no tags to describe.');
+    expect(generateAllTagsWords(1, false)).toBe(
+      '1 tag has no description. Each goes to your AI provider with its notes’ titles and descriptions, two at a time.',
+    );
+    expect(generateAllTagsWords(2, false)).toBe(
+      '2 tags have no description. Each goes to your AI provider with its notes’ titles and descriptions, two at a time.',
+    );
+    expect(generateAllTagsWords(1, true)).toBe(
+      '1 tag will be described, replacing any description they have. Each goes to your AI provider with its notes’ titles and descriptions, two at a time.',
+    );
+    expect(generateAllTagsWords(3, true)).toBe(
+      '3 tags will be described, replacing any description they have. Each goes to your AI provider with its notes’ titles and descriptions, two at a time.',
+    );
+  });
+
+  it('names the token each prompt cannot do without', () => {
+    expect(AI_DESCRIPTION_COPY['tagPrompt.missing']).toContain('{{notes}}');
+    expect(AI_DESCRIPTION_COPY['notePrompt.missing']).toContain('{{body}}');
   });
 });

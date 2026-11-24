@@ -1053,6 +1053,11 @@ export class LocalServer {
         if (!tag) return refusal(400, 'invalid_request', 'Not a valid tag');
         return json(200, await tags.describe(tag));
       }
+      // What Generate All… covers, asked before anything is sent: core's set, so the
+      // dialog's number is the one /describe-all then describes (A1677).
+      if (path === '/api/ai/tags/to-describe' && method === 'GET') {
+        return json(200, { missing: tags.wanted(false).length, all: tags.wanted(true).length });
+      }
       if (path === '/api/ai/tags/describe-all' && method === 'POST') {
         const wanted = tags.wanted(body['replace'] === true);
         // In the background: the answer says how many go, and each is written as it comes.

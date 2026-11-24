@@ -770,6 +770,11 @@ describe('tag descriptions on the phone (A1677)', () => {
     });
 
     // Generate All: the tags with none, or every tag when replacing; each written as it comes.
+    // Its dialog asks first how many, from the same set.
+    expect((await phone.http('GET', '/api/ai/tags/to-describe')).json).toEqual({
+      missing: 2,
+      all: 3,
+    });
     expect((await phone.http('POST', '/api/ai/tags/describe-all', {})).json).toEqual({
       count: 2,
     });
@@ -780,6 +785,10 @@ describe('tag descriptions on the phone (A1677)', () => {
         ).sort(),
       ).toEqual(['garden', 'garden/seeds', 'summer']),
     );
+    expect((await phone.http('GET', '/api/ai/tags/to-describe')).json).toEqual({
+      missing: 0,
+      all: 3,
+    });
     expect((await phone.http('POST', '/api/ai/tags/describe-all', {})).json).toEqual({
       count: 0,
     });

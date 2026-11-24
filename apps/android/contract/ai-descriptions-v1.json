@@ -30,5 +30,50 @@
       "label": "Claude Sonnet 5.5"
     }
   ],
-  "pauses": [30, 60, 120, 300, 600]
+  "pauses": [30, 60, 120, 300, 600],
+  "copy": {
+    "notePrompt.missing": "This prompt has no {{body}} token, so Claude won’t see the note’s text.",
+    "tagPrompt.missing": "This prompt has no {{notes}} token, so Claude won’t see the tag’s notes.",
+    "generateAll.none": "There are no tags to describe.",
+    "generateAll.allDescribed": "Every tag has a description already.",
+    "generateAll.replace.one": "1 tag will be described, replacing any description they have.",
+    "generateAll.replace.many": "{count} tags will be described, replacing any description they have.",
+    "generateAll.missing.one": "1 tag has no description.",
+    "generateAll.missing.many": "{count} tags have no description.",
+    "generateAll.each": "Each goes to your AI provider with its notes’ titles and descriptions, two at a time.",
+    "chooseProvider.body": "Generating a description sends the tag’s notes to your AI provider. Choose one in Settings → AI Descriptions first."
+  },
+  "generateAll": [
+    {
+      "count": 0,
+      "replace": false,
+      "words": "Every tag has a description already."
+    },
+    {
+      "count": 0,
+      "replace": true,
+      "words": "There are no tags to describe."
+    },
+    {
+      "count": 1,
+      "replace": false,
+      "words": "1 tag has no description. Each goes to your AI provider with its notes’ titles and descriptions, two at a time."
+    },
+    {
+      "count": 1,
+      "replace": true,
+      "words": "1 tag will be described, replacing any description they have. Each goes to your AI provider with its notes’ titles and descriptions, two at a time."
+    },
+    {
+      "count": 2,
+      "replace": false,
+      "words": "2 tags have no description. Each goes to your AI provider with its notes’ titles and descriptions, two at a time."
+    },
+    {
+      "count": 2,
+      "replace": true,
+      "words": "2 tags will be described, replacing any description they have. Each goes to your AI provider with its notes’ titles and descriptions, two at a time."
+    }
+  ],
+  "tagDescriptionMax": 2000
 }

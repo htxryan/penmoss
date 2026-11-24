@@ -428,6 +428,13 @@ data class AiNoteStatus(val ready: Boolean = false, val effective: AiEffective =
     data class AiSource(val level: String = "global", val id: String? = null, val name: String? = null)
 }
 
+/** What Generate All covers (A1677): how many tags have no description, and how many there are. */
+@Serializable
+data class TagsToDescribe(val missing: Int = 0, val all: Int = 0) {
+    /** How many go: every tag when [replace], else those with no description. */
+    fun count(replace: Boolean): Int = if (replace) all else missing
+}
+
 /** What Describe Now came to: the description, or why not (`not-sent`, `offline`, `refused`…). */
 @Serializable
 data class AiNowAnswer(val ok: Boolean = false, val text: String? = null, val code: String? = null, val message: String? = null)

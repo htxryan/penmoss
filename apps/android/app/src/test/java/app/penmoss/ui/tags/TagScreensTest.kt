@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -62,11 +63,11 @@ class TagScreensTest {
 
     @Test
     fun saysHowToMakeATagWhenThereIsNone() {
-        compose.setContent { PenmossTheme { TagsScreen(emptyList(), onBack = {}, onOpenTag = {}, onMenu = {}, status = "Renamed #a to #b in 2 notes", onGenerateAll = {}) } }
+        compose.setContent { PenmossTheme { TagsScreen(emptyList(), onBack = {}, onOpenTag = {}, onMenu = {}, onGenerateAll = {}) } }
         // Nothing to describe: no Generate All….
         compose.onNodeWithTag("tagsGenerateAll").assertDoesNotExist()
-        compose.onNodeWithText("No tags").assertIsDisplayed()
-        compose.onNodeWithTag("tagStatus").assertIsDisplayed()
+        // The Mac's Tags page's empty state, its heading and line as one.
+        compose.onNodeWithTag("tagsEmpty").assertTextEquals("No tags yet. Tag a note with #name in its text, and the tag shows here.")
     }
 
     @Test

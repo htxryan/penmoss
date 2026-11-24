@@ -115,8 +115,9 @@ class SettingsScreensTest {
         compose.onNodeWithText("The Theme’s Width").assertIsDisplayed()
         compose.onNodeWithTag("section-note").performClick()
         // Note pushes Symbols below a short screen (A1634).
-        list.performScrollToNode(hasText("☐ ★ ? ! 💡 →"))
-        compose.onNodeWithText("☐ ★ ? ! 💡 →").assertIsDisplayed()
+        // Strikethrough is the last default (A1679).
+        list.performScrollToNode(hasText("☐ ★ ? ! 💡 → ⊘"))
+        compose.onNodeWithText("☐ ★ ? ! 💡 → ⊘").assertIsDisplayed()
         compose.onNodeWithTag("section-symbols").performClick()
         list.performScrollToNode(hasText("Writing"))
         list.performScrollToNode(hasText("America/Chicago"))

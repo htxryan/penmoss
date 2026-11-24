@@ -32,7 +32,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Interface Font", "Appearance", SettingsRoutes.APPEARANCE, "The app’s own text", "typeface"),
     entry("Note Font", "Appearance", SettingsRoutes.APPEARANCE, "Your notes’ text", "typeface"),
     entry("Note Font Size", "Appearance", SettingsRoutes.APPEARANCE, "12 to 28 px", "text size", "bigger", "smaller"),
-    entry("Dad Jokes", "Appearance", SettingsRoutes.APPEARANCE, "A joke in place of the heading when no note is open", "joke", "jokes", "welcome", "empty window", "home"),
+    entry("Dad Jokes", "Appearance", SettingsRoutes.APPEARANCE, DAD_JOKES_HELP.removeSuffix("."), "joke", "jokes", "welcome", "empty window", "home"),
     entry("Shortcuts on Home", "Home", SettingsRoutes.DISPLAY, "Tags, Today, This Week, Graph and Commands", "hide", "sidebar", "buttons"),
     entry("Sections", "Home", SettingsRoutes.DISPLAY, "Quick Access, Recent Notes and Notebooks, in your order", "reorder", "sidebar"),
     entry("Show Notebook Names", "Home", SettingsRoutes.DISPLAY, "In Quick Access", "quick access"),

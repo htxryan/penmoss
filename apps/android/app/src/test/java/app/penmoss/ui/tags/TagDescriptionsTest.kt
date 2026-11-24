@@ -23,8 +23,10 @@ import app.penmoss.engine.api.AiNowAnswer
 import app.penmoss.engine.api.ChangedNote
 import app.penmoss.engine.api.ChangesPage
 import app.penmoss.engine.api.SyncTree
+import app.penmoss.engine.api.TagsToDescribe
 import app.penmoss.engine.notes.TagTree
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.SNACKBAR_TAG
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -40,8 +42,9 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Tag descriptions on the phone (A1677, PEN-10 gap 3): the Tags screen shows each tag's
- * description, its long-press menu adds, edits, clears or generates one, and Generate All asks
- * first, saying how many tags go; without an AI provider it points to Settings → AI Descriptions.
+ * description, its long-press menu adds, edits, clears or generates one, each said in a snackbar
+ * with Undo, and Generate All asks first, saying how many tags go (the engine page's count, by
+ * core's set); without an AI provider it points to Settings → AI Descriptions.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -77,6 +80,7 @@ class TagDescriptionsTest {
         val written = mutableListOf<Pair<String, String>>()
         val generated = mutableListOf<String>()
         val all = mutableListOf<Boolean>()
+        var covers = TagsToDescribe(missing = 2, all = 3)
         var answer: (String) -> AiNowAnswer = { tag -> AiNowAnswer(ok = true, text = "Notes about $tag.") }
         var gate: CompletableDeferred<Unit>? = null
         var syncs = 0
@@ -91,6 +95,8 @@ class TagDescriptionsTest {
             gate?.await()
             return answer(tag)
         }
+
+        override suspend fun toDescribe(): TagsToDescribe = covers
 
         override suspend fun generateAll(replace: Boolean): Int {
             all += replace
@@ -111,13 +117,17 @@ class TagDescriptionsTest {
     }
 
     private fun show(describer: FakeDescriber, onSettings: () -> Unit = {}) {
-        compose.setContent { PenmossTheme { TagsRoute(store, noRename, onBack = {}, onOpenTag = {}, describer = describer, onOpenAiSettings = onSettings) } }
+        // Undo held open: the snackbar's time would otherwise run out on the test's clock.
+        compose.setContent { PenmossTheme { TagsRoute(store, noRename, onBack = {}, onOpenTag = {}, describer = describer, onOpenAiSettings = onSettings, undoFor = 600_000) } }
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("tag-garden").fetchSemanticsNodes().isNotEmpty() }
     }
 
     private fun waitFor(tag: String) = compose.waitUntil(5_000) { compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
 
     private fun descriptions() = runBlocking { store.observeTagDescriptions().first() }
+
+    /** Waits for the snackbar that says [text]. */
+    private fun said(text: String) = compose.waitUntil(5_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
 
     @Test
     fun showsEachTagsDescriptionFirstLineAndWhileOneIsGenerated() {
@@ -171,7 +181,7 @@ class TagDescriptionsTest {
         compose.onNodeWithTag("tagDescriptionSave").performClick()
         waitFor("tagDescription-garden")
         compose.onNodeWithTag("tagDescription-garden", useUnmergedTree = true).assertTextEquals("Growing food.")
-        compose.onNodeWithTag("tagStatus").assertTextEquals("Saved the description of #garden.")
+        said("Saved the description of #garden.")
         assertEquals(listOf("garden" to "Growing food."), describer.written)
         assertEquals(1, describer.syncs)
 
@@ -187,12 +197,12 @@ class TagDescriptionsTest {
         compose.onNodeWithTag("tag-garden").performTouchInput { longClick() }
         compose.onNodeWithTag("tagAction-clear").performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("tagDescription-garden", useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
-        compose.onNodeWithTag("tagStatus").assertTextEquals("Cleared the description of #garden.")
+        said("Cleared the description of #garden.")
         assertEquals("garden" to "", describer.written.last())
-        compose.onNodeWithTag("tagUndo").performClick()
+        compose.onNodeWithText("Undo").performClick()
         waitFor("tagDescription-garden")
         compose.onNodeWithTag("tagDescription-garden", useUnmergedTree = true).assertTextEquals("Vegetables.")
-        compose.onNodeWithTag("tagStatus").assertTextEquals("The description of #garden is as it was.")
+        said("The description of #garden is as it was.")
         assertEquals("garden" to "Vegetables.", describer.written.last())
     }
 
@@ -206,19 +216,22 @@ class TagDescriptionsTest {
         describer.gate!!.complete(Unit)
         waitFor("tagDescription-summer")
         compose.onNodeWithTag("tagDescription-summer", useUnmergedTree = true).assertTextEquals("Notes about summer.")
-        compose.onNodeWithTag("tagStatus").assertTextEquals("Wrote a description of #summer.")
+        // Said in the app's snackbar, with its Undo, as Trash's and the Mac's tag toast.
+        said("Wrote a description of #summer.")
+        compose.onNodeWithTag(SNACKBAR_TAG).assertIsDisplayed()
         assertEquals(listOf("summer"), describer.generated)
         assertEquals("Notes about summer.", descriptions()["summer"])
         // Undo: it had none, so it has none again.
-        compose.onNodeWithTag("tagUndo").performClick()
+        compose.onNodeWithText("Undo").performClick()
         compose.waitUntil(5_000) { descriptions()["summer"] == null }
+        said("The description of #summer is as it was.")
 
         describer.gate = null
         describer.answer = { AiNowAnswer(ok = false, code = "offline", message = "No connection to Anthropic.") }
         compose.onNodeWithTag("tag-garden").performTouchInput { longClick() }
         compose.onNodeWithTag("tagAction-generate").performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Couldn’t generate a description of #garden: No connection to Anthropic.").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("tagUndo").assertDoesNotExist()
+        compose.onNodeWithText("Undo").assertDoesNotExist()
         compose.onNodeWithTag("tagDescription-garden", useUnmergedTree = true).assertDoesNotExist()
     }
 
@@ -245,8 +258,9 @@ class TagDescriptionsTest {
         val describer = FakeDescriber()
         show(describer)
         compose.onNodeWithTag("tagsGenerateAll").assertTextEquals("Generate All…").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Generate All Tag Descriptions?").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Generate All Tag Descriptions?").assertIsDisplayed()
-        // garden and garden/seeds have none; summer has one.
+        // The engine page's count (core's set): garden and garden/seeds have none; summer has one.
         compose.onNodeWithTag("tagsGenerateCount")
             .assertTextEquals("2 tags have no description. Each goes to your AI provider with its notes’ titles and descriptions, two at a time.")
         compose.onNodeWithTag("tagsGenerateStart").assertTextEquals("Generate 2 Descriptions")
@@ -256,16 +270,6 @@ class TagDescriptionsTest {
         compose.onNodeWithTag("tagsGenerateStart").performClick()
         compose.waitUntil(5_000) { describer.all.isNotEmpty() }
         assertEquals(listOf(true), describer.all)
-        compose.onNodeWithTag("tagStatus").assertTextEquals("Generating descriptions of 4 tags in the background.")
-    }
-
-    @Test
-    fun saysWhatGenerateAllCovers() {
-        val tree = TagTree.build(listOf(listOf("garden", "summer"), listOf("garden/seeds")))
-        assertEquals(listOf("garden", "garden/seeds", "summer"), tagsToDescribe(tree, emptyMap(), replace = false))
-        assertEquals(listOf("garden/seeds"), tagsToDescribe(tree, mapOf("garden" to "x", "summer" to "y"), replace = false))
-        assertEquals(3, tagsToDescribe(tree, mapOf("garden" to "x"), replace = true).size)
-        assertEquals("Every tag has a description already.", generateAllWords(0, replace = false))
-        assertEquals("1 tag has no description. Each goes to your AI provider with its notes’ titles and descriptions, two at a time.", generateAllWords(1, replace = false))
+        said("Generating descriptions of 4 tags in the background.")
     }
 }
