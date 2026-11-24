@@ -145,20 +145,42 @@ export class NodeMeaning {
    * Deletes what other models left on this Mac: their folders and partial downloads in
    * `~/.penmoss/models`, and their vectors in `~/.penmoss/vectors` (the lease stays). After an
    * update pins a new model, the old one (about 200 MB) and its vectors are never read again.
-   * `open` calls it, so it runs once the new model is here. Answers the paths it removed.
+   * The app's `open` calls it, so it runs once the new model is here. Anything changed in the
+   * last `keepMs` (an hour) stays, so an older `penmoss` still downloading or indexing its model
+   * keeps it until it stops. Answers the paths it removed.
    */
-  async removeOthers(): Promise<string[]> {
-    const models = await otherModels(this.manifest, this.home);
-    for (const path of models) await rm(path, { recursive: true, force: true });
-    const vectors = await removeOtherVectors(this.home, modelId(this.manifest));
-    return [...models, ...vectors];
+  async removeOthers(keepMs = 60 * 60_000, now = Date.now()): Promise<string[]> {
+    const stale = async (path: string) => {
+      const info = await stat(path).catch(() => null);
+      return info !== null && now - info.mtimeMs >= keepMs;
+    };
+    const removed: string[] = [];
+    for (const path of await otherModels(this.manifest, this.home)) {
+      if (!(await stale(path))) continue;
+      await rm(path, { recursive: true, force: true });
+      removed.push(path);
+    }
+    const keep = modelId(this.manifest);
+    const others = await readdir(join(this.home, 'vectors'), { withFileTypes: true }).catch(
+      () => [],
+    );
+    const fresh: string[] = [];
+    for (const entry of others) {
+      const path = join(this.home, 'vectors', entry.name);
+      if (entry.isDirectory() && path !== vectorsDir(this.home, keep) && !(await stale(path))) {
+        fresh.push(path);
+      }
+    }
+    removed.push(...(await removeOtherVectors(this.home, keep, fresh)));
+    return removed;
   }
 
   /**
    * The model and vectors for `writer`, or null when Search by Meaning is off or the model is not
    * here. Throws `ModelError('corrupt')` when a file fails its checksum (it is deleted, so a fetch
-   * gets it again). With `thread`, inference runs in a worker thread. Opening the model first
-   * removes other models' files (`removeOthers`), so a model change frees the old one's space.
+   * gets it again). With `thread`, inference runs in a worker thread. The app's service, opening
+   * the model, first removes other models' files (`removeOthers`), so a model change frees the
+   * old one's space; the CLI and `penmoss mcp` never do, as an older one may still use them.
    */
   async open(
     writer: 'cli' | 'mcp' | 'app',
@@ -168,7 +190,7 @@ export class NodeMeaning {
     if (!status.enabled || status.state !== 'ready') return null;
     const dir = await openModel(this.manifest, this.home);
     // Best effort: a file another process holds open is removed next time.
-    await this.removeOthers().catch(() => []);
+    if (writer === 'app') await this.removeOthers().catch(() => []);
     const threads = this.options.threads ?? 4;
     let embedder: Embedder;
     let close: () => Promise<void>;

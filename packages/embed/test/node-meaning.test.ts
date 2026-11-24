@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -95,19 +95,33 @@ describe('NodeMeaning (T75)', () => {
     for (const dir of [oldModel, oldPartial, oldVectors]) mkdirSync(dir, { recursive: true });
     writeFileSync(join(oldModel, 'model.onnx'), 'old');
     writeFileSync(join(oldVectors, 'app.seg'), 'old');
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60_000);
+    for (const dir of [oldModel, oldPartial, oldVectors]) utimesSync(dir, twoHoursAgo, twoHoursAgo);
+    // Another model's download still going (changed just now): an older penmoss may be at it.
+    const freshPartial = join(home, 'models', '.other@0123456789abcdef.partial');
+    mkdirSync(freshPartial, { recursive: true });
     await node.fetch();
     // Fetched but not opened yet: nothing is removed.
+    expect(existsSync(oldModel)).toBe(true);
+    // The CLI and penmoss mcp never remove another model's files: an older one may use them.
+    const byMcp = await node.open('mcp');
+    await byMcp!.close();
     expect(existsSync(oldModel)).toBe(true);
     const opened = await node.open('app');
     await opened!.cache.put(new Map([['a'.repeat(64), new Float32Array(4).fill(0.5)]]));
     const lease = await opened!.lease();
     expect(lease).toBeDefined();
     for (const dir of [oldModel, oldPartial, oldVectors]) expect(existsSync(dir)).toBe(false);
+    expect(existsSync(freshPartial)).toBe(true);
     // This model, its vectors and the lease stay.
     expect((await node.status()).state).toBe('ready');
     expect(await node.indexBytes()).toBeGreaterThan(0);
     expect(existsSync(join(home, 'vectors', 'indexer.lease'))).toBe(true);
     expect(await node.removeOthers()).toEqual([]);
+    // An hour on, the stopped download goes too.
+    expect(await node.removeOthers(60 * 60_000, Date.now() + 2 * 60 * 60_000)).toEqual([
+      freshPartial,
+    ]);
     await opened!.close();
   });
 });
