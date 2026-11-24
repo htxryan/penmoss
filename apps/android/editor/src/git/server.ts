@@ -53,7 +53,9 @@ import {
   readWorkspace,
   registerNote,
   mergedSettings,
+  readTagDescriptions,
   setFolderAiDescription,
+  setTagDescription,
   writeSetting,
 } from '@penmoss/model/workspace';
 import {
@@ -62,6 +64,8 @@ import {
   type AiSetting,
 } from '@penmoss/core/ai-description';
 import type { NotebookDescriber } from './describer';
+import type { TagDescriber } from './tag-describer';
+import { normaliseTag } from '@penmoss/core/tags';
 import { parseMarkdown } from '@penmoss/core';
 import { appendCapture, captureTime, splitCapture } from '@penmoss/model/capture';
 import { mirrorMarkdown, readNoteState } from '@penmoss/model/markdown';
@@ -239,6 +243,8 @@ export class LocalServer {
   private readonly released = new Set<string>();
   /** AI Descriptions' describer (PEN-161): Describe Now and Describe Notes Now go through it. */
   private describer: NotebookDescriber | null = null;
+  /** A tag's AI description (A1677): Generate AI Description and Generate All. */
+  private tagDescriber: TagDescriber | null = null;
 
   constructor(
     private readonly engine: GitNotebookEngine,
@@ -267,8 +273,9 @@ export class LocalServer {
     this.released.add(noteId);
   }
 
-  useDescriber(describer: NotebookDescriber | null): void {
+  useDescriber(describer: NotebookDescriber | null, tags: TagDescriber | null = null): void {
     this.describer = describer;
+    this.tagDescriber = tags;
   }
 
   /** No old copy waits any more. */
@@ -441,6 +448,15 @@ export class LocalServer {
       );
       return json(202, done);
     }
+    // What a tag means (PEN-68, A1677): the Tags screen writes it here, as the Mac's Tags page
+    // writes the WorkspaceDoc; blank text clears it.
+    if (path === '/api/tags/description' && method === 'PUT') {
+      const tag = normaliseTag(textOf(body['tag']));
+      if (!tag) return refusal(400, 'invalid_request', 'Not a valid tag');
+      const text = typeof body['description'] === 'string' ? body['description'] : '';
+      await this.write(() => setTagDescription(this.workspace, tag, text));
+      return json(200, { tag, description: readTagDescriptions(this.workspace)[tag] ?? null });
+    }
     if (path === '/api/settings' && method === 'PUT') {
       // The notebook's own settings only: the CLI's local API refuses the apps' (A827).
       const done = await this.write(() => this.notebook.changeSettings(body));
@@ -562,6 +578,8 @@ export class LocalServer {
       // The device's settings kept in this notebook (A1014): what the app shows with no account
       // when this is the Journal notebook, and a Mac's change reaches it with the next pass.
       device: this.deviceSettings(),
+      // What each tag means (PEN-68): the Tags screen shows them, offline too (A1677).
+      tagDescriptions: readTagDescriptions(this.workspace),
       folders: workspace.folders
         .map((folder) => ({
           id: folder.id,
@@ -1025,6 +1043,23 @@ export class LocalServer {
         await this.write(() => setFolderAiDescription(workspace, id, next));
       }
       return json(200, { value: parseAiSetting(read()?.aiDescription) });
+    }
+    // A tag's description (A1677): one tag now, or Generate All in the background.
+    if (path.startsWith('/api/ai/tags/')) {
+      const tags = this.tagDescriber;
+      if (!tags) return refusal(503, 'unavailable', 'AI Descriptions is not running here');
+      if (path === '/api/ai/tags/describe' && method === 'POST') {
+        const tag = normaliseTag(textOf(body['tag']));
+        if (!tag) return refusal(400, 'invalid_request', 'Not a valid tag');
+        return json(200, await tags.describe(tag));
+      }
+      if (path === '/api/ai/tags/describe-all' && method === 'POST') {
+        const wanted = tags.wanted(body['replace'] === true);
+        // In the background: the answer says how many go, and each is written as it comes.
+        void tags.batch(wanted);
+        return json(200, { count: wanted.length });
+      }
+      return refusal(404, 'not_found', 'No such route');
     }
     const describer = this.describer;
     if (!describer) return refusal(503, 'unavailable', 'AI Descriptions is not running here');

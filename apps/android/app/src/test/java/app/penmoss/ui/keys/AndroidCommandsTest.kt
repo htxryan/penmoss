@@ -164,6 +164,8 @@ class AndroidCommandsTest {
             "theme.toggleDark" to "dark",
             "note.fullWidth" to "wide",
             "app.graph" to "graph",
+            // Home's Tags, from anywhere (A1677).
+            "app.tags" to "open:tags",
             "note.copyMarkdown" to "copy markdown",
             "note.copyRich" to "copy rich",
             "note.toggleSource" to "source",

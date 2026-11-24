@@ -2,6 +2,8 @@ package app.penmoss.ai
 
 import app.penmoss.ui.settings.AI_PROMPT_TOKENS
 import app.penmoss.ui.settings.DEFAULT_AI_PROMPT
+import app.penmoss.ui.settings.AI_TAG_PROMPT_TOKENS
+import app.penmoss.ui.settings.DEFAULT_AI_TAG_PROMPT
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
@@ -27,6 +29,13 @@ class AiDescriptionsContractTest {
     fun theDefaultPromptAndItsTokensAreCores() {
         assertEquals(contract.getValue("defaultPrompt").jsonPrimitive.content, DEFAULT_AI_PROMPT)
         assertEquals(contract.getValue("tokens").jsonArray.map { it.jsonPrimitive.content }, AI_PROMPT_TOKENS)
+    }
+
+    @Test
+    fun theTagPromptAndItsTokensAreCores() {
+        assertEquals(contract.getValue("defaultTagPrompt").jsonPrimitive.content, DEFAULT_AI_TAG_PROMPT)
+        assertEquals(contract.getValue("tagTokens").jsonArray.map { it.jsonPrimitive.content }, AI_TAG_PROMPT_TOKENS)
+        assertEquals("ai.description.tagPrompt", AiKeys.TAG_PROMPT)
     }
 
     @Test

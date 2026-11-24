@@ -52,6 +52,7 @@ vi.setConfig({ testTimeout: 60_000 });
 const NOTEBOOK = '01JBNOTEBOOK00000000000001';
 const NOTE = '01JBNOTE000000000000000001';
 const FOLDER = '01JBF0000000000000000000B1';
+const SECOND_NOTE = '01JBNOTE000000000000000003';
 
 /** Two ports joined back to back, delivering on a later turn as the WebView does. */
 function pipe(): [FramePort, FramePort] {
@@ -701,6 +702,90 @@ describe('AI Descriptions on the phone (PEN-161)', () => {
     expect((await phone.http('PATCH', '/api/ai/notebook', { value: 'inherit' })).json).toEqual({
       value: 'inherit',
     });
+  });
+});
+
+describe('tag descriptions on the phone (A1677)', () => {
+  it('writes, clears and generates a tag’s description, and the tree carries them', async () => {
+    const remote = new MemoryRemote();
+    const ai = {
+      // No tag prompt from the app: core's default is sent.
+      config: { ready: false, global: false, when: 'pause', pauseS: 120, prompt: '' },
+      prompts: [] as string[],
+      text: '  "Raised beds and what grows in them."  ',
+    };
+    const phone = fakeApp({ remote, ai });
+    await phone.app.call('open', { notebookId: NOTEBOOK, name: 'Work', create: true });
+    await settle(phone.app);
+    const note = (id: string, title: string, markdown: string) => {
+      const doc = new Y.Doc();
+      initNote(doc, { id, created: '2026-10-29T10:00:00-05:00', kind: 'note' }, title);
+      setBody(doc, docToDelta(parseMarkdown(markdown).doc));
+      return { id, update: [toBase64(Y.encodeStateAsUpdate(doc))], folderId: null, text: true };
+    };
+    await phone.http('POST', '/sync/batch', {
+      notes: [
+        note(NOTE, 'Beds', 'Raised #garden beds, #summer only'),
+        note(SECOND_NOTE, 'Seeds', 'Order #garden/seeds'),
+      ],
+    });
+
+    // By hand: kept as typed, a blank one clears it, and the tree carries what is kept.
+    const put = (tag: unknown, description: unknown) =>
+      phone.http('PUT', '/api/tags/description', { tag, description });
+    expect((await put('#Summer', 'Hot months.')).json).toEqual({
+      tag: 'summer',
+      description: 'Hot months.',
+    });
+    expect((await put('not a tag', 'x')).status).toBe(400);
+    expect((await phone.http('GET', '/sync/tree')).json?.['tagDescriptions']).toEqual({
+      summer: 'Hot months.',
+    });
+    expect((await put('summer', '   ')).json).toEqual({ tag: 'summer', description: null });
+    expect((await phone.http('GET', '/sync/tree')).json?.['tagDescriptions']).toEqual({});
+
+    // No provider on this phone: nothing is sent.
+    expect((await phone.http('POST', '/api/ai/tags/describe', { tag: 'garden' })).json).toEqual({
+      ok: false,
+      code: 'no-provider',
+      message: 'Choose an AI provider in Settings → AI Descriptions.',
+    });
+    expect(ai.prompts).toEqual([]);
+
+    // With one: the default tag prompt, with the notes and the other tags, and the answer kept.
+    ai.config.ready = true;
+    expect((await phone.http('POST', '/api/ai/tags/describe', { tag: 'garden' })).json).toEqual({
+      ok: true,
+      text: 'Raised beds and what grows in them.',
+    });
+    expect(ai.prompts).toHaveLength(1);
+    expect(ai.prompts[0]).toContain('Tag: #garden\n');
+    expect(ai.prompts[0]).toContain('Notebook: Work\n');
+    expect(ai.prompts[0]).toContain('Notes with it: 2\n');
+    expect(ai.prompts[0]).toContain('Other tags on these notes: #garden/seeds (1), #summer (1)');
+    expect(ai.prompts[0]).toContain('- Beds: Raised #garden beds, #summer only');
+    expect(ai.prompts[0]).toContain('- Seeds: Order #garden/seeds');
+    expect((await phone.http('GET', '/sync/tree')).json?.['tagDescriptions']).toEqual({
+      garden: 'Raised beds and what grows in them.',
+    });
+
+    // Generate All: the tags with none, or every tag when replacing; each written as it comes.
+    expect((await phone.http('POST', '/api/ai/tags/describe-all', {})).json).toEqual({
+      count: 2,
+    });
+    await vi.waitFor(async () =>
+      expect(
+        Object.keys(
+          (await phone.http('GET', '/sync/tree')).json?.['tagDescriptions'] as object,
+        ).sort(),
+      ).toEqual(['garden', 'garden/seeds', 'summer']),
+    );
+    expect((await phone.http('POST', '/api/ai/tags/describe-all', {})).json).toEqual({
+      count: 0,
+    });
+    expect((await phone.http('POST', '/api/ai/tags/describe-all', { replace: true })).json).toEqual(
+      { count: 3 },
+    );
   });
 });
 

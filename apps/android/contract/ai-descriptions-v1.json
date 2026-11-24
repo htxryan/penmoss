@@ -10,6 +10,16 @@
     "{{description}}",
     "{{date}}"
   ],
+  "defaultTagPrompt": "Write a description of a tag for an AI agent choosing tags for a note, or looking for the notes a tag finds.\n\nOne or two plain sentences, at most 40 words. Say what the notes with this tag have in common and what the tag is for, beside the other tags they carry. No preamble, no quotes, no markdown, and don't start with \"This tag\".\n\nTag: #{{tag}}\nNotebook: {{notebook}}\nNotes with it: {{count}}\nOther tags on these notes: {{tags}}\n\n{{notes}}",
+  "tagTokens": [
+    "{{tag}}",
+    "{{notes}}",
+    "{{tags}}",
+    "{{count}}",
+    "{{notebook}}",
+    "{{description}}",
+    "{{date}}"
+  ],
   "models": [
     {
       "id": "claude-haiku-5-5",

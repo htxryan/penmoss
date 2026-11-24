@@ -37,6 +37,9 @@ object AiKeys {
     const val PAUSE = "ai.description.pause"
     const val MODEL = "ai.description.model"
     const val PROMPT = "ai.description.prompt"
+
+    /** The prompt for a tag's description (A1677; core's `AI_TAG_PROMPT_SETTING`). */
+    const val TAG_PROMPT = "ai.description.tagPrompt"
     const val PROVIDER = "ai.provider"
     const val NOTEBOOK = "ai.description"
 
@@ -253,6 +256,7 @@ class AiDescriptions(
                 "when" to JsonPrimitive(if (text(AiKeys.WHEN) == "sync") "sync" else "pause"),
                 "pauseS" to JsonPrimitive(pause),
                 "prompt" to JsonPrimitive(text(AiKeys.PROMPT) ?: ""),
+                "tagPrompt" to JsonPrimitive(text(AiKeys.TAG_PROMPT) ?: ""),
             ),
         )
     }

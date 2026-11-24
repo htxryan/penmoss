@@ -87,6 +87,15 @@ class AiDescriptionsTest {
         assertEquals(before, calls.size)
     }
 
+    /** A1677: the engine page's tag describer reads the tag prompt from the same answer. */
+    @Test
+    fun tellsThePageTheTagPrompt() = runBlocking {
+        val ai = ai()
+        assertEquals("", ai.config().jsonObject.getValue("tagPrompt").jsonPrimitive.content)
+        settings = JsonObject(mapOf(AiKeys.TAG_PROMPT to JsonPrimitive("Describe #{{tag}}: {{notes}}")))
+        assertEquals("Describe #{{tag}}: {{notes}}", ai.config().jsonObject.getValue("tagPrompt").jsonPrimitive.content)
+    }
+
     @Test
     fun sendsNothingWithoutAProvider() = runBlocking {
         val ai = ai()

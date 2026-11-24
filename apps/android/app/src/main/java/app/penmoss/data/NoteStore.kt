@@ -159,6 +159,8 @@ class NoteStore private constructor(
     suspend fun captureTimeZone(): String? = settings.captureTimeZone()
     fun observeSettings(): Flow<SettingsState> = settings.observeSettings()
     suspend fun settingsNow(): SettingsState = settings.settingsNow()
+    fun observeTagDescriptions(): Flow<Map<String, String>> = settings.observeTagDescriptions()
+    suspend fun setTagDescriptionLocally(tag: String, description: String?) = settings.setTagDescriptionLocally(tag, description)
     fun observeDeviceMap(): Flow<JsonObject?> = settings.observeDeviceMap()
     suspend fun deviceMapNow(): JsonObject? = settings.deviceMapNow()
     suspend fun putDeviceMap(map: JsonObject) = settings.putDeviceMap(map)

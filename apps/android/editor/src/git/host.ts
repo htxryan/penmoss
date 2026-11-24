@@ -35,8 +35,10 @@ import {
   type FailureWords,
 } from '@penmoss/git-notebook/host';
 import { LocalNotebook } from '@penmoss/git-notebook/local';
+import { readTagDescriptions, setTagDescription } from '@penmoss/model/workspace';
 import type { BridgeTransport } from './bridge-transport';
 import { NotebookDescriber, type AiPort } from './describer';
+import { TagDescriber } from './tag-describer';
 import {
   emptyState,
   LocalServer,
@@ -258,7 +260,22 @@ export class AndroidGitHost {
         this.now,
       );
       this.describer = describer;
-      this.server.useDescriber(describer);
+      // A tag's AI description (A1677), asked for from the Tags screen.
+      const tags = new TagDescriber(
+        {
+          promptNotes: () => notebook.tagPromptNotes(),
+          descriptions: () => readTagDescriptions(ops.workspace),
+          setDescription: (tag, text) =>
+            engine.exclusive(async () => {
+              setTagDescription(ops.workspace, tag, text);
+              await hooks.changed();
+            }),
+          name: this.options.name,
+        },
+        this.options.ai,
+        this.now,
+      );
+      this.server.useDescriber(describer, tags);
       // Every change, typed here or brought by a sync (its description's own write too, which
       // the text hash then skips).
       this.offs.push(engine.replica.onChange((ids) => describer.changed(ids)));

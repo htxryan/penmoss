@@ -122,6 +122,11 @@ data class SyncTree(
      * account. Never from the Penmoss server.
      */
     val device: JsonObject? = null,
+    /**
+     * What each tag means (PEN-68, A1364): the notebook's `tagDescriptions`, tag → text, as the
+     * Tags screen shows them (A1677). Null from a page older than that: what Room has stands.
+     */
+    val tagDescriptions: JsonObject? = null,
 )
 
 /** A git notebook's device map after a read or a change (A1014). */

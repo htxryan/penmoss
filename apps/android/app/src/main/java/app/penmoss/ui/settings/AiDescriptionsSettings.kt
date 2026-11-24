@@ -62,6 +62,16 @@ const val DEFAULT_AI_PROMPT =
 /** The tokens a prompt can use, in the order Settings offers them (core's `PROMPT_TOKENS`). */
 val AI_PROMPT_TOKENS = listOf("{{title}}", "{{body}}", "{{tags}}", "{{folder}}", "{{notebook}}", "{{description}}", "{{date}}")
 
+/** The prompt sent for a tag when none is set (core's `DEFAULT_TAG_PROMPT`; `contract/ai-descriptions-v1.json`). */
+const val DEFAULT_AI_TAG_PROMPT =
+    "Write a description of a tag for an AI agent choosing tags for a note, or looking for the notes a tag finds.\n\n" +
+        "One or two plain sentences, at most 40 words. Say what the notes with this tag have in common and what the tag is for, " +
+        "beside the other tags they carry. No preamble, no quotes, no markdown, and don't start with \"This tag\".\n\n" +
+        "Tag: #{{tag}}\nNotebook: {{notebook}}\nNotes with it: {{count}}\nOther tags on these notes: {{tags}}\n\n{{notes}}"
+
+/** The tokens a tag prompt can use, in the order Settings offers them (core's `TAG_PROMPT_TOKENS`). */
+val AI_TAG_PROMPT_TOKENS = listOf("{{tag}}", "{{notes}}", "{{tags}}", "{{count}}", "{{notebook}}", "{{description}}", "{{date}}")
+
 private val PAUSE_LABELS = mapOf(30 to "30 Seconds", 60 to "1 Minute", 120 to "2 Minutes", 300 to "5 Minutes", 600 to "10 Minutes")
 
 /** What the Settings list says of AI Descriptions. */
@@ -92,12 +102,14 @@ internal fun AiDescriptionsRoute(host: SettingsHost, onBack: () -> Unit) {
         key = key,
         model = ai.model,
         prompt = text(AiKeys.PROMPT),
+        tagPrompt = text(AiKeys.TAG_PROMPT),
         onGlobal = { graph.changeSetting(AiKeys.GLOBAL, JsonPrimitive(it)) },
         onWhen = { graph.changeSetting(AiKeys.WHEN, JsonPrimitive(it)) },
         onPause = { graph.changeSetting(AiKeys.PAUSE, JsonPrimitive(it)) },
         onProvider = { graph.changeSetting(AiKeys.PROVIDER, if (it == AiKeys.NONE) null else JsonPrimitive(it)) },
         onModel = { graph.changeSetting(AiKeys.MODEL, JsonPrimitive(it)) },
         onPrompt = { graph.changeSetting(AiKeys.PROMPT, if (it == DEFAULT_AI_PROMPT) null else JsonPrimitive(it)) },
+        onTagPrompt = { graph.changeSetting(AiKeys.TAG_PROMPT, if (it == DEFAULT_AI_TAG_PROMPT) null else JsonPrimitive(it)) },
         onSaveKey = { typed, done -> scope.launch { done(ai.saveKey(typed)) } },
         onTestKey = { done -> scope.launch { done(ai.testKey()) } },
         onRemoveKey = ai::removeKey,
@@ -127,7 +139,8 @@ fun describeAllWords(count: Int?): String = when (count) {
 /**
  * Settings → AI Descriptions (PEN-161): Describe Notes (On or Off), Describe a Note (After a Pause
  * or At Sync), After a Pause Of, Describe All Notes, then this phone's AI Provider with its key,
- * the model, and the prompt with its tokens and Reset to Default.
+ * the model, the note prompt with its tokens and Reset to Default, and the tag prompt the Tags
+ * screen's Generate AI Description sends (A1677), the same way.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -140,12 +153,14 @@ fun AiDescriptionsScreen(
     key: AiKeyState,
     model: String,
     prompt: String?,
+    tagPrompt: String?,
     onGlobal: (Boolean) -> Unit,
     onWhen: (String) -> Unit,
     onPause: (Int) -> Unit,
     onProvider: (String) -> Unit,
     onModel: (String) -> Unit,
     onPrompt: (String) -> Unit,
+    onTagPrompt: (String) -> Unit,
     onSaveKey: (String, (AiResult) -> Unit) -> Unit,
     onTestKey: ((AiResult) -> Unit) -> Unit,
     onRemoveKey: () -> Unit,
@@ -224,8 +239,11 @@ fun AiDescriptionsScreen(
             }
         }
 
-        GroupTitle("Prompt", Modifier.settingRow("prompt"))
-        PromptEditor(prompt ?: DEFAULT_AI_PROMPT, prompt != null, enabled, onPrompt)
+        GroupTitle("Note Prompt", Modifier.settingRow("note-prompt"))
+        PromptEditor(prompt ?: DEFAULT_AI_PROMPT, prompt != null, enabled, NOTE_PROMPT, onPrompt)
+
+        GroupTitle("Tag Prompt", Modifier.settingRow("tag-prompt"))
+        PromptEditor(tagPrompt ?: DEFAULT_AI_TAG_PROMPT, tagPrompt != null, enabled, TAG_PROMPT, onTagPrompt)
     }
 }
 
@@ -305,51 +323,93 @@ private fun AnthropicKey(
     }
 }
 
-/** The prompt: its tokens inserted at the cursor, Save, and Reset to Default. */
+/** What tells the note prompt's editor from the tag prompt's: words, tokens, default, ids. */
+private class PromptKind(
+    val help: String,
+    val tokens: List<String>,
+    val default: String,
+    /** The token without which the model sees nothing to describe, and what is said when it is missing. */
+    val needs: String,
+    val missing: String,
+    /** Test tags' prefix (`aiPrompt`, `aiTagPrompt`), and the tokens' (`aiToken`, `aiTagToken`). */
+    val tag: String,
+    val tokenTag: String,
+    val tokenEvent: String,
+    val saveEvent: String,
+    val resetEvent: String,
+)
+
+private val NOTE_PROMPT = PromptKind(
+    help = "Sent for each note. The tokens are replaced with the note’s own.",
+    tokens = AI_PROMPT_TOKENS,
+    default = DEFAULT_AI_PROMPT,
+    needs = "{{body}}",
+    missing = "This prompt has no {{body}}, so the model can’t see the note’s text.",
+    tag = "aiPrompt",
+    tokenTag = "aiToken",
+    tokenEvent = "settings.ai.token",
+    saveEvent = "settings.ai.save-prompt",
+    resetEvent = "settings.ai.reset-prompt",
+)
+
+private val TAG_PROMPT = PromptKind(
+    help = "Sent for a tag when you generate its description on the Tags screen. The tokens are replaced with the tag’s own.",
+    tokens = AI_TAG_PROMPT_TOKENS,
+    default = DEFAULT_AI_TAG_PROMPT,
+    needs = "{{notes}}",
+    missing = "This prompt has no {{notes}}, so the model can’t see the tag’s notes.",
+    tag = "aiTagPrompt",
+    tokenTag = "aiTagToken",
+    tokenEvent = "settings.ai.tag-token",
+    saveEvent = "settings.ai.save-tag-prompt",
+    resetEvent = "settings.ai.reset-tag-prompt",
+)
+
+/** A prompt: its tokens inserted at the cursor, Save, and Reset to Default. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PromptEditor(prompt: String, custom: Boolean, enabled: Boolean, onSave: (String) -> Unit) {
+private fun PromptEditor(prompt: String, custom: Boolean, enabled: Boolean, kind: PromptKind, onSave: (String) -> Unit) {
     var draft by remember(prompt) { mutableStateOf(TextFieldValue(prompt, TextRange(prompt.length))) }
-    Help("Sent for each note. The tokens are replaced with the note’s own.")
+    Help(kind.help)
     OutlinedTextField(
         value = draft,
         onValueChange = { draft = it },
         enabled = enabled,
         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-        modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp).padding(horizontal = 16.dp, vertical = 4.dp).testTag("aiPrompt"),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp).padding(horizontal = 16.dp, vertical = 4.dp).testTag(kind.tag),
     )
     FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        for (token in AI_PROMPT_TOKENS) {
+        for (token in kind.tokens) {
             TextButton(
-                onClick = trackedClick("settings.ai.token") {
+                onClick = trackedClick(kind.tokenEvent) {
                     val text = draft.text
                     val at = draft.selection.end.coerceIn(0, text.length)
                     val next = text.substring(0, at) + token + text.substring(at)
                     draft = TextFieldValue(next, TextRange(at + token.length))
                 },
                 enabled = enabled,
-                modifier = Modifier.testTag("aiToken-${token.trim('{', '}')}"),
+                modifier = Modifier.testTag("${kind.tokenTag}-${token.trim('{', '}')}"),
             ) { Text(token, fontFamily = FontFamily.Monospace) }
         }
     }
-    if ("{{body}}" !in draft.text) {
+    if (kind.needs !in draft.text) {
         Text(
-            "This prompt has no {{body}}, so the model can’t see the note’s text.",
-            Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("aiPromptWarning"),
+            kind.missing,
+            Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("${kind.tag}Warning"),
             style = MaterialTheme.roles.help,
             color = MaterialTheme.colorScheme.error,
         )
     }
     Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilledTonalButton(
-            onClick = trackedClick("settings.ai.save-prompt") { onSave(draft.text) },
+            onClick = trackedClick(kind.saveEvent) { onSave(draft.text) },
             enabled = enabled && draft.text != prompt && draft.text.isNotBlank(),
-            modifier = Modifier.testTag("aiPromptSave"),
+            modifier = Modifier.testTag("${kind.tag}Save"),
         ) { Text("Save Prompt") }
         TextButton(
-            onClick = trackedClick("settings.ai.reset-prompt") { onSave(DEFAULT_AI_PROMPT) },
+            onClick = trackedClick(kind.resetEvent) { onSave(kind.default) },
             enabled = enabled && custom,
-            modifier = Modifier.testTag("aiPromptReset"),
+            modifier = Modifier.testTag("${kind.tag}Reset"),
         ) { Text("Reset to Default") }
     }
 }

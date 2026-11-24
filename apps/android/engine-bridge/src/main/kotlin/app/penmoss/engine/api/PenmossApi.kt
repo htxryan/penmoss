@@ -120,6 +120,21 @@ interface PenmossApi {
     suspend fun describeAll(folderId: String?): Int = throw UnsupportedOperationException("describeAll")
 
     /**
+     * What a tag means (PEN-68, A1677; `PUT /api/tags/description`): written into the notebook's
+     * WorkspaceDoc by its engine page; blank text clears it. The description as kept, or null.
+     */
+    suspend fun setTagDescription(tag: String, description: String): String? = throw UnsupportedOperationException("setTagDescription")
+
+    /** Generate AI Description for a tag (`POST /api/ai/tags/describe`): what came of it, written when it worked. */
+    suspend fun describeTag(tag: String): AiNowAnswer = throw UnsupportedOperationException("describeTag")
+
+    /**
+     * Generate All (`POST /api/ai/tags/describe-all`): the notebook's tags with no description, or
+     * every tag when [replace], described in the background. How many go.
+     */
+    suspend fun describeAllTags(replace: Boolean): Int = throw UnsupportedOperationException("describeAllTags")
+
+    /**
      * Deletes a folder and its subfolders (`DELETE /api/folders/:id`, T40 P4, NT4): their notes
      * move up. Idempotent: a missing folder answers false.
      */
@@ -417,6 +432,27 @@ class HttpPenmossApi(
         val body = buildJsonObject { put("folderId", folderId?.let(::JsonPrimitive) ?: JsonNull) }
         return send("POST", url("api/ai/describe-all"), body.toString().toRequestBody(JSON_TYPE), AiCount.serializer()).count
     }
+
+    override suspend fun setTagDescription(tag: String, description: String): String? {
+        val body = buildJsonObject {
+            put("tag", tag)
+            put("description", description)
+        }
+        return send("PUT", url("api/tags/description"), body.toString().toRequestBody(JSON_TYPE), TagDescribed.serializer()).description
+    }
+
+    override suspend fun describeTag(tag: String): AiNowAnswer {
+        val body = buildJsonObject { put("tag", tag) }
+        return send("POST", url("api/ai/tags/describe"), body.toString().toRequestBody(JSON_TYPE), AiNowAnswer.serializer())
+    }
+
+    override suspend fun describeAllTags(replace: Boolean): Int {
+        val body = buildJsonObject { put("replace", replace) }
+        return send("POST", url("api/ai/tags/describe-all"), body.toString().toRequestBody(JSON_TYPE), AiCount.serializer()).count
+    }
+
+    @Serializable
+    private data class TagDescribed(val tag: String = "", val description: String? = null)
 
     @Serializable
     private data class AiValue(val value: String)

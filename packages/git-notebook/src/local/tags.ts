@@ -2,6 +2,7 @@
  * A git notebook's tags on this device: counts, descriptions (PEN-68), the notes with a tag, and
  * renaming or deleting one in every note at once (A125).
  */
+import type { TagPromptNote } from '@penmoss/core/ai-description';
 import { describeTags, normaliseTag, tagMatches, type DescribedTag } from '@penmoss/core/tags';
 import type { EditOp } from '@penmoss/model/edit-engine';
 import { readTagDescriptions } from '@penmoss/model/workspace';
@@ -30,6 +31,22 @@ export class LocalTags {
           return { name, notes, ...(description ? { description } : {}) };
         }),
     };
+  }
+
+  /**
+   * Every live note as a tag's AI description reads it (A1677), newest first: its title, tags,
+   * description and text, for core's `tagPrompt`.
+   */
+  promptNotes(): TagPromptNote[] {
+    return this.notes
+      .live()
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((note) => ({
+        title: note.title,
+        tags: note.tags,
+        description: note.description,
+        text: note.text,
+      }));
   }
 
   describeTags(wanted?: readonly string[]): { tags: DescribedTag[] } {

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 /**
  * AI Descriptions (PEN-161 T6): apps/android/contract/ai-descriptions-v1.json is core's default
- * prompt, its tokens, Anthropic's models and the pauses, so the phone's Settings offers and resets
+ * prompt, its tokens, the tag prompt and its tokens (A1677), Anthropic's models and the pauses, so the phone's Settings offers and resets
  * to what the Mac does. The Kotlin `AiDescriptionsContractTest` checks the app's copy against it.
  *
  * After changing `packages/core/src/ai-description.ts`, write the file again:
@@ -12,18 +12,23 @@ import { resolve } from 'node:path';
 import {
   ANTHROPIC_MODELS,
   DEFAULT_PROMPT,
+  DEFAULT_TAG_PROMPT,
   PAUSE_CHOICES_SECONDS,
   PROMPT_TOKENS,
+  TAG_PROMPT_TOKENS,
 } from '@penmoss/core/ai-description';
 import { describe, expect, it } from 'vitest';
 import contract from '../../contract/ai-descriptions-v1.json';
 
 describe('AI Descriptions contract v1', () => {
-  it('is core’s prompt, tokens, models and pauses', () => {
+  it('is core’s prompts, tokens, models and pauses', () => {
     const expected = {
       version: 1,
       defaultPrompt: DEFAULT_PROMPT,
       tokens: PROMPT_TOKENS.map((token) => `{{${token}}}`),
+      // A tag's description (A1677).
+      defaultTagPrompt: DEFAULT_TAG_PROMPT,
+      tagTokens: TAG_PROMPT_TOKENS.map((token) => `{{${token}}}`),
       models: ANTHROPIC_MODELS.map((model) => ({ id: model.id, label: model.label })),
       pauses: [...PAUSE_CHOICES_SECONDS],
     };

@@ -5,7 +5,7 @@
  * again at the next sync.
  */
 import { parseMarkdown } from '@penmoss/core';
-import { HAND_WRITTEN } from '@penmoss/core/ai-description';
+import { DEFAULT_TAG_PROMPT, HAND_WRITTEN } from '@penmoss/core/ai-description';
 import {
   readDescription,
   readDescriptionOf,
@@ -70,6 +70,7 @@ function setup(config: Partial<AiConfig> = {}, answer: AiAnswer = { ok: true, te
           when: 'pause',
           pauseS: 120,
           prompt: 'Describe {{title}} in {{folder}}: {{body}}',
+          tagPrompt: 'Describe #{{tag}} ({{count}}): {{tags}}\n{{notes}}',
           ...config,
         }),
       describe: (prompt) => {
@@ -169,6 +170,9 @@ describe('the Android describer', () => {
       parseAiConfig({ ready: true, global: true, when: 'sync', pauseS: 30, prompt: '' }),
     ).toEqual(expect.objectContaining({ ready: true, global: true, when: 'sync', pauseS: 30 }));
     expect(parseAiConfig({ ready: true, pauseS: 'soon' })?.pauseS).toBe(120);
+    // A1677: the tag prompt, core's default until the app gives one.
+    expect(parseAiConfig({ ready: true, tagPrompt: ' ' })?.tagPrompt).toBe(DEFAULT_TAG_PROMPT);
+    expect(parseAiConfig({ ready: true, tagPrompt: '#{{tag}}' })?.tagPrompt).toBe('#{{tag}}');
     expect(parseAiConfig('nope')).toBeNull();
     expect(parseAiAnswer({ ok: true, text: 'Hi.' })).toEqual({ ok: true, text: 'Hi.' });
     expect(parseAiAnswer({ ok: false, code: 'refused', message: 'No.' })).toEqual({

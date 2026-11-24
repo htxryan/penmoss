@@ -28,6 +28,8 @@ object SearchActions {
         SearchAction("note.new", "New Note"),
         SearchAction("app.capture", "Quick Capture…"),
         SearchAction("app.trash", "Trash"),
+        // The notebook's tags and their descriptions (A1677).
+        SearchAction("app.tags", "Tags"),
         SearchAction("journal.today", "Today's Note"),
         SearchAction("journal.thisWeek", "This Week's Note"),
         SearchAction("journal.calendar", "Show the Calendar"),
