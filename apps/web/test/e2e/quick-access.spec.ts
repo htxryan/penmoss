@@ -206,3 +206,48 @@ test.describe('in Quanta, with a folder and two notes', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// Quanta feedback (PEN-182): the collapsed sidebar's pin opens the pinned notes beside the rail.
+test('the rail’s Quick Access opens its pinned notes beside the rail, and one opens', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  const a = await newNote(page, `Rail Pin A ${RUN}`, 'A.');
+  await noteAction(page, 'pin-quick-access');
+  await newNote(page, `Rail Pin B ${RUN}`, 'B.');
+  // Not on the open sidebar: Quick Access is its section there.
+  await expect(page.getByTestId('quick-access-flyout')).toHaveCount(0);
+  await page.getByTestId('toggle-sidebar').click();
+  await expect(page.getByTestId('app-root')).toHaveAttribute('data-sidebar', 'collapsed');
+  const pin = page.getByTestId('quick-access-flyout');
+  await expect(pin).toHaveAccessibleName('Quick Access');
+  await pin.click();
+  const menu = page.getByRole('menu', { name: 'Quick Access' });
+  await expect(menu.locator(`[data-note-id="${a}"]`)).toHaveText(`Rail Pin A ${RUN}`);
+  // Beside the rail, level with the pin, inside the window.
+  const [pinBox, menuBox, rail] = await Promise.all([
+    pin.boundingBox(),
+    menu.boundingBox(),
+    page.locator('#app-sidebar').boundingBox(),
+  ]);
+  expect(menuBox!.x).toBeGreaterThanOrEqual(rail!.x + rail!.width);
+  // Once its rise has finished (pm-rise).
+  await expect
+    .poll(async () => Math.abs((await menu.boundingBox())!.y - pinBox!.y))
+    .toBeLessThanOrEqual(1);
+  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(1280);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/quick-access-rail.png` });
+  // Escape closes it, focus back on the pin.
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(pin).toBeFocused();
+  // Choosing a note opens it.
+  await pin.click();
+  await menu.locator(`[data-note-id="${a}"]`).click();
+  await expect(menu).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(a));
+  await expect(page.getByTestId('app-root')).toHaveAttribute('data-sidebar', 'collapsed');
+  expect(errors).toEqual([]);
+});

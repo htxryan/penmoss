@@ -411,6 +411,16 @@
   margin: 0 0 0.3rem;
 }
 
+/*
+ * Quick Access ends the rail's column (Quanta feedback, PEN-182): its menu of pinned notes opens
+ * beside the rail, level with the pin, rather than under it.
+ */
+.notes-app[data-sidebar='collapsed'] .sb-shortcuts > .menu-anchor > .menu {
+  top: 0;
+  right: auto;
+  left: calc(100% + 0.25rem);
+}
+
 .notes-app[data-sidebar='collapsed'] .sb-item {
   position: relative;
   justify-content: center;

@@ -105,7 +105,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 - **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
 - **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.
 
-⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and the tab strip starts with Back and Forward.
+⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and the tab strip starts with Back and Forward. The pin under the rail's shortcuts opens Quick Access beside the rail: choose a note to open it, or ⌘-click it to open it in a new tab.
 
 ## The note in Settings
 

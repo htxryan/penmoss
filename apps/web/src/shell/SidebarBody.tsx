@@ -67,6 +67,7 @@ export function SidebarBody({
           graphOpen={place.graphOpen}
           tagsOpen={place.tagsOpen}
           shownNote={activeId}
+          rail={rail}
         />
       </div>
       <nav ref={list} className="sb-list" aria-label="All notes">
