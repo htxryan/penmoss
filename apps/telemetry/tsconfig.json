@@ -3,5 +3,13 @@
   "compilerOptions": {
     "types": ["@cloudflare/vitest-plugin/types"]
   },
-  "include": ["worker-configuration.d.ts", "src", "test", "vitest.config.ts"]
+  "include": [
+    // This Worker's Env (worker-configuration.d.ts) and the runtime types the three Workers share,
+    // for one compatibility date and its flags; `pnpm types` writes both, typecheck checks them.
+    "worker-configuration.d.ts",
+    "../../types/workers-runtime.d.ts",
+    "src",
+    "test",
+    "vitest.config.ts"
+  ]
 }
