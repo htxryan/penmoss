@@ -70,11 +70,6 @@ const widths = Object.fromEntries(
   ]),
 ) as Record<PaneKind, DevicePref<number>>;
 
-/** Keeps `rem` as the kind's width, within its limits. */
-export function writePaneWidth(kind: PaneKind, rem: number): void {
-  widths[kind].write(rem);
-}
-
 /** The kind's width in rem, and a way to keep a new one. */
 export function usePaneSize(kind: PaneKind): readonly [number, (rem: number) => void] {
   return useDevicePref(widths[kind]);

@@ -9,9 +9,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
-
-const ITEMS =
-  '[role="menuitem"]:not([disabled]), [role="menuitemcheckbox"]:not([disabled]), [role="menuitemradio"]:not([disabled])';
+import { MENU_ITEMS, menuKeyDown } from './menu-keys';
 
 /**
  * A menu button with a WAI-ARIA menu (T15, T36): arrows move between items,
@@ -66,7 +64,7 @@ export function Menu({
 
   useEffect(() => {
     if (!open) return;
-    menuRef.current?.querySelector<HTMLElement>(ITEMS)?.focus();
+    menuRef.current?.querySelector<HTMLElement>(MENU_ITEMS)?.focus();
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
@@ -82,22 +80,8 @@ export function Menu({
     buttonRef.current?.focus();
   };
 
-  const onMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = [...(menuRef.current?.querySelectorAll<HTMLElement>(ITEMS) ?? [])];
-    const at = items.indexOf(document.activeElement as HTMLElement);
-    const move = (index: number) => {
-      event.preventDefault();
-      items[(index + items.length) % items.length]?.focus();
-    };
-    if (event.key === 'ArrowDown') move(at + 1);
-    else if (event.key === 'ArrowUp') move(at - 1);
-    else if (event.key === 'Home') move(0);
-    else if (event.key === 'End') move(items.length - 1);
-    else if (event.key === 'Escape' || event.key === 'Tab') {
-      event.preventDefault();
-      close();
-    }
-  };
+  const onMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) =>
+    menuKeyDown(menuRef.current, event, close);
 
   // An item ran (its own click handler first, inside the user's gesture): close the menu.
   const onMenuClick = (event: MouseEvent<HTMLDivElement>) => {

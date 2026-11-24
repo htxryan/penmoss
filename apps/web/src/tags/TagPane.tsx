@@ -17,6 +17,7 @@ import { linkHandler } from '../router';
 import { notesText, renameProblem } from './manage';
 import { useTagChanges } from './tag-changes';
 import { TagDoneToast, type TagDone } from './TagDoneToast';
+import { counted } from '@penmoss/core/words';
 
 /** Whether the Tags panel is collapsed on this device (T51, A934). */
 export const TAGS_COLLAPSED_KEY = 'penmoss.sidebar.tags';
@@ -76,7 +77,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
             className="tag-name"
             data-ui="item"
             data-event="tags.pane.show"
-            aria-label={`#${node.tag}, ${node.count} ${node.count === 1 ? 'note' : 'notes'}`}
+            aria-label={`#${node.tag}, ${counted(node.count, 'note')}`}
             data-tip={`Show Notes Tagged #${node.tag}`}
             onClick={() => showTag(node.tag)}
           >

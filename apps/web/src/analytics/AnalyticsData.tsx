@@ -22,6 +22,7 @@ import { desktop, type DesktopAnalyticsStatus } from '../desktop/bridge';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { analyticsBridge, copy, shortId, useAnalyticsStatus } from './status';
 import './privacy.css';
+import { Segmented } from '../shell/Segmented';
 
 const PAGE_SIZE = 100;
 
@@ -316,23 +317,14 @@ function Filter<T extends string>({
       <span className="privacy-filter-label" id={`${id}-label`}>
         {label}
       </span>
-      <div className="seg" data-testid={testId}>
-        {options.map((option) => (
-          <label key={option.value} className="seg-option">
-            <input
-              type="radio"
-              name={name}
-              value={option.value}
-              checked={value === option.value}
-              data-event={event}
-              onChange={() => onChange(option.value)}
-            />
-            <span className="bold-steady" data-label={option.label}>
-              {option.label}
-            </span>
-          </label>
-        ))}
-      </div>
+      <Segmented
+        name={name}
+        value={value}
+        options={options}
+        event={event}
+        onChange={onChange}
+        testId={testId}
+      />
     </fieldset>
   );
 }

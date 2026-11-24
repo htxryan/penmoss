@@ -1,10 +1,9 @@
 import type { AppSyncState } from './service';
-
-const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
+import { counted } from '@penmoss/core/words';
 
 /** What the state means, read out when sync needs attention (A522). */
 export function syncHint(state: AppSyncState): string {
-  const waiting = plural(state.pending, 'note');
+  const waiting = counted(state.pending, 'note');
   switch (state.phase) {
     case 'offline':
       return state.pending > 0

@@ -23,6 +23,7 @@ import { useAllSources, useGitInfo } from './hooks';
 import type { GitSource } from './git-source';
 import './sources.css';
 import './notebook-settings.css';
+import { counted } from '@penmoss/core/words';
 
 const ACTIVITY_PATH = '/settings/agent-activity';
 
@@ -133,7 +134,7 @@ function useAgentCount(
 const countWords = (agents: readonly LocalAgentInfo[] | null, count: number | null) => {
   if (agents && agents.length > 0) return agents.map((agent) => agent.label).join(', ');
   if (count === null) return '';
-  return count === 0 ? 'No Agent Copies' : count === 1 ? '1 Agent Copy' : `${count} Agent Copies`;
+  return count === 0 ? 'No Agent Copies' : counted(count, 'Agent Copy', 'Agent Copies');
 };
 
 /** A notebook's row: its name and its agent copies' names, folding open in place to them. */

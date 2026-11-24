@@ -1,6 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { DialogClose } from '../shell/DialogClose';
-import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { PickerField, PickerListbox } from '../shell/picker';
+import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
 import type { Theme } from '@penmoss/ui/theme';
 import { useEffect, useMemo, useState } from 'react';
@@ -60,7 +61,7 @@ export function ThemePicker({ themes, currentId, onChoose, onClose }: ThemePicke
   useEffect(() => () => controller.preview(null, owner), [controller, owner]);
 
   return (
-    <PickerOverlay testId="theme-picker" className="palette" label="Switch Theme" onClose={onClose}>
+    <ModalOverlay testId="theme-picker" className="palette" label="Switch Theme" onClose={onClose}>
       <div className="dlg-search">
         <PickerField
           dialog="themePicker"
@@ -122,6 +123,6 @@ export function ThemePicker({ themes, currentId, onChoose, onClose }: ThemePicke
         </span>
         Keep the current theme
       </div>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }

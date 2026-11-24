@@ -1,12 +1,11 @@
 /** How Trash words a deleted folder and its restore (T42, A560), apart from its components. */
 import type { TrashedFolder } from '@penmoss/model/workspace';
-
-const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+import { counted } from '@penmoss/core/words';
 
 /** What a folder held, in words: "3 notes, 1 subfolder". */
 export function folderContents(folder: TrashedFolder): string {
-  const parts = [count(folder.notes, 'note', 'notes')];
-  if (folder.folders > 0) parts.push(count(folder.folders, 'subfolder', 'subfolders'));
+  const parts = [counted(folder.notes, 'note')];
+  if (folder.folders > 0) parts.push(counted(folder.folders, 'subfolder'));
   return parts.join(', ');
 }
 
@@ -33,7 +32,7 @@ export function restoredMessage(
   if (result.parentGone) parts.push('The folder it was in is gone.');
   if (result.skipped.length > 0) {
     parts.push(
-      `${count(result.skipped.length, 'note was', 'notes were')} moved or deleted since, so ${result.skipped.length === 1 ? 'it stays' : 'they stay'} where ${result.skipped.length === 1 ? 'it is' : 'they are'}.`,
+      `${counted(result.skipped.length, 'note was', 'notes were')} moved or deleted since, so ${result.skipped.length === 1 ? 'it stays' : 'they stay'} where ${result.skipped.length === 1 ? 'it is' : 'they are'}.`,
     );
   }
   return parts.join(' ');

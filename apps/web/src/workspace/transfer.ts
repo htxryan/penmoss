@@ -13,6 +13,7 @@ import { copyNote, noteAttachmentPaths } from '@penmoss/model/records';
 import type { Notes } from '../notes/service';
 import { childrenOf, planDrop, type ItemRef } from './model';
 import type { Workspace } from './service';
+import { counted } from '@penmoss/core/words';
 
 /** What a copy needs of a notebook: its notes and its folder tree. */
 export interface NotebookServices {
@@ -109,10 +110,9 @@ export function topItems(tree: WorkspaceTree, items: readonly ItemRef[]): ItemRe
 
 /** "3 notes and 2 folders", for what moved or was copied (T68). */
 export function itemsCount(notes: number, folders: number): string {
-  const part = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
-  if (folders === 0) return part(notes, 'note');
-  if (notes === 0) return part(folders, 'folder');
-  return `${part(notes, 'note')} and ${part(folders, 'folder')}`;
+  if (folders === 0) return counted(notes, 'note');
+  if (notes === 0) return counted(folders, 'folder');
+  return `${counted(notes, 'note')} and ${counted(folders, 'folder')}`;
 }
 
 export interface TransferResult {

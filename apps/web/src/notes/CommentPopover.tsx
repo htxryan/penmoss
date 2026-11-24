@@ -15,10 +15,10 @@ import {
   type CollabEditor,
   type SelectionAnchor,
 } from '@penmoss/editor';
-import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { CommentDraft, CommentThread } from './CommentsPanel';
 import { placePopover, type PopoverPlace } from './popover-place';
+import { DialogClose } from '../shell/DialogClose';
 
 /** What floats: a new thread's composer, or a thread (`focus`: its reply takes focus). */
 export type FloatingComment =
@@ -184,18 +184,14 @@ export function CommentPopover({
       }
       onKeyDown={onKeyDown}
     >
-      <button
-        type="button"
-        className="icon-btn comment-popover-close"
-        data-ui="dismiss"
-        data-event="comments.popover.close"
-        aria-label="Close"
-        data-tip="Close"
-        onClick={() => onClose(true)}
-        data-testid="comment-popover-close"
-      >
-        <Icon name="close" size={14} />
-      </button>
+      <DialogClose
+        label="Close"
+        event="comments.popover.close"
+        className="comment-popover-close"
+        size={14}
+        onClose={() => onClose(true)}
+        testId="comment-popover-close"
+      />
       {floating.kind === 'draft' ? (
         <CommentDraft
           noteId={noteId}

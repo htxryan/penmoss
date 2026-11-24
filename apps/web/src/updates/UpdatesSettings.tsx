@@ -7,7 +7,7 @@
  * model is notice.ts). The Mac app only.
  */
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
 import { navigate } from '../router';
 import { SettingRow, Switch } from '../theme/look-rows';
@@ -19,26 +19,19 @@ import { checkedLine, updateChip, updateStatus, useUpdates } from './updates';
 import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { Segmented } from '../shell/Segmented';
+import { useNow } from '../shell/use-now';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
   { value: 'stable', label: 'Stable' },
   { value: 'alpha', label: 'Alpha' },
 ];
 
-/** Now, again each minute, so "checked 5 minutes ago" keeps true while the page is open. */
-function useMinute(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
-
 export function UpdatesSettings() {
   const found = useUpdates();
   const id = useId();
-  const now = useMinute();
+  // Each minute, so "checked 5 minutes ago" keeps true while the page is open.
+  const now = useNow(60_000);
   const [busy, setBusy] = useState(false);
   /** The switch as just clicked, until main answers. */
   const [wanted, setWanted] = useState<boolean | null>(null);
@@ -161,27 +154,19 @@ export function UpdatesSettings() {
             disabled={busy || working || state?.phase === 'ready' || !state?.supported}
             aria-labelledby={`${id}-channel-label`}
           >
-            <div className="seg" data-testid="updates-channel">
-              {CHANNELS.map((item) => (
-                <label key={item.value} className="seg-option">
-                  <input
-                    data-event="settings.updates.channel"
-                    type="radio"
-                    name={`${id}-channel`}
-                    value={item.value}
-                    checked={channel === item.value}
-                    aria-describedby={item.value === 'alpha' ? `${id}-alpha` : undefined}
-                    onChange={() => {
-                      setChosen(item.value);
-                      void run(() => updates.setChannel(item.value)).finally(() => setChosen(null));
-                    }}
-                  />
-                  <span className="bold-steady" data-label={item.label}>
-                    {item.label}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <Segmented
+              name={`${id}-channel`}
+              value={channel}
+              options={CHANNELS.map((item) =>
+                item.value === 'alpha' ? { ...item, describedBy: `${id}-alpha` } : item,
+              )}
+              event="settings.updates.channel"
+              onChange={(value) => {
+                setChosen(value);
+                void run(() => updates.setChannel(value)).finally(() => setChosen(null));
+              }}
+              testId="updates-channel"
+            />
           </fieldset>
         </SettingRow>
       </div>
@@ -310,18 +295,7 @@ export function SidebarUpdateNotice({
       >
         What's New
       </button>
-      <button
-        data-event="updates.sidebar.dismiss"
-        type="button"
-        className="icon-btn sb-update-close"
-        data-ui="dismiss"
-        aria-label="Dismiss"
-        data-tip="Dismiss"
-        onClick={notice.dismiss}
-        data-testid="updated-dismiss"
-      >
-        <Icon name="close" size={14} />
-      </button>
+      <DismissNotice onClick={notice.dismiss} testId="updated-dismiss" />
     </div>
   ) : (
     <div
@@ -344,19 +318,27 @@ export function SidebarUpdateNotice({
           >
             Install and Restart
           </button>
-          <button
-            data-event="updates.sidebar.dismiss"
-            type="button"
-            className="icon-btn sb-update-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            data-tip="Dismiss"
-            onClick={notice.dismiss}
-          >
-            <Icon name="close" size={14} />
-          </button>
+          <DismissNotice onClick={notice.dismiss} />
         </>
       ) : null}
     </div>
+  );
+}
+
+/** The sidebar notice's ×, the same whichever notice it closes. */
+function DismissNotice({ onClick, testId }: { onClick: () => void; testId?: string }) {
+  return (
+    <button
+      data-event="updates.sidebar.dismiss"
+      type="button"
+      className="icon-btn sb-update-close"
+      data-ui="dismiss"
+      aria-label="Dismiss"
+      data-tip="Dismiss"
+      onClick={onClick}
+      data-testid={testId}
+    >
+      <Icon name="close" size={14} />
+    </button>
   );
 }

@@ -2,7 +2,8 @@ import { Icon } from '@penmoss/ui/icons';
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import { DialogClose } from '../shell/DialogClose';
-import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { PickerField, PickerListbox } from '../shell/picker';
+import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
 import type { FolderChoice } from './model';
 import { useTrackedDialog } from '../analytics/dialog';
@@ -79,7 +80,7 @@ export function FolderPicker({
     named ??
     (count === 1 ? `Move “${title || 'Untitled'}” to a folder` : `Move ${count} notes to a folder`);
   return (
-    <PickerOverlay
+    <ModalOverlay
       testId="folder-picker"
       className="palette folder-picker"
       label={label}
@@ -162,6 +163,6 @@ export function FolderPicker({
         </span>
         Cancel
       </div>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }

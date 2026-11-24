@@ -37,7 +37,7 @@ import {
 } from './icon-grid';
 import { LUCIDE_PREFIX, LucideSvg, lucideName, rememberLucideIcon } from './lucide';
 import type { IconEntry } from './lucide-catalog';
-import { PickerOverlay } from './picker';
+import { ModalOverlay } from './ModalOverlay';
 import './icon-picker.css';
 
 export type PickerTab = 'icons' | 'characters';
@@ -324,7 +324,7 @@ export function IconPicker({
   const noun = tab === 'icons' ? 'icons' : 'characters';
   const titleId = `${id}-title`;
   return (
-    <PickerOverlay testId={testId} className="icon-picker" labelledBy={titleId} onClose={onClose}>
+    <ModalOverlay testId={testId} className="icon-picker" labelledBy={titleId} onClose={onClose}>
       <div className="dlg-title">
         <h2 id={titleId}>{title}</h2>
         <DialogClose label="Close" onClose={onClose} />
@@ -491,6 +491,6 @@ export function IconPicker({
           <kbd>esc</kbd> Close
         </span>
       </div>
-    </PickerOverlay>
+    </ModalOverlay>
   );
 }

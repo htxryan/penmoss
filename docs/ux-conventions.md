@@ -32,7 +32,7 @@ A design for Penmoss (a plan's mockups, a prototype, a deck, a page of the site)
 
 - **Never mock the app's UI.** A preview, or an example of the app inside the app (as in Settings), renders the real components, made inert (A1564).
 - **One flow per job.** Adding a notebook later reuses the first-run screens and logic (A1562); the icon and symbol pickers are one component (A1568).
-- Use the shared primitives: buttons, `Switch`, chips, `NotebookBadge`, `ConfirmDialog`, the picker overlay, the focus trap (`apps/web/src/shell/focus-trap.ts`), and `SettingsHeader`.
+- Use the shared primitives: buttons, `Switch`, `Select` (`@penmoss/ui/controls/Select`), `Segmented` (`apps/web/src/shell/Segmented.tsx`), chips, `NotebookBadge`, `ConfirmDialog`, `ModalOverlay` (the overlay every modal picker and dialog sits on), `DialogClose`, the focus trap (`apps/web/src/shell/focus-trap.ts`), and `SettingsHeader`. Counts in words come from `counted` (`@penmoss/core/words`).
 
 ## Every platform the same
 

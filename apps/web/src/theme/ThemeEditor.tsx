@@ -24,9 +24,17 @@ import { AppPreview } from './AppPreview';
 import { PreviewZoom } from './PreviewZoom';
 import { TypeSpecimen } from './TypeSpecimen';
 import { useThemeController, useThemeState } from './hooks';
+import { Segmented, type SegmentedOption } from '../shell/Segmented';
+import { pluralise } from '@penmoss/core/words';
 
 /** Edits are saved (and synced) once they pause this long; the page shows them at once. */
 const SAVE_DELAY_MS = 400;
+
+/** The variant the editor edits, beside the theme's name. */
+const VARIANT_CHOICES: ReadonlyArray<SegmentedOption<'light' | 'dark'>> = [
+  { value: 'light', label: 'Light', icon: 'sun' },
+  { value: 'dark', label: 'Dark', icon: 'moon' },
+];
 
 const FONT_FIELDS: ReadonlyArray<{ key: keyof ThemeFonts; label: string }> = [
   { key: 'ui', label: 'Interface Font' },
@@ -197,24 +205,14 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
               aria-invalid={otherNames.includes(current.name.trim()) || undefined}
             />
           </label>
-          <div className="seg" role="radiogroup" aria-label="Variant to Edit">
-            {(['light', 'dark'] as const).map((each) => (
-              <label key={each} className="seg-option">
-                <input
-                  type="radio"
-                  data-event="theme-editor.variant"
-                  name={`${id}-variant`}
-                  value={each}
-                  checked={variant === each}
-                  onChange={() => setVariant(each)}
-                />
-                <Icon name={each === 'light' ? 'sun' : 'moon'} size={14} />
-                <span className="bold-steady" data-label={each === 'light' ? 'Light' : 'Dark'}>
-                  {each === 'light' ? 'Light' : 'Dark'}
-                </span>
-              </label>
-            ))}
-          </div>
+          <Segmented
+            name={`${id}-variant`}
+            label="Variant to Edit"
+            value={variant}
+            options={VARIANT_CHOICES}
+            event="theme-editor.variant"
+            onChange={setVariant}
+          />
         </fieldset>
         {variant !== shownVariant ? (
           <p className="muted appearance-note">
@@ -339,7 +337,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
         >
           {problems.length === 0
             ? `Every text and icon colour in the ${variant} variant passes WCAG AA.`
-            : `${problems.length} colour ${problems.length === 1 ? 'pair is' : 'pairs are'} below WCAG AA in the ${variant} variant: ${problems
+            : `${problems.length} colour ${pluralise(problems.length, 'pair is', 'pairs are')} below WCAG AA in the ${variant} variant: ${problems
                 .slice(0, 4)
                 .map((problem) => `${problem.label} (${problem.ratio.toFixed(1)}:1)`)
                 .join('; ')}${problems.length > 4 ? '; …' : '.'}`}

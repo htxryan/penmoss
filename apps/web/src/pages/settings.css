@@ -536,7 +536,7 @@
  */
 .settings-content
   :is(.settings, .settings-section)
-  > :is(.settings-field, .display-toggles, .display-toggle, .appearance-group) {
+  > :is(.settings-field, .display-toggles, .display-toggle) {
   margin: 1.5rem 0 0;
 }
 
@@ -678,11 +678,6 @@
 .pm-select-quiet:focus {
   border-color: var(--pm-border);
   background-color: var(--pm-raised);
-}
-
-.kb-actions {
-  display: flex;
-  gap: 2px;
 }
 
 .chip {

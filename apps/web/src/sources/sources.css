@@ -981,16 +981,6 @@
   min-width: 0;
 }
 
-/* A label read only by a screen reader (the repository name beside its owner). */
-.fr-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* Fields: the settings field, without its margins. */
 .fr-form,
 .fr-fields {
