@@ -190,7 +190,7 @@ describe('Settings → Semantic Search (T78)', () => {
       host.querySelector('[data-testid="meaning-delete-model"]')?.classList.contains('danger-fill'),
     ).toBe(true);
     // On: Recreate, asked first; Cancel keeps the index.
-    expect(size()).toBe('2 MB on this Mac, from your notes');
+    expect(size()).toBe('2.4 MB on this Mac, from your notes');
     expect(recreate()?.textContent).toBe('Recreate Index…');
     expect(remove()).toBeNull();
     act(() => recreate()!.click());
@@ -219,7 +219,7 @@ describe('Settings → Semantic Search (T78)', () => {
     expect(recreate()).toBeNull();
     expect(remove()?.textContent).toBe('Delete Index…');
     expect(remove()?.classList.contains('danger-fill')).toBe(true);
-    expect(size()).toBe('1 KB on this Mac, from your notes');
+    expect(size()).toBe('800 B on this Mac, from your notes');
     act(() => remove()!.click());
     expect(ask()?.textContent).toContain('Delete the Index?');
     expect(ask()?.textContent).toContain('The model stays');

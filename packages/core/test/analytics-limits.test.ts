@@ -10,7 +10,6 @@ import {
   DEFAULT_LIMITS,
   EVENT_BYTES,
   eventSpace,
-  formatBytes,
   isLimitKey,
   LIMIT_KEYS,
   limitAllowed,
@@ -24,6 +23,7 @@ import {
   reportHours,
   type Limits,
 } from '../src/analytics/limits';
+import { formatBytes } from '../src/words';
 import {
   fitLogLines,
   formatReportSize,
@@ -39,7 +39,7 @@ describe('LIMITS', () => {
     expect(LIMITS.map((spec) => [spec.key, spec.default, spec.min, spec.max, spec.unit])).toEqual([
       ['events.days', 7, 1, 360, 'days'],
       ['events.max', 200_000, 500, 2_000_000, 'events'],
-      ['logs.fileKb', 1024, 256, 81_920, 'KB'],
+      ['logs.fileKb', 1000, 250, 80_000, 'KB'],
       ['logs.files', 2, 1, 5, 'files'],
       ['logs.days', 7, 1, 360, 'days'],
       ['report.hours', 24, 1, 168, 'hours'],
@@ -61,7 +61,8 @@ describe('LIMITS', () => {
 
   it('keeps logs to 400 MB at most', () => {
     const most = Object.fromEntries(LIMITS.map((spec) => [spec.key, spec.max])) as Limits;
-    expect(logSpace(most)).toBe(400 * 1024 * 1024);
+    expect(logSpace(most)).toBe(400_000_000);
+    expect(formatBytes(logSpace(most))).toBe('400 MB');
   });
 });
 
@@ -74,7 +75,7 @@ describe('readLimits', () => {
       readLimits({
         'events.days': 30,
         'events.max': 499,
-        'logs.fileKb': 81_921,
+        'logs.fileKb': 80_001,
         'logs.files': 2.5,
         'logs.days': '14',
         'report.hours': Number.NaN,
@@ -121,7 +122,7 @@ describe('range words', () => {
   it('writes a field’s range and what it says out of range', () => {
     expect(rangeLabel('events.days')).toBe('1–360 days');
     expect(rangeLabel('events.max')).toBe('500–2,000,000 events');
-    expect(rangeLabel('logs.fileKb')).toBe('256–81,920 KB');
+    expect(rangeLabel('logs.fileKb')).toBe('250–80,000 KB');
     expect(rangeMessage('events.days')).toBe('Between 1 and 360');
     expect(rangeMessage('events.max')).toBe('Between 500 and 2,000,000');
   });
@@ -132,20 +133,14 @@ describe('space', () => {
     // PEN-177: 200,000 events of about 500 bytes each.
     expect(EVENT_BYTES).toBe(500);
     expect(eventSpace(DEFAULT_LIMITS)).toBe(200_000 * 500);
-    expect(logSpace(DEFAULT_LIMITS)).toBe(2 * 1024 * 1024);
+    expect(logSpace(DEFAULT_LIMITS)).toBe(2_000_000);
   });
 
   it('writes bytes as the Advanced section does', () => {
-    expect(formatBytes(0)).toBe('1 KB');
-    expect(formatBytes(1)).toBe('1 KB');
-    expect(formatBytes(640 * 1024)).toBe('640 KB');
-    expect(formatBytes(1024 * 1024)).toBe('1 MB');
-    expect(formatBytes(2 * 1024 * 1024)).toBe('2 MB');
-    expect(formatBytes(1.5 * 1024 * 1024)).toBe('1.5 MB');
-    expect(formatBytes(12.4 * 1024 * 1024)).toBe('12 MB');
-    expect(formatBytes(400 * 1024 * 1024)).toBe('400 MB');
-    expect(formatBytes(eventSpace(DEFAULT_LIMITS))).toBe('95 MB');
-    expect(formatBytes(eventSpace({ ...DEFAULT_LIMITS, 'events.max': 2_000_000 }))).toBe('954 MB');
+    // Decimal units, as every size is written (`@penmoss/core/words`).
+    expect(formatBytes(logSpace(DEFAULT_LIMITS))).toBe('2 MB');
+    expect(formatBytes(eventSpace(DEFAULT_LIMITS))).toBe('100 MB');
+    expect(formatBytes(eventSpace({ ...DEFAULT_LIMITS, 'events.max': 2_000_000 }))).toBe('1 GB');
   });
 
   it('moves an install on the old default to the new one, deleting nothing (PEN-177)', () => {
@@ -205,8 +200,8 @@ describe('reportLines', () => {
     const lines = Array.from({ length: 2000 }, () => line);
     const limits = { ...DEFAULT_LIMITS, 'report.lines': 2000, 'report.kb': 4 };
     const kept = reportLines(lines, limits, NOW);
-    expect(kept).toHaveLength(Math.floor(4096 / (line.length + 1)));
-    expect(textBytes(kept)).toBeLessThanOrEqual(4096);
+    expect(kept).toHaveLength(Math.floor(4000 / (line.length + 1)));
+    expect(textBytes(kept)).toBeLessThanOrEqual(4000);
   });
 
   it('counts bytes, not characters', () => {
@@ -217,7 +212,7 @@ describe('reportLines', () => {
       limits,
       NOW,
     );
-    expect(kept).toHaveLength(Math.floor(4096 / (new TextEncoder().encode(line).length + 1)));
+    expect(kept).toHaveLength(Math.floor(4000 / (new TextEncoder().encode(line).length + 1)));
   });
 
   it('keeps a continuation line with the lines around it and skips blank lines', () => {
@@ -263,10 +258,10 @@ describe('reportLines', () => {
 describe('formatReportSize', () => {
   it('writes the size the form shows', () => {
     expect(formatReportSize(0)).toBe('0 B');
-    expect(formatReportSize(1023)).toBe('1023 B');
-    expect(formatReportSize(1024)).toBe('1.0 KB');
-    expect(formatReportSize(9830)).toBe('9.6 KB');
-    expect(formatReportSize(16 * 1024)).toBe('16 KB');
+    expect(formatReportSize(999)).toBe('999 B');
+    expect(formatReportSize(1000)).toBe('1 KB');
+    expect(formatReportSize(9630)).toBe('9.6 KB');
+    expect(formatReportSize(16_000)).toBe('16 KB');
   });
 });
 

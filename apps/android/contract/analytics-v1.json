@@ -199,9 +199,9 @@
     },
     {
       "key": "logs.fileKb",
-      "default": 1024,
-      "min": 256,
-      "max": 81920,
+      "default": 1000,
+      "min": 250,
+      "max": 80000,
       "unit": "KB",
       "group": "logs"
     },

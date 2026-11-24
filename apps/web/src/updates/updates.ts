@@ -3,7 +3,7 @@
  * reads. Main does the work (apps/desktop/src/updater.ts); UpdatesSettings.tsx shows it.
  */
 import { useEffect, useState } from 'react';
-import { pushedWords } from '../sources/repo-words';
+import { timeAgo } from '@penmoss/core/words';
 import {
   desktop,
   type DesktopReleaseNotes,
@@ -127,9 +127,9 @@ export function updateChip(state: DesktopUpdateState): string | null {
   }
 }
 
-/** "Stable · checked 5 minutes ago": the channel, and when main last asked. */
+/** "Stable · Checked 5 min ago": the channel, and when main last asked. */
 export function checkedLine(state: DesktopUpdateState, now = Date.now()): string {
   const channel = state.channel === 'alpha' ? 'Alpha' : 'Stable';
   if (!state.checkedAt) return `${channel} · Not Checked Yet`;
-  return `${channel} · Checked ${pushedWords(new Date(state.checkedAt).toISOString(), now)}`;
+  return `${channel} · Checked ${timeAgo(state.checkedAt, now)}`;
 }

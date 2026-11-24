@@ -340,7 +340,7 @@ test.describe('Settings → Privacy', () => {
     await expect(most.getByTestId('privacy-limit-range')).toHaveText('500–2,000,000 events');
     // How much each may take (core's estimate: 200,000 events, 2 files of 1 MB).
     await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-      'About 95 MB of events at most on this Mac',
+      'About 100 MB of events at most on this Mac',
     );
     await expect(advanced.getByTestId('privacy-space-logs')).toHaveText(
       'Up to 2 MB of logs on this Mac (at most 400 MB)',

@@ -419,7 +419,7 @@ class SessionDetailTest {
                 val most = { screen.tagged("limit-events.max").config.getOrNull(SemanticsProperties.EditableText)?.text }
                 screen.waitFor("Keep at Most at 200,000") { true.takeIf { most() == "200,000" } }
                 screen.reveal(screen.tagged("limit-events.max"), margin = 160f)
-                val space = "About 95 MB of events at most on this phone"
+                val space = "About 100 MB of events at most on this phone"
                 val whole = {
                     listOf(screen.tagged("limit-events.max"), screen.text("500–2,000,000 events"), screen.text(space))
                         .all { shownWhole(screen, it) }

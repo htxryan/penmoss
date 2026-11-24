@@ -2,14 +2,13 @@
  * `penmoss models fetch|status|remove` (T75, A1151, A1158): the model search by meaning uses, on
  * this Mac. The same folder and setting as the app's Settings → Search by Meaning.
  */
+import { formatBytes } from '@penmoss/core/words';
 import { UsageError } from '../args';
 import type { Command, Context } from '../command';
 import { CliError, EXIT } from '../errors';
 import type { MeaningIo, MeaningStatus } from '../io';
 
 const ACTIONS = ['fetch', 'status', 'remove'] as const;
-
-const megabytes = (bytes: number) => `${(bytes / 1_000_000).toFixed(0)} MB`;
 
 function meaningOf(context: Context): MeaningIo {
   const meaning = context.io.meaning;
@@ -26,10 +25,10 @@ function meaningOf(context: Context): MeaningIo {
 function describe(status: MeaningStatus): string[] {
   const state =
     status.state === 'ready'
-      ? `downloaded (${megabytes(status.totalBytes)})`
+      ? `downloaded (${formatBytes(status.totalBytes)})`
       : status.state === 'partial'
-        ? `partly downloaded (${megabytes(status.bytes)} of ${megabytes(status.totalBytes)}): run penmoss models fetch`
-        : `not downloaded (${megabytes(status.totalBytes)}): run penmoss models fetch`;
+        ? `partly downloaded (${formatBytes(status.bytes)} of ${formatBytes(status.totalBytes)}): run penmoss models fetch`
+        : `not downloaded (${formatBytes(status.totalBytes)}): run penmoss models fetch`;
   return [
     `Semantic search: ${status.enabled ? 'on' : 'off (Settings → Semantic Search in the app)'}`,
     `Model: ${status.model}, ${state}`,
@@ -69,7 +68,7 @@ export const models: Command = {
       context.emit({ ...after, removed: before.state !== 'absent' }, () =>
         before.state === 'absent'
           ? 'The model was not here; nothing to remove.'
-          : `Removed the model and its vectors (${megabytes(before.bytes)}). Search is by words only until you fetch it again.`,
+          : `Removed the model and its vectors (${formatBytes(before.bytes)}). Search is by words only until you fetch it again.`,
       );
       return;
     }
@@ -80,7 +79,7 @@ export const models: Command = {
       const percent = Math.floor((received / total) * 100);
       if (percent >= shown + 10 || percent === 100) {
         shown = percent - (percent % 10);
-        context.note(`Downloading the model: ${percent}% of ${megabytes(total)}`);
+        context.note(`Downloading the model: ${percent}% of ${formatBytes(total)}`);
       }
     });
     context.emit({ ...status, fetched: before.state !== 'ready' }, () => [

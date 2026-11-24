@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { desktop, type DesktopMeaning, type DesktopMeaningStatus } from '../desktop/bridge';
-import { counted } from '@penmoss/core/words';
+import { counted, formatBytes } from '@penmoss/core/words';
 
 /** The service's status, kept current; null until read. Absent outside the Mac app. */
 export function useMeaningStatus(): {
@@ -33,12 +33,6 @@ export function useMeaningStatus(): {
   return meaning ? { meaning, status } : null;
 }
 
-export const megabytes = (bytes: number) => `${Math.round(bytes / 1_000_000)} MB`;
-
-/** The index's size on disk, in KB under a megabyte (a few notes' vectors are small). */
-export const indexSize = (bytes: number) =>
-  bytes >= 1_000_000 ? megabytes(bytes) : `${Math.max(1, Math.round(bytes / 1_000))} KB`;
-
 /** `embeddinggemma-300m-q4@5090578d/768/p1` as people read it. */
 export function modelName(model: string | undefined): string {
   if (!model) return 'the model';
@@ -48,7 +42,7 @@ export function modelName(model: string | undefined): string {
 
 /** One sentence for each state (A1158): Not Downloaded, Downloading, Indexing, Ready, Off. */
 export function meaningStatusText(status: DesktopMeaningStatus): string {
-  const size = status.totalBytes ? megabytes(status.totalBytes) : 'about 219 MB';
+  const size = status.totalBytes ? formatBytes(status.totalBytes) : 'about 219 MB';
   switch (status.state) {
     case 'off':
       // The model stays when it is switched off; Delete Model… removes it (A1566).
@@ -61,7 +55,7 @@ export function meaningStatusText(status: DesktopMeaningStatus): string {
       const received = status.received ?? status.modelBytes ?? 0;
       const total = status.totalBytes ?? 0;
       const percent = total > 0 ? Math.floor((received / total) * 100) : 0;
-      return `Downloading ${modelName(status.model)}… ${percent}% (${megabytes(received)} of ${size}).`;
+      return `Downloading ${modelName(status.model)}… ${percent}% (${formatBytes(received)} of ${size}).`;
     }
     case 'opening':
     case 'starting':
@@ -104,7 +98,7 @@ export function meaningProgress(
     const total = status.totalBytes ?? 0;
     if (total <= 0) return null;
     const percent = Math.min(100, Math.floor((received / total) * 100));
-    return { percent, text: `${megabytes(received)} of ${megabytes(total)}` };
+    return { percent, text: `${formatBytes(received)} of ${formatBytes(total)}` };
   }
   if (status.state === 'indexing' || status.state === 'ready') {
     if (status.total <= 0) return null;

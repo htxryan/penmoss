@@ -13,11 +13,10 @@ import { useId, useState } from 'react';
 import type { DesktopMeaningStatus } from '../desktop/bridge';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { SettingRow, Switch } from '../theme/look-rows';
+import { formatBytes } from '@penmoss/core/words';
 import {
-  indexSize,
   meaningProgress,
   meaningStatusText,
-  megabytes,
   modelName,
   useMeaningStatus,
   waitingText,
@@ -26,7 +25,7 @@ import { SettingsHeader } from '../pages/SettingsHeader';
 
 /** The model's size as its rows and the question say it. */
 const sizeOf = (status: DesktopMeaningStatus | null) =>
-  status?.totalBytes ? megabytes(status.totalBytes) : 'about 219 MB';
+  status?.totalBytes ? formatBytes(status.totalBytes) : 'about 219 MB';
 
 /** Some of the model is on this Mac: all of it, or a download that stopped. */
 const modelHere = (status: DesktopMeaningStatus | null) => (status?.modelBytes ?? 0) > 0;
@@ -201,7 +200,7 @@ export function MeaningSettings() {
             help={
               <span data-testid="meaning-index-state">
                 {indexBytes > 0
-                  ? `${indexSize(indexBytes)} on this Mac, from your notes`
+                  ? `${formatBytes(indexBytes)} on this Mac, from your notes`
                   : 'No Index'}
               </span>
             }
@@ -243,8 +242,8 @@ export function MeaningSettings() {
         >
           <p>
             {indexAction === 'recreate'
-              ? `The semantic index${indexBytes > 0 ? ` (${indexSize(indexBytes)})` : ''} is deleted and built again from your notes. That takes a while and keeps this Mac busy; until it is done, search matches your words in the notes not indexed yet.`
-              : `The semantic index (${indexSize(indexBytes)}) is deleted from this Mac. The model stays, so turning Semantic Search on builds the index again without a download.`}
+              ? `The semantic index${indexBytes > 0 ? ` (${formatBytes(indexBytes)})` : ''} is deleted and built again from your notes. That takes a while and keeps this Mac busy; until it is done, search matches your words in the notes not indexed yet.`
+              : `The semantic index (${formatBytes(indexBytes)}) is deleted from this Mac. The model stays, so turning Semantic Search on builds the index again without a download.`}
           </p>
           <div className="confirm-actions">
             <button

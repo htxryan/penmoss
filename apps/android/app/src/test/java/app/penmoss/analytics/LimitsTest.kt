@@ -18,7 +18,7 @@ class LimitsTest {
     fun eachLimitHasItsDefaultAndRange() {
         assertEquals(7, Limits.DEFAULTS.eventsDays)
         assertEquals(200_000, Limits.DEFAULTS.eventsMax)
-        assertEquals(1024, Limits.DEFAULTS.logsFileKb)
+        assertEquals(1000, Limits.DEFAULTS.logsFileKb)
         assertEquals(2, Limits.DEFAULTS.logsFiles)
         assertEquals(7, Limits.DEFAULTS.logsDays)
         assertEquals(24, Limits.DEFAULTS.reportHours)
@@ -27,7 +27,7 @@ class LimitsTest {
         assertEquals("1–360 days", Limits.spec(Limits.EVENTS_DAYS).rangeLabel)
         assertEquals("500–2,000,000 events", Limits.spec(Limits.EVENTS_MAX).rangeLabel)
         assertEquals(500L, Limits.EVENT_BYTES)
-        assertEquals("Between 256 and 81,920", Limits.spec(Limits.LOGS_FILE_KB).rangeMessage)
+        assertEquals("Between 250 and 80,000", Limits.spec(Limits.LOGS_FILE_KB).rangeMessage)
     }
 
     @Test
@@ -51,14 +51,15 @@ class LimitsTest {
 
     @Test
     fun spaceAndTheReportsHoursFollowTheLimits() {
-        // "About 95 MB of events at most on this phone" (PEN-177).
-        assertEquals("95 MB", Limits.formatBytes(Limits.DEFAULTS.eventSpace))
+        // "About 100 MB of events at most on this phone" (PEN-177), in decimal units (PEN-188).
+        assertEquals("100 MB", Limits.formatBytes(Limits.DEFAULTS.eventSpace))
+        assertEquals(2_000_000L, Limits.DEFAULTS.logSpace)
         assertEquals("2 MB", Limits.formatBytes(Limits.DEFAULTS.logSpace))
         val most = Limits.of(Limits.SPECS.associate { it.key to it.max })
-        assertEquals("954 MB", Limits.formatBytes(most.eventSpace))
+        assertEquals("1 GB", Limits.formatBytes(most.eventSpace))
         assertEquals("400 MB", Limits.formatBytes(most.logSpace))
-        assertEquals("640 KB", Limits.formatBytes(640 * 1024))
-        assertEquals("1.5 MB", Limits.formatBytes(1536 * 1024))
+        assertEquals("640 KB", Limits.formatBytes(640_000))
+        assertEquals("1.5 MB", Limits.formatBytes(1_500_000))
         // A report never attaches more hours than the logs keep.
         assertEquals(24, Limits.of(mapOf(Limits.LOGS_DAYS to 1, Limits.REPORT_HOURS to 168)).reportHours)
         assertEquals(168, Limits.of(mapOf(Limits.LOGS_DAYS to 7, Limits.REPORT_HOURS to 168)).reportHours)

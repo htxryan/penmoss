@@ -11,7 +11,7 @@ import { LogFile, logFileName } from '../../src/log-file';
 
 const SLACK = process.env['CI'] ? 2 : 1;
 const MAX: Limits = Object.fromEntries(LIMITS.map((spec) => [spec.key, spec.max])) as Limits;
-const FILE_BYTES = MAX['logs.fileKb'] * 1024;
+const FILE_BYTES = MAX['logs.fileKb'] * 1000;
 const NOW = Date.now();
 
 let dir: string;
@@ -51,7 +51,7 @@ describe('the log file at 400 MB (AC35)', () => {
       return [value, performance.now() - started] as const;
     })();
     expect(report.lines.length).toBeGreaterThan(0);
-    expect(report.bytes).toBeLessThanOrEqual(MAX['report.kb'] * 1024);
+    expect(report.bytes).toBeLessThanOrEqual(MAX['report.kb'] * 1000);
     expect(took).toBeLessThan(300 * SLACK);
     const defaults = performance.now();
     await file.report(DEFAULT_LIMITS);

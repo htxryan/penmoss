@@ -136,19 +136,6 @@ export function filePath(sha256: string, type: FileType, name: string): string {
   return `attachments/${sha256}.${ext}`;
 }
 
-/** A size for people: `512 B`, `1.5 KB`, `20 MB`. */
-export function formatBytes(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  const shown = unit === 0 || value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
-  return `${shown} ${units[unit]}`;
-}
-
 /** Lower-case hex SHA-256 of `bytes` (Web Crypto: browsers, Node and workerd). */
 export async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));

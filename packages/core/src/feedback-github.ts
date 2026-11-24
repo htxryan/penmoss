@@ -21,7 +21,7 @@
  * trying again later may work (GitHub's 5xx, a primary or secondary rate limit, no answer),
  * otherwise a refusal that only a change of token or request fixes (a 401, 403, 404 or 422).
  */
-import { limitSpec } from './analytics/limits';
+import { LIMIT_KB, limitSpec } from './analytics/limits';
 import { isUlid } from './ids';
 import {
   contextWithoutSecrets,
@@ -366,7 +366,7 @@ export interface FeedbackSubmission {
 
 /** At most the form's own maximums for the logs it attaches (`report.lines`, `report.kb`). */
 const MAX_LOG_LINES = limitSpec('report.lines').max;
-const MAX_LOG_BYTES = limitSpec('report.kb').max * 1024;
+const MAX_LOG_BYTES = limitSpec('report.kb').max * LIMIT_KB;
 
 /** The `logs` part of a payload, checked: lines of text within the form's maximums. */
 function readLogs(logs: unknown): string[] {
@@ -380,7 +380,7 @@ function readLogs(logs: unknown): string[] {
   }
   const bytes = new TextEncoder().encode(lines.join('\n')).length;
   if (bytes > MAX_LOG_BYTES) {
-    throw new FeedbackInvalid(`logs must be at most ${MAX_LOG_BYTES / 1024} KB`, 413);
+    throw new FeedbackInvalid(`logs must be at most ${MAX_LOG_BYTES / LIMIT_KB} KB`, 413);
   }
   return lines;
 }

@@ -275,7 +275,7 @@ test('Settings → Semantic Search: Recreate Index rebuilds the vectors while on
   const state = row.getByTestId('meaning-index-state');
   await expect(row.getByTestId('meaning-delete-model')).toHaveClass(/danger-fill/);
   // On: Recreate Index… alone, with the index's size on disk.
-  await expect(state).toHaveText(/^\d+ (KB|MB) on this Mac, from your notes$/);
+  await expect(state).toHaveText(/^[\d.,]+ (B|KB|MB) on this Mac, from your notes$/);
   await expect(row.getByTestId('meaning-recreate-index')).toBeVisible();
   await expect(row.getByTestId('meaning-delete-index')).toHaveCount(0);
   await row.getByTestId('meaning-recreate-index').click();

@@ -91,7 +91,9 @@ class GitNotebooksScreenTest {
             "Offline: changes stay on this phone. Tries again at 10:04 AM · 2 changes not pushed",
             gitStatusLine(GitEngineStatus(phase = "offline", nextRetryAt = at + 4 * 60_000, pending = listOf("a", "b")), "github.com", now = at, zone = zone),
         )
-        assertEquals("Synced at 10:00 AM", gitStatusLine(GitEngineStatus(phase = "synced", lastSyncAt = at), "github.com", now = at, zone = zone))
+        assertEquals("Synced just now", gitStatusLine(GitEngineStatus(phase = "synced", lastSyncAt = at), "github.com", now = at, zone = zone))
+        // How long ago, as the Mac's row says it (PEN-188).
+        assertEquals("Synced 2 min ago", gitStatusLine(GitEngineStatus(phase = "synced", lastSyncAt = at), "github.com", now = at + 2 * 60_000, zone = zone))
         assertEquals("Delete for good waits.", gitStatusLine(GitEngineStatus(phase = "stopped", detail = "Delete for good waits."), "github.com"))
         // Status words in Title Case (A938, PEN-137); a reason after them stays a sentence.
         assertEquals("Sync Stopped", gitStatusLine(GitEngineStatus(phase = "stopped"), "github.com"))

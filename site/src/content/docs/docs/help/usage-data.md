@@ -154,14 +154,14 @@ The CLI and the MCP server follow the app's answer, never ask, and never send an
 | ------------------------- | -------------- | -------- | ------------- |
 | Keep Events For           | `events.days`  | 7 days   | 1–360 days    |
 | Keep at Most              | `events.max`   | 200,000  | 500–2,000,000 |
-| Log File Size             | `logs.fileKb`  | 1,024 KB | 256–81,920 KB |
+| Log File Size             | `logs.fileKb`  | 1,000 KB | 250–80,000 KB |
 | Log Files Kept            | `logs.files`   | 2        | 1–5           |
 | Keep Log Lines For        | `logs.days`    | 7 days   | 1–360 days    |
 | Attach Logs from the Last | `report.hours` | 24 hours | 1–168 hours   |
 | At Most (lines)           | `report.lines` | 300      | 50–2,000      |
 | At Most (KB)              | `report.kb`    | 16 KB    | 4–40 KB       |
 
-Lowering a limit that would delete events or logs asks first and says how much; **Cancel** keeps the old value. Raising a limit never brings back what was deleted. **Reset to Defaults** puts every limit back.
+A KB is 1,000 bytes and an MB 1,000 KB, as Finder and Android count them. Lowering a limit that would delete events or logs asks first and says how much; **Cancel** keeps the old value. Raising a limit never brings back what was deleted. **Reset to Defaults** puts every limit back.
 
 ## Logs
 

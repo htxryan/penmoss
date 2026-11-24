@@ -258,7 +258,7 @@ test('Settings → Semantic Search recreates the index while on, and deletes it 
   // Delete Model… is the solid red button.
   await expect(section.getByRole('button', { name: 'Delete Model…' })).toHaveClass(/danger-fill/);
   // On: Recreate alone, with the index's size.
-  await expect(state).toHaveText(/^\d+ KB on this Mac, from your notes$/);
+  await expect(state).toHaveText(/^[\d.,]+ (B|KB|MB) on this Mac, from your notes$/);
   await expect(recreate).toBeVisible();
   await expect(remove).toHaveCount(0);
   // Asked first; Cancel keeps it.

@@ -1,6 +1,6 @@
 package app.penmoss.feedback
 
-import java.util.Locale
+import app.penmoss.ui.common.formatBytes
 
 /**
  * The logs a bug report attaches (PEN-137, Logs in Send Feedback), as core's `log-block.ts` writes
@@ -21,12 +21,8 @@ object FeedbackLogs {
     /** The byte size of the attached text, as the form writes it. */
     fun textBytes(lines: List<String>): Int = lines.joinToString("\n").toByteArray().size
 
-    /** "9.6 KB": the size the form's summary shows (core's `formatReportSize`). */
-    fun formatReportSize(bytes: Int): String {
-        if (bytes < 1024) return "$bytes B"
-        val kb = bytes / 1024.0
-        return if (kb < 10) "${"%.1f".format(Locale.US, kb)} KB" else "${Math.round(kb)} KB"
-    }
+    /** "9.6 KB": the size the form's summary shows, as every size is written ([formatBytes]). */
+    fun formatReportSize(bytes: Int): String = formatBytes(bytes.toLong())
 
     /** A fence longer than any run of backticks in [text], three at least. */
     private fun fence(text: String): String {

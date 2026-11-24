@@ -191,7 +191,7 @@ data class Limits(val values: Map<String, Int>) {
     val eventSpace: Long get() = eventsMax.toLong() * EVENT_BYTES
 
     /** The most space the logs take, in bytes. */
-    val logSpace: Long get() = logsFileKb.toLong() * 1024 * logsFiles
+    val logSpace: Long get() = logsFileKb.toLong() * KB * logsFiles
 
     /** Only the values that differ from their defaults, as the consent file keeps them. */
     val changed: Map<String, Int> get() = SPECS.filter { this[it.key] != it.default }.associate { it.key to this[it.key] }
@@ -211,7 +211,7 @@ data class Limits(val values: Map<String, Int>) {
         val SPECS = listOf(
             LimitSpec(EVENTS_DAYS, 7, 1, 360, "days", "usage"),
             LimitSpec(EVENTS_MAX, 200_000, 500, 2_000_000, "events", "usage"),
-            LimitSpec(LOGS_FILE_KB, 1024, 256, 81_920, "KB", "logs"),
+            LimitSpec(LOGS_FILE_KB, 1000, 250, 80_000, "KB", "logs"),
             LimitSpec(LOGS_FILES, 2, 1, 5, "files", "logs"),
             LimitSpec(LOGS_DAYS, 7, 1, 360, "days", "logs"),
             LimitSpec(REPORT_HOURS, 24, 1, 168, "hours", "report"),
@@ -232,14 +232,10 @@ data class Limits(val values: Map<String, Int>) {
         fun of(stored: Map<String, Int?>): Limits =
             Limits(SPECS.associate { spec -> spec.key to (stored[spec.key]?.takeIf(spec::allowed) ?: spec.default) })
 
-        /** Bytes as the Advanced section writes them: "2 MB", "400 MB", "640 KB" (core's `formatBytes`). */
-        fun formatBytes(bytes: Long): String {
-            if (bytes >= 1024 * 1024) {
-                val mb = bytes / (1024.0 * 1024.0)
-                val whole = mb == Math.floor(mb)
-                return if (mb >= 10 || whole) "${Math.round(mb)} MB" else "${"%.1f".format(Locale.US, mb)} MB"
-            }
-            return "${maxOf(1L, Math.round(bytes / 1024.0))} KB"
-        }
+        /** Bytes as the Advanced section writes them, as every size is: "2 MB", "400 MB" ([app.penmoss.ui.common.formatBytes]). */
+        fun formatBytes(bytes: Long): String = app.penmoss.ui.common.formatBytes(bytes)
+
+        /** A KB in a limit (`logs.fileKb`, `report.kb`) is 1,000 bytes, as sizes are written (core's `LIMIT_KB`). */
+        const val KB = 1000L
     }
 }

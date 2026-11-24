@@ -34,6 +34,7 @@ import { pipeline } from 'node:stream/promises';
 import {
   createScrubber,
   DEFAULT_LIMITS,
+  LIMIT_KB,
   lineTime,
   reportHours,
   reportLines,
@@ -276,7 +277,7 @@ export class LogFile {
   }
 
   private maxBytes(limits: LogLimits = this.limits): number {
-    return limits['logs.fileKb'] * 1024;
+    return limits['logs.fileKb'] * LIMIT_KB;
   }
 
   private async openCurrent(): Promise<FileHandle> {
@@ -495,7 +496,7 @@ export class LogFile {
     const since = now - reportHours(limits) * 3_600_000;
     const maxLines = limits['report.lines'];
     // Scrub #2 may shorten a line: twice the bytes are read, and `reportLines` cuts after it.
-    const maxBytes = limits['report.kb'] * 1024 * 2;
+    const maxBytes = limits['report.kb'] * LIMIT_KB * 2;
     const newest: string[] = [];
     let bytes = 0;
     reading: for (const index of await this.present()) {

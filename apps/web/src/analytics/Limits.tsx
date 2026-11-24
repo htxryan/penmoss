@@ -10,7 +10,6 @@
 import {
   DEFAULT_LIMITS,
   eventSpace,
-  formatBytes,
   LIMITS,
   logSpace,
   reportHours,
@@ -18,6 +17,7 @@ import {
   type LimitSpec,
   type Limits,
 } from '@penmoss/core/analytics';
+import { formatBytes } from '@penmoss/core/words';
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState } from 'react';
 import type { DesktopAnalytics, LimitsPreview } from '../desktop/bridge';

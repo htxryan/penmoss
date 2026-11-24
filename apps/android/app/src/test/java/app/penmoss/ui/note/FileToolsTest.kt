@@ -199,7 +199,7 @@ class FileToolsTest {
         }
         compose.onNodeWithTag("storageFiles", useUnmergedTree = true).assertTextEquals("Counting… · files over 10 MB upload on Wi-Fi")
         compose.onNodeWithTag("clearWebPictures").assertIsNotEnabled()
-        use = StorageUse(files = 12L * 1024 * 1024, webPictures = 1536, webPictureCount = 3)
+        use = StorageUse(files = 12_000_000L, webPictures = 1536, webPictureCount = 3)
         compose.onNodeWithTag("storageFiles", useUnmergedTree = true).assertTextEquals("12 MB · files over 10 MB upload on Wi-Fi")
         compose.onNodeWithTag("storageWebPictures", useUnmergedTree = true).assertTextEquals("3 kept to show again · 1.5 KB")
         // Clear… asks first: Cancel clears nothing.
@@ -223,8 +223,8 @@ class FileToolsTest {
     fun formatsSizesAsCoreDoes() {
         assertEquals("512 B", attachmentSize(512))
         assertEquals("1.5 KB", attachmentSize(1536))
-        assertEquals("1 KB", attachmentSize(1024))
-        assertEquals("20 MB", attachmentSize(20L * 1024 * 1024))
+        assertEquals("1 KB", attachmentSize(1000))
+        assertEquals("20 MB", attachmentSize(20_000_000))
         assertNotNull(attachmentSize(0))
     }
 }

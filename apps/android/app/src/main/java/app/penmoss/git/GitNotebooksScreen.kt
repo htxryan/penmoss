@@ -56,6 +56,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import app.penmoss.ui.common.Toggle
+import app.penmoss.ui.common.rememberNow
+import app.penmoss.ui.common.timeAgo
 
 /** What the All Notebooks row says (T50 G7; PEN-146): what it holds, or how to start. */
 fun gitSummary(count: Int): String = when (count) {
@@ -80,7 +82,8 @@ private val TIME = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
 internal fun clock(at: Long, zone: ZoneId = ZoneId.systemDefault()) = TIME.format(Instant.ofEpochMilli(at).atZone(zone))
 
 /**
- * A notebook's sync as its row says it (A859): synced and when, waiting for the host once a sync
+ * A notebook's sync as its row says it (A859): synced and how long ago ("Synced 2 min ago", as the
+ * Mac's row says it, [timeAgo]), waiting for the host once a sync
  * has run a while (never "Syncing…" for ever), offline and when it tries again, or why it stopped.
  */
 fun gitStatusLine(status: GitEngineStatus?, host: String, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): String {
@@ -88,7 +91,7 @@ fun gitStatusLine(status: GitEngineStatus?, host: String, now: Long = System.cur
     val pending = status.pending.size
     val waiting = if (pending == 0) "" else " · ${if (pending == 1) "1 change" else "$pending changes"} not pushed"
     return when (status.phase) {
-        "synced" -> (status.lastSyncAt?.let { "Synced at ${clock(it, zone)}" } ?: "Synced") + waiting
+        "synced" -> (status.lastSyncAt?.let { "Synced ${timeAgo(it, now, zone)}" } ?: "Synced") + waiting
         "syncing" -> status.since.let { since -> if (since != null && now - since > WAITING_AFTER_MS) "Waiting for $host…$waiting" else "Syncing…$waiting" }
         "offline" -> "Offline: changes stay on this phone" + (status.nextRetryAt?.let { ". Tries again at ${clock(it, zone)}" } ?: "") + waiting
         "stopped" -> status.detail ?: "Sync Stopped"
@@ -479,8 +482,8 @@ private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modi
         },
         supportingContent = {
             Text(
-                view.repository + " · " + gitStatusLine(row.status, view.host),
-                Modifier.testTag("gitStatus-${view.localId}").semantics { liveRegion = LiveRegionMode.Polite },
+                view.repository + " · " + gitStatusLine(row.status, view.host, rememberNow()),
+                Modifier.testTag("gitStatus-${view.localId}").semantics { if (row.status?.phase != "synced") liveRegion = LiveRegionMode.Polite },
                 color = if (row.status?.phase == "stopped") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },

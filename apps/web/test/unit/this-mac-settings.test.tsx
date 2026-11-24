@@ -204,7 +204,7 @@ describe('Settings → Updates’ version card (PEN-146)', () => {
     const now = Date.parse('2026-11-15T12:00:00Z');
     expect(checkedLine(state({}), now)).toBe('Stable · Not Checked Yet');
     expect(checkedLine(state({ checkedAt: now - 5 * 60_000 }), now)).toBe(
-      'Stable · Checked 5 minutes ago',
+      'Stable · Checked 5 min ago',
     );
     expect(checkedLine(state({ channel: 'alpha', checkedAt: now }), now)).toBe(
       'Alpha · Checked just now',
