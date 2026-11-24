@@ -71,9 +71,7 @@ export function GenerateTagsDialog({
       after={
         finished && failed ? (
           <p className="ai-warn" role="alert" data-testid="generate-tags-failed">
-            {failed.count === 1
-              ? '1 couldn’t be described'
-              : `${failed.count} couldn’t be described`}
+            {`${failed.count} couldn’t be described`}
             {failed.message ? `: ${failed.message}` : '.'}
           </p>
         ) : null
