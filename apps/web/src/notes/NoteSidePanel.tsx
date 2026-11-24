@@ -20,6 +20,7 @@ import type { NotePanelTab } from './NoteActions';
 import { InfoPanel } from './NoteInfo';
 import type { NoteStats } from './note-stats';
 import { PANEL_TABS } from './panel-tabs';
+import { DialogClose } from '../shell/DialogClose';
 
 /** The Local Graph tab draws with d3-force: loaded the first time it shows (T51, as GraphPage). */
 const NoteGraph = lazy(() =>
@@ -173,18 +174,12 @@ export function NoteSidePanel({
             <h2>{tabLabel}</h2>
             {/* History's ⓘ: how versions are made (Ryan's review of #192, finding 13). */}
             {tab === 'history' ? <AboutVersions /> : null}
-            <button
-              type="button"
-              className="icon-btn"
-              data-ui="dismiss"
-              data-event="note.panel.close"
-              aria-label="Close Panel"
-              data-tip="Close Panel (Esc)"
-              onClick={onClose}
-              data-testid="note-panel-close"
-            >
-              <Icon name="close" size={16} />
-            </button>
+            <DialogClose
+              label="Close Panel"
+              event="note.panel.close"
+              onClose={onClose}
+              testId="note-panel-close"
+            />
           </div>
           <div
             className="note-tabpanel"

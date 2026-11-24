@@ -5,6 +5,7 @@ import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
 import { useTrackedDialog } from '../analytics/dialog';
 import { SPACES_CLASH, symbolKeysMayClash } from '../notes/symbols';
+import { DialogClose } from '../shell/DialogClose';
 
 /** Typing shortcuts that are not commands (markdown and the slash menu), for reference. */
 const TYPED: ReadonlyArray<readonly [string, string]> = [
@@ -71,18 +72,7 @@ export function Cheatsheet({
               <Icon name="keyboard" />
               Customise
             </button>
-            <button
-              ref={close}
-              type="button"
-              className="icon-btn"
-              data-ui="dismiss"
-              data-event="cheatsheet.close"
-              aria-label="Close"
-              data-tip="Close (Esc)"
-              onClick={onClose}
-            >
-              <Icon name="close" />
-            </button>
+            <DialogClose ref={close} label="Close" event="cheatsheet.close" onClose={onClose} />
           </div>
         </div>
         {/* It scrolls on a short window: focusable, so the keyboard can scroll it too. */}
