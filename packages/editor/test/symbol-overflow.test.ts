@@ -1,25 +1,15 @@
 /**
- * More symbols than the margin holds (T52 item 3): as many as fit, at least one, then a "+N"
- * chip (or a badge when one slot is all there is), every symbol in a popover that hovering or
- * a tap on the chip shows, and every spoken name kept.
+ * More symbols than the gutter holds (T52 item 3, A1680): the gutter has room for three, so
+ * a line with more shows the first two and a "+N" chip (fitSymbols also draws a badge when one
+ * slot is all there is), every symbol in a popover that hovering or a tap on the chip shows, and
+ * every spoken name kept.
  */
+import { GUTTER_SLOTS } from '@penmoss/core/line-symbols';
 import type { JSONContent } from '@tiptap/core';
 import type { EditorView } from '@tiptap/pm/view';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  INLINE_CAP,
-  NOTE_LAYOUT_EVENT,
-  HANDLE_PX,
-  SymbolFitter,
-  noteLayoutChanged,
-  fitSymbols,
-  slotsFitting,
-} from '../src/extensions/symbol-overflow';
+import { describe, expect, it } from 'vitest';
+import { fitSymbols } from '../src/extensions/symbol-overflow';
 import { openEditor, paragraph } from './support/editor';
-
-afterEach(() => {
-  document.head.querySelectorAll('style[data-test]').forEach((style) => style.remove());
-});
 
 /** A margin as the editor draws it: a glyph per symbol, then the spoken label. */
 function margin(glyphs: string[]): HTMLElement {
@@ -56,20 +46,6 @@ function press(target: Element, pointerType: string) {
   target.dispatchEvent(event);
   return event;
 }
-
-describe('how many symbols the gutter holds (T52 item 3)', () => {
-  it('counts the slots that fit, at least one and at most nine', () => {
-    // A full-width note's 3rem gutter, less the gap to the text: two 14.4 px glyphs.
-    expect(slotsFitting(48 - 4.8 - 2, 14.4)).toBe(2);
-    expect(slotsFitting(200, 14.4)).toBe(9);
-    expect(slotsFitting(120, 14.4)).toBe(6);
-    expect(slotsFitting(10, 14.4)).toBe(1);
-    expect(slotsFitting(-30, 14.4)).toBe(1);
-    // Not measurable (no layout): everything shows.
-    expect(slotsFitting(Number.NaN, 14.4)).toBe(9);
-    expect(slotsFitting(100, Number.NaN)).toBe(9);
-  });
-});
 
 describe('a margin with more symbols than fit (T52 item 3)', () => {
   it('shows them all, and nothing more, when they fit', () => {
@@ -137,7 +113,7 @@ describe('a margin with more symbols than fit (T52 item 3)', () => {
   });
 });
 
-describe('fitting an editor’s margins to its gutter (T52 item 3)', () => {
+describe('an editor’s margins in its gutter (T52 item 3, A1680)', () => {
   const content: JSONContent[] = [
     paragraph('! 💡 → Three symbols'),
     paragraph('★ One symbol'),
@@ -148,132 +124,15 @@ describe('fitting an editor’s margins to its gutter (T52 item 3)', () => {
       (element) => `${shown(element)}${chip(element) ?? ''}`,
     );
 
-  it('caps symbols before the text at three slots, the label naming every one', () => {
+  it('shows three slots at most, past that two and a chip, the label naming every one', () => {
     const { editor } = openEditor(content);
     const { view } = editor;
-    expect(INLINE_CAP).toBe(3);
+    expect(GUTTER_SLOTS).toBe(3);
     expect(lines(view)).toEqual(['!💡→', '★', '★?+3']);
     expect(view.dom.querySelectorAll('.pm-symbols-label')[2]?.textContent).toBe(
       '★ Important ? Question ! Follow-up 💡 Idea → Next: ',
     );
-  });
-
-  it('fits the margin to the gutter, and refits when the gutter changes', () => {
-    const style = document.createElement('style');
-    style.dataset['test'] = '';
-    style.textContent = '.pm-symbols { position: absolute; font-size: 14.4px; }';
-    document.head.append(style);
-    const { editor } = openEditor([paragraph('')]);
-    const { view } = editor;
-    // A full-width note: the text column starts 48 px into the page.
-    let left = 48;
-    vi.spyOn(view.dom, 'getBoundingClientRect').mockImplementation(
-      () => new DOMRect(left, 0, 600, 400),
-    );
-    const fitter = new SymbolFitter();
-    fitter.attach(view);
-    editor.commands.setContent({ type: 'doc', content });
-    for (const element of view.dom.querySelectorAll<HTMLElement>('.pm-symbols'))
-      fitter.drawn.add(element);
-    fitter.update();
-    // Less the drag handle's room left of them (T52): one slot, the first symbol with a badge.
-    const badge = () => view.dom.querySelector('.pm-symbols')?.classList.contains('is-badge');
-    expect(lines(view)).toEqual(['!+2', '★', '★+4']);
-    expect(badge()).toBe(true);
-    // A little wider: two slots, the first symbol and a "+N" chip, the handle still clear.
-    left = 48 + HANDLE_PX + 8;
-    fitter.refit();
-    expect(lines(view)).toEqual(['!+2', '★', '★+4']);
-    expect(badge()).toBe(false);
-    // The sidebar closes: a wide gutter shows them all.
-    left = 300;
-    fitter.refit();
-    expect(lines(view)).toEqual(['!💡→', '★', '★?!💡→']);
-    // A very narrow one: the first symbol and a badge.
-    left = 20;
-    fitter.refit();
-    expect(lines(view)).toEqual(['!+2', '★', '★+4']);
-    expect(badge()).toBe(true);
-    fitter.destroy();
-  });
-
-  it('refits when the note’s layout moves the text column at the same width (the side panel)', () => {
-    expect(NOTE_LAYOUT_EVENT).toBe('penmoss:note-layout');
-    const style = document.createElement('style');
-    style.dataset['test'] = '';
-    style.textContent = '.pm-symbols { position: absolute; font-size: 14.4px; }';
-    document.head.append(style);
-    const frames: FrameRequestCallback[] = [];
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-      frames.push(callback);
-      return frames.length;
-    });
-    const { editor } = openEditor(content);
-    const { view } = editor;
-    // A wide window, the panel hidden: the capped column sits well inside the pane.
-    let left = 300;
-    vi.spyOn(view.dom, 'getBoundingClientRect').mockImplementation(
-      () => new DOMRect(left, 0, 600, 400),
-    );
-    const fitter = new SymbolFitter();
-    fitter.attach(view);
-    expect(lines(view)).toEqual(['!💡→', '★', '★?!💡→']);
-    // The side panel shows: the column moves left at the same width, the gutter is 3rem.
-    left = 48;
-    noteLayoutChanged();
-    for (const frame of frames.splice(0)) frame(0);
-    expect(lines(view)).toEqual(['!+2', '★', '★+4']);
-    // Once destroyed, a later change asks nothing of it.
-    fitter.destroy();
-    const refit = vi.spyOn(fitter, 'refit');
-    noteLayoutChanged();
-    for (const frame of frames.splice(0)) frame(0);
-    expect(refit).not.toHaveBeenCalled();
-    vi.restoreAllMocks();
-  });
-
-  it('refits when the editor gets wider or narrower, never when it only gets taller', () => {
-    // jsdom has no ResizeObserver: one whose notices the test sends.
-    let notify: ResizeObserverCallback = () => undefined;
-    class FakeObserver {
-      constructor(callback: ResizeObserverCallback) {
-        notify = callback;
-      }
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    }
-    vi.stubGlobal('ResizeObserver', FakeObserver);
-    const frames: FrameRequestCallback[] = [];
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-      frames.push(callback);
-      return frames.length;
-    });
-    try {
-      const { editor } = openEditor(content);
-      const { view } = editor;
-      const fitter = new SymbolFitter();
-      const refit = vi.spyOn(fitter, 'refit');
-      fitter.attach(view);
-      refit.mockClear();
-      const resize = (width: number, height: number) => {
-        const entry = { target: view.dom, contentRect: new DOMRect(0, 0, width, height) };
-        notify([entry as unknown as ResizeObserverEntry], {} as ResizeObserver);
-        for (const frame of frames.splice(0)) frame(0);
-      };
-      resize(600, 400);
-      expect(refit).toHaveBeenCalledTimes(1);
-      // Enter, a wrapped line: taller only.
-      resize(600, 424);
-      resize(600, 448);
-      expect(refit).toHaveBeenCalledTimes(1);
-      // Full width, or the sidebar: a new width.
-      resize(900, 448);
-      expect(refit).toHaveBeenCalledTimes(2);
-      fitter.destroy();
-    } finally {
-      vi.unstubAllGlobals();
-      vi.restoreAllMocks();
-    }
+    // At any width: nothing is measured, so a window's size never changes what a line shows.
+    expect(view.dom.querySelector('.pm-symbols.is-badge')).toBeNull();
   });
 });

@@ -19,16 +19,34 @@
  * list order when any block lacks it, otherwise removed. The list is a synced setting (A743)
  * that the app hands in as a `SymbolSource`, so a change on another device redraws every
  * open note.
+ *
+ * Stacking (A1678, A1679): the Checkbox and Strikethrough stack with a line's symbols. On a
+ * bulleted or numbered item, a heading or a cell the Checkbox is `☐` or `☑` in the run, so the
+ * item keeps its bullet or number and no other line changes; a plain line still becomes a GFM
+ * checklist item. Strikethrough is `⊘` in the run, and the line's text is drawn struck through.
+ *
+ * The gutter (A1680): the editor's element is given `data-symbol-slots`, the widest stack in
+ * the note up to three, and the stylesheet keeps that many slots left of the text column, every
+ * line's symbols drawn in them. A note without symbols has none, so its text starts at the
+ * column's edge; typing on a line without symbols never changes it.
  */
 import {
   DEFAULT_SYMBOLS,
+  GUTTER_SLOTS,
+  checkboxEdits,
+  gutterSlots,
+  runBox,
+  runIsStruck,
   symbolEdits,
   symbolInk,
   symbolRun,
-  symbolSpokenName,
+  tokenGlyph,
+  tokenSpokenName,
+  type BoxState,
   type LineSymbol,
   type SymbolKind,
   type SymbolRun,
+  type TextEdit,
 } from '@penmoss/core/line-symbols';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Node as PMNode, ResolvedPos } from '@tiptap/pm/model';
@@ -44,7 +62,7 @@ import {
 import { AttrStep, ReplaceAroundStep } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import { asOwnUndoStep, dispatchMove } from './block-move';
-import { SymbolFitter, toggleSymbolPopover } from './symbol-overflow';
+import { fitSymbols, toggleSymbolPopover } from './symbol-overflow';
 import { SymbolPicker } from './symbol-picker';
 
 /** Where the editor reads the person's symbols, and hears when they change (Settings, sync). */
@@ -80,7 +98,21 @@ interface PluginState {
   /** Where the caret's line starts (-1: none); its bare last glyph is not drawn (A741). */
   readonly caretLine: number;
   readonly decorations: DecorationSet;
+  /**
+   * How many drawn margins take one, two and three or more of the gutter's slots (A1680), at
+   * 1, 2 and 3; kept up to date as lines are drawn and removed, so no keystroke counts them all.
+   */
+  readonly counts: readonly number[];
 }
+
+/** No margins drawn yet. */
+const NO_COUNTS: readonly number[] = [0, 0, 0, 0];
+
+/** The slots a margin's widget takes in the gutter: none in a cell, which draws before its text. */
+const gutterOf = (spec: unknown): number => {
+  const slots = (spec as { gutter?: unknown } | null)?.gutter;
+  return typeof slots === 'number' ? slots : 0;
+};
 
 type Meta = { readonly symbols: readonly LineSymbol[] } | { readonly raw: true };
 
@@ -125,10 +157,10 @@ const SYMBOL_BLOCKS = new Set(['paragraph', 'heading', 'tableCell', 'tableHeader
 /** Whether a textblock is a table cell, where symbols sit before the text (T52 item 2). */
 const isCell = (block: PMNode) => block.type.spec.tableRole !== undefined;
 
-/** What drawing a margin needs: the picker for a click, and the fitter that sizes it. */
+/** What a margin does when clicked: opens the picker, or ticks the line's Checkbox (A1678). */
 interface Drawing {
   readonly open: (view: EditorView, pos: number) => void;
-  readonly fitter: SymbolFitter;
+  readonly tick: (view: EditorView, pos: number) => void;
 }
 
 /** Longest leading text a run is read from: nine symbols of the longest glyph, and more. */
@@ -178,9 +210,9 @@ export function lineSymbolsOf(state: EditorState): readonly LineSymbol[] {
   return lineSymbolsKey.getState(state)?.symbols ?? DEFAULT_SYMBOLS;
 }
 
-/** A run's symbols as they are named (T51 item 12, A940): by their glyphs. */
+/** A run's symbols as they are named (T51 item 12, A940): by their glyphs, a box as ☐ or ☑. */
 const glyphs = (run: SymbolRun, symbols: readonly LineSymbol[]) =>
-  run.tokens.map((token) => symbols[token.index]!.glyph);
+  run.tokens.map((token) => tokenGlyph(token, symbols));
 
 /** The margin's DOM for a run: the glyphs, coloured, and read once for screen readers. */
 function gutter(
@@ -204,18 +236,26 @@ function gutter(
     glyph.className = 'pm-symbol';
     glyph.setAttribute('aria-hidden', 'true');
     glyph.dataset['symbol'] = String(token.index + 1);
+    // A box ticks with a click, as a checklist item's does (A1678).
+    if (symbol.kind === 'checkbox') {
+      glyph.dataset['box'] = token.checked ? 'ticked' : 'unticked';
+      glyph.dataset['event'] = 'editor.symbol.tick';
+      glyph.title = token.checked ? 'Click to Untick' : 'Click to Tick';
+    }
     // An emoji keeps its own colours (A1588).
     const ink = symbolInk(symbol);
     if (ink) glyph.style.color = ink;
-    glyph.textContent = symbol.glyph;
+    glyph.textContent = tokenGlyph(token, symbols);
     element.append(glyph);
   }
   // Read before the line (A745, A940): "★ !: Send the form", with an older symbol's name too
   // ("★ Important ! Follow-up: …"), as punctuation alone may be read as nothing (T51 review).
   const spoken = doc.createElement('span');
   spoken.className = 'pm-symbols-label';
-  spoken.textContent = `${run.tokens.map((token) => symbolSpokenName(symbols[token.index]!)).join(' ')}: `;
+  spoken.textContent = `${run.tokens.map((token) => tokenSpokenName(token, symbols)).join(' ')}: `;
   element.append(spoken);
+  // The gutter holds three slots at most (A1680): past that the first two and a "+N" chip.
+  fitSymbols(element, GUTTER_SLOTS);
   // A tap on the "+N" chip shows every symbol (T52 item 3): touch has no hover. Cancelling the
   // press keeps the browser from sending the mouse events that open the picker.
   element.addEventListener('pointerdown', (event) => {
@@ -224,15 +264,18 @@ function gutter(
     event.preventDefault();
     toggleSymbolPopover(element);
   });
-  // A click opens the picker for this line; the editor keeps its focus until then.
+  // A click opens the picker for this line; the editor keeps its focus until then. A click on a
+  // box ticks or unticks it instead (A1678).
   element.addEventListener('mousedown', (event) => {
     if (event.button !== 0) return;
     event.preventDefault();
     toggleSymbolPopover(element, false);
     const pos = getPos();
-    if (pos !== undefined) draw.open(view, pos);
+    if (pos === undefined) return;
+    const box = event.target instanceof Element && event.target.closest('.pm-symbol[data-box]');
+    if (box) draw.tick(view, pos);
+    else draw.open(view, pos);
   });
-  draw.fitter.drawn.add(element);
   return element;
 }
 
@@ -266,14 +309,29 @@ function decorateLine(
       marks: [],
       ignoreSelection: true,
       stopEvent: () => true,
-      key: `symbols:${run.tokens
+      // The gutter's slots it takes (A1680): a cell's symbols sit before its text instead.
+      gutter: cell ? 0 : Math.min(GUTTER_SLOTS, run.tokens.length),
+      key: `symbols:${cell ? 'cell:' : ''}${run.tokens
         .map((token) => {
           const symbol = symbols[token.index]!;
-          return `${symbol.glyph}|${symbol.name}|${symbol.colour}`;
+          return `${tokenGlyph(token, symbols)}|${symbol.name}|${symbol.colour}`;
         })
         .join('/')}`,
     }),
   );
+  // Strikethrough strikes the line's text through, not its symbols (A1679).
+  const textEnd = pos + block.nodeSize - 1;
+  if (runIsStruck(run, symbols) && end < textEnd)
+    out.push(Decoration.inline(end, textEnd, { class: 'pm-symbol-struck' }));
+}
+
+/** How many of `decorations`' margins take one, two and three slots (at 1, 2 and 3). */
+function countGutters(decorations: readonly Decoration[], into = [...NO_COUNTS], sign = 1) {
+  for (const decoration of decorations) {
+    const slots = gutterOf(decoration.spec);
+    if (slots > 0) into[slots]! += sign;
+  }
+  return into;
 }
 
 function decorateAll(
@@ -281,7 +339,7 @@ function decorateAll(
   symbols: readonly LineSymbol[],
   draw: Drawing,
   caretLine: number,
-): DecorationSet {
+): { decorations: DecorationSet; counts: readonly number[] } {
   const out: Decoration[] = [];
   if (symbols.length > 0) {
     doc.descendants((node, pos) => {
@@ -291,7 +349,19 @@ function decorateAll(
       return false;
     });
   }
-  return DecorationSet.create(doc, out);
+  // Counted first: building the set empties the array.
+  const counts = countGutters(out);
+  return { decorations: DecorationSet.create(doc, out), counts };
+}
+
+/**
+ * How many slots the note's symbol gutter has (A1680): the widest stack drawn in its margin,
+ * up to three; none without symbols. Cells, which draw theirs before the text, take none.
+ */
+export function symbolGutterSlots(state: EditorState): number {
+  const counts = lineSymbolsKey.getState(state)?.counts ?? NO_COUNTS;
+  const widest = [3, 2, 1].find((slots) => (counts[slots] ?? 0) > 0) ?? 0;
+  return gutterSlots(widest);
 }
 
 /**
@@ -406,10 +476,14 @@ export function symbolLines(state: EditorState): Array<{ pos: number; node: PMNo
   return lines;
 }
 
-/** What list item a line is (A1632): its nearest item's kind, and whether a checkbox is ticked. */
+/**
+ * What list item a line is (A1632): its nearest item's kind, whether a checklist item is ticked,
+ * and where that item starts (-1 for none).
+ */
 interface ListLine {
   readonly kind: SymbolKind | null;
   readonly checked: boolean;
+  readonly item: number;
 }
 
 function listLineAt(state: EditorState, pos: number): ListLine {
@@ -417,14 +491,49 @@ function listLineAt(state: EditorState, pos: number): ListLine {
   for (let depth = $pos.depth - 1; depth > 0; depth--) {
     const node = $pos.node(depth);
     if (node.type.name === 'taskItem')
-      return { kind: 'checkbox', checked: node.attrs['checked'] === true };
+      return {
+        kind: 'checkbox',
+        checked: node.attrs['checked'] === true,
+        item: $pos.before(depth),
+      };
     if (node.type.name === 'listItem') {
       const list = $pos.node(depth - 1).type.name;
       const kind = list === 'orderedList' ? 'ordered' : list === 'bulletList' ? 'bullet' : null;
-      return { kind, checked: false };
+      return { kind, checked: false, item: $pos.before(depth) };
     }
   }
-  return { kind: null, checked: false };
+  return { kind: null, checked: false, item: -1 };
+}
+
+/**
+ * A line's Checkbox (A1632, A1678): a checklist item's (`task`), or one in its run (`text`: on
+ * a bulleted or numbered item, a heading, a cell, or a line already holding `☐`), or none on a
+ * plain line, which the Checkbox makes a checklist item (`plain`).
+ */
+interface BoxLine {
+  readonly pos: number;
+  readonly node: PMNode;
+  readonly form: 'task' | 'text' | 'plain';
+  readonly box: BoxState;
+  /** Where its checklist item starts (`task`). */
+  readonly item: number;
+  readonly text: string;
+  readonly run: SymbolRun;
+}
+
+function boxLines(state: EditorState, symbols: readonly LineSymbol[]): BoxLine[] {
+  return symbolLines(state).map(({ pos, node }) => {
+    const line = listLineAt(state, pos);
+    const text = leadingText(node);
+    const run = symbolRun(text, symbols);
+    if (line.kind === 'checkbox') {
+      const box = line.checked ? 'ticked' : 'unticked';
+      return { pos, node, form: 'task', box, item: line.item, text, run };
+    }
+    const box = runBox(run, symbols);
+    const plain = box === 'none' && line.kind === null && node.type.name === 'paragraph';
+    return { pos, node, form: plain ? 'plain' : 'text', box, item: -1, text, run };
+  });
 }
 
 /** The symbol slots every line in the selection has (the picker's ticks, the phone's sheet). */
@@ -433,34 +542,122 @@ export function activeSymbols(state: EditorState): number[] {
   const symbols = lineSymbolsOf(state);
   if (lines.length === 0) return [];
   const runs = lines.map(({ node }) => symbolRun(leadingText(node), symbols));
-  // A list item slot is ticked when every line is that kind of item (A1632).
+  // A list item slot is ticked when every line is that kind of item (A1632); the Checkbox when
+  // every line has a box, as a checklist item or in its run (A1678).
   const items = lines.map(({ pos }) => listLineAt(state, pos).kind);
   return symbols
     .map((_, index) => index)
     .filter((index) => {
       const kind = symbols[index]!.kind;
-      if (kind) return items.every((item) => item === kind);
+      if (kind === 'checkbox')
+        return items.every(
+          (item, line) => item === 'checkbox' || runBox(runs[line]!, symbols) !== 'none',
+        );
+      if (kind === 'bullet' || kind === 'ordered') return items.every((item) => item === kind);
       return runs.every((run) => run.tokens.some((token) => token.index === index));
     });
+}
+
+/** Applies a line's text edits (descending, from `symbolEdits` or `checkboxEdits`) at `start`. */
+function applyEdits(tr: Transaction, start: number, edits: readonly TextEdit[]): void {
+  for (const edit of edits) {
+    if (edit.insert)
+      tr.replaceWith(start + edit.from, start + edit.to, tr.doc.type.schema.text(edit.insert));
+    else tr.delete(start + edit.from, start + edit.to);
+  }
+}
+
+/**
+ * The Checkbox's step on the selection's lines (A1632, A1678): when any line has no box, each
+ * such line gets an unticked one; else when any is unticked, every box is ticked; else every box
+ * goes. A box stacks with the line's symbols and leaves its list alone: a bulleted or numbered
+ * item, a heading or a cell takes `☐` or `☑` in its run, keeping its bullet or number, and no
+ * other item changes. A plain line becomes a GFM checklist item, and a checklist item's box is
+ * the item's own (ticked in place, or the item made a plain line again).
+ */
+export function toggleCheckbox(editor: Editor): boolean {
+  const { state } = editor;
+  const symbols = lineSymbolsOf(state);
+  const index = symbols.findIndex((symbol) => symbol.kind === 'checkbox');
+  const lines = boxLines(state, symbols);
+  if (lines.length === 0) return false;
+  const to: BoxState = lines.some((line) => line.box === 'none')
+    ? 'unticked'
+    : lines.some((line) => line.box === 'unticked')
+      ? 'ticked'
+      : 'none';
+  // Each change from the last line up, so the positions of the lines before it hold; a run of
+  // plain lines is made one checklist, and a run of checklist items made plain lines at once.
+  type Step =
+    | { readonly kind: 'edit'; readonly line: BoxLine }
+    | { readonly kind: 'tick'; readonly item: number }
+    | { readonly kind: 'list'; readonly from: number; to: number; tail: BoxLine };
+  const steps: Step[] = [];
+  const adjacent = (before: BoxLine, after: BoxLine): boolean => {
+    if (before.form === 'plain') return before.pos + before.node.nodeSize === after.pos;
+    const item = state.doc.nodeAt(before.item);
+    return item !== null && before.item + item.nodeSize === after.item;
+  };
+  for (const line of lines) {
+    const listed =
+      (line.form === 'plain' && to === 'unticked') || (line.form === 'task' && to === 'none');
+    if (listed) {
+      const last = steps.at(-1);
+      const end = line.pos + line.node.nodeSize - 1;
+      if (last?.kind === 'list' && last.tail.form === line.form && adjacent(last.tail, line)) {
+        last.to = end;
+        last.tail = line;
+      } else steps.push({ kind: 'list', from: line.pos + 1, to: end, tail: line });
+      continue;
+    }
+    if (line.form === 'task') {
+      if (to === 'ticked' && line.box === 'unticked') steps.push({ kind: 'tick', item: line.item });
+      continue;
+    }
+    if (line.form === 'text' && (to !== 'unticked' || line.box === 'none'))
+      steps.push({ kind: 'edit', line });
+  }
+  const { selection } = state;
+  const chain = editor.chain();
+  for (const step of steps.reverse()) {
+    if (step.kind === 'list') {
+      chain.setTextSelection({ from: step.from, to: step.to }).toggleTaskList();
+    } else if (step.kind === 'tick') {
+      chain.command(({ tr }) => {
+        tr.setNodeAttribute(step.item, 'checked', true);
+        return true;
+      });
+    } else {
+      const { line } = step;
+      chain.command(({ tr }) => {
+        applyEdits(tr, line.pos + 1, checkboxEdits(line.run, symbols, index, to, line.text));
+        return true;
+      });
+    }
+  }
+  return chain
+    .command(({ tr }) => {
+      tr.setSelection(selection.map(tr.doc, tr.mapping));
+      return true;
+    })
+    .scrollIntoView()
+    .run();
 }
 
 /**
  * A list item slot's toggle on the selection's lines (A1632). Bulleted and Numbered make them
  * that kind of item, or plain lines when they already are. Checkbox steps through ☐, ☑ and no
- * box: lines that are not all checklist items become unticked ones, unticked ones are ticked,
- * and ticked ones become plain lines. False when no line may be one (a heading, a cell).
+ * box, stacked with the lines' symbols (`toggleCheckbox`, A1678). False when no line may be one.
  */
 export function toggleListItem(editor: Editor, kind: SymbolKind): boolean {
   const { state } = editor;
   const lines = symbolLines(state);
   if (lines.length === 0) return false;
+  if (kind === 'checkbox') return toggleCheckbox(editor);
   const chain = editor.chain();
   if (kind === 'bullet') return chain.toggleBulletList().run();
   if (kind === 'ordered') return chain.toggleOrderedList().run();
-  const items = lines.map(({ pos }) => listLineAt(state, pos));
-  if (items.every((item) => item.kind === 'checkbox') && items.some((item) => !item.checked))
-    return chain.updateAttributes('taskItem', { checked: true }).run();
-  return chain.toggleTaskList().run();
+  return false;
 }
 
 /** Whether a symbol can go on the selection's lines (it holds a paragraph, item or heading). */
@@ -475,8 +672,10 @@ export const canHaveSymbols = (state: EditorState): boolean => symbolLines(state
 export function toggleLineSymbol(index: number) {
   return (state: EditorState, dispatch?: (tr: Transaction) => void): boolean => {
     const symbols = lineSymbolsOf(state);
-    // A list item slot needs the editor's list commands: `toggleSymbolIn` (A1632).
-    if (!symbols[index] || symbols[index].kind) return false;
+    // A list item slot, and the Checkbox, need the editor's list commands: `toggleSymbolIn`
+    // (A1632). Strikethrough is text in the run, as a glyph is (A1679).
+    const kind = symbols[index]?.kind;
+    if (!symbols[index] || (kind && kind !== 'strike')) return false;
     const lines = symbolLines(state);
     if (lines.length === 0) return false;
     const texts = lines.map(({ node }) => leadingText(node));
@@ -486,11 +685,8 @@ export function toggleLineSymbol(index: number) {
     const tr = state.tr;
     // Last line first, so earlier positions hold.
     for (let line = lines.length - 1; line >= 0; line--) {
-      const start = lines[line]!.pos + 1;
-      for (const edit of symbolEdits(runs[line]!, symbols, index, add, texts[line])) {
-        if (edit.insert) tr.insert(start + edit.from, state.schema.text(edit.insert));
-        else tr.delete(start + edit.from, start + edit.to);
-      }
+      const edits = symbolEdits(runs[line]!, symbols, index, add, texts[line]);
+      applyEdits(tr, lines[line]!.pos + 1, edits);
     }
     if (!tr.docChanged) return true;
     dispatch(tr.scrollIntoView());
@@ -507,8 +703,9 @@ export function toggleSymbolIn(view: EditorView, index: number, fromKey = false)
   // is the editor's, which a refocus must not replace with wherever the browser put the caret.
   if (fromKey && view.hasFocus()) readDOMSelection(view);
   const kind = lineSymbolsOf(view.state)[index]?.kind;
-  if (kind) {
-    // A list item slot (A1632) runs the editor's list commands, as its own undo step too.
+  if (kind && kind !== 'strike') {
+    // A list item slot or the Checkbox (A1632, A1678) runs the editor's list commands, as its
+    // own undo step too.
     const editor = (view.dom as HTMLElement & { editor?: Editor }).editor;
     return editor ? asOwnUndoStep(view, () => toggleListItem(editor, kind)) : false;
   }
@@ -610,7 +807,23 @@ export const LineSymbols = Extension.create<LineSymbolsOptions, LineSymbolsStora
       if (!view.hasFocus()) view.focus();
       openSymbolPicker(editor);
     };
-    const draw: Drawing = { open, fitter: new SymbolFitter() };
+    /** Ticks or unticks the box in the margin clicked (A1678), as its own undo step. */
+    const tick = (view: EditorView, widgetPos: number) => {
+      const { state } = view;
+      const symbols = lineSymbolsOf(state);
+      const index = symbols.findIndex((symbol) => symbol.kind === 'checkbox');
+      const $pos = state.doc.resolve(Math.min(widgetPos, state.doc.content.size));
+      if (index < 0 || !$pos.parent.isTextblock) return;
+      const text = leadingText($pos.parent);
+      const run = symbolRun(text, symbols);
+      const box = runBox(run, symbols);
+      if (box === 'none') return;
+      const tr = state.tr;
+      const to = box === 'ticked' ? 'unticked' : 'ticked';
+      applyEdits(tr, $pos.start(), checkboxEdits(run, symbols, index, to, text));
+      if (tr.docChanged) dispatchMove(view, tr);
+    };
+    const draw: Drawing = { open, tick };
     return [
       new Plugin<PluginState>({
         key: lineSymbolsKey,
@@ -618,8 +831,7 @@ export const LineSymbols = Extension.create<LineSymbolsOptions, LineSymbolsStora
           init: (_config, state) => {
             const symbols = source?.get() ?? DEFAULT_SYMBOLS;
             const caretLine = caretLineOf(state);
-            const decorations = decorateAll(state.doc, symbols, draw, caretLine);
-            return { symbols, caretLine, decorations };
+            return { symbols, caretLine, ...decorateAll(state.doc, symbols, draw, caretLine) };
           },
           apply: (tr, previous, _old, state) => {
             const meta = tr.getMeta(lineSymbolsKey) as Meta | undefined;
@@ -628,15 +840,22 @@ export const LineSymbols = Extension.create<LineSymbolsOptions, LineSymbolsStora
               return {
                 symbols: meta.symbols,
                 caretLine,
-                decorations: decorateAll(state.doc, meta.symbols, draw, caretLine),
+                ...decorateAll(state.doc, meta.symbols, draw, caretLine),
               };
             }
             if (!tr.docChanged && caretLine === previous.caretLine) return previous;
             const { symbols } = previous;
+            // The gutter's counts follow every margin removed or drawn (A1680).
+            const counts = [...previous.counts];
             let set = tr.docChanged
-              ? previous.decorations.map(tr.mapping, state.doc)
+              ? previous.decorations.map(tr.mapping, state.doc, {
+                  onRemove: (spec) => {
+                    const slots = gutterOf(spec);
+                    if (slots > 0) counts[slots]! -= 1;
+                  },
+                })
               : previous.decorations;
-            if (symbols.length === 0) return { symbols, caretLine, decorations: set };
+            if (symbols.length === 0) return { symbols, caretLine, decorations: set, counts };
             const lines = tr.docChanged ? changedLines(state.doc, tr) : new Map<number, PMNode>();
             // The caret's old and new lines: a bare last glyph shows or hides as it moves (A741).
             const before = previous.caretLine < 0 ? -1 : tr.mapping.map(previous.caretLine, 1);
@@ -651,17 +870,18 @@ export const LineSymbols = Extension.create<LineSymbolsOptions, LineSymbolsStora
               // Only this line's own: `find` also returns a neighbour's that touches it.
               const end = pos + line.nodeSize;
               const stale = set.find(pos, end).filter((deco) => deco.from > pos && deco.to < end);
-              if (stale.length) set = set.remove(stale);
+              if (stale.length) {
+                countGutters(stale, counts, -1);
+                set = set.remove(stale);
+              }
               decorateLine(state.doc, line, pos, symbols, draw, added, caretLine);
             }
-            if (added.length) set = set.add(state.doc, added);
-            return { symbols, caretLine, decorations: set };
+            if (added.length) {
+              countGutters(added, counts);
+              set = set.add(state.doc, added);
+            }
+            return { symbols, caretLine, decorations: set, counts };
           },
-        },
-        // Fits each margin to the gutter as it is drawn, and all of them on a resize (T52).
-        view: (view) => {
-          draw.fitter.attach(view);
-          return { update: () => draw.fitter.update(), destroy: () => draw.fitter.destroy() };
         },
         // The caret never rests inside a run (A745). Only the selection moves, so the binding's
         // repair guard leaves this plugin alone (yjs14.ts).
@@ -681,6 +901,13 @@ export const LineSymbols = Extension.create<LineSymbolsOptions, LineSymbolsStora
         },
         props: {
           decorations: (state) => lineSymbolsKey.getState(state)?.decorations,
+          // The gutter's width (A1680): the stylesheet keeps this many slots left of the text.
+          attributes: (state): Record<string, string> => {
+            const slots = symbolGutterSlots(state);
+            return slots > 0
+              ? { 'data-symbol-slots': String(slots), style: `--pm-symbol-slots: ${slots}` }
+              : {};
+          },
           handleDOMEvents: {
             // A soft keyboard's Backspace (Gboard sends keyCode 229 and then this): at the start
             // of a symbol line's text the browser would reach into the hidden run or do nothing

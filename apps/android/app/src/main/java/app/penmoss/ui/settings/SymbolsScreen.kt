@@ -264,12 +264,14 @@ fun SymbolsScreen(
     }
 }
 
-/** What a list item's key does (A1632), as its row says. */
+/** What a kind's key does (A1632, A1679), as its row says: the web's `KINDS` words. */
 internal fun kindDoes(kind: String): String = when (kind) {
     "checkbox" -> "☐ → ☑ → no box"
     "bullet" -> "Line ⇄ bulleted item"
+    "strike" -> "⊘ strikes the line through"
     else -> "Line ⇄ numbered item"
 }
+
 
 /** What a symbol's row says in place of its colour for an emoji, in its own colours (A1588). */
 internal const val OWN_COLOURS = "Its Own Colours"
@@ -302,8 +304,13 @@ private fun SymbolDialog(
     var refused by remember { mutableStateOf<String?>(null) }
     var picking by rememberSaveable { mutableStateOf(false) }
     val colours = LocalSymbolColours.current
-    val taken = others.map { LineSymbols.glyphKey(it.glyph) }.toSet()
-    val glyphProblem = LineSymbols.glyphProblem(glyph)
+    val taken = others.filter { it.kind == null }.map { LineSymbols.glyphKey(it.glyph) }.toSet()
+    // ☐, ☑ and ⊘ are how the Checkbox and Strikethrough are written on a line (A1678): a glyph
+    // of one's own may not take them while that kind is listed, unless it already had it.
+    val reserved = others.filter { it.kind != null }.flatMap { kind -> LineSymbols.kindGlyphs(kind.kind!!).map { it to kind.name } }.toMap()
+    fun usedBy(candidate: String): String? =
+        reserved[LineSymbols.glyphKey(candidate)]?.takeIf { LineSymbols.glyphKey(candidate) != LineSymbols.glyphKey(initial.glyph) || isNew }?.let { "Used by $it" }
+    val glyphProblem = usedBy(glyph) ?: LineSymbols.glyphProblem(glyph)
         ?: if (LineSymbols.glyphKey(glyph) in taken) "$glyph is already in the list" else null
     // An emoji comes in its own colours (A1588): no colour to choose, and the one it had is kept.
     val locked = ColourLock.isLocked(glyph)
@@ -311,7 +318,7 @@ private fun SymbolDialog(
         CharacterPicker(
             current = glyph,
             refusal = { candidate ->
-                if (LineSymbols.glyphKey(candidate) in taken) "Already in the list" else LineSymbols.glyphProblem(candidate)
+                usedBy(candidate) ?: if (LineSymbols.glyphKey(candidate) in taken) "Already in the list" else LineSymbols.glyphProblem(candidate)
             },
             onPick = {
                 glyph = it

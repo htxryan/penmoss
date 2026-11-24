@@ -5,7 +5,7 @@ import { DEFAULT_SYMBOLS } from '@penmoss/core/line-symbols';
 import { DEVICE_MAP, readSettings, setSetting } from '@penmoss/model/workspace';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandCenter, memoryBindings } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
 import { CommandsContext } from '../../src/commands/hooks';
@@ -337,7 +337,8 @@ describe('Settings → Symbols: list items (A1632)', () => {
     click(byTest('symbol-add-bullet'));
     const stored = settings()['symbols.list'] as Array<Record<string, string>>;
     expect(stored.at(-1)).toEqual({ kind: 'bullet' });
-    expect(byTest('symbols-notice').textContent).toBe('Added Bulleted List Item as symbol 7.');
+    // The defaults are seven since Strikethrough (A1679): the new item is the eighth.
+    expect(byTest('symbols-notice').textContent).toBe('Added Bulleted List Item as symbol 8.');
 
     click(byTest('symbol-remove-1'));
     expect((settings()['symbols.list'] as Array<Record<string, string>>)[0]).toEqual({
@@ -347,6 +348,65 @@ describe('Settings → Symbols: list items (A1632)', () => {
     });
     click(byTest('symbol-add'));
     expect(byTest<HTMLButtonElement>('symbol-add-checkbox').disabled).toBe(false);
+  });
+
+  it('shows Strikethrough’s row with what it does, and offers it in Add once (A1679)', () => {
+    render(<SymbolsSettings />);
+    const rows = [...host.querySelectorAll<HTMLElement>('[data-testid="symbol-row"]')];
+    const strike = rows.at(-1)!;
+    expect(strike.dataset['kind']).toBe('strike');
+    expect(strike.textContent).toContain('Strikethrough');
+    expect(strike.textContent).toContain('⊘ strikes the line through');
+    click(byTest('symbol-add'));
+    const add = byTest<HTMLButtonElement>('symbol-add-strike');
+    expect(add.textContent).toContain('Strikethrough');
+    expect(add.disabled).toBe(true);
+    // Closed again, then Strikethrough removed: Add offers it.
+    click(byTest('symbol-add'));
+    click(byTest(`symbol-remove-${rows.length}`));
+    expect((settings()['symbols.list'] as Array<Record<string, string>>).at(-1)).toEqual({
+      glyph: '→',
+      name: 'Next',
+      colour: 'accent',
+    });
+    click(byTest('symbol-add'));
+    click(byTest('symbol-add-strike'));
+    expect((settings()['symbols.list'] as Array<Record<string, string>>).at(-1)).toEqual({
+      kind: 'strike',
+    });
+  });
+
+  it('refuses ☐, ☑ and ⊘ for a glyph of one’s own while the kind that writes them is listed', async () => {
+    render(<SymbolsSettings />);
+    act(() => byTest('symbol-glyph-2').click());
+    const search = () => byTest<HTMLInputElement>('symbol-glyph-2-picker-search');
+    await vi.waitFor(() => expect(host.querySelector('[data-value="★"]')).not.toBeNull(), {
+      timeout: 5_000,
+    });
+    for (const [glyph, kind] of [
+      ['☐', 'Checkbox'],
+      ['☑', 'Checkbox'],
+      ['⊘', 'Strikethrough'],
+    ] as const) {
+      act(() => {
+        const field = search();
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+          field,
+          glyph,
+        );
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      const cell = host.querySelector<HTMLElement>(
+        `[data-testid="symbol-glyph-2-picker-cell"][data-value="${glyph}"]`,
+      );
+      if (cell) {
+        expect(cell.getAttribute('aria-disabled')).toBe('true');
+        expect(cell.getAttribute('aria-label')).toContain(`Used by ${kind}`);
+      } else {
+        // Not among the Characters: offered as typed, and refused with why.
+        expect(byTest('symbol-glyph-2-picker-problem').textContent).toBe(`Used by ${kind}`);
+      }
+    }
   });
 });
 

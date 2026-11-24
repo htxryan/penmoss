@@ -3,7 +3,6 @@ import {
   BACKSPACE_INTO_TITLE,
   COMMENT_ADD_EVENT,
   COMMENT_OPEN_EVENT,
-  noteLayoutChanged,
   revealThread,
   selectionAnchor,
   showCommentThreads,
@@ -149,15 +148,6 @@ export function NoteView({
   useLayoutPart('panel', preview ? undefined : panelMode);
   /** The open panel lies over the note's text: a narrow pane has no room beside it. */
   const panelOver = showPanel && !wide;
-  // The panel coming or going moves the text column, in a wide window without changing its
-  // width: the line symbols' margins are fitted to the gutter again (T52 items 3 and 6).
-  const layoutKey = `${panelMode} ${wide}`;
-  const laidOut = useRef(layoutKey);
-  useLayoutEffect(() => {
-    if (laidOut.current === layoutKey) return;
-    laidOut.current = layoutKey;
-    noteLayoutChanged();
-  }, [layoutKey]);
   /** The note's text, scrolled on its own: its place is kept by the tab. */
   const scrollRef = useRef<HTMLDivElement>(null);
   /** The thread picked in the panel or the note (T48). */

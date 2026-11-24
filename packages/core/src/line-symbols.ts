@@ -6,6 +6,11 @@
  * `## ? Open questions`, `| ★ Ship it |`: T52 item 2). The editor draws a leading run of known glyphs in the margin; the
  * codec, the git mirror and agents see only text, so nothing here changes a note's bytes.
  *
+ * Symbols stack (A1678): a line carries several, the Checkbox and Strikethrough among them.
+ * On a bulleted or numbered item, a heading or a cell the Checkbox is text in the run too, `☐`
+ * or `☑` (`1. ☐ ★ Call the bank`), so the item keeps its number and its list is untouched;
+ * Strikethrough is `⊘` (`⊘ ★ Call the bank`), and the editor strikes the line's text through.
+ *
  * The glyphs a person uses are one synced setting, `symbols.list` (A743): up to nine entries,
  * one per shortcut slot, each a glyph, a name and a theme colour (D14). The web writes it in
  * its WorkspaceDoc; the Android app through `PUT /api/settings`, which checks it with
@@ -78,17 +83,36 @@ export const SYMBOL_COLOUR_LABELS: Readonly<Record<ThemeSymbolColour, string>> =
 };
 
 /**
- * A list item a slot can be instead of a glyph (A1632): its shortcut turns the selection's
- * lines into checklist, bulleted or numbered items and back. Stored as `{ "kind": … }`.
+ * What a slot can be instead of a glyph of one's own (A1632, A1679): a Checkbox, a bulleted
+ * or numbered list item, or Strikethrough. Stored as `{ "kind": … }`. Bulleted and Numbered turn
+ * the selection's lines into those items and back; Checkbox and Strikethrough stack with the
+ * line's symbols (`CHECKBOX_GLYPH`, `STRIKE_GLYPH`, A1678).
  */
-export type SymbolKind = 'checkbox' | 'bullet' | 'ordered';
+export type SymbolKind = 'checkbox' | 'bullet' | 'ordered' | 'strike';
 
 /** The kinds in the order Settings → Symbols offers them, with how they are shown and named. */
 export const SYMBOL_KINDS: Readonly<Record<SymbolKind, { glyph: string; name: string }>> = {
   checkbox: { glyph: '☐', name: 'Checkbox' },
   bullet: { glyph: '•', name: 'Bulleted List Item' },
   ordered: { glyph: '1.', name: 'Numbered List Item' },
+  strike: { glyph: '⊘', name: 'Strikethrough' },
 };
+
+/**
+ * A Checkbox as text in a line's run (A1678): on a bulleted or numbered item, a heading or a
+ * table cell, where a GFM `[ ]` cannot go without changing the list or the block, the box is
+ * `☐`, and `☑` once ticked (`- ☐ Milk`, `1. ☑ ★ Call the bank`). Any markdown reader shows
+ * the box. A plain line still becomes a GFM checklist item (`- [ ] Milk`).
+ */
+export const CHECKBOX_GLYPH = '☐';
+export const CHECKED_GLYPH = '☑';
+
+/** Strikethrough as text in a line's run (A1679): the editor strikes the line's text through. */
+export const STRIKE_GLYPH = '⊘';
+
+/** The glyphs a kind is written as in a line's run; none for a list item, which is never text. */
+export const kindGlyphs = (kind: SymbolKind): readonly string[] =>
+  kind === 'checkbox' ? [CHECKBOX_GLYPH, CHECKED_GLYPH] : kind === 'strike' ? [STRIKE_GLYPH] : [];
 
 export const SYMBOL_KIND_KEYS = Object.keys(SYMBOL_KINDS) as readonly SymbolKind[];
 
@@ -100,8 +124,8 @@ export interface LineSymbol {
   readonly name: string;
   readonly colour: SymbolColour;
   /**
-   * A list item rather than a glyph (A1632). Its glyph and name are only how it is shown: it
-   * is never text at the start of a line, so no line's run holds it.
+   * A kind rather than a glyph of one's own (A1632). Its glyph and name are how it is shown. A
+   * line's run holds a Checkbox or Strikethrough as `kindGlyphs`, and never a list item (A1678).
    */
   readonly kind?: SymbolKind;
 }
@@ -113,7 +137,10 @@ export const kindSymbol = (kind: SymbolKind): LineSymbol => ({
   kind,
 });
 
-/** The list until a person changes it (A743): Checkbox on the first slot, then the glyphs (A1632). */
+/**
+ * The list until a person changes it (A743): Checkbox on the first slot, then the glyphs
+ * (A1632), then Strikethrough (A1679).
+ */
 export const DEFAULT_SYMBOLS: readonly LineSymbol[] = [
   kindSymbol('checkbox'),
   { glyph: '★', name: 'Important', colour: 'calloutWarning' },
@@ -121,6 +148,7 @@ export const DEFAULT_SYMBOLS: readonly LineSymbol[] = [
   { glyph: '!', name: 'Follow-up', colour: 'danger' },
   { glyph: '💡', name: 'Idea', colour: 'calloutTip' },
   { glyph: '→', name: 'Next', colour: 'accent' },
+  kindSymbol('strike'),
 ];
 
 /**
@@ -282,6 +310,8 @@ export interface SymbolToken {
   readonly from: number;
   /** Just after the space that follows it. */
   readonly to: number;
+  /** A Checkbox written `☑`: ticked (A1678). */
+  readonly checked?: true;
 }
 
 export interface SymbolRun {
@@ -317,13 +347,15 @@ export function symbolRun(
   bareEnd = true,
 ): SymbolRun {
   if (symbols.length === 0 || text.length === 0) return NO_RUN;
-  const slots = new Map<string, number>();
-  symbols.forEach((symbol, index) => {
-    // A list item is never text on the line (A1632).
-    if (symbol.kind) return;
-    const key = glyphKey(symbol.glyph);
-    if (!slots.has(key)) slots.set(key, index);
-  });
+  const slots = slotsOf(symbols);
+  const token = (glyph: string, from: number, to: number): SymbolToken | null => {
+    const key = glyphKey(glyph);
+    const index = slots.get(key);
+    if (index === undefined) return null;
+    return key === CHECKED_GLYPH && symbols[index]?.kind === 'checkbox'
+      ? { index, from, to, checked: true }
+      : { index, from, to };
+  };
   const tokens: SymbolToken[] = [];
   let at = 0;
   for (;;) {
@@ -331,22 +363,124 @@ export function symbolRun(
     if (space === -1 && bareEnd) {
       // A line that is only symbols ends with a glyph: markdown drops a line's trailing space,
       // so `★ ` is written `★` and must read back as a symbol (T44 review, A741).
-      const index =
-        text.length - at <= MAX_GLYPH_CHARS ? slots.get(glyphKey(text.slice(at))) : undefined;
-      if (at < text.length && index !== undefined) {
-        tokens.push({ index, from: at, to: text.length });
+      const found =
+        at < text.length && text.length - at <= MAX_GLYPH_CHARS
+          ? token(text.slice(at), at, text.length)
+          : null;
+      if (found) {
+        tokens.push(found);
         at = text.length;
       }
       break;
     }
     if (space === -1 || space <= at || space - at > MAX_GLYPH_CHARS) break;
-    const index = slots.get(glyphKey(text.slice(at, space)));
-    if (index === undefined) break;
-    tokens.push({ index, from: at, to: space + 1 });
+    const found = token(text.slice(at, space), at, space + 1);
+    if (!found) break;
+    tokens.push(found);
     at = space + 1;
   }
   return tokens.length ? { tokens, end: at } : NO_RUN;
 }
+
+/**
+ * Each glyph a line's run may hold, by its key, with its slot: a person's own glyphs first, then
+ * the Checkbox's and Strikethrough's (A1678), so a stored glyph of one's own that looks the
+ * same stays that symbol. A list item is never text (A1632).
+ */
+function slotsOf(symbols: readonly LineSymbol[]): Map<string, number> {
+  const slots = new Map<string, number>();
+  symbols.forEach((symbol, index) => {
+    if (symbol.kind) return;
+    const key = glyphKey(symbol.glyph);
+    if (!slots.has(key)) slots.set(key, index);
+  });
+  symbols.forEach((symbol, index) => {
+    if (!symbol.kind) return;
+    for (const glyph of kindGlyphs(symbol.kind)) if (!slots.has(glyph)) slots.set(glyph, index);
+  });
+  return slots;
+}
+
+/**
+ * Glyphs a person's own symbol may not take while the list holds the kind that writes them
+ * (A1678): `☐` and `☑` with the Checkbox, `⊘` with Strikethrough. Settings refuses them as
+ * taken, so a line's text always means one symbol.
+ */
+export function reservedGlyphs(symbols: readonly LineSymbol[]): ReadonlyMap<string, LineSymbol> {
+  const reserved = new Map<string, LineSymbol>();
+  for (const symbol of symbols) {
+    if (symbol.kind) for (const glyph of kindGlyphs(symbol.kind)) reserved.set(glyph, symbol);
+  }
+  return reserved;
+}
+
+/** The glyph a token is drawn as: its symbol's, or the Checkbox's ☐ or ☑ (A1678). */
+export function tokenGlyph(token: SymbolToken, symbols: readonly LineSymbol[]): string {
+  const symbol = symbols[token.index];
+  if (!symbol) return '';
+  if (symbol.kind === 'checkbox') return token.checked ? CHECKED_GLYPH : CHECKBOX_GLYPH;
+  return symbol.kind === 'strike' ? STRIKE_GLYPH : symbol.glyph;
+}
+
+/** What a screen reader is given for a token: "☐ Checkbox", "☑ Checkbox", "★ Important". */
+export const tokenSpokenName = (token: SymbolToken, symbols: readonly LineSymbol[]): string =>
+  symbolSpokenName({ glyph: tokenGlyph(token, symbols), name: symbols[token.index]?.name ?? '' });
+
+/** Whether a line's run marks it struck through (A1679). */
+export const runIsStruck = (run: SymbolRun, symbols: readonly LineSymbol[]): boolean =>
+  run.tokens.some((token) => symbols[token.index]?.kind === 'strike');
+
+/** A line's Checkbox in its run (A1678): none, unticked (`☐`) or ticked (`☑`). */
+export type BoxState = 'none' | 'unticked' | 'ticked';
+
+export function runBox(run: SymbolRun, symbols: readonly LineSymbol[]): BoxState {
+  const box = run.tokens.find((token) => symbols[token.index]?.kind === 'checkbox');
+  if (!box) return 'none';
+  return box.checked ? 'ticked' : 'unticked';
+}
+
+/**
+ * The edits that put the Checkbox in slot `index` in state `to` on a line with `run` (A1678):
+ * `☐` added at its place by list order (as `symbolEdits` adds a symbol), `☐` and `☑` swapped in
+ * place, or the box taken off. Other symbols are untouched; a second box (two devices added one
+ * at once) goes. Edits are in descending order, as `symbolEdits`' are.
+ */
+export function checkboxEdits(
+  run: SymbolRun,
+  symbols: readonly LineSymbol[],
+  index: number,
+  to: BoxState,
+  text?: string,
+): TextEdit[] {
+  if (symbols[index]?.kind !== 'checkbox') return [];
+  if (to === 'none') return symbolEdits(run, symbols, index, false, text);
+  const boxes = run.tokens.filter((token) => token.index === index);
+  if (boxes.length === 0)
+    return to === 'unticked' ? symbolEdits(run, symbols, index, true, text) : [];
+  const glyph = to === 'ticked' ? CHECKED_GLYPH : CHECKBOX_GLYPH;
+  const edits: TextEdit[] = [];
+  boxes.forEach((box, at) => {
+    if (at > 0) {
+      edits.push({ from: box.from, to: box.to, insert: '' });
+      return;
+    }
+    if ((box.checked === true) === (to === 'ticked')) return;
+    // The glyph alone, not its space (a last glyph read back from `☐ ` has none).
+    const end = text !== undefined && text[box.to - 1] !== ' ' ? box.to : box.to - 1;
+    edits.push({ from: box.from, to: end, insert: glyph });
+  });
+  return edits.sort((a, b) => b.from - a.from);
+}
+
+/**
+ * How many slots the note's symbol gutter has room for (A1680): as many as its widest stack,
+ * up to three, and none in a note without symbols. A line with more than three shows the first
+ * two and a "+N" chip there.
+ */
+export const GUTTER_SLOTS = 3;
+
+export const gutterSlots = (widest: number): number =>
+  Number.isFinite(widest) ? Math.max(0, Math.min(GUTTER_SLOTS, Math.floor(widest))) : 0;
 
 /** Whether the text's run has the symbol in slot `index`. */
 export const hasSymbol = (run: SymbolRun, index: number): boolean =>
@@ -375,8 +509,10 @@ export function symbolEdits(
   text?: string,
 ): TextEdit[] {
   const symbol = symbols[index];
-  // A list item changes the line's block, not its text (A1632).
-  if (!symbol || symbol.kind) return [];
+  // A list item changes the line's block, not its text (A1632); a Checkbox goes on as `☐` and
+  // Strikethrough as `⊘` (A1678, A1679).
+  const glyph = symbol?.kind ? kindGlyphs(symbol.kind)[0] : symbol?.glyph;
+  if (!symbol || glyph === undefined) return [];
   // A second copy of a symbol (two devices added it at once) goes with any toggle on the line.
   const seen = new Set<number>();
   const extra = run.tokens.filter((token) => {
@@ -402,7 +538,7 @@ export function symbolEdits(
   const insert: TextEdit = {
     from: at,
     to: at,
-    insert: bare ? ` ${symbol.glyph} ` : `${symbol.glyph} `,
+    insert: bare ? ` ${glyph} ` : `${glyph} `,
   };
   // Applied in order from the end; a removal starting where the symbol goes comes first.
   return [insert, ...removals(extra)].sort((a, b) => b.from - a.from || b.to - a.to);

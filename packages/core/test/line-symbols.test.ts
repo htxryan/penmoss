@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { headingsOf, sectionOf, type DocJson } from '../src/links';
 import {
   DEFAULT_SYMBOLS,
+  GUTTER_SLOTS,
   MAX_SYMBOLS,
+  checkboxEdits,
+  gutterSlots,
+  reservedGlyphs,
+  runBox,
+  runIsStruck,
+  tokenGlyph,
+  type BoxState,
   SYMBOL_COLOUR_KEYS,
   SYMBOL_GLYPH_PRESETS,
   SYMBOLS_SETTING,
@@ -238,15 +246,16 @@ describe('list items in the symbol list (A1632)', () => {
     { kind: 'ordered' },
   ];
 
-  it('puts Checkbox on the first slot by default, the glyphs after it', () => {
+  it('puts Checkbox on the first slot by default, the glyphs after it, Strikethrough last', () => {
     expect(DEFAULT_SYMBOLS[0]).toEqual(kindSymbol('checkbox'));
-    expect(DEFAULT_SYMBOLS.slice(1).map((symbol) => symbol.glyph)).toEqual([
+    expect(DEFAULT_SYMBOLS.slice(1, -1).map((symbol) => symbol.glyph)).toEqual([
       '★',
       '?',
       '!',
       '💡',
       '→',
     ]);
+    expect(DEFAULT_SYMBOLS.at(-1)).toEqual(kindSymbol('strike'));
   });
 
   it('stores a kind as { kind } alone, and reads it back as its entry', () => {
@@ -268,9 +277,110 @@ describe('list items in the symbol list (A1632)', () => {
 
   it('is never text at the start of a line, and a toggle leaves the text alone', () => {
     const list = readSymbolList(stored)!;
-    expect(symbolRun('☐ 1. Call', list).tokens).toEqual([]);
+    // A list item's own glyph (`1.`) is never read from the text, nor written to it.
+    expect(symbolRun('1. Call', list).tokens).toEqual([]);
     expect(symbolRun('★ Call', list).tokens.map((token) => token.index)).toEqual([1]);
-    expect(symbolEdits(symbolRun('Call', list), list, 0, true, 'Call')).toEqual([]);
+    expect(symbolEdits(symbolRun('Call', list), list, 2, true, 'Call')).toEqual([]);
+    // The Checkbox stacks as text since A1678: `☐` is its slot's.
+    expect(symbolRun('☐ 1. Call', list).tokens.map((token) => token.index)).toEqual([0]);
+  });
+});
+
+describe('stacked symbols: the Checkbox and Strikethrough in a line’s run (A1678, A1679)', () => {
+  const list = DEFAULT_SYMBOLS;
+  const slots = (text: string) => symbolRun(text, list).tokens.map((token) => token.index);
+  const glyphs = (text: string) =>
+    symbolRun(text, list).tokens.map((token) => tokenGlyph(token, list));
+  const box = (text: string, to: BoxState) =>
+    apply(text, checkboxEdits(symbolRun(text, list), list, 0, to, text));
+  const toggleIn = (text: string, index: number, add: boolean) =>
+    apply(text, symbolEdits(symbolRun(text, list), list, index, add, text));
+
+  it('reads ☐, ☑ and ⊘ in a run beside the other symbols, each on its slot', () => {
+    expect(slots('☐ ★ Call the bank')).toEqual([0, 1]);
+    expect(glyphs('☑ ★ ! Call the bank')).toEqual(['☑', '★', '!']);
+    expect(symbolRun('☑ Call', list).tokens[0]).toMatchObject({ index: 0, checked: true });
+    expect(symbolRun('☐ Call', list).tokens[0]!.checked).toBeUndefined();
+    expect(glyphs('⊘ ★ Struck')).toEqual(['⊘', '★']);
+    expect(runIsStruck(symbolRun('★ ⊘ Struck', list), list)).toBe(true);
+    expect(runIsStruck(symbolRun('★ Plain', list), list)).toBe(false);
+    expect(runBox(symbolRun('★ ☐ Box', list), list)).toBe('unticked');
+    expect(runBox(symbolRun('☑️ Box', list), list)).toBe('ticked');
+    expect(runBox(symbolRun('★ Box', list), list)).toBe('none');
+    // Without those kinds in the list, the glyphs are text (A742).
+    const glyphsOnly = list.filter((symbol) => !symbol.kind);
+    expect(symbolRun('☐ ⊘ Call', glyphsOnly).tokens).toEqual([]);
+    // A glyph of the person's own that looks the same stays theirs.
+    const own: LineSymbol[] = [kindSymbol('checkbox'), { glyph: '☐', name: '☐', colour: 'accent' }];
+    expect(symbolRun('☐ Call', own).tokens.map((token) => token.index)).toEqual([1]);
+    expect(symbolRun('☑ Call', own).tokens.map((token) => token.index)).toEqual([0]);
+    expect([...reservedGlyphs(list).keys()]).toEqual(['☐', '☑', '⊘']);
+    expect(reservedGlyphs(glyphsOnly).size).toBe(0);
+  });
+
+  it('steps a run’s Checkbox through ☐, ☑ and none, in list order, other symbols kept', () => {
+    expect(box('★ ! Call the bank', 'unticked')).toBe('☐ ★ ! Call the bank');
+    expect(box('☐ ★ ! Call the bank', 'ticked')).toBe('☑ ★ ! Call the bank');
+    expect(box('☑ ★ ! Call the bank', 'unticked')).toBe('☐ ★ ! Call the bank');
+    expect(box('☑ ★ ! Call the bank', 'none')).toBe('★ ! Call the bank');
+    expect(box('Call the bank', 'unticked')).toBe('☐ Call the bank');
+    // Already so: nothing to do.
+    expect(checkboxEdits(symbolRun('☑ Call', list), list, 0, 'ticked', '☑ Call')).toEqual([]);
+    expect(checkboxEdits(symbolRun('Call', list), list, 0, 'ticked', 'Call')).toEqual([]);
+    // A line of only a box, read back without its space; a box with a variation selector.
+    expect(box('☐', 'ticked')).toBe('☑');
+    expect(box('☑️ Call', 'unticked')).toBe('☐ Call');
+    // Two boxes (two devices at once): the first takes the state, the second goes.
+    expect(box('☐ ★ ☐ Call', 'ticked')).toBe('☑ ★ Call');
+    // Not a Checkbox slot: nothing.
+    expect(checkboxEdits(symbolRun('Call', list), list, 1, 'unticked', 'Call')).toEqual([]);
+  });
+
+  it('toggles Strikethrough as ⊘ at its place by list order, the other symbols kept', () => {
+    const strike = list.length - 1;
+    expect(toggleIn('★ ? Call', strike, true)).toBe('★ ? ⊘ Call');
+    expect(toggleIn('☐ ★ ? ⊘ Call', strike, false)).toBe('☐ ★ ? Call');
+    // A symbol with an earlier slot goes before it; the Checkbox first of all.
+    expect(toggleIn('⊘ Call', 1, true)).toBe('★ ⊘ Call');
+    expect(box('⊘ Call', 'unticked')).toBe('☐ ⊘ Call');
+  });
+
+  it('round-trips stacked lines byte for byte, the bullet, number and box kept', () => {
+    for (const markdown of [
+      '- ☐ ★ Milk\n- Eggs\n',
+      '1. ☑ ★ Call the bank\n2. Book the train\n',
+      '⊘ ★ Struck through\n',
+      '## ☐ ⊘ Open questions\n',
+      '- [ ] ⊘ ! Send the form\n',
+      '- ☐ ★ !\n',
+    ]) {
+      expect(serializeMarkdown(parseMarkdown(markdown))).toBe(markdown);
+    }
+    // Still a bulleted and a numbered list, each item its own line with its symbols.
+    const doc = parseMarkdown('1. ☐ ★ First\n2. Second\n').doc;
+    expect(doc.firstChild!.type.name).toBe('orderedList');
+    expect(doc.firstChild!.childCount).toBe(2);
+    expect(blockTexts('- ☐ ★ Milk\n- Eggs\n')).toEqual(['☐ ★ Milk', 'Eggs']);
+    expect(run('1. ☑ ★ Call the bank', list)).toEqual([]);
+    expect(run('☑ ★ Call the bank', list)).toEqual(['☑', '★']);
+  });
+
+  it('stores Strikethrough as { kind } alone', () => {
+    const stored = [{ kind: 'strike' }, { glyph: '★', name: '★', colour: 'accent' }];
+    expect(symbolListProblem(stored)).toBeNull();
+    expect(readSymbolList(stored)![0]).toEqual(kindSymbol('strike'));
+    expect(kindSymbol('strike')).toMatchObject({ glyph: '⊘', name: 'Strikethrough' });
+    expect(storedSymbolList(readSymbolList(stored)!)).toEqual(stored);
+    expect(symbolListProblem([{ kind: 'strike' }, { kind: 'strike' }])).toMatch(/repeats the kind/);
+  });
+});
+
+describe('the symbol gutter’s width (A1680)', () => {
+  it('has room for the widest stack, none without symbols, three at most', () => {
+    expect(GUTTER_SLOTS).toBe(3);
+    expect([0, 1, 2, 3, 4, 9].map(gutterSlots)).toEqual([0, 1, 2, 3, 3, 3]);
+    expect(gutterSlots(-1)).toBe(0);
+    expect(gutterSlots(Number.NaN)).toBe(0);
   });
 });
 

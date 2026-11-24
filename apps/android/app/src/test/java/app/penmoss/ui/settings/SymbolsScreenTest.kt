@@ -381,15 +381,67 @@ class SymbolsScreenTest {
         compose.onNodeWithTag("symbol-add-ordered").performClick()
         assertEquals(LineSymbols.kindSymbol("ordered"), stored.last().last())
         assertEquals(JsonObject(mapOf("kind" to JsonPrimitive("ordered"))), LineSymbols.toJson(stored.last()).last())
-        compose.onNodeWithTag("symbols-notice").assertTextContains("Added Numbered List Item as symbol 7.")
+        compose.onNodeWithTag("symbols-notice").assertTextContains("Added Numbered List Item as symbol 8.")
         compose.onNodeWithTag("symbol-delete-0").performScrollTo().performClick()
         assertEquals("★", stored.last().first().glyph)
         compose.onNodeWithTag("symbols-notice").assertTextContains("Removed Checkbox. Your lists stay as they are.")
     }
 
+    /** Strikethrough (A1679): the defaults' last row, what its key does, and Add offers it once. */
+    @Test
+    fun strikethroughIsARowAndAddOffersItOnce() {
+        screen(LineSymbols.DEFAULTS)
+        assertEquals(7, LineSymbols.DEFAULTS.size)
+        compose.onNodeWithTag("symbol-colour-label-6", useUnmergedTree = true).performScrollTo().assertTextEquals("Strikethrough")
+        compose.onNodeWithTag("symbol-key-6", useUnmergedTree = true).assertTextEquals("Alt+Shift+7 · ⊘ strikes the line through")
+        compose.onNodeWithText("⊘", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithTag("symbol-add").performScrollTo().performClick()
+        compose.onNodeWithTag("symbol-add-strike").assertIsNotEnabled().assertTextContains("Strikethrough (In the List)")
+        // Closed, then Strikethrough taken off: Add offers it, and it goes back as { kind }.
+        compose.onNodeWithTag("symbol-add-symbol").performClick()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithTag("symbol-delete-6").performScrollTo().performClick()
+        assertEquals(LineSymbols.DEFAULTS.dropLast(1), stored.last())
+        compose.onNodeWithTag("symbols-notice").assertTextContains("Removed Strikethrough. Your lists stay as they are.")
+        compose.onNodeWithTag("symbol-add").performScrollTo().performClick()
+        compose.onNodeWithTag("symbol-add-strike").assertIsEnabled().performClick()
+        assertEquals(LineSymbols.kindSymbol("strike"), stored.last().last())
+        assertEquals(JsonObject(mapOf("kind" to JsonPrimitive("strike"))), LineSymbols.toJson(stored.last()).last())
+        compose.onNodeWithTag("symbols-notice").assertTextContains("Added Strikethrough as symbol 7.")
+    }
+
+    /**
+     * ☐, ☑ and ⊘ are how the Checkbox and Strikethrough are written on a line (A1678): a glyph of
+     * one's own may not take them while that kind is listed, typed or from the symbol picker.
+     */
+    @Test
+    fun refusesTheGlyphsTheCheckboxAndStrikethroughWrite() {
+        screen(LineSymbols.DEFAULTS)
+        compose.onNodeWithTag("symbol-row-1").performClick()
+        for ((glyph, kind) in listOf("☐" to "Checkbox", "☑" to "Checkbox", "⊘" to "Strikethrough")) {
+            compose.onNodeWithTag("symbol-glyph").performTextReplacement(glyph)
+            compose.onNodeWithText("Used by $kind").assertIsDisplayed()
+            compose.onNodeWithTag("symbol-save").assertIsNotEnabled()
+        }
+        compose.onNodeWithTag("symbol-choose").performScrollTo().performClick()
+        compose.onNodeWithTag("character-search").performTextInput("ballot box")
+        compose.onAllNodesWithTag("character-☐")[0].assertIsNotEnabled()
+            .assertContentDescriptionEquals("Ballot Box, Used by Checkbox")
+    }
+
+    /** Without the Checkbox in the list, ☐ is a glyph like any other (A1678). */
+    @Test
+    fun withoutTheKindsTheirGlyphsAreFree() {
+        screen(glyphs)
+        compose.onNodeWithTag("symbol-row-0").performClick()
+        compose.onNodeWithTag("symbol-glyph").performTextReplacement("☐")
+        compose.onNodeWithTag("symbol-save").assertIsEnabled().performClick()
+        assertEquals("☐", stored.last().first().glyph)
+    }
+
     @Test
     fun theSettingsHomeListsTheGlyphs() {
-        assertEquals("☐ ★ ? ! 💡 →", symbolsSummary(Settings()))
+        assertEquals("☐ ★ ? ! 💡 → ⊘", symbolsSummary(Settings()))
         val none = Settings(JsonObject(mapOf(SettingKeys.SYMBOLS to LineSymbols.toJson(emptyList()))))
         assertEquals("None", symbolsSummary(none))
         assertEquals(emptyList<LineSymbol>(), none.symbols)

@@ -1086,11 +1086,21 @@
 
 /*
  * Line symbols (T44, A745): a line's leading glyphs are text, hidden in the line and drawn by a
- * widget in the left margin, beside the drag handle, coloured, taking no room in the text
- * column. The widget sits against the note's text column (the editor's element holds it),
- * whatever the nesting, at the line's own height. A phone has no margin to draw in: there they
- * sit before the text instead (still outside the caret's path).
+ * widget in the note's symbol gutter, beside the drag handle, coloured. The widget sits against
+ * the note's text column (the editor's element holds it), whatever the nesting, level with the
+ * line's first line of text.
+ *
+ * The gutter (A1680): the editor marks how many slots its widest stack needs, up to three
+ * (`data-symbol-slots`), and keeps that much room left of its text, so every line's text starts
+ * at the same place, symbols or not. A note without symbols keeps none. The glyphs are one size
+ * on every line, a heading's too, so three always fit; at every width, on the phone too.
  */
+.note-body .ProseMirror[data-symbol-slots] {
+  margin-inline-start: calc(
+    var(--pm-symbol-slots) * var(--pm-note-symbol-slot) + var(--pm-note-symbol-gutter-gap)
+  );
+}
+
 .pm-symbol-run {
   display: none;
 }
@@ -1106,11 +1116,18 @@
   font-size: var(--pm-note-symbol-size);
   font-weight: var(--pm-weight-regular);
   font-style: normal;
+  /* The line's own line height, so a glyph sits level with its text on a heading too. */
+  line-height: var(--pm-note-symbol-leading);
   text-decoration: none;
   white-space: nowrap;
   transform: translateX(calc(-100% - 0.3rem));
   cursor: pointer;
   user-select: none;
+}
+
+/* Strikethrough (A1679): the line's text, not its symbols. */
+.pm-symbol-struck {
+  text-decoration: line-through;
 }
 
 .pm-symbols:hover {
@@ -1202,18 +1219,6 @@
   text-align: center;
 }
 
-/* Before the text where there is no margin: the widget holds its popover (and its badge). */
-@media (max-width: 700px) {
-  /* No layer of its own here (auto), or a table's toolbar below the line would sit under it;
-     its popover still layers over the next lines. */
-  .pm-symbols {
-    position: relative;
-    z-index: auto;
-    margin-inline-end: 0.3em;
-    transform: none;
-  }
-}
-
 /*
  * In a table cell (T52 item 2) the page's margin is out of reach: the symbols sit at the start
  * of the cell's text, at any width. The widget stays in the flow (static), so its popover is
@@ -1222,6 +1227,7 @@
 .note-body .pm-table .pm-symbols {
   position: static;
   margin-inline-end: 0.3em;
+  line-height: inherit;
   transform: none;
 }
 

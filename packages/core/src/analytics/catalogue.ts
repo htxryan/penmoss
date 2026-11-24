@@ -873,6 +873,7 @@ export const CLICK_NAMES: readonly string[] = [
   'editor.format.symbol',
   'editor.format.symbol.edit',
   'editor.format.symbol.item',
+  'editor.symbol.tick',
   'editor.format.table',
   'editor.format.undo',
   'editor.link.apply',
