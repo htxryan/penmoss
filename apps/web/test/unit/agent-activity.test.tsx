@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { ActivityList } from '../../src/agents/AgentActivity';
 import { gitUndoMessage, type ActivityEntry } from '../../src/agents/activity';
+import type { NotebookActivity } from '../../src/sources/agent-activity-list';
 import { DeletedFolderList } from '../../src/trash/DeletedFolders';
 import { folderContents, restoredMessage } from '../../src/trash/deleted-folders';
 
@@ -21,22 +22,33 @@ const entry = (over: Partial<ActivityEntry> = {}): ActivityEntry => ({
   ...over,
 });
 
-// T42 (A561): Settings → Devices lists what agents changed, each with Undo.
+const item = (over: Partial<ActivityEntry> = {}): NotebookActivity => ({
+  notebookId: 'nb1',
+  notebook: 'Personal',
+  entry: entry(over),
+});
+
+// T42 (A561), PEN-146: Settings → Agent Activity lists what agents changed, each with Undo.
 describe('agent activity', () => {
-  it('lists each change with the agent that made it and an Undo', () => {
-    const html = render(<ActivityList entries={[entry()]} busy={null} onUndo={() => {}} />);
+  it('lists each change with the agent that made it, its notebook and an Undo', () => {
+    const html = render(
+      <ActivityList items={[item()]} busy={false} canUndo={() => true} onUndo={() => {}} />,
+    );
     expect(html).toContain('Renamed the folder “Garden” to “Yard”');
-    expect(html).toContain('✦ Claude Code');
+    expect(text(html)).toContain('✦ Claude Code · Personal · ');
+    expect(html).toContain('data-notebook-id="nb1"');
     // The Undo button is named Undo and described by the change it undoes.
-    expect(html).toMatch(/id="agent-activity-7"[^>]*>Renamed the folder “Garden” to “Yard”/);
-    expect(html).toContain('aria-describedby="agent-activity-7"');
+    expect(html).toMatch(/id="agent-activity-nb1-7"[^>]*>Renamed the folder “Garden” to “Yard”/);
+    expect(html).toContain('aria-describedby="agent-activity-nb1-7"');
+    expect(html).toContain('data-event="settings.agent-activity.undo"');
   });
 
   it('shows who undid a change instead of its Undo', () => {
     const html = render(
       <ActivityList
-        entries={[entry({ undoneAt: 1_761_230_000_000, undoneBy: 'Ryan’s Mac' })]}
-        busy={null}
+        items={[item({ undoneAt: 1_761_230_000_000, undoneBy: 'Ryan’s Mac' })]}
+        busy={false}
+        canUndo={() => true}
         onUndo={() => {}}
       />,
     );
@@ -45,17 +57,19 @@ describe('agent activity', () => {
     expect(html).not.toContain('aria-describedby');
   });
 
-  it('says when there is nothing to list', () => {
-    const html = render(<ActivityList entries={[]} busy={null} onUndo={() => {}} />);
-    expect(html).toContain('No agent has moved notes or changed folders, settings or tags');
+  it('offers no Undo for a notebook no longer on this Mac, and waits while one runs', () => {
+    expect(
+      render(
+        <ActivityList items={[item()]} busy={false} canUndo={() => false} onUndo={() => {}} />,
+      ),
+    ).not.toContain('aria-describedby');
+    expect(
+      render(<ActivityList items={[item()]} busy canUndo={() => true} onUndo={() => {}} />),
+    ).toMatch(/<button[^>]*disabled=""/);
   });
 
-  // #172 (A920): a git notebook's list, from its branch, in the same words.
-  it('says a git notebook’s empty list and Undo answers in the server’s words', () => {
-    const html = render(
-      <ActivityList entries={[]} busy={null} onUndo={() => {}} empty="Nothing here." />,
-    );
-    expect(text(html)).toBe('Nothing here.');
+  // #172 (A920): a git notebook's list, from its branch; Undo answers in the server's words.
+  it('says what Undo did in the server’s words', () => {
     expect(gitUndoMessage({ ok: true, alreadyUndone: false, notice: null }, entry())).toBe(
       'Undone: Renamed the folder “Garden” to “Yard”.',
     );
