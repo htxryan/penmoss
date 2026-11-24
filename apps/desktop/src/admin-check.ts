@@ -15,8 +15,7 @@
 import { boundedExec } from './bounded-exec';
 
 /** What the page is told: done, or not done and why (shown as is). */
-type AdminCheckAnswer =
-  { readonly ok: true } | { readonly ok: false; readonly message: string };
+type AdminCheckAnswer = { readonly ok: true } | { readonly ok: false; readonly message: string };
 
 /** How a run of the helper ended. */
 export type HelperOutcome =
