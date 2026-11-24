@@ -16,6 +16,7 @@
  * N is stable within one scrubber, so a log still shows that two lines name the same repository.
  * Kotlin's `ErrorScrub` follows the same cases (`apps/android/contract/scrub-v1.json`).
  */
+import { wholeWord } from '../whole-word';
 
 export interface ScrubKnown {
   /** The GitHub login signed in. */
@@ -103,13 +104,6 @@ function replacePaths(text: string): string {
 const ULID = /\b[0-7][0-9A-HJKMNP-TV-Z]{25}\b/gi;
 const UUID = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g;
 const HEX_ID = /\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{12,}\b/gi;
-/** A git notebook's repository as `owner/name`, when it is known. */
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-function wholeWord(name: string): RegExp {
-  return new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(name)}(?![\\p{L}\\p{N}_])`, 'giu');
-}
-
 /** The shortest name scrubbed as a known name; shorter ones would eat ordinary words. */
 export const MIN_KNOWN_NAME = 3;
 
@@ -120,6 +114,7 @@ export interface Scrubber {
   text(text: string): string;
 }
 
+/** A git notebook's repository as `owner/name`, when it is known. */
 function repoKey(value: string): string {
   return value
     .toLowerCase()

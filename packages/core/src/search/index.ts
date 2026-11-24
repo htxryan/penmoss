@@ -32,6 +32,7 @@ export {
   MemoryVectorCache,
   VectorIndex,
   chunkKey,
+  coverageNotice,
   dot,
   fakeEmbedder,
   fuseHybrid,

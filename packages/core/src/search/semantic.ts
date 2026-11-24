@@ -218,6 +218,10 @@ export interface MeaningCoverage {
   readonly total: number;
 }
 
+/** What a search by meaning says while some notes have no vectors yet (A1156), in every app. */
+export const coverageNotice = ({ indexed, total }: MeaningCoverage): string =>
+  `Meaning covers ${indexed} of ${total} notes so far.`;
+
 export interface UpdateOptions {
   /** Stop embedding after about this long (ms); the rest waits for the next update. */
   readonly budgetMs?: number;

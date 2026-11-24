@@ -16,8 +16,8 @@ import {
   MEANING_DOWNLOADING,
   MEANING_NOT_READY,
   NotebookMeaning,
-  coverageNotice,
 } from '../../src/search/meaning';
+import { coverageNotice } from '@penmoss/core/search';
 import { NO_FILTERS, SearchService, type SearchRequest } from '../../src/search/service';
 import { SourceSearches } from '../../src/search/sources';
 import { memoryNotes } from './support/memory-notes';
@@ -301,7 +301,7 @@ describe('the search box with meaning (T77, A1155, A1156)', () => {
   it('says how much meaning covers while it indexes', async () => {
     const { service, emit } = await setup();
     emit({ state: 'indexing', indexed: 3, total: 9 });
-    expect((await service.search(hybrid('backup'))).notice).toBe(coverageNotice(3, 9));
+    expect((await service.search(hybrid('backup'))).notice).toBe(coverageNotice({ indexed: 3, total: 9 }));
   });
 
   it('says Words only while the model is not ready, and why', async () => {
