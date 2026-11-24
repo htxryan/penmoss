@@ -322,6 +322,11 @@ describe('the stamper', () => {
     const fields = (version: string, packaged: boolean) =>
       macFields({ version, packaged, platform: 'darwin', systemVersion: '26.0.1' });
     expect(fields('0.1.0', false)).toMatchObject({ channel: 'dev', osVersion: '26.0' });
+    // Run from source, an Alpha version is a development build, as the CLI in it says too.
+    expect(fields('0.2.2-alpha.1185', false)).toMatchObject({ channel: 'dev' });
+    expect(
+      macFields({ version: '0.2.2', packaged: true, platform: 'linux', systemVersion: '6.1' }),
+    ).toMatchObject({ os: 'linux', osVersion: '6.1' });
     expect(fields('0.2.2-alpha.1185', true)).toMatchObject({
       channel: 'alpha',
       version: '0.2.2-alpha.1185',

@@ -12,10 +12,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  channelOf,
   CLI_FLAGS,
   CLI_NAMES,
   eventProblem,
   isCatalogued,
+  osOf,
   Recorder,
   STATES,
   type AnalyticsEvent,
@@ -28,7 +30,7 @@ import { ToolRecorder } from '../src/analytics';
 import type { FlagSpec } from '../src/args';
 import { COMMANDS, GLOBAL_FLAGS, NOTEBOOK_COMMANDS, NOTEBOOK_FLAGS } from '../src/main';
 import type { AnalyticsIo } from '../src/io';
-import { channelOf, macosVersionOf, nodeAnalytics } from '../src/node-analytics';
+import { macosVersionOf, nodeAnalytics } from '../src/node-analytics';
 import { HANDSHAKE, machine as machineAt, MemoryHosts, rpc, testRoot } from './support/machine';
 
 const root = testRoot('penmoss-analytics-');
@@ -665,10 +667,21 @@ describe('what every event says of this machine', () => {
     expect(macosVersionOf('nonsense')).toBe('0');
   });
 
-  it('the channel from the version', () => {
+  it('the channel from the version: the Mac app’s rule, from core', () => {
     expect(channelOf('0.3.0-alpha.12', true)).toBe('alpha');
     expect(channelOf('0.3.0', true)).toBe('stable');
     expect(channelOf('0.1.0', false)).toBe('dev');
+    // Run from source, an Alpha version is still a development build.
+    expect(channelOf('0.3.0-alpha.12', false)).toBe('dev');
+    expect(nodeAnalytics({ version: '0.3.0-alpha.12' }).fields.channel).toBe('dev');
+  });
+
+  it('the OS from Node’s platform', () => {
+    expect(osOf('darwin')).toBe('macos');
+    expect(osOf('linux')).toBe('linux');
+    expect(osOf('win32')).toBe('windows');
+    expect(osOf('freebsd')).toBe('other');
+    expect(nodeAnalytics({ platform: 'win32' }).fields.os).toBe('windows');
   });
 });
 

@@ -253,6 +253,24 @@ export function majorMinor(version: string): string {
   return match[2] === undefined ? match[1]! : `${match[1]}.${match[2]}`;
 }
 
+/** The OS as events name it, from Node's `process.platform`. */
+export function osOf(platform: string): AnalyticsOs {
+  if (platform === 'darwin') return 'macos';
+  if (platform === 'linux') return 'linux';
+  if (platform === 'win32') return 'windows';
+  return 'other';
+}
+
+/**
+ * The channel a desktop or CLI build is on, the rule Android's `channelOf` has too: a build that
+ * is not packaged (run from source) is `dev` whatever its version, an Alpha build (its version
+ * says so) `alpha`, else `stable`.
+ */
+export function channelOf(version: string, packaged: boolean): Channel {
+  if (!packaged) return 'dev';
+  return /-alpha\b/.test(version) ? 'alpha' : 'stable';
+}
+
 /** The width class of a window `width` CSS pixels (or dp) wide. */
 export function sizeClassOf(width: number): SizeClass {
   if (width < 600) return 'compact';

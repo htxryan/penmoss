@@ -4,7 +4,7 @@
  * what every event says of this process: its version, channel and system.
  */
 import { release } from 'node:os';
-import { majorMinor, type AnalyticsOs, type Channel } from '@penmoss/core/analytics';
+import { channelOf, majorMinor, osOf, type Channel } from '@penmoss/core/analytics';
 import {
   AnalyticsStore,
   analyticsBase,
@@ -18,14 +18,6 @@ import {
 } from '@penmoss/core/analytics/node';
 import type { AnalyticsIo } from './io';
 import { VERSION } from './version';
-
-/** The OS as events name it. */
-export function osOf(platform: NodeJS.Platform): AnalyticsOs {
-  if (platform === 'darwin') return 'macos';
-  if (platform === 'linux') return 'linux';
-  if (platform === 'win32') return 'windows';
-  return 'other';
-}
 
 /**
  * macOS's version from Darwin's (`os.release()`), major.minor: Darwin 20–24 is macOS 11–15
@@ -50,12 +42,6 @@ export function osVersionOf(platform: NodeJS.Platform, kernel: string = release(
     return system ? majorMinor(system) : macosVersionOf(kernel);
   }
   return majorMinor(kernel);
-}
-
-/** The channel a version was built for: an Alpha build's says so; a packaged one is stable. */
-export function channelOf(version: string, packaged: boolean): Channel {
-  if (/-alpha\b/.test(version)) return 'alpha';
-  return packaged ? 'stable' : 'dev';
 }
 
 /**

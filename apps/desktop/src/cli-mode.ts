@@ -9,7 +9,8 @@ import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { app } from 'electron';
-import { channelOf, killGitOnSignals, nodeIo, run } from '@penmoss/cli/node';
+import { killGitOnSignals, nodeIo, run } from '@penmoss/cli/node';
+import { channelOf } from '@penmoss/core/analytics';
 import { NodeMeaning } from '@penmoss/embed';
 import { CLI_FLAG } from './local-agents';
 

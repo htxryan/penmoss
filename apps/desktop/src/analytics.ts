@@ -26,6 +26,7 @@
 import { unwatchFile, watchFile, type Stats } from 'node:fs';
 import {
   answer as answered,
+  channelOf,
   changedLimits,
   DEFAULT_LIMITS,
   envOptsOut,
@@ -36,6 +37,7 @@ import {
   majorMinor,
   MAX_BATCH_EVENTS,
   newSessionId,
+  osOf,
   readLimits,
   resetId as withNewId,
   SEND_AT_WAITING,
@@ -43,8 +45,6 @@ import {
   stateFor,
   STATES,
   type AnalyticsEvent,
-  type AnalyticsOs,
-  type Channel,
   type ClientFields,
   type ConsentAnswer,
   type ConsentFile,
@@ -233,8 +233,9 @@ export function parseLimitChanges(value: unknown): Partial<Record<LimitKey, numb
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9.]{1,20})?$/;
 
 /**
- * The fields every event from the Mac app carries: a development build is `dev`, an Alpha build
- * (its version says so) `alpha`, else `stable`; the OS version as major.minor only.
+ * The fields every event from the Mac app carries: the channel by core's `channelOf` (a
+ * development build is `dev`, an Alpha build `alpha`, else `stable`), the CLI's rule too; the OS
+ * version as major.minor only.
  */
 export function macFields(options: {
   readonly version: string;
@@ -243,25 +244,12 @@ export function macFields(options: {
   readonly systemVersion: string;
 }): Omit<ClientFields, 'sizeClass'> {
   const version = VERSION.test(options.version) ? options.version : '0.0.0';
-  const channel: Channel = !options.packaged
-    ? 'dev'
-    : /-alpha\b/.test(version)
-      ? 'alpha'
-      : 'stable';
-  const os: AnalyticsOs =
-    options.platform === 'darwin'
-      ? 'macos'
-      : options.platform === 'linux'
-        ? 'linux'
-        : options.platform === 'win32'
-          ? 'windows'
-          : 'other';
   return {
     client: 'mac',
     actor: 'person',
     version,
-    channel,
-    os,
+    channel: channelOf(version, options.packaged),
+    os: osOf(options.platform),
     osVersion: majorMinor(options.systemVersion),
   };
 }
