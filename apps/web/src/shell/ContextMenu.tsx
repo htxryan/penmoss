@@ -7,12 +7,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-
-const ITEMS = [
-  '[role="menuitem"]:not([disabled])',
-  '[role="menuitemradio"]:not([disabled])',
-  '[role="menuitemcheckbox"]:not([disabled])',
-].join(', ');
+import { MENU_ITEMS, menuKeyDown } from './menu-keys';
 
 /**
  * An in-app context menu (T42, #104 item 1, A570), at the pointer or, opened from the keyboard
@@ -64,7 +59,7 @@ export function ContextMenu({
     const menu = ref.current;
     (
       menu?.querySelector<HTMLElement>('[aria-checked="true"]:not([disabled])') ??
-      menu?.querySelector<HTMLElement>(ITEMS)
+      menu?.querySelector<HTMLElement>(MENU_ITEMS)
     )?.focus();
   }, [place]);
 
@@ -92,21 +87,8 @@ export function ContextMenu({
   }, []);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = [...(ref.current?.querySelectorAll<HTMLElement>(ITEMS) ?? [])];
-    const at = items.indexOf(document.activeElement as HTMLElement);
-    const move = (index: number) => {
-      event.preventDefault();
-      items[(index + items.length) % items.length]?.focus();
-    };
     event.stopPropagation();
-    if (event.key === 'ArrowDown') move(at + 1);
-    else if (event.key === 'ArrowUp') move(at - 1);
-    else if (event.key === 'Home') move(0);
-    else if (event.key === 'End') move(items.length - 1);
-    else if (event.key === 'Escape' || event.key === 'Tab') {
-      event.preventDefault();
-      onClose();
-    }
+    menuKeyDown(ref.current, event, onClose);
   };
 
   return (
