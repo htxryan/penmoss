@@ -19,7 +19,7 @@ import {
 } from '../src/ai-description';
 import { isLocalSetting } from '../src/settings';
 
-// A tag's AI description (A-NEW-1): its prompt, its tokens and what each says.
+// A tag's AI description (A1677): its prompt, its tokens and what each says.
 
 const note = (title: string, tags: string[], over: Partial<TagPromptNote> = {}): TagPromptNote => ({
   title,

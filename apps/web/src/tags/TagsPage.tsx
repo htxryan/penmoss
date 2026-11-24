@@ -1,3 +1,4 @@
+import { aiProviderOf } from '@penmoss/core/ai-description';
 import { normaliseTag, TAG_DESCRIPTION_MAX } from '@penmoss/core/tags';
 import type { TagChange } from '@penmoss/model/tags';
 import { Icon } from '@penmoss/ui/icons';
@@ -11,10 +12,12 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { windowDescriber } from '../notes/describer';
 import { useNoteList } from '../notes/hooks';
 import { Menu, MenuItem } from '../shell/Menu';
 import { SourceScope } from '../sources/context';
-import { useSourcesState } from '../sources/hooks';
+import { useAppWorkspace, useSource, useSourcesState } from '../sources/hooks';
+import { showToast } from '../toasts/toasts';
 import type { Source } from '../sources/registry';
 import type { Workspace } from '../workspace/service';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
@@ -29,6 +32,7 @@ import {
   tagRows,
   type TagRow,
 } from './manage';
+import { ChooseAiProviderDialog, GenerateTagsDialog } from './GenerateTagsDialog';
 import { DeleteDialog, MergeDialog } from './TagDialogs';
 import { useTagChanges } from './tag-changes';
 import { TagDoneToast, type TagDone } from './TagDoneToast';
@@ -44,6 +48,8 @@ export type ShowTag = (sourceId: string | null, tag: string) => void;
  * Saving…, Saved or Not saved. It is where tags are managed too: rename in place, merge, delete,
  * from a row's ⋯ or, for the selected tags, the buttons above the table; each acts on that
  * notebook's notes only, and its toast offers Undo. Choosing a tag's name opens Search on it.
+ * A row's ⋯ also has Generate AI Description, and the page Generate All… (A1677): the tag
+ * prompt, with the tag's notes and the other tags on them, sent to the AI provider.
  */
 export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
   const sources = useSourcesState().all;
@@ -51,6 +57,12 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
   const [query, setQuery] = useState('');
   const [done, setDone] = useState<TagDone | null>(null);
   const closeDone = useCallback(() => setDone(null), []);
+  const [generating, setGenerating] = useState(false);
+  const [noProvider, setNoProvider] = useState(false);
+  const app = useAppWorkspace();
+  // The provider is this device's setting: re-read when the app's settings change.
+  useSyncExternalStore(app.subscribe, app.getState, app.getState);
+  const provider = aiProviderOf(app.settings());
   const section = (source: Source) => (
     <NotebookTags
       name={source.name}
@@ -58,6 +70,8 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
       query={query}
       onShowTag={onShowTag}
       onDone={setDone}
+      provider={provider !== 'none'}
+      onNoProvider={() => setNoProvider(true)}
     />
   );
   return (
@@ -65,24 +79,37 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
       <div className="tags-page-top" data-testid="tags-page-top">
         <h2 id="tags-page-heading">Tags</h2>
         {anyTags === false ? null : (
-          <label className="tags-filter tags-page-filter">
-            <Icon name="search" size={14} />
-            <input
-              className="input"
-              type="search"
-              aria-label="Filter Tags"
-              placeholder="Filter tags"
-              value={query}
-              data-testid="tags-filter"
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape' && query) {
-                  event.preventDefault();
-                  setQuery('');
-                }
-              }}
-            />
-          </label>
+          <div className="tags-page-tools">
+            <label className="tags-filter tags-page-filter">
+              <Icon name="search" size={14} />
+              <input
+                className="input"
+                type="search"
+                aria-label="Filter Tags"
+                placeholder="Filter tags"
+                value={query}
+                data-testid="tags-filter"
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && query) {
+                    event.preventDefault();
+                    setQuery('');
+                  }
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn tags-generate-all"
+              data-ui="item"
+              data-event="tags.generate-all"
+              data-testid="tags-generate-all"
+              onClick={() => (provider === 'none' ? setNoProvider(true) : setGenerating(true))}
+            >
+              <Icon name="sparkle" size={14} />
+              Generate All…
+            </button>
+          </div>
         )}
       </div>
       <div className="tags-page-scroll" data-testid="tags-page-scroll">
@@ -103,8 +130,27 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
         )}
       </div>
       <TagDoneToast done={done} onClose={closeDone} />
+      {generating ? (
+        <GenerateTagsDialog sources={sources} onClose={() => setGenerating(false)} />
+      ) : null}
+      {noProvider ? <ChooseAiProviderDialog onClose={() => setNoProvider(false)} /> : null}
     </section>
   );
+}
+
+const NEVER = () => () => undefined;
+
+/** A description written or cleared (A1677): the toast says so, and Undo puts back `before`. */
+function describedDone(workspace: Workspace, tag: string, text: string, before: string): TagDone {
+  return {
+    text,
+    undone: `The description of #${tag} is as it was.`,
+    undo: async () => {
+      workspace.setTagDescription(tag, before);
+      await workspace.flush().catch(() => undefined);
+      return 0;
+    },
+  };
 }
 
 /** Whether any notebook has a tag. */
@@ -131,6 +177,8 @@ function NotebookTags({
   query,
   onShowTag,
   onDone,
+  provider,
+  onNoProvider,
 }: {
   /** The notebook's name, as its section's heading. */
   readonly name: string;
@@ -138,8 +186,17 @@ function NotebookTags({
   readonly query: string;
   readonly onShowTag: ShowTag;
   readonly onDone: (done: TagDone) => void;
+  /** This device has an AI provider (Settings → AI Descriptions). */
+  readonly provider: boolean;
+  /** Generate AI Description without one: where to choose one. */
+  readonly onNoProvider: () => void;
 }) {
   const workspace = useWorkspace();
+  const source = useSource();
+  const describer = windowDescriber();
+  // Which tags are being generated, as the describer says.
+  const busyKey = () => describer?.tagsBusyIn(sourceId).join(' ') ?? '';
+  useSyncExternalStore(describer?.subscribe ?? NEVER, busyKey, busyKey);
   const list = useNoteList();
   const noteTags = useMemo(() => list.map((entry) => entry.tags), [list]);
   const rows = useMemo(() => tagRows(noteTags), [noteTags]);
@@ -213,6 +270,36 @@ function NotebookTags({
           : `Deleted ${tagList(tags)} from ${notesText(n)}.`,
     );
     setDeleting(null);
+  };
+
+  /**
+   * Generate AI Description (A1677): the answer replaces the description, and the toast's Undo
+   * puts back what it said.
+   */
+  const generate = async (tag: string) => {
+    if (!provider || !describer || !source) {
+      onNoProvider();
+      return;
+    }
+    const answer = await describer.describeTag(source, tag);
+    if (answer.ok) {
+      onDone(describedDone(workspace, tag, `Wrote a description of #${tag}.`, answer.before));
+    } else if (answer.code === 'no-provider') {
+      onNoProvider();
+    } else {
+      showToast({
+        text: `Couldn’t generate a description of #${tag}: ${answer.message}`,
+        tone: 'error',
+        testId: 'tags-generate-error',
+      });
+    }
+  };
+
+  const clear = (tag: string) => {
+    const before = descriptions[tag] ?? '';
+    workspace.setTagDescription(tag, '');
+    void workspace.flush().catch(() => undefined);
+    onDone(describedDone(workspace, tag, `Cleared the description of #${tag}.`, before));
   };
 
   const headingId = `tags-page-${sourceId}`;
@@ -353,6 +440,9 @@ function NotebookTags({
                 setMerging({ sources: [row.tag], target });
               }}
               onDelete={() => setDeleting([row.tag])}
+              generating={describer?.tagBusy(sourceId, row.tag) ?? false}
+              onGenerate={() => void generate(row.tag)}
+              onClear={() => clear(row.tag)}
             />
           ))}
         </div>
@@ -501,6 +591,9 @@ function TagRowView({
   onRename,
   onMergeInto,
   onDelete,
+  generating,
+  onGenerate,
+  onClear,
 }: {
   readonly row: TagRow;
   readonly rows: readonly TagRow[];
@@ -517,6 +610,10 @@ function TagRowView({
   readonly onRename: (from: string, to: string, nested: boolean) => Promise<void>;
   readonly onMergeInto: (target: string | null) => void;
   readonly onDelete: () => void;
+  /** Its AI description is being generated now. */
+  readonly generating: boolean;
+  readonly onGenerate: () => void;
+  readonly onClear: () => void;
 }) {
   const at = filter ? row.tag.indexOf(filter) : -1;
   const cells = (name: ReactNode) => (
@@ -547,7 +644,12 @@ function TagRowView({
         {row.count}
       </span>
       <span role="cell" className="tags-desc-cell">
-        <DescriptionField tag={row.tag} value={description} workspace={workspace} />
+        <DescriptionField
+          tag={row.tag}
+          value={description}
+          workspace={workspace}
+          generating={generating}
+        />
       </span>
       <span role="cell" className="tags-more-cell">
         <Menu
@@ -567,6 +669,20 @@ function TagRowView({
           <MenuItem icon="branch" data-event="tags.row.merge" onClick={() => onMergeInto(null)}>
             Merge Into…
           </MenuItem>
+          <div className="menu-sep" role="separator" />
+          <MenuItem
+            icon="sparkle"
+            data-event="tags.row.generate"
+            disabled={generating}
+            onClick={onGenerate}
+          >
+            Generate AI Description
+          </MenuItem>
+          {description ? (
+            <MenuItem icon="close" data-event="tags.row.clear-description" onClick={onClear}>
+              Clear Description
+            </MenuItem>
+          ) : null}
           <div className="menu-sep" role="separator" />
           <MenuItem icon="trash" danger data-event="tags.row.delete" onClick={onDelete}>
             Delete…
@@ -859,10 +975,13 @@ function DescriptionField({
   tag,
   value,
   workspace,
+  generating = false,
 }: {
   readonly tag: string;
   readonly value: string;
   readonly workspace: Workspace;
+  /** Its AI description is being generated (A1677): said where Saving… is. */
+  readonly generating?: boolean;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [state, setState] = useState<SaveState>('idle');
@@ -976,7 +1095,12 @@ function DescriptionField({
         </button>
       )}
       <span className="tags-save" role="status" data-testid="tags-save">
-        {state === 'saving' ? (
+        {generating ? (
+          <>
+            <span className="tags-save-dot" aria-hidden="true" />
+            Generating…
+          </>
+        ) : state === 'saving' ? (
           <>
             <span className="tags-save-dot" aria-hidden="true" />
             Saving…

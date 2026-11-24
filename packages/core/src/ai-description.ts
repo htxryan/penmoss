@@ -13,7 +13,7 @@
  *   nothing is sent while it is `none`.
  * - The prompt's tokens (`renderPrompt`), the text hash a description is stamped with
  *   (`describedTextHash`), and cutting long notes (`cutForPrompt`).
- * - A tag's description (A-NEW-1): its own prompt (`ai.description.tagPrompt`), with tokens for
+ * - A tag's description (A1677): its own prompt (`ai.description.tagPrompt`), with tokens for
  *   the tag, the notes carrying it and the other tags on them (`tagPrompt`), written on demand
  *   from the Tags page into the notebook's `tagDescriptions` (PEN-68).
  */
@@ -41,7 +41,7 @@ export const AI_DESCRIPTION_PAUSE_SETTING = 'ai.description.pause';
 export const AI_DESCRIPTION_MODEL_SETTING = 'ai.description.model';
 /** The prompt, with tokens; unset is the built-in default. */
 export const AI_DESCRIPTION_PROMPT_SETTING = 'ai.description.prompt';
-/** The tag prompt (A-NEW-1), with tokens; unset is the built-in default. */
+/** The tag prompt (A1677), with tokens; unset is the built-in default. */
 export const AI_TAG_PROMPT_SETTING = 'ai.description.tagPrompt';
 /** This device's AI provider (a local setting, never synced): `none`, `anthropic`, `claude-code`. */
 export const AI_PROVIDER_SETTING = 'ai.provider';
@@ -320,7 +320,7 @@ export function descriptionLine(description: string, max = 240): string {
   return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
 }
 
-// --- Tag descriptions (A-NEW-1) ---
+// --- Tag descriptions (A1677) ---
 
 export const DEFAULT_TAG_PROMPT = `Write a description of a tag for an AI agent choosing tags for a note, or looking for the notes a tag finds.
 

@@ -593,7 +593,7 @@ export function installFakeBridge(config: {
       : {}),
     ...(config.analytics ? { analytics: fakeAnalytics(config.analytics) } : {}),
     // AI Descriptions (PEN-161): a stubbed provider. Each describe is kept in `__aiCalls`; the
-    // answer names the note's title (the prompt's `Title:` line). `sk-ant-good` is the one key
+    // answer names the note's title (the prompt's `Title:` line), or a tag's (its `Tag:` line). `sk-ant-good` is the one key
     // Anthropic accepts here.
     ...(config.ai
       ? {
@@ -653,8 +653,11 @@ export function installFakeBridge(config: {
               describe: (provider: string, model: string, prompt: string) => {
                 calls.push(`${provider}|${model}|${prompt}`);
                 const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'a note';
+                // A tag's prompt (A1677) names the tag: the answer does too.
+                const tag = /^Tag: #(.*)$/m.exec(prompt)?.[1];
+                const text = tag ? `Notes about #${tag}.` : `A note about ${title}.`;
                 return new Promise<{ ok: true; text: string }>((resolve) =>
-                  setTimeout(() => resolve({ ok: true, text: `A note about ${title}.` }), 50),
+                  setTimeout(() => resolve({ ok: true, text }), 50),
                 );
               },
               onChange: (listener: () => void) => listen(listeners, listener),
