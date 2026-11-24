@@ -2,6 +2,7 @@ package app.penmoss.ui.keys
 
 import androidx.compose.foundation.lazy.rememberLazyListState
 import app.penmoss.analytics.TrackScroll
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.settings.settingRow
 import android.content.res.Configuration
 import android.view.KeyEvent as AndroidKeyEvent
@@ -226,20 +227,20 @@ fun ShortcutsScreen(
                     Text(
                         "For a hardware keyboard. Changes reach your other Android phones; your Macs keep their own. Shortcuts need Ctrl or Alt so typing never runs a command. " +
                             "Meta+/ lists the ones that work where you are.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.roles.help,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (!keyboard) {
                         Text(
                             "Connect a keyboard to change a shortcut.",
                             Modifier.testTag("shortcutsNeedKeyboard"),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.roles.body,
                         )
                     }
                     if (!canChange) {
                         Text(
                             "Shortcuts can be changed once Penmoss has read your settings from your primary notebook.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.roles.body,
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -249,7 +250,7 @@ fun ShortcutsScreen(
                                 "${Combos.format(it.combo)} is bound to both “${it.first.title}” and “${it.second.title}”"
                             },
                             Modifier.testTag("shortcutClashes").semantics { liveRegion = LiveRegionMode.Polite },
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.roles.body,
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -292,7 +293,7 @@ fun ShortcutsScreen(
                     Text(
                         area,
                         Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp).semantics { heading() },
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.roles.listHead,
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -407,7 +408,7 @@ private fun ShortcutRow(
                         Text(
                             "Changed from " + (defaults.joinToString(" or ") { Combos.format(it) }.ifEmpty { "no shortcut" }),
                             Modifier.testTag("changedFrom-${command.id}"),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.roles.help,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -439,16 +440,16 @@ private fun ShortcutRow(
                 notice.text,
                 Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("notice-${command.id}")
                     .semantics { liveRegion = LiveRegionMode.Polite },
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.help,
                 color = if (notice.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             is RowNotice.Clash -> Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("conflict-${command.id}")) {
                 // Its title, as the web's ConfirmBlock has it; the sentence below says why.
-                Text("Replace This Shortcut?", Modifier.semantics { heading() }, style = MaterialTheme.typography.titleSmall)
+                Text("Replace This Shortcut?", Modifier.semantics { heading() }, style = MaterialTheme.roles.groupHead)
                 Text(
                     "${Combos.format(notice.combo)} is used by ${notice.others.joinToString(" and ") { "“${it.title}”" }}.",
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.body,
                     color = MaterialTheme.colorScheme.error,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

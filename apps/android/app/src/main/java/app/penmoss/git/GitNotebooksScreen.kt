@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.semantics.Role
 import app.penmoss.ui.common.DotState
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.settings.DotMarkOf
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -277,7 +278,7 @@ fun GitNotebooksScreen(
             Text(
                 FIRST_RUN,
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitFirstRun"),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.roles.body,
             )
         }
         for ((at, row) in ui.rows.withIndex()) NotebookRow(row, primary = ui.journal == row.view.localId, if (at == 0) Modifier.settingRow("all-notebooks") else Modifier, event = if (ui.home) "home.notebook" else "settings.git-notebooks.row.open") {
@@ -420,10 +421,10 @@ internal fun CopySettingsDialog(rows: List<GitRow>, from: String, to: String?, o
                 }
                 Text(
                     "Replaces ${target?.let { "${it.view.name}’s" } ?: "their"} settings with ${sourceRow.view.name}’s: the theme, Home, shortcuts and the rest. Quick Access stays as it is.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.body,
                 )
                 done?.let {
-                    Text(it, Modifier.testTag("gitCopySettingsDone").semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.typography.bodyMedium)
+                    Text(it, Modifier.testTag("gitCopySettingsDone").semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.roles.body)
                 }
             }
         },
@@ -494,7 +495,7 @@ private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modi
                 color = if (row.status?.phase == "stopped") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
-        trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
+        trailingContent = { Text("›", style = MaterialTheme.roles.rowLabel) },
         modifier = modifier.testTag("gitNotebook-${view.localId}").clickable(role = Role.Button, onClick = trackedClick(event, onClick)),
     )
 }
@@ -505,7 +506,7 @@ internal fun PrimaryChip() {
     Text(
         "Primary",
         Modifier.background(MaterialTheme.colorScheme.primaryContainer).padding(horizontal = 6.dp, vertical = 1.dp).testTag("primaryChip"),
-        style = MaterialTheme.typography.labelSmall,
+        style = MaterialTheme.roles.badge,
         color = MaterialTheme.colorScheme.onPrimaryContainer,
     )
 }
@@ -529,10 +530,10 @@ fun RecoveryNotice(notice: GitRecoveryNotice, onSave: () -> Unit = {}, onDismiss
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 if (notice.titles.isEmpty()) "Notes Not Brought Back" else "Notes Brought Back",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.roles.groupHead,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
-            Text(notice.words(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+            Text(notice.words(), style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onErrorContainer)
             Row {
                 if (notice.unrecovered.isNotEmpty()) {
                     TextButton(onClick = trackedClick("settings.git-notebooks.recovered.save", onSave), Modifier.testTag("gitRecoveredSave")) { Text("Save Their Text") }
@@ -563,19 +564,19 @@ fun WithheldNotice(copies: List<WithheldView>, onSave: () -> Unit, onDelete: (St
                     "${copies.size} recovered copies of notes deleted for good on another device were kept on this device only."
                 },
                 Modifier.testTag("gitWithheldWords"),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.roles.groupHead,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Text(
                 "Nothing of ${if (copies.size == 1) "it" else "them"} was pushed. Keep and Sync pushes a copy as a new note; Delete for Good removes it from this phone. The phone asks for your fingerprint, face or screen lock first.",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             for (copy in copies) {
                 Text(
                     OwnerWords.title(copy.title) ?: "An untitled note",
                     Modifier.testTag("gitWithheldTitle-${copy.noteId}"),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.body,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Row {
@@ -594,14 +595,14 @@ internal fun Purges(row: GitRow, actions: GitNotebooksActions) {
     val id = row.view.localId
     val purges = row.purges
     LaunchedEffect(id, purges == null) { if (purges == null) actions.onShowPurges(id) }
-    Text("Delete for Good, Waiting", style = MaterialTheme.typography.titleSmall)
+    Text("Delete for Good, Waiting", style = MaterialTheme.roles.groupHead)
     if (purges == null) {
-        Text("Reading the notes from the branch…", style = MaterialTheme.typography.bodySmall)
+        Text("Reading the notes from the branch…", style = MaterialTheme.roles.help)
         return
     }
     Kept(row, actions)
     if (purges.isEmpty()) {
-        Text("Nothing waits: the next sync goes on.", style = MaterialTheme.typography.bodySmall)
+        Text("Nothing waits: the next sync goes on.", style = MaterialTheme.roles.help)
         return
     }
     Help(
@@ -644,7 +645,7 @@ internal fun Kept(row: GitRow, actions: GitNotebooksActions) {
             Text(
                 "Kept ${OwnerWords.title(note.title) ?: "an untitled note"}.",
                 Modifier.weight(1f).testTag("gitKept-${note.id}"),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.body,
             )
             TextButton(onClick = trackedClick("settings.git-notebooks.reconfirm.undo-keep") { actions.onUndoKeep(row.view.localId, note.id) }, Modifier.testTag("gitKeepUndo-${note.id}")) { Text("Undo") }
         }
@@ -748,7 +749,7 @@ private fun CommitIdentity(ui: GitNotebooksUi, actions: GitNotebooksActions) {
         supportingContent = {
             Text(listOfNotNull(ui.identityEmail.ifBlank { null }, if (ui.signingKey != null) "signing key on this phone" else null).joinToString(" · ").ifEmpty { "Name and email for your commits" })
         },
-        trailingContent = { Text(if (open) "⌃" else "›", style = MaterialTheme.typography.titleMedium) },
+        trailingContent = { Text(if (open) "⌃" else "›", style = MaterialTheme.roles.rowLabel) },
         modifier = Modifier.testTag("gitCommits").clickable(role = Role.Button, onClick = trackedClick("settings.git-notebooks.commits.toggle") { open = !open }),
     )
     if (!open) return
@@ -773,12 +774,12 @@ internal fun SigningKey(ui: GitNotebooksUi, actions: GitNotebooksActions) {
         actions.onNewSigningKey(type)
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Signing Key", style = MaterialTheme.typography.titleSmall)
+        Text("Signing Key", style = MaterialTheme.roles.groupHead)
         Text(
             "Made in this phone's Keystore; it never leaves the phone. Add it to GitHub as a signing key (Settings → SSH and GPG keys → New SSH key, Key type: Signing Key), with your commit email verified on your account, so its commits show Verified.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.help,
         )
-        Text(key, Modifier.fillMaxWidth().testTag("gitSigningKey"), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+        Text(key, Modifier.fillMaxWidth().testTag("gitSigningKey"), style = MaterialTheme.roles.code)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.copy") { actions.onCopySigningKey(key) }, Modifier.testTag("gitSigningKeyCopy")) { Text("Copy") }
             TextButton(onClick = trackedClick("settings.git-notebooks.signing-key.new") { making = app.penmoss.engine.git.CommitKeyType.P256 }, Modifier.testTag("gitSigningKeyNew")) { Text("Make a New Key") }
@@ -786,7 +787,7 @@ internal fun SigningKey(ui: GitNotebooksUi, actions: GitNotebooksActions) {
         }
         Text(
             "Make a New Key is P-256, which every phone's Keystore has; Ed25519 works where this phone's Keystore has it, and your key stays as it is where it does not.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.help,
         )
     }
 }

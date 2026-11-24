@@ -1,6 +1,7 @@
 package app.penmoss.ui.note
 
 import app.penmoss.engine.notes.Tags
+import app.penmoss.ui.common.roles
 import kotlinx.coroutines.flow.combine
 import android.view.View
 import android.webkit.WebView
@@ -598,7 +599,7 @@ internal fun NoteBody(
                     Text(
                         it,
                         Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.roles.meta,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -804,7 +805,7 @@ internal fun CopyNotice(copyTitle: String, onOpen: () -> Unit, onDismiss: () -> 
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 10.dp)) {
             Text(
                 "This note was restored or replaced on the server. What this phone had that it lacks is kept in a conflict copy, “$copyTitle”.",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.body,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -851,7 +852,7 @@ internal fun PeriodNavRow(
                 nav.label,
                 Modifier.weight(1f).testTag("periodLabel"),
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.roles.item,
                 maxLines = 1,
             )
             TextButton(

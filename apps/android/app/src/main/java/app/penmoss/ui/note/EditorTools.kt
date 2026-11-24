@@ -75,6 +75,8 @@ import app.penmoss.engine.bridge.BlockAction
 import app.penmoss.engine.bridge.BlockEntry
 import app.penmoss.engine.bridge.BlockPurpose
 import app.penmoss.engine.bridge.CopyFormat
+import app.penmoss.ui.common.SheetTitle
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.open
 
 /*
@@ -194,7 +196,7 @@ internal fun FindBar(
             )
             Text(
                 findLabel(query, active, count),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.roles.meta,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
@@ -234,11 +236,7 @@ internal fun BlockSheet(
     val tracked = rememberTrackedDialog("blockPicker")
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag("blockSheet")) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-            Text(
-                if (purpose == BlockPurpose.INSERT) "Insert" else "Turn Into",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+            SheetTitle(if (purpose == BlockPurpose.INSERT) "Insert" else "Turn Into", Modifier.padding(bottom = 8.dp), padded = false)
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -293,18 +291,18 @@ private fun BlockRow(entry: BlockEntry, onClick: () -> Unit) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     entry.icon,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.roles.item,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     modifier = Modifier.semantics { hideFromAccessibility() },
                 )
             }
         }
-        Text(entry.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(entry.label, style = MaterialTheme.roles.rowLabel, modifier = Modifier.weight(1f))
         entry.hint?.let {
             Text(
                 it,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.roles.meta,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 // Markdown punctuation read aloud is noise: the hint is for the eye.

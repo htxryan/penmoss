@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.trackedClick
+import app.penmoss.ui.common.roles
 import app.penmoss.updates.NotesBlock
 import app.penmoss.updates.NotesView
 import app.penmoss.updates.noteLine
@@ -55,7 +56,7 @@ fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Un
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("whatsNewEarlierToggle"),
                     ) { Text(if (earlier) "Hide Earlier Versions" else "Earlier Versions") }
                     if (earlier) {
-                        Heading("Earlier Versions", MaterialTheme.typography.titleLarge, Modifier.testTag("whatsNewEarlier"))
+                        Heading("Earlier Versions", MaterialTheme.roles.sectionHead, Modifier.testTag("whatsNewEarlier"))
                         view.earlier.forEach { Block(it, "whatsNewRelease") }
                     }
                 }
@@ -76,15 +77,15 @@ private fun VersionCard(version: String) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Penmoss $version", style = MaterialTheme.typography.titleMedium)
+            Text("Penmoss $version", style = MaterialTheme.roles.groupHead)
             Text(
                 "Current",
                 Modifier.background(MaterialTheme.colorScheme.primaryContainer).padding(horizontal = 8.dp, vertical = 2.dp),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.roles.meta,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
-        Text(VERSION_UPDATES, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(VERSION_UPDATES, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OpenSourceNoticesLink()
     }
 }
@@ -108,7 +109,7 @@ private fun Heading(text: String, style: androidx.compose.ui.text.TextStyle, mod
 
 @Composable
 private fun Block(block: NotesBlock, tag: String) {
-    Heading(block.title, MaterialTheme.typography.titleMedium, Modifier.testTag(tag))
+    Heading(block.title, MaterialTheme.roles.groupHead, Modifier.testTag(tag))
     if (block.groups.isEmpty()) {
         Help("Nothing that people using Penmoss would notice.")
         return
@@ -120,7 +121,7 @@ private fun Block(block: NotesBlock, tag: String) {
             Text(
                 "• ${noteLine(note, block.builds)}",
                 Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("whatsNewNote"),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.roles.body,
             )
         }
     }

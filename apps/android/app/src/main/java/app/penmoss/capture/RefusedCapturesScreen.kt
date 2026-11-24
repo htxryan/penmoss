@@ -28,6 +28,7 @@ import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.CaptureRequest
 import app.penmoss.ui.common.BackButton
 import app.penmoss.ui.common.ConfirmDialog
+import app.penmoss.ui.common.roles
 
 /**
  * Captures that cannot go as they are (T34 review S2, A345): each one's text and why, to
@@ -64,11 +65,11 @@ fun RefusedCapturesScreen(
                 Column(Modifier.fillMaxWidth().padding(16.dp).testTag("refusedCapture"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         "${dateOf(capture.capturedAt)} · ${if (capture.destination == CaptureRequest.INBOX) "New note in Inbox" else "Today’s note"}",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.roles.meta,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text(capture.text, maxLines = 6, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                    Text(capture.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    Text(capture.text, maxLines = 6, overflow = TextOverflow.Ellipsis, style = MaterialTheme.roles.body)
+                    Text(capture.reason, style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.error)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = trackedClick("capture.refused.copy") { onCopy(capture) }, Modifier.testTag("refusedCopy")) { Text("Copy") }
                         TextButton(onClick = trackedClick("capture.refused.retry") { onRetry(capture) }, Modifier.testTag("refusedRetry")) { Text("Try Again") }

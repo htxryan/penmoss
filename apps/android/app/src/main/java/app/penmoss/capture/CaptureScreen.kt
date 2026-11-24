@@ -57,6 +57,7 @@ import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.engine.api.CaptureRequest
 import app.penmoss.ui.common.ConfirmDialog
+import app.penmoss.ui.common.roles
 
 /** What the capture sheet shows. */
 /** A git notebook a capture can go to (A888, A1040), by its local id. */
@@ -157,9 +158,9 @@ fun CaptureScreen(
                 Modifier.padding(20.dp).navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Capture to Penmoss", style = MaterialTheme.typography.titleMedium)
+                Text("Capture to Penmoss", style = MaterialTheme.roles.groupHead)
                 if (!ui.hasNotebook) {
-                    Text(NO_NOTEBOOK, style = MaterialTheme.typography.bodyMedium)
+                    Text(NO_NOTEBOOK, style = MaterialTheme.roles.body)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = trackedClick("capture.cancel", onCancel)) { Text("Cancel") }
                         Button(onClick = trackedClick("capture.open-app", onOpenApp), Modifier.testTag("captureOpenApp")) { Text("Open Penmoss") }
@@ -186,7 +187,7 @@ fun CaptureScreen(
                     Text(
                         if (ui.pictures == 1) "1 picture" else "${ui.pictures} pictures",
                         Modifier.testTag("capturePictures"),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.roles.meta,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -194,7 +195,7 @@ fun CaptureScreen(
                 Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Destinations(ui, onDestination)
                 }
-                ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+                ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.roles.body) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                     CancelAndSave(ui, sheet, onSave, onCancel)
                 }
@@ -291,11 +292,11 @@ private fun ShortSheet(
                 Text(
                     if (ui.pictures == 1) "1 picture" else "${ui.pictures} pictures",
                     Modifier.testTag("capturePictures"),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.roles.meta,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.roles.help) }
         }
     }
 }

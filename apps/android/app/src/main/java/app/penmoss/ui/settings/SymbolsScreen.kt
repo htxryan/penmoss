@@ -60,6 +60,7 @@ import app.penmoss.engine.settings.ColourLock
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.ui.common.LocalSymbolColours
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.common.symbolColour
 
 /** A slot's key as the phone shows it (A747): its binding, or Alt+Shift+N; null with none. */
@@ -117,7 +118,7 @@ fun SymbolsScreen(
                             Box(
                                 Modifier.size(40.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant).testTag("symbol-glyph-$index"),
                                 contentAlignment = Alignment.Center,
-                            ) { Text(symbol.glyph, style = MaterialTheme.typography.titleLarge, maxLines = 1) }
+                            ) { Text(symbol.glyph, style = MaterialTheme.roles.glyph, maxLines = 1) }
                         }
                     },
                     headlineContent = { Text(symbol.name, Modifier.testTag("symbol-colour-label-$index")) },
@@ -149,7 +150,7 @@ fun SymbolsScreen(
                         ) {
                             // An emoji keeps its own colours (A1588).
                             val ink = if (ColourLock.isLocked(symbol.glyph)) Color.Unspecified else symbolColour(symbol.colour)
-                            Text(symbol.glyph, color = ink, style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                            Text(symbol.glyph, color = ink, style = MaterialTheme.roles.glyph, maxLines = 1)
                         }
                     }
                 },
@@ -232,7 +233,7 @@ fun SymbolsScreen(
         }
         Text(
             said ?: "A glyph is a symbol or emoji without letters, digits or markdown characters.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.help,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -337,7 +338,7 @@ private fun SymbolDialog(
         title = { Text(if (isNew) "Add a Symbol" else "Edit ${initial.glyph}") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Glyph", style = MaterialTheme.typography.labelLarge)
+                Text("Glyph", style = MaterialTheme.roles.listHead)
                 // The symbol picker (A1569): every symbol and emoji, searched by name.
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(
@@ -345,7 +346,7 @@ private fun SymbolDialog(
                             .clearAndSetSemantics {},
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(glyph.ifEmpty { "●" }, style = MaterialTheme.typography.titleLarge, color = if (locked) Color.Unspecified else symbolColour(colour))
+                        Text(glyph.ifEmpty { "●" }, style = MaterialTheme.roles.glyph, color = if (locked) Color.Unspecified else symbolColour(colour))
                     }
                     OutlinedButton(onClick = trackedClick("glyph-picker.open") { picking = true }, modifier = Modifier.testTag("symbol-choose")) {
                         Text("Choose Symbol…")
@@ -360,7 +361,7 @@ private fun SymbolDialog(
                     supportingText = { Text(glyphProblem ?: "Or paste any symbol or emoji") },
                     modifier = Modifier.fillMaxWidth().testTag("symbol-glyph").typedLength("symbolEditor", "other", glyph).semantics { glyphProblem?.let { error(it) } },
                 )
-                Text("Colour", style = MaterialTheme.typography.labelLarge)
+                Text("Colour", style = MaterialTheme.roles.listHead)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for ((key, label) in LineSymbols.COLOURS) {
                         FilterChip(

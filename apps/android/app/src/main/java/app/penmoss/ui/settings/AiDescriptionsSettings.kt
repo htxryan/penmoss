@@ -173,7 +173,7 @@ fun AiDescriptionsScreen(
     var describeSaid by remember { mutableStateOf<String?>(null) }
     var describing by remember { mutableStateOf(false) }
     SectionScreen("AI Descriptions", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
-        Text("Describe Notes", Modifier.settingRow("describe-notes").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
+        Text("Describe Notes", Modifier.settingRow("describe-notes").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.roles.rowLabel)
         Segments(listOf("on" to "On", "off" to "Off"), if (global) "on" else "off", enabled, "aiGlobal", event = "settings.ai.global") { onGlobal(it == "on") }
         Help(
             if (global) {
@@ -182,7 +182,7 @@ fun AiDescriptionsScreen(
                 "Nothing is described unless a notebook, folder or note says On."
             },
         )
-        Text("Describe a Note", Modifier.settingRow("describe-a-note").padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.bodyLarge)
+        Text("Describe a Note", Modifier.settingRow("describe-a-note").padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.roles.rowLabel)
         Segments(listOf("pause" to "After a Pause", "sync" to "At Sync"), whenToDescribe, enabled, "aiWhen", event = "settings.ai.when", onChoose = onWhen)
         Help(if (whenToDescribe == "sync") "Once the notebook has synced." else "Once you stop changing it for a while.")
         if (whenToDescribe == "pause") {
@@ -193,7 +193,7 @@ fun AiDescriptionsScreen(
                 }
             }
         }
-        Text("Describe All Notes", Modifier.settingRow("describe-all-notes").padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.bodyLarge)
+        Text("Describe All Notes", Modifier.settingRow("describe-all-notes").padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.roles.rowLabel)
         Help(
             if (provider == AiKeys.NONE) {
                 "Pick an AI provider below first."
@@ -268,7 +268,7 @@ private fun AnthropicKey(
             null -> null
         }
     }
-    Text("Anthropic API Key", Modifier.settingRow("anthropic-api-key").padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.bodyLarge)
+    Text("Anthropic API Key", Modifier.settingRow("anthropic-api-key").padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.roles.rowLabel)
     if (key.saved) {
         Help(if (key.refused) "Anthropic refused this key. Remove it and save another." else "Saved on this phone, encrypted. It is never synced or shown again.")
         Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -377,7 +377,7 @@ private fun PromptEditor(prompt: String, custom: Boolean, enabled: Boolean, kind
         value = draft,
         onValueChange = { draft = it },
         enabled = enabled,
-        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        textStyle = MaterialTheme.roles.code,
         modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp).padding(horizontal = 16.dp, vertical = 4.dp).testTag(kind.tag),
     )
     FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

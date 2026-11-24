@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
@@ -46,6 +45,7 @@ import androidx.compose.ui.graphics.luminance
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.trackedId
 import app.penmoss.ui.common.TextButton
+import app.penmoss.ui.common.roles
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -117,7 +117,7 @@ fun AnalyticsDataScreen(
                 Text(
                     AnalyticsFormat.countsLine(counts),
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("viewerCounts"),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.body,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -155,7 +155,7 @@ private fun EventRow(event: EventEntity) {
         headlineContent = { EventName(event.kind, event.name) },
         supportingContent = if (event.props == "{}") null else {
             // As the Mac's viewer writes them (PEN-177, core's propsLine): key: value, a long list cut.
-            { Text(propsText(event.props), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
+            { Text(propsText(event.props), style = MaterialTheme.roles.code) }
         },
         trailingContent = { StateChip(event.eventState) },
         modifier = Modifier.testTag("viewerEvent"),
@@ -202,6 +202,6 @@ internal fun StateChip(state: EventState) {
         else -> colours.onSurface.copy(alpha = 0.08f)
     }
     Surface(color = tint, contentColor = colours.onSurface, shape = RoundedCornerShape(4.dp), modifier = Modifier.testTag("viewerState-${state.wire}")) {
-        Text(state.label, Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        Text(state.label, Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.roles.meta, maxLines = 1)
     }
 }

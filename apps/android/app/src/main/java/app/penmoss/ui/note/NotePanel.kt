@@ -72,6 +72,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.settings.SettingsIcons
 import kotlin.math.PI
 import kotlin.math.cos
@@ -136,7 +137,7 @@ fun NotePanel(tab: PanelTab, onTab: (PanelTab) -> Unit, onClose: () -> Unit, ope
                     Text(
                         tab.label.uppercase(),
                         Modifier.weight(1f).semantics { heading() }.testTag("panelTitle"),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.roles.listHead,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -232,7 +233,7 @@ fun LocalGraphPanel(title: String, neighbours: List<Neighbour>?, onOpen: (String
                         else -> "${neighbours.size} linked notes"
                     },
                     Modifier.weight(1f).semantics { heading() },
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.roles.listHead,
                 )
                 FilledTonalButton(onClick = trackedClick("graph.open-full", onOpenGraph), modifier = Modifier.testTag("panelOpenGraph")) { Text("Open Full Graph") }
             }
@@ -293,7 +294,7 @@ private fun GraphLabel(text: String, at: Offset, strong: Boolean, onClick: () ->
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), RectangleShape)
             .clickable(onClick = trackedClick("note.panel.graph-node", onClick))
             .padding(horizontal = 4.dp),
-        style = if (strong) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelSmall,
+        style = if (strong) MaterialTheme.roles.item else MaterialTheme.roles.badge,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )

@@ -138,7 +138,7 @@ fun PenmossSnackbar(data: SnackbarData, modifier: Modifier = Modifier) {
                 }
                 Text(
                     visuals.message,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.body,
                     color = colours.content,
                     modifier = Modifier.weight(1f, fill = false).padding(vertical = 12.dp),
                 )

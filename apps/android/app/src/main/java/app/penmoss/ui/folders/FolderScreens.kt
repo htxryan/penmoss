@@ -13,6 +13,7 @@ import app.penmoss.analytics.TreeEvents
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.analytics.typedLength
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.keys.FolderCommands
 import app.penmoss.ui.home.FolderScreen
 import kotlinx.coroutines.Dispatchers
@@ -146,7 +147,7 @@ private fun FolderAiSection(ai: FolderAi, onDescribeAll: () -> Unit) {
     Text(
         "AI Descriptions",
         Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.roles.listHead,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     for ((value, label) in listOf("inherit" to "Inherit", "on" to "On", "off" to "Off")) {
@@ -164,7 +165,7 @@ private fun FolderAiSection(ai: FolderAi, onDescribeAll: () -> Unit) {
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         ) {
             RadioButton(selected = ai.value == value, onClick = null, enabled = ai.value != null)
-            Text(label, Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyLarge)
+            Text(label, Modifier.padding(start = 12.dp), style = MaterialTheme.roles.rowLabel)
         }
     }
     SheetAction("Describe Notes Now", "folderAction-describeAll", event = "folder.ai.describe-all", onDescribeAll)
@@ -297,7 +298,7 @@ fun BreadcrumbBar(path: List<FolderItem>, onOpenFolder: (String?) -> Unit, modif
                     },
                 )
                 .testTag("breadcrumb"),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.roles.item,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             // Truncated from the start (T40 P4, NT11): a deep path keeps the note's own folder.
@@ -532,7 +533,7 @@ private fun ReorderRow(
         Text(
             name,
             Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.roles.rowLabel,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

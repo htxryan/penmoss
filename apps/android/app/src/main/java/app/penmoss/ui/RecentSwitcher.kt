@@ -35,6 +35,7 @@ import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.keys.KeyNames
 import app.penmoss.ui.keys.LocalAppCommands
 import app.penmoss.ui.keys.RegisterCommand
@@ -147,7 +148,7 @@ fun RecentSwitcher(notes: List<NoteItem>, index: Int, onOpen: (Int) -> Unit, onD
                 Text(
                     "Recent notes",
                     Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.roles.listHead,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 notes.forEachIndexed { at, note ->
@@ -163,7 +164,7 @@ fun RecentSwitcher(notes: List<NoteItem>, index: Int, onOpen: (Int) -> Unit, onD
                             }
                             .padding(horizontal = 20.dp, vertical = 10.dp)
                             .testTag("recent-$at"),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.roles.rowLabel,
                         fontWeight = if (chosen) FontWeight.SemiBold else null,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

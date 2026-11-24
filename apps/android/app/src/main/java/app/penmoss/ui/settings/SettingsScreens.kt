@@ -97,7 +97,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -603,7 +602,7 @@ internal fun SettingsPreviewTabs(previewing: Boolean, tag: String, onPreview: (B
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     icons?.icon(glyph)?.let { Icon(LucideAssets.vector(it), contentDescription = null, Modifier.size(18.dp), tint = if (on) colours.onSurface else colours.onSurfaceVariant) }
-                    Text(label, style = MaterialTheme.typography.labelLarge, color = if (on) colours.onSurface else colours.onSurfaceVariant, maxLines = 1, softWrap = false)
+                    Text(label, style = MaterialTheme.roles.item, color = if (on) colours.onSurface else colours.onSurfaceVariant, maxLines = 1, softWrap = false)
                 }
                 if (on) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(2.dp).background(colours.primary))
             }
@@ -691,10 +690,10 @@ private fun ThemeCardView(theme: ThemeCard, selected: Boolean, enabled: Boolean,
             }
             Row(Modifier.padding(start = 10.dp, end = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
-                    Text(theme.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(theme.name, style = MaterialTheme.roles.rowLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         if (theme.custom) "Custom · ${theme.description}" else theme.description,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.roles.meta,
                         color = colours.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -800,7 +799,7 @@ fun DailyNotesScreen(
         ListItem(
             headlineContent = { Text("Time Zone") },
             supportingContent = { Text("$timeZone · today is ${app.penmoss.ui.journal.journalLongDate(today).substringBeforeLast(' ')}") },
-            trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
+            trailingContent = { Text("›", style = MaterialTheme.roles.rowLabel) },
             modifier = Modifier.settingRow("time-zone").testTag("timeZone").clickable(enabled = enabled, role = Role.Button, onClick = trackedClick("settings.journal.time-zone", onTimeZone)),
         )
         if (phoneZone != timeZone) {
@@ -882,7 +881,7 @@ private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, t
                 .testTag("templatePreview"),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(if (weekly) "This Week’s Note" else "Today’s Note", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if (weekly) "This Week’s Note" else "Today’s Note", style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
             MarkdownPreviewView(fillTemplate(text, weekly, today), Modifier.fillMaxWidth().testTag("templatePreviewText"), framed = false)
         }
         return
@@ -908,7 +907,7 @@ private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, t
                 Modifier.testTag("count-${field.key}"),
             )
         },
-        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+        textStyle = MaterialTheme.roles.code,
     )
     Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box {
@@ -946,7 +945,7 @@ private fun ColumnScope.TemplateEditor(field: TemplateField, enabled: Boolean, t
                 if (it == "Saved") "✓ Saved" else it,
                 Modifier.padding(end = 8.dp).testTag("templateStatus").semantics { liveRegion = LiveRegionMode.Polite; contentDescription = it },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.body,
             )
         }
     }
@@ -1057,7 +1056,7 @@ fun QuickCaptureScreen(
         ListItem(
             headlineContent = { Text(notebook ?: "No Notebook Yet") },
             supportingContent = { Text(if (notebook != null) "Your primary notebook · change it on All Notebooks" else "Add one on All Notebooks") },
-            trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
+            trailingContent = { Text("›", style = MaterialTheme.roles.rowLabel) },
             modifier = Modifier.testTag("captureNotebook").clickable(role = Role.Button, onClick = trackedClick("settings.quick-capture.notebook-link", onNotebook)),
         )
     }
