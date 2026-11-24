@@ -47,12 +47,6 @@ export function plainDate(year: number, month: number, day: number): PlainDate {
   return Object.freeze({ year, month, day, toString: () => iso });
 }
 
-/** Vault path of the daily note for `date`, e.g. `Journal/2026/10/2026-10-22.md`. */
-export function dailyNotePath(date: PlainDate): string {
-  const { year, month } = date;
-  return `Journal/${year}/${pad2(month)}/${date.toString()}.md`;
-}
-
 /** `2026-10-21` → a PlainDate, or null when it is not a valid ISO calendar date. */
 export function parsePlainDate(text: string): PlainDate | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
@@ -132,11 +126,6 @@ export function weekDays(week: IsoWeek): PlainDate[] {
 
 export function addWeeks(week: IsoWeek, weeks: number): IsoWeek {
   return isoWeek(addDays(weekMonday(week), weeks * 7));
-}
-
-/** Vault path of the weekly note for `week`, e.g. `Journal/2026/Weekly/2026-W43.md`. */
-export function weeklyNotePath(week: IsoWeek): string {
-  return `Journal/${week.year}/Weekly/${week.toString()}.md`;
 }
 
 /** The calendar date at `now` in an IANA time zone (`America/Chicago`). */
@@ -295,6 +284,33 @@ export function periodicNoteId(kind: PeriodKind, period: string, salt?: string):
 /** The id of a journal folder (`Journal`, `Journal/2026`, `Journal/2026/10`, `Journal/2026/Weekly`). */
 export function journalFolderId(path: string, salt?: string): string {
   return deterministicUlid(0, salted(salt, `folder:${path}`));
+}
+
+/**
+ * The folders a period's note is filed in, outermost first (T19): `Journal`, the year, then the
+ * month (`Journal/2026/10`) or `Weekly` (`Journal/2026/Weekly`, the ISO week's year).
+ */
+export function journalLevels(kind: PeriodKind, period: string): readonly string[] {
+  return ['Journal', period.slice(0, 4), kind === 'daily' ? period.slice(5, 7) : 'Weekly'];
+}
+
+/**
+ * The salt a period's note takes (A828): `salt`, or, when that note was deleted for good, the
+ * first of `<salt>#2`, `<salt>#3`, … whose id was not, so every device skips the same purged ids
+ * and still agrees on the note. Never capped: each round is a new id and only so many are
+ * purged, while a cap would leave a device that reached it on a purged id the others skip.
+ */
+export function periodicSalt(
+  kind: PeriodKind,
+  period: string,
+  salt: string,
+  isPurged: (id: string) => boolean,
+): string {
+  let each = salt;
+  for (let round = 2; isPurged(periodicNoteId(kind, period, each)); round++) {
+    each = `${salt}#${round}`;
+  }
+  return each;
 }
 
 /**

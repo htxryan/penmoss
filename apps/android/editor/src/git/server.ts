@@ -32,7 +32,7 @@ import {
 import { LocalError, localFetch, type LocalNotebook } from '@penmoss/git-notebook/local';
 import { effectiveParents, keyBetween, compareOrder } from '@penmoss/core/workspace';
 import { textHash } from '@penmoss/core/mirror';
-import { isTimeZone, journalFolderId, todayIn } from '@penmoss/core/periodic';
+import { isTimeZone, todayIn } from '@penmoss/core/periodic';
 import {
   initNote,
   isDeleted,
@@ -45,8 +45,8 @@ import { NOTE_ROOT } from '@penmoss/model/replica';
 import { isActive, offeredSessions, readAgentSessions } from '@penmoss/model/agent-sessions';
 import { ulid } from '@penmoss/core/ids';
 import {
-  createFolder,
   fallbackFolder,
+  inboxFolder,
   moveNote,
   readFolderTrash,
   deviceSettings,
@@ -165,7 +165,6 @@ export async function captureNoteId(captureId: string): Promise<string> {
   return CROCKFORD[CROCKFORD.indexOf(out[0]!) & 7] + out.slice(1);
 }
 const SHA256 = /^[0-9a-f]{64}$/;
-const INBOX = 'Inbox';
 
 /** The app's own route for them: only Penmoss's Kotlin reaches this server (never an agent). */
 export const DEVICE_SETTINGS_PATH = '/android/device-settings';
@@ -1475,16 +1474,7 @@ export class LocalServer {
 
   /** The Inbox that captures filed as new notes go to: the notebook's own, else a derived one. */
   private inbox(): string {
-    const folders = readWorkspace(this.workspace).folders;
-    const own = folders.find(
-      (folder) => folder.parentId === null && folder.name.trim().toLowerCase() === 'inbox',
-    );
-    if (own) return own.id;
-    const id = journalFolderId(INBOX, this.ops.salt);
-    if (!folders.some((folder) => folder.id === id)) {
-      createFolder(this.workspace, { id, name: INBOX, parentId: null });
-    }
-    return id;
+    return inboxFolder(this.workspace, this.ops.salt);
   }
 }
 

@@ -6,7 +6,7 @@
  * which `pullStored` reads in.
  */
 import { ulid } from '@penmoss/core/ids';
-import { journalFolderId, type PeriodKind } from '@penmoss/core/periodic';
+import type { PeriodKind } from '@penmoss/core/periodic';
 import { isLocalSetting, type SettingsPlatform } from '@penmoss/core/settings';
 import { type SortMode } from '@penmoss/core/workspace';
 import type { ReplicaStore } from '@penmoss/model/record';
@@ -17,6 +17,8 @@ import {
   deleteFolder,
   endPosition,
   fallbackFolder,
+  fileJournalNote,
+  inboxFolder,
   moveFolder,
   moveNote,
   readFolderTrash,
@@ -46,7 +48,7 @@ import type { MovePlan } from './model';
 export const SETTINGS_PLATFORM: SettingsPlatform = 'desktop';
 
 /** Where captures filed as new notes go (T30). */
-export const INBOX = 'Inbox';
+export { INBOX } from '@penmoss/model/workspace';
 
 /** Where a note out of Trash goes (`restorePlace`), or that no place is known (T43 review B2). */
 export type RestorePlace = { readonly folderId: string | null } | { readonly refused: true };
@@ -299,20 +301,7 @@ export class Workspace {
    * folders. A note already filed (by any device) stays where it is.
    */
   fileJournalNote(id: string, kind: PeriodKind, period: string): void {
-    if (this.state.snapshot.notes.some((entry) => entry.id === id)) return;
-    const year = period.slice(0, 4);
-    const levels = ['Journal', year, kind === 'daily' ? period.slice(5, 7) : 'Weekly'];
-    this.doc.transact(() => {
-      let parentId: string | null = null;
-      for (let depth = 1; depth <= levels.length; depth++) {
-        const folderId = journalFolderId(levels.slice(0, depth).join('/'), this.salt);
-        if (!readWorkspace(this.doc).folders.some((folder) => folder.id === folderId)) {
-          createFolder(this.doc, { id: folderId, name: levels[depth - 1]!, parentId });
-        }
-        parentId = folderId;
-      }
-      registerNote(this.doc, { id, folderId: parentId });
-    });
+    fileJournalNote(this.doc, id, kind, period, this.salt);
   }
 
   /**
@@ -321,19 +310,11 @@ export class Workspace {
    * name, so two devices capturing offline make one Inbox.
    */
   fileInInbox(id: string): string {
-    const folders = readWorkspace(this.doc).folders;
-    const own = folders.find(
-      (folder) =>
-        folder.parentId === null && folder.name.trim().toLowerCase() === INBOX.toLowerCase(),
-    );
-    const folderId = own?.id ?? journalFolderId(INBOX, this.salt);
-    this.doc.transact(() => {
-      if (!own && !folders.some((folder) => folder.id === folderId)) {
-        createFolder(this.doc, { id: folderId, name: INBOX, parentId: null });
-      }
+    return this.doc.transact(() => {
+      const folderId = inboxFolder(this.doc, this.salt);
       registerNote(this.doc, { id, folderId });
+      return folderId;
     });
-    return folderId;
   }
 
   /** The folder a note is filed in (null: top level or not registered). */
