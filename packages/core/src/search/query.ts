@@ -1,11 +1,12 @@
 /**
  * Search queries (T22): words, `"quoted phrases"` and `prefix*`, all of which
  * must match (AND). `-word` or `-"phrase"` leaves out notes holding it, and
- * `title:word` or `title:"phrase"` looks in the title only (A117). One parser
- * serves an FTS5 MATCH expression (`ftsMatch`) and the offline index
- * (`queryMatcher`), so both read a query the same way. Words are folded as the
- * index folds text; FTS5 stems them itself, and the client stems them with the
- * same porter step. A prefix term may carry completions (`completions.ts`,
+ * `title:word` or `title:"phrase"` looks in the title only (A117). The offline
+ * index ranks and marks (`queryMatcher`) what this parser reads; its tests
+ * check it against FTS5 with the MATCH expression the server wrote
+ * (`core/test/support/sqlite-fts.ts`). Words are folded as the index folds
+ * text; FTS5 stems them itself, and the client stems them with the same
+ * porter step. A prefix term may carry completions (`completions.ts`,
  * A680): whole words of the index it starts, matched as words.
  */
 import type { FtsColumn } from './fields';
@@ -132,33 +133,6 @@ export function parseQuery(input: string, options: ParseOptions = {}): SearchQue
     });
   });
   return { clauses: clauses.slice(0, MAX_CLAUSES) };
-}
-
-function clauseMatch(clause: QueryClause): string {
-  let phrase =
-    clause.kind === 'term'
-      ? `"${clause.text}"${clause.prefix ? '*' : ''}`
-      : `"${clause.texts.join(' ')}"`;
-  if (clause.kind === 'term' && clause.completions?.length) {
-    // Folded words: letters and digits only, never a quote.
-    phrase = `(${[phrase, ...clause.completions.map((word) => `"${word}"`)].join(' OR ')})`;
-  }
-  return clause.column ? `${clause.column} : ${phrase}` : phrase;
-}
-
-/**
- * The FTS5 MATCH expression for a query (every token quoted), or null when it
- * has nothing to look for (no words, or only exclusions).
- */
-export function ftsMatch(query: SearchQuery): string | null {
-  const kept = query.clauses.filter((clause) => !clause.negated);
-  if (kept.length === 0) return null;
-  // FTS5 ANDs phrases side by side, but a parenthesised OR (completions) only with AND.
-  const grouped = kept.some((clause) => clause.kind === 'term' && clause.completions?.length);
-  const wanted = kept.map(clauseMatch).join(grouped ? ' AND ' : ' ');
-  const excluded = query.clauses.filter((clause) => clause.negated).map(clauseMatch);
-  if (excluded.length === 0) return wanted;
-  return `(${wanted})${excluded.map((each) => ` NOT ${each}`).join('')}`;
 }
 
 /**

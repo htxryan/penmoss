@@ -15,7 +15,7 @@
  * whole word finds. The same words, the same completions, on every client.
  */
 import type { QueryClause, SearchQuery } from './query';
-import { stemTerm, tokenize } from './tokenize';
+import { stemTerm } from './tokenize';
 
 /** Shorter prefixes are left alone: porter keeps a word's first two letters (A680). */
 export const MIN_COMPLETION_LENGTH = 3;
@@ -43,11 +43,6 @@ export function compareCodePoints(a: string, b: string): number {
     return x - y;
   }
   return a.length - b.length;
-}
-
-/** Bounds for a range scan of the words starting with `prefix`: `>=` the first, `<` the second. */
-export function wordRange(prefix: string): readonly [string, string] {
-  return [prefix, `${prefix}\u{10ffff}`];
 }
 
 /**
@@ -108,16 +103,4 @@ export function withCompletions(
     return { ...clause, completions: [...found] };
   });
   return changed ? { clauses } : query;
-}
-
-/**
- * A note's distinct words, folded and not stemmed, in the order they first
- * appear: what the completion index holds for it.
- */
-export function searchWords(columns: readonly string[]): string[] {
-  const out = new Set<string>();
-  for (const column of columns) {
-    for (const { term } of tokenize(column, { stem: false })) out.add(term);
-  }
-  return [...out];
 }

@@ -9,16 +9,13 @@ import {
   compareCodePoints,
   completionPrefixes,
   completions,
-  ftsMatch,
   highlight,
   parseQuery,
   queryMatcher,
   reciprocalRankFusion,
   searchText,
-  searchWords,
   snippet,
   withCompletions,
-  wordRange,
 } from '../src/search';
 
 describe('search queries (T22)', () => {
@@ -60,13 +57,6 @@ describe('search queries (T22)', () => {
     ]);
   });
 
-  it('writes an FTS5 MATCH expression with every token quoted', () => {
-    expect(ftsMatch(parseQuery('Backup "git mirror" plan* OR NOT'))).toBe(
-      '"backup" "git mirror" "plan"* "or" "not"',
-    );
-    expect(ftsMatch(parseQuery(''))).toBeNull();
-  });
-
   it('excludes words and phrases written with a leading minus, never matching them instead', () => {
     expect(parseQuery('backup -git -"cold ferment" e-mail').clauses).toEqual([
       { kind: 'term', text: 'backup', prefix: false },
@@ -74,11 +64,6 @@ describe('search queries (T22)', () => {
       { kind: 'phrase', texts: ['cold', 'ferment'], negated: true },
       { kind: 'phrase', texts: ['e', 'mail'] },
     ]);
-    expect(ftsMatch(parseQuery('backup -git -"cold ferment" plan'))).toBe(
-      '("backup" "plan") NOT "git" NOT "cold ferment"',
-    );
-    // Only exclusions: nothing to look for, so no match at all (never every other note).
-    expect(ftsMatch(parseQuery('-git'))).toBeNull();
     // A lone minus is not an operator; the last word stays a prefix while typing.
     expect(parseQuery('- backup -gi', { prefixLast: true }).clauses).toEqual([
       { kind: 'term', text: 'backup', prefix: false },
@@ -95,9 +80,6 @@ describe('search queries (T22)', () => {
       { kind: 'phrase', texts: ['git', 'mirror'], column: 'title' },
       { kind: 'term', text: 'pl', prefix: true, column: 'title' },
     ]);
-    expect(ftsMatch(parseQuery('title:backup -title:git restore'))).toBe(
-      '(title : "backup" "restore") NOT title : "git"',
-    );
     // Other prefixes are not columns: the word is read as written, as before.
     expect(parseQuery('body:x').clauses).toEqual([{ kind: 'phrase', texts: ['body', 'x'] }]);
     // Title words are marked in titles only.
@@ -216,7 +198,6 @@ describe('partly typed words (#120, A680)', () => {
       'a\u{fb01}',
       'a\u{1f600}',
     ]);
-    expect(wordRange('happin')).toEqual(['happin', 'happin\u{10ffff}']);
   });
 
   it('asks for completions of prefix terms of three characters or more', () => {
@@ -247,12 +228,7 @@ describe('partly typed words (#120, A680)', () => {
       prefix: true,
       completions: ['happiness'],
     });
-    expect(ftsMatch(query)).toBe('"lemon" AND ("happin"* OR "happiness")');
-    expect(ftsMatch(withCompletions(parseQuery('happin* -sad'), () => ['happiness']))).toBe(
-      '(("happin"* OR "happiness")) NOT "sad"',
-    );
     const titled = withCompletions(parseQuery('title:happin*'), () => ['happiness', 'happy']);
-    expect(ftsMatch(titled)).toBe('title : ("happin"* OR "happiness" OR "happy")');
     const marks = queryMatcher(query);
     expect(marks('happi')).toBe(true);
     expect(marks('happinz')).toBe(true);
@@ -261,13 +237,5 @@ describe('partly typed words (#120, A680)', () => {
     expect(queryMatcher(titled, 'title')('happi')).toBe(true);
     // No completions, no change.
     expect(withCompletions(parseQuery('happin*'), () => [])).toEqual(parseQuery('happin*'));
-  });
-
-  it('lists a note’s distinct words, folded and not stemmed, for the completion index', () => {
-    expect(searchWords(['Happiness and happiness', 'Café happiness', ''])).toEqual([
-      'happiness',
-      'and',
-      'cafe',
-    ]);
   });
 });

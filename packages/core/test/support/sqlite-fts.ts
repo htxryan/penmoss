@@ -5,6 +5,7 @@
  * Node-only: import it from `*.node.test.ts` files.
  */
 import { DatabaseSync } from 'node:sqlite';
+import { tokenize as tokenizeText, type QueryClause, type SearchQuery } from '../../src/search';
 
 /** The tokenizer of `notes_fts` (apps/server/migrations/0002_index.sql and 0006). */
 export const NOTES_FTS_TOKENIZE = 'porter unicode61 remove_diacritics 2';
@@ -29,6 +30,51 @@ export function sqliteTerms(texts: readonly string[], tokenize = NOTES_FTS_TOKEN
   } finally {
     db.close();
   }
+}
+
+/**
+ * The FTS5 MATCH expression the server searched with (every token quoted), or
+ * null when the query has nothing to look for (no words, or only exclusions):
+ * the reference the offline index is checked against (`model/test/local-index.test.ts`).
+ */
+export function ftsMatch(query: SearchQuery): string | null {
+  const kept = query.clauses.filter((clause) => !clause.negated);
+  if (kept.length === 0) return null;
+  // FTS5 ANDs phrases side by side, but a parenthesised OR (completions) only with AND.
+  const grouped = kept.some((clause) => clause.kind === 'term' && clause.completions?.length);
+  const wanted = kept.map(clauseMatch).join(grouped ? ' AND ' : ' ');
+  const excluded = query.clauses.filter((clause) => clause.negated).map(clauseMatch);
+  if (excluded.length === 0) return wanted;
+  return `(${wanted})${excluded.map((each) => ` NOT ${each}`).join('')}`;
+}
+
+function clauseMatch(clause: QueryClause): string {
+  let phrase =
+    clause.kind === 'term'
+      ? `"${clause.text}"${clause.prefix ? '*' : ''}`
+      : `"${clause.texts.join(' ')}"`;
+  if (clause.kind === 'term' && clause.completions?.length) {
+    // Folded words: letters and digits only, never a quote.
+    phrase = `(${[phrase, ...clause.completions.map((word) => `"${word}"`)].join(' OR ')})`;
+  }
+  return clause.column ? `${clause.column} : ${phrase}` : phrase;
+}
+
+/** Bounds for a range scan of the words starting with `prefix`: `>=` the first, `<` the second. */
+export function wordRange(prefix: string): readonly [string, string] {
+  return [prefix, `${prefix}\u{10ffff}`];
+}
+
+/**
+ * A note's distinct words, folded and not stemmed, in the order they first
+ * appear: what the server's completion index (`notes_words`) held for it.
+ */
+export function searchWords(columns: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const column of columns) {
+    for (const { term } of tokenizeText(column, { stem: false })) out.add(term);
+  }
+  return [...out];
 }
 
 export { DatabaseSync };
