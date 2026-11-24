@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -59,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.engine.notes.Tags
 import app.penmoss.ui.common.FolderChoice
 import app.penmoss.ui.common.FolderIcon
+import app.penmoss.ui.common.SheetTitle
 
 /**
  * Where a note goes (T38): the top level and every folder, nested as the tree is. [current]
@@ -77,13 +77,7 @@ fun FolderPickerSheet(
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("folderPicker")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Text(
-            title,
-            Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        SheetTitle(title)
         LazyColumn(Modifier.fillMaxWidth().testTag("folderPicker"), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
             for (choice in choices) {
                 item(key = choice.id ?: "", contentType = "choice") {

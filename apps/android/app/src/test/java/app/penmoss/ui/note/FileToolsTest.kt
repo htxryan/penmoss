@@ -1,7 +1,6 @@
 package app.penmoss.ui.note
 
 import android.content.Intent
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -28,7 +27,7 @@ import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.open
 import app.penmoss.ui.settings.StorageScreen
 import app.penmoss.ui.settings.StorageUse
-import app.penmoss.ui.settings.formatBytes
+import app.penmoss.ui.settings.attachmentSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -222,10 +221,10 @@ class FileToolsTest {
 
     @Test
     fun formatsSizesAsCoreDoes() {
-        assertEquals("512 B", formatBytes(512))
-        assertEquals("1.5 KB", formatBytes(1536))
-        assertEquals("1 KB", formatBytes(1024))
-        assertEquals("20 MB", formatBytes(20L * 1024 * 1024))
-        assertNotNull(formatBytes(0))
+        assertEquals("512 B", attachmentSize(512))
+        assertEquals("1.5 KB", attachmentSize(1536))
+        assertEquals("1 KB", attachmentSize(1024))
+        assertEquals("20 MB", attachmentSize(20L * 1024 * 1024))
+        assertNotNull(attachmentSize(0))
     }
 }

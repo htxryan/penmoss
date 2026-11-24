@@ -16,8 +16,11 @@ import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.WebPictureSetting
 import app.penmoss.ui.common.ConfirmDialog
 
-/** A size for people, as core's `formatBytes`: `512 B`, `1.5 KB`, `20 MB`. */
-fun formatBytes(bytes: Long): String {
+/**
+ * A file's or a store's size for people, as core's `formatBytes` in `attachments.ts`: `512 B`,
+ * `1.5 KB`, `20 MB`. Analytics' limits have their own ([app.penmoss.analytics.Limits.formatBytes]).
+ */
+fun attachmentSize(bytes: Long): String {
     val units = listOf("B", "KB", "MB", "GB")
     var value = bytes.toDouble()
     var unit = 0
@@ -61,14 +64,14 @@ fun StorageScreen(
             modifier = Modifier.settingRow("files-and-pictures-in-notes"),
             headlineContent = { Text("Files and Pictures in Notes") },
             // The upload queue's own rule (review PS2): a large file is not sent over mobile data.
-            supportingContent = { Text((use?.let { formatBytes(it.files) } ?: "Counting…") + " · files over 10 MB upload on Wi-Fi", Modifier.testTag("storageFiles")) },
+            supportingContent = { Text((use?.let { attachmentSize(it.files) } ?: "Counting…") + " · files over 10 MB upload on Wi-Fi", Modifier.testTag("storageFiles")) },
         )
         ListItem(
             modifier = Modifier.settingRow("pictures-from-the-web"),
             headlineContent = { Text("Pictures from the Web") },
             supportingContent = {
                 Text(
-                    use?.let { "${it.webPictureCount} kept to show again · ${formatBytes(it.webPictures)}" } ?: "Counting…",
+                    use?.let { "${it.webPictureCount} kept to show again · ${attachmentSize(it.webPictures)}" } ?: "Counting…",
                     Modifier.testTag("storageWebPictures"),
                 )
             },

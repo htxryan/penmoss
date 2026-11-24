@@ -261,7 +261,7 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
     val primary = rememberPrimary(host)
     val daily = primary?.settings?.collectAsStateWithLifecycle()?.value
     var storage by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(views.size) { storage = formatBytes(storageUse(device).total) }
+    LaunchedEffect(views.size) { storage = attachmentSize(storageUse(device).total) }
     val github = FeedbackRoutes.tokenSummary(device.githubToken.accounts().map { it.login })
     val privacy = rememberPrivacySummary(device)
     SettingsHome(

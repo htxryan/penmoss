@@ -23,6 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import app.penmoss.ui.common.noteCount
 
 /**
  * All Notebooks → Between Notebooks and a notebook's Overview on the phone (A1137, A1550;
@@ -160,7 +161,10 @@ class BetweenNotebooksScreenTest {
         compose.waitForIdle()
         assertEquals(listOf("w" to "h"), copies)
         assertEquals("1 note", noteCountWords(1))
+        assertEquals("1,234 notes", noteCountWords(1_234))
         assertEquals("Not Read Yet", noteCountWords(null))
+        // Every count of notes is the same words (one noteCount): grouped from 1,000.
+        assertEquals(listOf("0 notes", "1 note", "2 notes", "12,000 notes"), listOf(0, 1, 2, 12_000).map(::noteCount))
     }
 
     @Test

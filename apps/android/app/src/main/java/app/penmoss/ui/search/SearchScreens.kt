@@ -104,6 +104,7 @@ import app.penmoss.ui.RootUi
 import app.penmoss.ui.SEARCH_ROUTE
 import app.penmoss.ui.leave
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.SheetTitle
 
 /** The Updated filter's choices, in the web's words (T40 P6, FD3): a label and its days back. */
 internal val DATE_RANGES: List<Pair<String, Int?>> = listOf(
@@ -330,7 +331,7 @@ private fun TagFilterSheet(tags: List<String>, current: String?, onPick: (String
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("tagFilter")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Text("Tag", Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.titleMedium)
+        SheetTitle("Tag")
         LazyColumn(Modifier.fillMaxWidth().testTag("tagChoices")) {
             items(listOf<String?>(null) + tags, key = { it ?: "" }) { tag ->
                 val depth = tag?.count { it == '/' } ?: 0

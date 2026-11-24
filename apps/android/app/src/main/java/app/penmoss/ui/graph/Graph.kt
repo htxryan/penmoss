@@ -1,7 +1,6 @@
 package app.penmoss.ui.graph
 
 import androidx.compose.runtime.Immutable
-import app.penmoss.data.DirectoryRow
 import app.penmoss.data.FolderEntity
 import app.penmoss.data.GraphSource
 import app.penmoss.engine.bridge.GraphGroup
@@ -12,6 +11,7 @@ import app.penmoss.engine.tree.FolderRow
 import app.penmoss.engine.tree.FolderTree
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.trash.titleOf
+import app.penmoss.ui.common.noteCount
 
 /** A note the graph's search field can find. */
 @Immutable
@@ -111,5 +111,5 @@ object GraphInput {
 
     /** "6 notes · 4 links", as the web's graph counts them. */
     fun count(notes: Int, links: Int): String =
-        "${if (notes == 1) "1 note" else "$notes notes"} · ${if (links == 1) "1 link" else "$links links"}"
+        "${noteCount(notes)} · ${if (links == 1) "1 link" else "$links links"}"
 }

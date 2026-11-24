@@ -1,14 +1,5 @@
 package app.penmoss.ui.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +27,7 @@ import app.penmoss.ui.common.LucideAssets
 import app.penmoss.ui.common.NotebookBadgeView
 import app.penmoss.ui.common.rememberLucideIcons
 import app.penmoss.ui.common.roles
+import app.penmoss.engine.settings.SidebarLayout
 
 /** A notebook on this phone, as the drawer lists it. */
 data class DrawerNotebook(val localId: String, val name: String, val badge: app.penmoss.engine.settings.NotebookBadge? = null)
@@ -66,7 +58,7 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
             if (ui.layout.quickAccessInDrawer) {
                 // Settings → Home → Notes in the Sidebar (Ryan, 18 Nov 2026; A1622): the notes
                 // themselves, each one tap away, in place of the Quick Access page.
-                Heading("Quick Access")
+                Heading(SidebarLayout.NAMES.getValue(SidebarLayout.QUICK_ACCESS))
                 if (ui.quickAccess.isEmpty()) {
                     Text(
                         "No notes yet: a note’s ⋮ → Pin to Quick Access adds it.",
@@ -79,11 +71,11 @@ internal fun HomeDrawerSheet(ui: HomeUi, actions: HomeActions, close: () -> Unit
                     Item(note.title.ifEmpty { "Untitled" }, "file-text", "drawerQuickAccessNote-${note.id}", event = "sidebar.quick-access.note", onClick = go { actions.onOpen(note.id) })
                 }
             } else {
-                Item("Quick Access", "star", "drawerQuickAccess", event = "sidebar.drawer.quick-access", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
+                Item(SidebarLayout.NAMES.getValue(SidebarLayout.QUICK_ACCESS), "star", "drawerQuickAccess", event = "sidebar.drawer.quick-access", selected = ui.page == HomePage.QUICK_ACCESS, onClick = go { actions.onPage(HomePage.QUICK_ACCESS) })
             }
-            Item("Recent Notes", "clock", "drawerRecent", event = "sidebar.drawer.recent", selected = ui.page == HomePage.RECENT, onClick = go { actions.onPage(HomePage.RECENT) })
+            Item(SidebarLayout.NAMES.getValue(SidebarLayout.RECENT), "clock", "drawerRecent", event = "sidebar.drawer.recent", selected = ui.page == HomePage.RECENT, onClick = go { actions.onPage(HomePage.RECENT) })
             if (ui.notebooks.isNotEmpty()) {
-                Heading("Notebooks")
+                Heading(SidebarLayout.NAMES.getValue(SidebarLayout.NOTEBOOKS))
                 for (notebook in ui.notebooks) {
                     val here = notebook.localId == ui.notebookId
                     NavigationDrawerItem(

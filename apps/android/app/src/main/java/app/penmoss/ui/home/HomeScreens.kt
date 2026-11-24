@@ -96,6 +96,7 @@ import app.penmoss.ui.settings.SettingsIcons
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.semantics.contentDescription
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.noteCount
 
 /**
  * The notebook screen's pages (Ryan's Android feedback, 15 Nov 2026, item 11; A1608): the Mac
@@ -105,8 +106,8 @@ import app.penmoss.ui.common.BackButton
 enum class HomePage(val title: String?) {
     /** The notebook's folders and its top-level notes, under its heading; titled by the notebook. */
     NOTES(null),
-    QUICK_ACCESS("Quick Access"),
-    RECENT("Recent Notes"),
+    QUICK_ACCESS(SidebarLayout.NAMES.getValue(SidebarLayout.QUICK_ACCESS)),
+    RECENT(SidebarLayout.NAMES.getValue(SidebarLayout.RECENT)),
 }
 
 /** What Home shows (A6): its lists, the sync state and the person's layout. */
@@ -569,7 +570,7 @@ private fun QuickAccessRow(
 @Composable
 private fun KeptApartNotice(notes: Int) {
     Text(
-        "Edits on this phone to ${if (notes == 1) "1 note" else "$notes notes"} could not sync: the note was " +
+        "Edits on this phone to ${noteCount(notes)} could not sync: the note was " +
             "restored or deleted elsewhere, or Penmoss refused them. They are kept here and become " +
             "conflict copies the next time you open a note.",
         Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("keptApart"),

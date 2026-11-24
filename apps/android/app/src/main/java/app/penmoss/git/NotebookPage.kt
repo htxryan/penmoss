@@ -40,6 +40,7 @@ import app.penmoss.ui.settings.GroupTitle
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
 import app.penmoss.ui.common.Toggle
+import app.penmoss.ui.common.noteCount
 
 /** A notebook page's tabs (PEN-146), as its route names them. */
 object NotebookTab {
@@ -53,8 +54,7 @@ object NotebookTab {
 /** The Notes row's words (PEN-148): how many, or that they are not read yet. */
 internal fun noteCountWords(count: Int?): String = when (count) {
     null -> "Not Read Yet"
-    1 -> "1 note"
-    else -> String.format(java.util.Locale.US, "%,d notes", count)
+    else -> noteCount(count)
 }
 
 /** The repository as a line: `github.com/me/notes · branch · dir/`. */

@@ -93,6 +93,8 @@ import app.penmoss.ui.FolderNaming
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.leave
 import app.penmoss.ui.open
+import app.penmoss.ui.common.ConfirmDialog
+import app.penmoss.ui.common.SheetTitle
 
 /**
  * What a long press on a folder row offers (T40 P4, NT3–NT5): make a folder inside it (New Folder
@@ -117,13 +119,7 @@ fun FolderSheet(
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("folderMenu")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Text(
-            name.ifBlank { "Untitled folder" },
-            Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        SheetTitle(name.ifBlank { "Untitled folder" })
         Box(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             // Scrolls: with AI Descriptions (PEN-161) it can be taller than a small phone's sheet.
             Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState())) {
@@ -237,15 +233,16 @@ internal fun folderDeleteText(notes: Int, subfolders: Int, destination: String?)
 /** Deletes a folder (T40 P4, NT4): says what goes, what moves up and that Trash keeps it. */
 @Composable
 fun FolderDeleteDialog(name: String, notes: Int, subfolders: Int, destination: String?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val tracked = rememberTrackedDialog("confirm")
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Delete “${name.ifBlank { "Untitled folder" }}”?") },
-        text = { Text(folderDeleteText(notes, subfolders, destination)) },
-        confirmButton = {
-            TextButton(onClick = trackedClick("tree.delete-folder.confirm", tracked.done(onConfirm)), modifier = Modifier.testTag("folderDeleteConfirm")) { Text("Delete Folder") }
-        },
-        dismissButton = { TextButton(onClick = trackedClick("tree.delete-folder.cancel", onDismiss)) { Text("Cancel") } },
+    ConfirmDialog(
+        title = "Delete “${name.ifBlank { "Untitled folder" }}”?",
+        body = folderDeleteText(notes, subfolders, destination),
+        confirmLabel = "Delete Folder",
+        confirmEvent = "tree.delete-folder.confirm",
+        cancelEvent = "tree.delete-folder.cancel",
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        destructive = true,
+        confirmTag = "folderDeleteConfirm",
     )
 }
 

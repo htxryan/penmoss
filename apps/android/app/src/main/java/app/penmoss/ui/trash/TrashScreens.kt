@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +48,8 @@ import app.penmoss.ui.common.FolderIcon
 import app.penmoss.ui.common.PenmossSnackbar
 import app.penmoss.ui.common.BackButton
 import app.penmoss.ui.common.ConfirmDialog
+import app.penmoss.ui.common.SheetTitle
+import app.penmoss.ui.common.SectionTitle
 
 /** One note in Trash as the screen shows it (NT13). */
 data class TrashEntryUi(
@@ -153,12 +154,12 @@ fun TrashScreen(
                     item { EmptyMessage("Trash is empty. Nothing has been deleted lately.", Modifier.testTag("trashEmpty")) }
                 }
                 if (folders.folders.isNotEmpty()) {
-                    item { TrashHeading("Folders") }
+                    item { SectionTitle("Folders") }
                     items(folders.folders, key = { "folder-${it.id}" }) { folder ->
                         TrashFolderRow(folder, enabled = !folders.busy, onRestore = { onRestoreFolder(folder) })
                         HorizontalDivider()
                     }
-                    if (ui.entries.isNotEmpty()) item { TrashHeading("Notes") }
+                    if (ui.entries.isNotEmpty()) item { SectionTitle("Notes") }
                 }
                 items(ui.entries, key = { it.id }) { entry ->
                     TrashRowView(entry, enabled = !ui.busy, onRestore = { onRestore(entry) }, onDelete = { confirming = entry })
@@ -183,16 +184,6 @@ fun TrashScreen(
             confirmTag = "confirmDeleteForGood",
         )
     }
-}
-
-@Composable
-private fun TrashHeading(text: String) {
-    Text(
-        text,
-        Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-    )
 }
 
 @Composable
@@ -251,13 +242,7 @@ fun NoteActionsSheet(
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracked = rememberTrackedDialog("noteMenu")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Text(
-            titleOf(title),
-            Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        SheetTitle(titleOf(title))
         Box(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Column(Modifier.fillMaxWidth()) {
                 onNewNoteHere?.let { SheetAction("New Note Here", "noteAction-newNote", event = "tree.note-menu.new-note", tracked.done(it)) }
