@@ -5,6 +5,7 @@
  * value set before, or by hand, that is not one of the menu's is kept as an extra choice.
  */
 import type { GitSyncStatus } from './engine-host';
+import { counted } from '@penmoss/core/words';
 
 export interface CadenceChoice {
   readonly value: number;
@@ -16,13 +17,11 @@ export const PUSH_CHOICES: readonly number[] = [5, 12, 30, 60, 120, 300, 600];
 /** Pull Changes: minutes between pulls in the foreground (1 by default). */
 export const PULL_CHOICES: readonly number[] = [1, 2, 5, 10, 15, 30, 60];
 
-const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? '' : 's'}`;
-
 /** "12 Seconds", "1 Minute", "2 Minutes", "1 Hour". */
 function span(seconds: number): string {
-  if (seconds % 3600 === 0) return plural(seconds / 3600, 'Hour');
-  if (seconds % 60 === 0) return plural(seconds / 60, 'Minute');
-  return plural(seconds, 'Second');
+  if (seconds % 3600 === 0) return counted(seconds / 3600, 'Hour');
+  if (seconds % 60 === 0) return counted(seconds / 60, 'Minute');
+  return counted(seconds, 'Second');
 }
 
 /** "After 12 Seconds", "After 1 Minute". */

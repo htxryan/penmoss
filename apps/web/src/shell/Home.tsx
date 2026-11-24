@@ -13,6 +13,7 @@ import { displayTitle } from '../notes/list';
 import { readOpened, recentNotes } from '../notes/recent';
 import { linkHandler, notePath } from '../router';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
+import { counted } from '@penmoss/core/words';
 
 const RECENT_ON_PHONE = 6;
 
@@ -90,9 +91,7 @@ export function Home({ phone }: { readonly phone: boolean }) {
                 <Icon name="graph" size={14} />
                 Graph
               </span>
-              <span className="ph-head">
-                {list.length} {list.length === 1 ? 'note' : 'notes'}
-              </span>
+              <span className="ph-head">{counted(list.length, 'note')}</span>
             </button>
           </div>
           {recent.length > 0 ? (

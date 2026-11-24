@@ -17,6 +17,7 @@ import { useReorder } from './reorder';
 import { SidebarBody, type SidebarPlace } from './SidebarBody';
 import { useSidebarLayout, type SidebarLayout } from './sidebar-layout-state';
 import { SettingsHeader } from '../pages/SettingsHeader';
+import { counted } from '@penmoss/core/words';
 
 const ITEMS: ReadonlyArray<{
   readonly item: SidebarItem;
@@ -187,7 +188,7 @@ function SectionSettings({ layout }: { readonly layout: SidebarLayout }) {
                   section === 'quickAccess' ? (
                     <QuickAccessNotebook layout={layout} />
                   ) : section === 'recent' ? (
-                    `Shows ${layout.recentCount} ${layout.recentCount === 1 ? 'note' : 'notes'}`
+                    `Shows ${counted(layout.recentCount, 'note')}`
                   ) : undefined
                 }
               >

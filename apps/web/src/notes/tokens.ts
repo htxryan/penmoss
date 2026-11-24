@@ -5,6 +5,7 @@
  * encoding's tables are large, so they load the first time a count is wanted, in a chunk of
  * their own, never with the app's first page.
  */
+import { pluralise } from '@penmoss/core/words';
 
 type Count = (text: string) => number;
 
@@ -25,4 +26,4 @@ const number = new Intl.NumberFormat('en');
 
 /** `1,204 tokens`, `1 token`. */
 export const tokensLabel = (count: number) =>
-  `${number.format(count)} ${count === 1 ? 'token' : 'tokens'}`;
+  `${number.format(count)} ${pluralise(count, 'token')}`;

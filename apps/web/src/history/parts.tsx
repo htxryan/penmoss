@@ -8,6 +8,7 @@ import type { CSSProperties } from 'react';
 import { diffRows } from './diff-rows';
 import { authorName } from './format';
 import type { HistoryAuthor } from './source';
+import { pluralise } from '@penmoss/core/words';
 
 type Author = HistoryAuthor;
 
@@ -103,7 +104,7 @@ export function DiffLines({
       {rows.map((row, i) =>
         row.op === 'fold' ? (
           <span key={i} className="diff-fold">
-            ⋯ {row.count} unchanged {row.count === 1 ? 'line' : 'lines'}
+            ⋯ {row.count} unchanged {pluralise(row.count, 'line')}
             {numbered ? (
               <span
                 className="diff-fold-lines"

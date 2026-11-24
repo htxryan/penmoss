@@ -5,6 +5,7 @@ import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { folderContents, restoredMessage } from './deleted-folders';
 import { DeletedByChip } from './DeletedByChip';
 import { trashDaysLeft } from './days-left';
+import { counted } from '@penmoss/core/words';
 
 const deletedOn = (ms: number) =>
   new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -46,7 +47,7 @@ export function DeletedFolderList({
                     <DeletedByChip by={folder.deletedBy} />
                   </>
                 ) : null}{' '}
-                · {left} {left === 1 ? 'day' : 'days'} left
+                · {counted(left, 'day')} left
               </span>
             </div>
             <div className="trash-actions">

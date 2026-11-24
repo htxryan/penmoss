@@ -20,6 +20,7 @@ import type {
   DesktopReleaseNotes,
   DesktopReleaseNotesRelease,
 } from '../desktop/bridge';
+import { counted } from '@penmoss/core/words';
 
 /** The `release-notes.json` schema this app reads; a newer file shows a link instead. */
 export const NOTES_SCHEMA = 1;
@@ -282,6 +283,6 @@ export function whatsNewSummary(view: NotesView, current: string, offered: strin
   const version = view.offered && offered ? offered : current;
   if (!block) return label(version);
   const count = changes(block);
-  const counted = count === 0 ? 'nothing to notice' : count === 1 ? '1 change' : `${count} changes`;
-  return `${view.offered ? `${label(version)} to install` : label(version)} · ${counted}`;
+  const summary = count === 0 ? 'nothing to notice' : counted(count, 'change');
+  return `${view.offered ? `${label(version)} to install` : label(version)} · ${summary}`;
 }

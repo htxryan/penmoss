@@ -12,6 +12,7 @@ import { folderChoices } from '../workspace/model';
 import { useFolderTree } from '../workspace/tree';
 import { DeletedFolders } from './DeletedFolders';
 import { deletedForGoodText } from './trashed';
+import { counted } from '@penmoss/core/words';
 
 const deletedOn = (ms: number) =>
   new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -117,9 +118,7 @@ export function TrashView() {
                   <span className="muted">
                     Deleted {deletedOn(entry.deletedAt)}
                     {from ? ` from ${from}` : ''}
-                    {git
-                      ? ' · kept until deleted for good'
-                      : ` · ${left} ${left === 1 ? 'day' : 'days'} left`}
+                    {git ? ' · kept until deleted for good' : ` · ${counted(left, 'day')} left`}
                   </span>
                 </div>
                 {confirming === entry.id ? (

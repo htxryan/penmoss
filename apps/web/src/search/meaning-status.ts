@@ -4,6 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { desktop, type DesktopMeaning, type DesktopMeaningStatus } from '../desktop/bridge';
+import { counted } from '@penmoss/core/words';
 
 /** The service's status, kept current; null until read. Absent outside the Mac app. */
 export function useMeaningStatus(): {
@@ -91,9 +92,7 @@ export function waitingText(status: DesktopMeaningStatus): string | null {
   if (!('leaseElsewhere' in status) || !status.leaseElsewhere) return null;
   const waiting = status.total - status.indexed;
   if (waiting <= 0) return null;
-  return ` Another copy of Penmoss on this Mac is indexing, so ${waiting} ${
-    waiting === 1 ? 'note waits' : 'notes wait'
-  } here; Semantic Search can miss ${waiting === 1 ? 'it' : 'them'} until then.`;
+  return ` Another copy of Penmoss on this Mac is indexing, so ${counted(waiting, 'note waits', 'notes wait')} here; Semantic Search can miss ${waiting === 1 ? 'it' : 'them'} until then.`;
 }
 
 /** How far along the service is, 0–100, with its words; null when nothing is under way. */

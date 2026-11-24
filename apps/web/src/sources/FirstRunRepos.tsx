@@ -53,6 +53,7 @@ import {
 } from './FirstRunFrame';
 import { freeName, nameClash, useOtherNotebookNames } from './notebook-names';
 import { folderNameProblem, pushedWords } from './repo-words';
+import { counted } from '@penmoss/core/words';
 
 /** The notebook name field, with a word when another notebook here has the name. */
 function NameField({
@@ -701,7 +702,7 @@ export function RepoTree({
       <p className="fr-lead fr-small fr-count" role="status" data-testid="first-run-filter-count">
         {q
           ? `${shown.length} of ${repos.length} match.`
-          : `${repos.length} ${repos.length === 1 ? 'repository' : 'repositories'}.`}
+          : `${counted(repos.length, 'repository', 'repositories')}.`}
       </p>
       <ul
         ref={setTree}

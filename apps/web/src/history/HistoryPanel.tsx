@@ -34,6 +34,7 @@ import {
   type HistoryVersion,
 } from './source';
 import { VersionView, type ViewImages } from './VersionView';
+import { counted } from '@penmoss/core/words';
 
 type History = HistoryList;
 type Detail = HistoryDetail;
@@ -286,9 +287,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
         setConflicts(result.conflicts ?? []);
         const n = result.conflicts?.length ?? 0;
         if (n > 0) {
-          return `Reverted what did not overlap later edits. ${n} ${
-            n === 1 ? 'part was' : 'parts were'
-          } changed again since, and kept.`;
+          return `Reverted what did not overlap later edits. ${counted(n, 'part was', 'parts were')} changed again since, and kept.`;
         }
         return result.changed
           ? 'Reverted this edit; later edits are kept.'

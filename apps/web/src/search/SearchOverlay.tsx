@@ -32,6 +32,7 @@ import {
 import type { Source } from '../sources/registry';
 import type { TagSearch } from './show-tag';
 import { useTrackedDialog } from '../analytics/dialog';
+import { counted } from '@penmoss/core/words';
 
 /** This device's words answer each keystroke at once (A111); Enter answers without waiting. */
 const TYPING_MS = 60;
@@ -286,11 +287,9 @@ export function SearchOverlay({
     : searching && !outcome
       ? 'Searching…'
       : outcome && browsing
-        ? `${hits.length} ${hits.length === 1 ? 'note' : 'notes'}${
-            filters.tag ? ` tagged #${filters.tag}` : ''
-          }`
+        ? `${counted(hits.length, 'note')}${filters.tag ? ` tagged #${filters.tag}` : ''}`
         : outcome
-          ? `${hits.length === 0 ? 'No results' : `${hits.length} ${hits.length === 1 ? 'result' : 'results'}`}${
+          ? `${hits.length === 0 ? 'No results' : counted(hits.length, 'result')}${
               outcome.preview ? '' : ' on this device'
             }`
           : '';

@@ -25,6 +25,7 @@ import { PreviewZoom } from './PreviewZoom';
 import { TypeSpecimen } from './TypeSpecimen';
 import { useThemeController, useThemeState } from './hooks';
 import { Segmented, type SegmentedOption } from '../shell/Segmented';
+import { pluralise } from '@penmoss/core/words';
 
 /** Edits are saved (and synced) once they pause this long; the page shows them at once. */
 const SAVE_DELAY_MS = 400;
@@ -336,7 +337,7 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
         >
           {problems.length === 0
             ? `Every text and icon colour in the ${variant} variant passes WCAG AA.`
-            : `${problems.length} colour ${problems.length === 1 ? 'pair is' : 'pairs are'} below WCAG AA in the ${variant} variant: ${problems
+            : `${problems.length} colour ${pluralise(problems.length, 'pair is', 'pairs are')} below WCAG AA in the ${variant} variant: ${problems
                 .slice(0, 4)
                 .map((problem) => `${problem.label} (${problem.ratio.toFixed(1)}:1)`)
                 .join('; ')}${problems.length > 4 ? '; …' : '.'}`}

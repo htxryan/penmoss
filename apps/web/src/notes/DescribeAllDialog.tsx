@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSource } from '../sources/hooks';
 import { BatchDialog } from './BatchDialog';
 import { windowDescriber, type DescriberSource } from './describer';
+import { counted } from '@penmoss/core/words';
 
 /** Some of a notebook's notes, to describe. */
 export interface DescribeGroup {
@@ -94,7 +95,7 @@ export function DescribeNotesDialog({
       total={total}
       done={done}
       stop={stop}
-      startLabel={total ? `Describe ${total === 1 ? '1 Note' : `${total} Notes`}` : 'Describe'}
+      startLabel={total ? `Describe ${counted(total, 'Note')}` : 'Describe'}
       progress={{
         label: 'Notes described',
         running: (at, of) => `Describing ${at} of ${of}…`,

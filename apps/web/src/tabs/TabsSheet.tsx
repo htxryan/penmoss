@@ -9,6 +9,7 @@ import { sheet } from './sheet';
 import { shownTabCount } from './state';
 import { useTrackedDialog } from '../analytics/dialog';
 import { DialogClose } from '../shell/DialogClose';
+import { counted } from '@penmoss/core/words';
 
 /**
  * The narrow window's tabs (700 px and narrower, AC13, A1502): the strip is hidden, and the app
@@ -97,9 +98,7 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
         onKeyDown={onKeyDown}
       >
         <div className="tabs-sheet-head">
-          <h2 data-testid="tabs-sheet-heading">
-            {ordered.length === 1 ? '1 Tab' : `${ordered.length} Tabs`}
-          </h2>
+          <h2 data-testid="tabs-sheet-heading">{counted(ordered.length, 'Tab')}</h2>
           <DialogClose label="Close Tabs" event="tabs.sheet.close" onClose={onClose} />
         </div>
         <ul className="tabs-sheet-list">
