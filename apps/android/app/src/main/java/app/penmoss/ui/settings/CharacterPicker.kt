@@ -216,7 +216,7 @@ fun CharacterPicker(
                                 ) {
                                     Text(
                                         cell.glyph,
-                                        style = MaterialTheme.typography.titleLarge,
+                                        style = MaterialTheme.roles.glyph,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (refused != null) 0.38f else 1f),
                                     )
                                 }

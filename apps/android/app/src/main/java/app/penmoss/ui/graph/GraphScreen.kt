@@ -58,6 +58,7 @@ import app.penmoss.engine.bridge.FromGraph
 import app.penmoss.engine.bridge.GraphProtocol
 import app.penmoss.engine.bridge.GraphScope
 import app.penmoss.engine.bridge.ToGraph
+import app.penmoss.ui.common.roles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -217,7 +218,7 @@ fun GraphScreen(
                             Text(
                                 GraphInput.count(it.notes, it.links),
                                 Modifier.testTag("graphCount").semantics { liveRegion = LiveRegionMode.Polite },
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.roles.meta,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -318,7 +319,7 @@ fun GraphScreen(
                     Text(
                         "${model.entries.size} notes are a lot to draw on a phone, so the graph starts around the note edited last.",
                         Modifier.weight(1f).testTag("graphLarge"),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.roles.help,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     TextButton(

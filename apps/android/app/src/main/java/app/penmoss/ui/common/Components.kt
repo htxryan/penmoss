@@ -125,14 +125,14 @@ fun NoteRowView(
                 Text(
                     item.title,
                     Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.roles.rowLabel,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (item.date.isNotEmpty()) {
                     Spacer(Modifier.width(12.dp))
-                    Text(item.date, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.date, style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (item.excerpt.isNotEmpty()) {
@@ -148,7 +148,7 @@ fun NoteRowView(
                 }
                 Text(
                     excerpt,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.help,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = if (matches.isEmpty()) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
@@ -194,7 +194,7 @@ fun FolderRowView(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(FolderIcon, contentDescription = null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-        Text(item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(item.name, style = MaterialTheme.roles.rowLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -258,13 +258,15 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 
 /**
  * A long-press sheet's or a picker sheet's title over its actions (a note's, a folder's, a tag's;
- * Move to Folder, the tag filter): the group-head role, at most two lines.
+ * Move to Folder, the tag filter): the group-head role, at most two lines. A sheet whose column
+ * pads its content already (Insert and Turn Into, a note's Tags, a theme's colour) passes
+ * `padded = false` and its own [modifier].
  */
 @Composable
-fun SheetTitle(text: String) {
+fun SheetTitle(text: String, modifier: Modifier = Modifier, padded: Boolean = true) {
     Text(
         text,
-        Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        if (padded) modifier.padding(horizontal = 24.dp, vertical = 8.dp) else modifier,
         style = MaterialTheme.roles.groupHead,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,

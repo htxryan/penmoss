@@ -52,6 +52,7 @@ import app.penmoss.analytics.trackedId
 import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.OutlinedTextField
 import app.penmoss.ui.common.TextButton
+import app.penmoss.ui.common.roles
 import kotlinx.coroutines.launch
 import app.penmoss.ui.common.Toggle
 import app.penmoss.ui.common.ConfirmDialog
@@ -164,7 +165,7 @@ fun PrivacyScreen(ui: PrivacyUi, actions: PrivacyActions) {
             headlineContent = { Text(AnalyticsCopy.text("privacy.id.label")) },
             supportingContent = {
                 Column {
-                    Text(shortId(ui.install), Modifier.testTag("privacyId"), style = MaterialTheme.typography.bodyMedium)
+                    Text(shortId(ui.install), Modifier.testTag("privacyId"), style = MaterialTheme.roles.body)
                     Text(AnalyticsCopy.text("privacy.id.hint"))
                     FlowRow(
                         Modifier.fillMaxWidth().padding(top = 8.dp).testTag("privacyIdButtons"),

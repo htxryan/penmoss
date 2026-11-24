@@ -113,7 +113,7 @@ fun NoteSettingsScreen(
                 return@Column
             }
             GroupTitle("Layout", deviceOnly = LocalSettings.isLocal(SettingKeys.FULL_WIDTH))
-            Text("Note Width", Modifier.settingRow("note-width").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
+            Text("Note Width", Modifier.settingRow("note-width").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.roles.rowLabel)
             Segments(
                 listOf("theme" to "The Theme’s Width", "full" to "Full Width"),
                 if (fullWidth) "full" else "theme",

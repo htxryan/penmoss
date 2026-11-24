@@ -59,6 +59,7 @@ import app.penmoss.engine.notes.Tags
 import app.penmoss.ui.common.FolderChoice
 import app.penmoss.ui.common.FolderIcon
 import app.penmoss.ui.common.SheetTitle
+import app.penmoss.ui.common.roles
 
 /**
  * Where a note goes (T38): the top level and every folder, nested as the tree is. [current]
@@ -119,7 +120,7 @@ private fun FolderChoiceRow(choice: FolderChoice, chosen: Boolean, onPick: (Stri
         Text(
             choice.name,
             Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.roles.rowLabel,
             fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -165,7 +166,7 @@ fun TagSheet(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp).navigationBarsPadding().imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Tags", style = MaterialTheme.typography.titleMedium)
+            SheetTitle("Tags", padded = false)
             when {
                 tags == null -> Text("Opening the note…", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 tags.isEmpty() -> Text("No tags yet.", Modifier.testTag("noTags"), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -193,7 +194,7 @@ fun TagSheet(
             if (!editable) {
                 Text(
                     "This note can't be changed here, so its tags can't either.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.help,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 return@Column
@@ -228,7 +229,7 @@ fun TagSheet(
             }
             Text(
                 "Tags written in the text as #tag stay in the text.",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -245,7 +246,7 @@ private fun TagPill(tag: String) {
             .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
             .padding(horizontal = 12.dp, vertical = 6.dp)
             .testTag("tag:$tag"),
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.roles.item,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )

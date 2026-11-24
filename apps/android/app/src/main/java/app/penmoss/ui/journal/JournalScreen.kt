@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.penmoss.ui.common.roles
 import java.time.LocalDate
 import java.time.Month
 import java.time.format.TextStyle
@@ -103,7 +104,7 @@ fun JournalScreen(
                 Text(
                     monthLabel(shown),
                     Modifier.testTag("journalMonth"),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.roles.groupHead,
                 )
                 IconButton(
                     onClick = trackedClick("calendar.next-month") { show(shown.next()) },
@@ -118,7 +119,7 @@ fun JournalScreen(
                         head,
                         Modifier.weight(1f),
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.roles.meta,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -133,7 +134,7 @@ fun JournalScreen(
                     ) {
                         Text(
                             week.number.toString(),
-                            style = if (weekMarked) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
+                            style = if (weekMarked) MaterialTheme.roles.item else MaterialTheme.roles.body,
                             color = if (weekMarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -175,7 +176,7 @@ private fun DayCell(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 day.dayOfMonth.toString(),
-                style = if (isToday) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
+                style = if (isToday) MaterialTheme.roles.item else MaterialTheme.roles.body,
                 color = when {
                     isToday -> MaterialTheme.colorScheme.primary
                     inMonth -> MaterialTheme.colorScheme.onSurface
@@ -185,7 +186,7 @@ private fun DayCell(
             // The mark under days that have a daily note, as the web's sidebar calendar shows.
             Text(
                 if (marked) "•" else "",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.roles.meta,
                 color = MaterialTheme.colorScheme.primary,
             )
         }

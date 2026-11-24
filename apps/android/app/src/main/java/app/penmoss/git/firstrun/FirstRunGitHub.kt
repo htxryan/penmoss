@@ -193,7 +193,7 @@ internal fun GitHubAccess(
                                 .align(Alignment.Center)
                                 .testTag("github-signin-code")
                                 .semantics { contentDescription = "Code ${state.userCode}" },
-                            style = MaterialTheme.roles.pageTitle,
+                            style = MaterialTheme.roles.display,
                         )
                         app.penmoss.ui.common.IconButton(
                             onClick = trackedClick("settings.github.sign-in.copy-code") { deps.copy(state.userCode) },

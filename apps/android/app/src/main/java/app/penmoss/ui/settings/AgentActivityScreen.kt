@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.trackedClick
 import app.penmoss.ui.common.PenmossSnackbar
 import app.penmoss.ui.common.BackButton
+import app.penmoss.ui.common.roles
 
 /** The words for an empty list (#172, A920): read from each notebook's branch, so no tags. */
 internal const val NO_AGENT_ACTIVITY = "No agent has moved notes or changed folders or settings in your notebooks in the last 30 days."
@@ -168,8 +169,8 @@ private fun ActivityRow(item: ActivityItem, now: Long, enabled: Boolean, onUndo:
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(entry.summary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(activityDetail(entry, now, item.notebookName), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(entry.summary, style = MaterialTheme.roles.rowLabel, fontWeight = FontWeight.SemiBold)
+            Text(activityDetail(entry, now, item.notebookName), style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (entry.undoneAt == null) {
             TextButton(

@@ -1,5 +1,6 @@
 package app.penmoss.feedback
 
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.settings.settingRow
 import kotlinx.coroutines.Dispatchers
 import android.content.Context
@@ -215,13 +216,13 @@ fun GitHubScreen(
             }
             when (signIn) {
                 is SignInState.Waiting -> Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("githubSignInWaiting")) {
-                    Text("Enter this code on GitHub:", style = MaterialTheme.typography.bodyMedium)
-                    Text(signIn.userCode, Modifier.testTag("githubUserCode"), style = MaterialTheme.typography.headlineSmall)
+                    Text("Enter this code on GitHub:", style = MaterialTheme.roles.body)
+                    Text(signIn.userCode, Modifier.testTag("githubUserCode"), style = MaterialTheme.roles.display)
                     Text(
                         "at ${signIn.verificationUri}. Penmoss waits here until you approve it." +
                             if (accounts.isNotEmpty()) " To add another account, check the one GitHub’s page shows at the top right, and switch there if it isn’t it." else "",
                         Modifier.testTag("githubSignInHint"),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.roles.help,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -235,7 +236,7 @@ fun GitHubScreen(
                         Text(
                             it,
                             Modifier.padding(horizontal = 16.dp, vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }.testTag("githubSignInMessage"),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.roles.body,
                             color = if (signIn is SignInState.Failed || signIn is SignInState.Denied) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -251,7 +252,7 @@ fun GitHubScreen(
                         Text(
                             "Add Account signs in to another GitHub account, such as a work one, beside these. Signing in as one already here renews it.",
                             Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("githubAddHelp"),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.roles.help,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -260,7 +261,7 @@ fun GitHubScreen(
             Text(
                 "Used For",
                 Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.roles.listHead,
                 color = MaterialTheme.colorScheme.primary,
             )
             ListItem(
@@ -275,13 +276,13 @@ fun GitHubScreen(
                             if (onSendFeedback == null) " Send it from a notebook’s ⋮ menu." else "",
                     )
                 },
-                trailingContent = if (onSendFeedback != null) ({ Text("›", style = MaterialTheme.typography.titleMedium) }) else null,
+                trailingContent = if (onSendFeedback != null) ({ Text("›", style = MaterialTheme.roles.rowLabel) }) else null,
                 modifier = (if (onSendFeedback != null) Modifier.clickable(role = Role.Button, onClick = trackedClick("settings.github.send-feedback", onSendFeedback)) else Modifier).settingRow("send-feedback").testTag("githubSendFeedback"),
             )
             Text(
                 "A notebook’s own repository uses the token typed on its Git tab, or the account it was added with.",
                 Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             outbox()
@@ -409,14 +410,14 @@ fun FeedbackOutboxList(
     Text(
         "Feedback Outbox",
         Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.roles.listHead,
         color = MaterialTheme.colorScheme.primary,
     )
     notice?.let {
         Text(
             it,
             Modifier.padding(horizontal = 16.dp).semantics { liveRegion = LiveRegionMode.Polite }.testTag("feedbackOutboxNotice"),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.roles.body,
             color = MaterialTheme.colorScheme.error,
         )
     }
