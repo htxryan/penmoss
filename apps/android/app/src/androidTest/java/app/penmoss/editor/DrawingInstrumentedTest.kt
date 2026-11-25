@@ -281,8 +281,9 @@ class DrawingInstrumentedTest {
         // Edit opens it again from its scene, which the app reads for the page; Cancel leaves it.
         js("document.querySelector('[data-testid=\"drawing\"]').click(), true")
         js("document.querySelector('[data-testid=\"drawing\"] .pm-drawing-edit').click(), true")
+        // The rectangle and the word, from the scene the app read.
         waitUntil("the drawing open again", 30_000) {
-            js("document.querySelector('[data-testid=\"drawing-editor\"]')?.dataset.shapes") == "\"1\""
+            js("document.querySelector('[data-testid=\"drawing-editor\"]')?.dataset.shapes") == "\"2\""
         }
         waitUntil("the drawing bar told", 5_000) { shown.lastOrNull() == "Edit Excalidraw Diagram" }
         channel.send(BridgeProtocol.encode(DrawingToEditor.Finish(DrawingAction.CANCEL)))
