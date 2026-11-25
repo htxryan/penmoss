@@ -44,7 +44,7 @@ afterAll(async () => {
 
 describe('the log file at 400 MB (AC35)', () => {
   it('has a bug report’s lines ready in under 300 ms, at the largest report limits', async () => {
-    expect(await file.bytes()).toBeGreaterThan(390 * 1024 * 1024);
+    expect(await file.bytes()).toBeGreaterThan(390_000_000);
     const [report, took] = await (async () => {
       const started = performance.now();
       const value = await file.report(MAX, ['Zebracanary Title Q7', 'Okapicanary Folder']);

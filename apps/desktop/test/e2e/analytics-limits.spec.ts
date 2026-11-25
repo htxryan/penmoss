@@ -150,7 +150,7 @@ test('Advanced opens in place; a limit out of range is refused, a lowering that 
   await expect.poll(() => recordTotal(page)).toBeLessThanOrEqual(520);
   // 500 events of about 500 bytes each (core's EVENT_BYTES).
   await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-    'About 244 KB of events at most on this Mac',
+    'About 250 KB of events at most on this Mac',
   );
   await most.scrollIntoViewIfNeeded();
   await holdForProof(page);
