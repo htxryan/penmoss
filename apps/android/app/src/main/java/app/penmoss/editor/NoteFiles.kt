@@ -3,12 +3,15 @@ package app.penmoss.editor
 import app.penmoss.data.FileStore
 import app.penmoss.data.PictureRefused
 import app.penmoss.engine.bridge.BridgeProtocol
+import app.penmoss.engine.bridge.DrawingFromEditor
+import app.penmoss.engine.bridge.DrawingToEditor
 import app.penmoss.engine.bridge.FileAction
 import app.penmoss.engine.bridge.FileLimits
 import app.penmoss.engine.bridge.FileRef
 import app.penmoss.engine.bridge.ParityFromEditor
 import app.penmoss.engine.bridge.ParityToEditor
 import app.penmoss.engine.bridge.WebPictureMode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -77,6 +80,27 @@ class NoteFiles(
             }
             is ParityFromEditor.OpenFile -> _requests.tryEmit(FileRequest(message.path, message.name, message.action))
             else -> Unit
+        }
+    }
+
+    /**
+     * A drawing's scene, to edit it (PEN-189): the `.excalidraw` file's text, fetched first when
+     * the phone lacks it, read off the main thread; null when it can't be had or is larger than a
+     * message to the page may carry ([MAX_SCENE_BYTES]), which the page says.
+     */
+    fun scene(message: DrawingFromEditor.SceneWanted) {
+        if (message.noteId != noteId) return
+        scope.launch {
+            val text = try {
+                store?.document(message.path)?.let { file ->
+                    withContext(Dispatchers.IO) { file.takeIf { it.length() <= MAX_SCENE_BYTES }?.readText() }
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                null
+            }
+            send(BridgeProtocol.encode(DrawingToEditor.Scene(noteId, message.path, text)))
         }
     }
 
@@ -158,5 +182,8 @@ class NoteFiles(
     companion object {
         /** Files the document picker takes at once (the page inserts at most [FileLimits.MAX_INSERT] per message). */
         const val MAX_PICKED = 10
+
+        /** The largest drawing scene handed to the page to edit (a scene of shapes is far smaller). */
+        const val MAX_SCENE_BYTES = 16L * 1024 * 1024
     }
 }

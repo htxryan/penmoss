@@ -7,6 +7,7 @@ import type { ExcalidrawInitialDataState } from '@excalidraw/excalidraw/types';
 import { createRoot } from 'react-dom/client';
 import { DrawingDialog, type DrawingStep } from './DrawingDialog';
 import { parseScene, type DrawingResult } from './scene';
+import { DRAWING_UNREADABLE } from './words';
 
 export type { DrawingStep } from './DrawingDialog';
 export type { DrawingResult } from './scene';
@@ -32,7 +33,7 @@ export function openDrawingEditor(options: DrawingEditorOptions): Promise<Drawin
     try {
       initial = parseScene(options.scene);
     } catch {
-      options.onError("This drawing's file couldn't be read");
+      options.onError(DRAWING_UNREADABLE);
       return Promise.resolve({ drawn: null, step: null });
     }
   }

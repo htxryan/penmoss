@@ -1421,7 +1421,7 @@
       "area": "Insert",
       "scope": "editor",
       "android": {
-        "na": "The phone shows drawings but has no drawing editor: they are made in the Mac app (PEN-28)"
+        "elsewhere": "A note's slash menu (ED3)"
       }
     },
     {

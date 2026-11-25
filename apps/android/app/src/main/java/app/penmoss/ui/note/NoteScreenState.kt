@@ -219,6 +219,15 @@ internal class NoteScreenState(
      */
     var lightbox by mutableStateOf(false)
 
+    /**
+     * The drawing editor open over the note, by its title (PEN-189): the drawing bar replaces the
+     * note's bars, and the back gesture keeps the drawing, as the Mac's Back does.
+     */
+    var drawing by mutableStateOf<String?>(null)
+
+    /** The drawing's Done is being saved: the drawing bar's buttons wait. */
+    var drawingSaving by mutableStateOf(false)
+
     fun openPanel(tab: PanelTab) {
         panelName = tab.name
         PanelMemory.remember(context, tab)

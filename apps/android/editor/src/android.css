@@ -149,3 +149,16 @@ body {
   font-size: var(--pm-text-body);
   line-height: var(--pm-leading-relaxed);
 }
+
+/*
+ * The drawing editor (PEN-189): Excalidraw fills the note's page, with no bar of its own; the note
+ * screen's drawing bar (the title, Cancel and Done) is the app's, above the page. Doubled classes:
+ * the Mac's drawing.css loads later, with the editor's chunk, and would otherwise win.
+ */
+.drawing-editor.android-drawing-editor {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.drawing-editor.android-drawing-editor .drawing-editor-canvas {
+  grid-row: 1;
+}

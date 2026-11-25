@@ -143,6 +143,17 @@ export class EditorHost extends HostNoteActions {
         // The phone's back gesture (T51, A948): the lightbox goes, the note stays.
         openLightboxNow()?.close();
         return;
+      case 'drawing':
+        // The note screen's drawing bar (PEN-189): Done (the back gesture too) or Cancel.
+        this.drawings.finish(message.action);
+        return;
+      case 'drawingScene': {
+        if (message.noteId !== this.current?.noteId) return;
+        const waiting = this.scenes.get(message.path);
+        this.scenes.delete(message.path);
+        for (const done of waiting ?? []) done(message.text);
+        return;
+      }
       case 'ime':
         // Whether the keyboard is up (T40 P6 review S8): hiding it does not blur the note.
         this.imeVisible = message.visible;

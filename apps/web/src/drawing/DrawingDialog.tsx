@@ -10,41 +10,21 @@
  * reaches the network. The note shows the SVG Done makes, inverted in dark mode as Excalidraw
  * itself does.
  */
-import { Excalidraw, MainMenu, serializeAsJSON } from '@excalidraw/excalidraw';
 import { Icon } from '@penmoss/ui/icons';
-import '@excalidraw/excalidraw/index.css';
 import type {
   ExcalidrawImperativeAPI,
   ExcalidrawInitialDataState,
 } from '@excalidraw/excalidraw/types';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { macWindowStore, useMacWindowState } from '../desktop/mac-window';
 import { historyPlace } from '../router';
-import './drawing.css';
-import { drawingSvg, type DrawingResult } from './scene';
+import { DrawingCanvas } from './DrawingCanvas';
+import { takeDrawing, type DrawingResult } from './scene';
+import { drawingNotSaved, drawingTitle } from './words';
 import { useTrackedDialog } from '../analytics/dialog';
 
 /** Where the window goes once the drawing is kept: the bar's Back or Forward. */
 export type DrawingStep = 'back' | 'forward';
-
-/** The app's mode as shown now (`data-mode` on `<html>`, set by the theme, T28). */
-function darkNow(): boolean {
-  return document.documentElement.getAttribute('data-mode') === 'dark';
-}
-
-/** Follows the app's light or dark mode while the editor is open. */
-function useDark(): boolean {
-  const [dark, setDark] = useState(darkNow);
-  useEffect(() => {
-    const observer = new MutationObserver(() => setDark(darkNow()));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-mode'],
-    });
-    return () => observer.disconnect();
-  }, []);
-  return dark;
-}
 
 export interface DrawingDialogProps {
   readonly initial: ExcalidrawInitialDataState | null;
@@ -63,7 +43,6 @@ export function DrawingDialog({
   onError,
   commands,
 }: DrawingDialogProps) {
-  const dark = useDark();
   const tracked = useTrackedDialog('drawing');
   const api = useRef<ExcalidrawImperativeAPI | null>(null);
   const [saving, setSaving] = useState(false);
@@ -81,29 +60,19 @@ export function DrawingDialog({
       if (!excalidraw || saving) return;
       setSaving(true);
       try {
-        const elements = excalidraw.getSceneElements();
-        // A new drawing left empty goes nowhere, as Cancel.
-        if (initial === null && elements.length === 0) {
-          onDone(null, step);
-          return;
-        }
-        const appState = excalidraw.getAppState();
-        const files = excalidraw.getFiles();
-        const scene = serializeAsJSON(elements, appState, files, 'local');
-        tracked.done();
-        onDone({ scene, svg: await drawingSvg(elements, appState, files) }, step);
+        const drawn = await takeDrawing(excalidraw, initial === null);
+        if (drawn) tracked.done();
+        onDone(drawn, step);
       } catch (error) {
         setSaving(false);
-        onError(
-          `The drawing couldn't be saved: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        onError(drawingNotSaved(error));
       }
     },
     [initial, onDone, onError, saving, tracked],
   );
 
   /** A drawing is named as the slash menu names it. */
-  const title = initial ? 'Edit Excalidraw Diagram' : 'New Excalidraw Diagram';
+  const title = drawingTitle(initial === null);
 
   return (
     <div
@@ -115,37 +84,12 @@ export function DrawingDialog({
       data-shapes={shapes}
     >
       <div className="drawing-editor-canvas">
-        <Excalidraw
-          excalidrawAPI={(instance) => (api.current = instance)}
-          initialData={initial}
-          theme={dark ? 'dark' : 'light'}
-          autoFocus
-          aiEnabled={false}
-          onChange={(elements) => {
-            const count = elements.filter((element) => !element.isDeleted).length;
-            setShapes((current) => (current === count ? current : count));
-          }}
-          UIOptions={{
-            canvasActions: {
-              // Nothing opens a file over the drawing; Save To… and Export Image… save one (R2-19).
-              loadScene: false,
-              saveToActiveFile: true,
-              saveAsImage: true,
-              export: { saveFileToDisk: true },
-              toggleTheme: false,
-            },
-            tools: { image: false },
-          }}
-        >
-          <MainMenu>
-            <MainMenu.DefaultItems.SaveToActiveFile />
-            <MainMenu.DefaultItems.Export />
-            <MainMenu.DefaultItems.SaveAsImage />
-            <MainMenu.Separator />
-            <MainMenu.DefaultItems.ClearCanvas />
-            <MainMenu.DefaultItems.ChangeCanvasBackground />
-          </MainMenu>
-        </Excalidraw>
+        <DrawingCanvas
+          initial={initial}
+          onApi={(instance) => (api.current = instance)}
+          onShapes={(count) => setShapes((current) => (current === count ? current : count))}
+          saving
+        />
       </div>
       {/* The bar comes after the canvas, though it shows above it: Excalidraw lays a layer over the
           whole window (its SVG trails), and in the Mac app a later region wins over an earlier one,

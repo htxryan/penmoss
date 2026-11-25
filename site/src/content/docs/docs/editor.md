@@ -111,18 +111,20 @@ Pictures and files are saved on the device first, so this works offline, and go 
 
 ## Excalidraw Diagrams
 
-Choose **Diagram: Excalidraw** in the slash menu to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
+Choose **Diagram: Excalidraw** in the slash menu (on Android, in the **+** sheet too) to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window, or the whole screen on a phone. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
 
 While the editor is open, its bar is the window's title bar. In the Mac app you drag the window by its empty part, as you do the app's own, and it starts with **Back**, **Forward** and the pin (**Keep on Top**), then the editor's title, with **Cancel** and **Done** at the end. Back and Forward keep the drawing in the note, as Done does, then go.
 
-To keep a copy of a drawing outside the note, open Excalidraw's menu (☰) in the editor's top-left corner:
+On Android the editor fills the screen under the app's bar, which shows the editor's title with **Cancel** and **Done**. Draw with your finger or a stylus. The back gesture keeps the drawing, as Done does.
+
+In the Mac app, to keep a copy of a drawing outside the note, open Excalidraw's menu (☰) in the editor's top-left corner:
 
 - **Save to...** saves the drawing as an `.excalidraw` file, which Excalidraw, or excalidraw.com, opens again.
 - **Export image...** saves it as a PNG or SVG picture, with or without its background, light or dark, at 1×, 2× or 3× size, and optionally with the scene embedded so Excalidraw can open the picture again. **Copy to clipboard** copies the PNG instead.
 
-The Mac app asks where to save each file, in your Downloads folder unless you choose another. Nothing in the menu opens a file into the drawing.
+The Mac app asks where to save each file, in your Downloads folder unless you choose another. On Android the menu has only clearing the canvas and its background colour: the drawing is kept in the note itself. Nothing in the menu opens a file into the drawing.
 
-The drawing shows in the note as a picture, as wide as you drew it. Click it to select it. Point at it, or select it, and two buttons show in its top-right corner: **Edit Excalidraw Diagram** (the pencil) opens it in Excalidraw again, and **Delete Excalidraw Diagram** (the bin) removes it from the note. With the drawing selected, Enter edits it too, and Backspace or Delete removes it. Undo (⌘Z, or Ctrl+Z) brings a removed drawing back. A read-only note, such as an older version in History, shows the drawing without the buttons.
+The drawing shows in the note as a picture, as wide as you drew it. Click or tap it to select it. Point at it, or select it, and two buttons show in its top-right corner: **Edit Excalidraw Diagram** (the pencil) opens it in Excalidraw again, and **Delete Excalidraw Diagram** (the bin) removes it from the note. With the drawing selected, Enter edits it too, and Backspace or Delete removes it. Undo (⌘Z, or Ctrl+Z) brings a removed drawing back. A read-only note, such as an older version in History, shows the drawing without the buttons.
 
 Each drawing is two files in the repository's `attachments/` folder: the Excalidraw scene, a `.excalidraw` file you can also open at excalidraw.com, and an `.svg` picture of it. The note shows the picture, linked to the scene, so GitHub and any markdown viewer show the drawing too:
 
@@ -130,7 +132,7 @@ Each drawing is two files in the repository's `attachments/` folder: the Excalid
 [![Excalidraw Diagram](attachments/9c1e…b2.svg)](attachments/41d7…0a.excalidraw)
 ```
 
-Each edit saves a new pair of files and points the note at them; the old pair stays in `attachments/`, as a picture does when you remove it from a note. Agents reading the note see the same picture link. The Android app shows drawings but can't edit them, and keeps them as they are when you edit the note around them.
+Each edit saves a new pair of files and points the note at them; the old pair stays in `attachments/`, as a picture does when you remove it from a note. Agents reading the note see the same picture link. A drawing made on Android opens in the Mac app, and the other way round.
 
 ## Embedded notes
 

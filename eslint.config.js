@@ -81,7 +81,13 @@ export default defineConfig(
     languageOptions: { globals: globals.serviceworker },
   },
   {
-    files: ['apps/web/**/*.tsx', 'packages/ui/**/*.tsx', 'packages/editor/**/*.tsx'],
+    files: [
+      'apps/web/**/*.tsx',
+      'packages/ui/**/*.tsx',
+      'packages/editor/**/*.tsx',
+      // Android's drawing editor (PEN-189).
+      'apps/android/editor/src/**/*.tsx',
+    ],
     extends: [reactHooks.configs.flat.recommended],
     languageOptions: { globals: globals.browser },
   },
@@ -98,8 +104,8 @@ export default defineConfig(
       'packages/editor/src/**/*.{ts,tsx}',
       // The Mac app's windows (T29): their background comes from the theme too.
       'apps/desktop/src/**/*.ts',
-      // The Android editor page (T32).
-      'apps/android/editor/src/**/*.ts',
+      // The Android editor page (T32), and its drawing editor (PEN-189).
+      'apps/android/editor/src/**/*.{ts,tsx}',
     ],
     ignores: ['packages/ui/src/theme/builtins.ts'],
     plugins: { penmoss: penmossLintPlugin },
@@ -110,7 +116,12 @@ export default defineConfig(
     // data-untracked reason, so it is counted by name (packages/ui/lint/tracked-control.js). The
     // plugin is the one above. The wrappers draw a control from the id they are given, so each
     // call names one: `props` are the props that name it; `items`, an array whose each item does.
-    files: ['apps/web/src/**/*.tsx', 'packages/ui/src/**/*.tsx', 'packages/editor/src/**/*.tsx'],
+    files: [
+      'apps/web/src/**/*.tsx',
+      'packages/ui/src/**/*.tsx',
+      'packages/editor/src/**/*.tsx',
+      'apps/android/editor/src/**/*.tsx',
+    ],
     rules: {
       'penmoss/tracked-control': [
         'error',

@@ -1,6 +1,9 @@
 package app.penmoss.editor
 
 import android.os.SystemClock
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
@@ -8,6 +11,13 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.data.Attachments
+import app.penmoss.data.FileStore
+import app.penmoss.engine.bridge.StoredFile
+import app.penmoss.engine.bridge.BridgeProtocol
+import app.penmoss.engine.bridge.DrawingAction
+import app.penmoss.engine.bridge.DrawingFromEditor
+import app.penmoss.engine.bridge.DrawingToEditor
+import app.penmoss.engine.bridge.ParityToEditor
 import app.penmoss.data.NoteStore
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.UpdateEntity
@@ -30,16 +40,21 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.InputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * PEN-28 on the phone: a drawing made on the Mac (an SVG picture linked to its Excalidraw scene,
- * `[![Drawing](attachments/<sha>.svg)](attachments/<sha>.excalidraw)`) shows in the note as a
- * picture, read-only: the phone has no drawing editor, so the slash menu offers no Drawing (the
- * editor has no drawing services) and a tap opens nothing. Typing around it keeps the drawing as it is, picture and link, in the edits
- * the app stores. The real editor WebView, page and bridge, with the SVG served as the app serves
- * a note's pictures (`EditorWebView.pictureResponse`, as image/svg+xml under a sandbox policy).
+ * PEN-28 and PEN-189 on the phone. A drawing made on the Mac (an SVG picture linked to its
+ * Excalidraw scene, `[![Drawing](attachments/<sha>.svg)](attachments/<sha>.excalidraw)`) shows in
+ * the note as a picture; a tap selects it and shows its Edit and Delete, and typing around it keeps
+ * it as it is, picture and link, in the edits the app stores. A new drawing is made on the phone:
+ * Diagram: Excalidraw opens Excalidraw over the note, Done stores the scene and its SVG as files
+ * and puts the drawing in the note, Edit opens it again from its scene, Cancel leaves it, and
+ * Delete takes it out. The real editor WebView, page and bridge, with the files kept as the app
+ * keeps them and pictures served as it serves them (`EditorWebView.pictureResponse`, an SVG as
+ * image/svg+xml under a sandbox policy). The note screen's drawing bar is stood in for by the
+ * bridge messages it sends.
  *
  * The factory's Android proof runs it on a headless emulator: `task proof:android --
  * app.penmoss.editor.DrawingInstrumentedTest`.
@@ -65,11 +80,43 @@ class DrawingInstrumentedTest {
         override fun noteEdited(noteId: String) = Unit
     }
 
-    /** The drawing's SVG, answered as the app answers a note's pictures. */
+    /** The note's files, kept as the app keeps them: by their path, which their bytes and name give. */
+    private val kept = java.util.concurrent.ConcurrentHashMap<String, ByteArray>()
+
+    private inner class KeptFiles : FileStore {
+        override suspend fun add(bytes: ByteArray, noteId: String?): String = error("no pictures here")
+
+        override suspend fun addFromPage(path: String, bytes: ByteArray, noteId: String): String? = null
+
+        override suspend fun addFile(input: InputStream, name: String, noteId: String?): String = error("no picker here")
+
+        override suspend fun addFileFromPage(path: String, name: String, bytes: ByteArray, noteId: String): String? {
+            val expected = "attachments/${Attachments.sha256(bytes)}.${name.substringAfterLast('.')}"
+            if (path != expected) return null
+            kept[path] = bytes
+            return path
+        }
+
+        override suspend fun info(path: String): StoredFile? = null
+
+        override suspend fun document(path: String): java.io.File? = kept[path]?.let { bytes ->
+            java.io.File(instrumentation.targetContext.cacheDir, path.substringAfter('/')).also { it.writeBytes(bytes) }
+        }
+    }
+
+    /** The page's messages the note screen reads itself: the drawing editor's title as it opens and closes. */
+    private val shown = java.util.concurrent.CopyOnWriteArrayList<String?>()
+
+    /** The titles the page said were being saved (the drawing bar's buttons wait meanwhile). */
+    private val saving = java.util.concurrent.CopyOnWriteArrayList<String>()
+
+    private lateinit var channel: EditorWebView.Channel
+
+    /** A note's picture, answered as the app answers them: the Mac's drawing, or one kept here. */
     private fun serve(sha256: String, ext: String): WebResourceResponse? {
-        if (sha256 != SVG_SHA || ext != "svg") return null
-        val file = java.io.File(instrumentation.targetContext.cacheDir, "$SVG_SHA.svg")
-        file.writeBytes(SVG)
+        val bytes = if (sha256 == SVG_SHA && ext == "svg") SVG else kept["attachments/$sha256.$ext"] ?: return null
+        val file = java.io.File(instrumentation.targetContext.cacheDir, "$sha256.$ext")
+        file.writeBytes(bytes)
         return EditorWebView.pictureResponse(file, ext)
     }
 
@@ -80,12 +127,18 @@ class DrawingInstrumentedTest {
         runBlocking { db.updates().insert(UpdateEntity(noteId = NOTE, state = UpdateEntity.SYNCED, update = EMPTY_NOTE)) }
         scenario = ActivityScenario.launch(ComponentActivity::class.java)
         scenario.onActivity { activity ->
-            val channel = EditorWebView.Channel()
-            controller = NoteEditorController(NOTE, store, NoServer, scope, channel::send, onOpenNote = {})
+            channel = EditorWebView.Channel()
+            controller = NoteEditorController(NOTE, store, NoServer, scope, channel::send, onOpenNote = {}, files = KeptFiles())
             webView = EditorWebView.create(
                 activity,
                 channel,
-                onMessage = controller::onPageMessage,
+                onMessage = { raw ->
+                    (BridgeProtocol.decodeFromEditor(raw) as? DrawingFromEditor.Shown)?.let {
+                        shown += it.title
+                        if (it.saving) saving += it.title
+                    }
+                    controller.onPageMessage(raw)
+                },
                 onRendererGone = {},
                 onBytes = controller::onPageBytes,
                 picture = ::serve,
@@ -131,10 +184,11 @@ class DrawingInstrumentedTest {
         }
         assertEquals("\"Drawing\"", js("document.querySelector('[data-testid=\"drawing\"] img').alt"))
 
-        // No drawing editor on the phone: a tap opens nothing, and the slash menu has no Drawing.
+        // A tap selects it and shows its Edit and Delete; nothing opens until Edit is tapped.
         js("document.querySelector('[data-testid=\"drawing\"]').click(), true")
+        assertEquals("true", js("document.querySelector('[data-testid=\"drawing\"]').classList.contains('ProseMirror-selectednode')"))
+        assertEquals("false", js("document.querySelector('[data-testid=\"drawing\"] .pm-drawing-tools').hidden"))
         assertEquals("false", js("!!document.querySelector('[data-testid=\"drawing-editor\"]')"))
-        assertEquals("true", js("penmossEditor.editor.editor.storage.drawing?.services === undefined"))
 
         // Typed around: before it, and after it.
         js(
@@ -178,7 +232,159 @@ class DrawingInstrumentedTest {
         ProofShot.take()
     }
 
+    @Test
+    fun aDrawingIsMadeEditedAndDeletedOnThePhone() {
+        instrumentation.runOnMainSync { webView.requestFocus() }
+        js("penmossEditor.editor.editor.chain().focus().insertContent('Garden plan').run(), true")
+        // Diagram: Excalidraw, as the slash menu and the + sheet insert it.
+        channel.send(BridgeProtocol.encode(ParityToEditor.Insert(NOTE, "drawing")))
+        waitUntil("the drawing editor open", 30_000) {
+            js("!!document.querySelector('[data-testid=\"drawing-editor\"] canvas.interactive')") == "true"
+        }
+        waitUntil("the drawing bar told", 5_000) { shown.lastOrNull() == "New Excalidraw Diagram" }
+
+        // A rectangle and a word, drawn with Excalidraw's own tools.
+        drawRectangle()
+        waitUntil("the rectangle drawn", 10_000) {
+            js("document.querySelector('[data-testid=\"drawing-editor\"]').dataset.shapes") == "\"1\""
+        }
+        writeText("Beds")
+        waitUntil("the word written", 10_000) {
+            js("document.querySelector('[data-testid=\"drawing-editor\"]').dataset.shapes") == "\"2\""
+        }
+        // The proof's screenshot: the drawing editor over the note.
+        SystemClock.sleep(1_000)
+        ProofShot.take()
+
+        // Done (the drawing bar's, or the back gesture): the files are stored and the note shows it.
+        channel.send(BridgeProtocol.encode(DrawingToEditor.Finish(DrawingAction.DONE)))
+        waitUntil("the drawing bar gone", 20_000) { shown.lastOrNull() == null && shown.size >= 2 }
+        waitUntil("the drawing in the note", 10_000) { drawingFiles() != null }
+        val (svg, scene) = drawingFiles()!!
+        val picture = String(kept.getValue(svg))
+        assertEquals(true, picture.trimStart().startsWith("<svg"))
+        // Its words' font is inlined from the APK's own font files, so it draws the same anywhere.
+        assertEquals(true, picture.contains("@font-face"))
+        val elements = (JSONTokener(String(kept.getValue(scene))).nextValue() as JSONObject).getJSONArray("elements")
+        val drawn = (0 until elements.length()).map { elements.getJSONObject(it) }.sortedBy { it.getString("type") }
+        assertEquals(listOf("rectangle", "text"), drawn.map { it.getString("type") })
+        // Drawn by the finger's drag and typed by the keys, not empty.
+        assertEquals(true, drawn[0].getDouble("width") > 50 && drawn[0].getDouble("height") > 30)
+        assertEquals("Beds", drawn[1].getString("text"))
+        // While Done was saved the drawing bar's buttons waited.
+        assertEquals(true, saving.isNotEmpty())
+        assertEquals("false", js("!!document.querySelector('[data-testid=\"drawing-editor\"]')"))
+        waitUntil("the new drawing shown", 20_000) {
+            js("document.querySelector('[data-testid=\"drawing\"]')?.dataset.state") == "\"ready\""
+        }
+
+        // Edit opens it again from its scene, which the app reads for the page; Cancel leaves it.
+        js("document.querySelector('[data-testid=\"drawing\"]').click(), true")
+        js("document.querySelector('[data-testid=\"drawing\"] .pm-drawing-edit').click(), true")
+        // The rectangle and the word, from the scene the app read.
+        waitUntil("the drawing open again", 30_000) {
+            js("document.querySelector('[data-testid=\"drawing-editor\"]')?.dataset.shapes") == "\"2\""
+        }
+        waitUntil("the drawing bar told", 5_000) { shown.lastOrNull() == "Edit Excalidraw Diagram" }
+        channel.send(BridgeProtocol.encode(DrawingToEditor.Finish(DrawingAction.CANCEL)))
+        waitUntil("the drawing editor closed", 10_000) {
+            js("!!document.querySelector('[data-testid=\"drawing-editor\"]')") == "false"
+        }
+        assertEquals(svg to scene, drawingFiles())
+
+        // A note that can't be edited shows the drawing with no Edit or Delete.
+        js("penmossEditor.editor.editor.setEditable(false), true")
+        js("document.querySelector('[data-testid=\"drawing\"]').click(), true")
+        assertEquals("true", js("document.querySelector('[data-testid=\"drawing\"] .pm-drawing-tools').hidden"))
+        js("penmossEditor.editor.editor.setEditable(true), true")
+
+        // Delete takes it out of the note.
+        js("document.querySelector('[data-testid=\"drawing\"]').click(), true")
+        js("document.querySelector('[data-testid=\"drawing\"] .pm-drawing-delete').click(), true")
+        waitUntil("the drawing deleted", 5_000) { drawingFiles() == null }
+    }
+
     // ---- helpers ----------------------------------------------------------------
+
+    /** The note's drawing, as its picture's and its scene's paths; null when it has none. */
+    private fun drawingFiles(): Pair<String, String>? {
+        val found = decode(
+            js(
+                """
+                (() => {
+                  let found = null;
+                  penmossEditor.editor.editor.state.doc.descendants((node) => {
+                    const link = node.type.name === 'image' && node.marks.find((mark) => mark.type.name === 'link');
+                    if (!found && link && link.attrs.href.endsWith('.excalidraw')) found = node.attrs.src + ' ' + link.attrs.href;
+                  });
+                  return found;
+                })()
+                """.trimIndent(),
+            ),
+        ) ?: return null
+        val (svg, scene) = found.split(' ')
+        return svg to scene
+    }
+
+    /** Picks Excalidraw's rectangle and drags one out on its canvas with a finger. */
+    private fun drawRectangle() {
+        tool("rectangle")
+        val (x, y) = canvasAt(60f, 120f)
+        val (toX, toY) = canvasAt(220f, 216f)
+        val down = SystemClock.uptimeMillis()
+        touch(MotionEvent.ACTION_DOWN, x, y, down)
+        for (step in 1..10) touch(MotionEvent.ACTION_MOVE, x + (toX - x) * step / 10, y + (toY - y) * step / 10, down)
+        touch(MotionEvent.ACTION_UP, toX, toY, down)
+    }
+
+    /** Picks Excalidraw's text tool, taps the canvas and types [words] with keys, then Escape ends the text. */
+    private fun writeText(words: String) {
+        tool("text")
+        val (x, y) = canvasAt(80f, 320f)
+        val down = SystemClock.uptimeMillis()
+        touch(MotionEvent.ACTION_DOWN, x, y, down)
+        touch(MotionEvent.ACTION_UP, x, y, down)
+        waitUntil("the text box open", 5_000) {
+            js("document.activeElement?.classList.contains('excalidraw-wysiwyg') ?? false") == "true"
+        }
+        instrumentation.sendStringSync(words)
+        waitUntil("the words typed", 5_000) {
+            decode(js("document.querySelector('textarea.excalidraw-wysiwyg')?.value ?? ''")) == words
+        }
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_ESCAPE)
+    }
+
+    /** Picks one of Excalidraw's tools from its toolbar. */
+    private fun tool(name: String) {
+        js("document.querySelector('[data-testid=\"drawing-editor\"] [data-testid=\"toolbar-$name\"]').click(), true")
+    }
+
+    /** A point on Excalidraw's canvas, given in CSS pixels from its top left, as screen pixels. */
+    private fun canvasAt(cssX: Float, cssY: Float): Pair<Float, Float> {
+        val box = JSONArray(
+            decode(
+                js(
+                    "JSON.stringify((() => { const r = document.querySelector('[data-testid=\"drawing-editor\"] canvas.interactive')" +
+                        ".getBoundingClientRect(); return [r.left, r.top]; })())",
+                ),
+            ),
+        )
+        val origin = IntArray(2)
+        var density = 1f
+        instrumentation.runOnMainSync {
+            webView.getLocationOnScreen(origin)
+            density = webView.resources.displayMetrics.density
+        }
+        return (origin[0] + (box.getDouble(0).toFloat() + cssX) * density) to (origin[1] + (box.getDouble(1).toFloat() + cssY) * density)
+    }
+
+    /** A finger's touch at a screen point, as the touchscreen sends it. */
+    private fun touch(action: Int, x: Float, y: Float, downTime: Long) {
+        val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
+        event.source = InputDevice.SOURCE_TOUCHSCREEN
+        instrumentation.sendPointerSync(event)
+        event.recycle()
+    }
 
     /** A block's text, its inline nodes' text joined. */
     private fun text(block: JSONObject): String {

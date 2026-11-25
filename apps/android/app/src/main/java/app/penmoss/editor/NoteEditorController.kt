@@ -10,6 +10,7 @@ import app.penmoss.data.PictureStore
 import app.penmoss.data.UpdateEntity
 import app.penmoss.engine.bridge.BridgeProtocol
 import app.penmoss.engine.bridge.CommentFromEditor
+import app.penmoss.engine.bridge.DrawingFromEditor
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.bridge.FromEditor
 import app.penmoss.engine.bridge.ParityFromEditor
@@ -578,6 +579,9 @@ class NoteEditorController(
             is ParityFromEditor.FileInfo, is ParityFromEditor.OpenFile -> files.onMessage(message)
             is ParityFromEditor -> tools.onMessage(message)
             is CommentFromEditor -> comments.onMessage(message)
+            // The note screen keeps the drawing bar's state itself (PEN-189); a scene is a file's.
+            is DrawingFromEditor.Shown -> Unit
+            is DrawingFromEditor.SceneWanted -> files.scene(message)
             is FromEditor.NoteContent, is FromEditor.WatchNote -> Unit
             is FromEditor.Error -> {
                 app.penmoss.log.PenmossLog.warn(TAG, "Editor page: ${message.message}")

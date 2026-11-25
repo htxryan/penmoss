@@ -42,6 +42,9 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import app.penmoss.engine.bridge.DrawingAction
+import app.penmoss.engine.bridge.DrawingFromEditor
+import app.penmoss.engine.bridge.DrawingToEditor
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.DisposableEffect
@@ -175,11 +178,17 @@ fun NoteRoute(
     BackHandler(enabled = format.menu && state.phase == EditorUiState.Phase.READY) { controller.dismissMenu() }
     BackHandler(enabled = note.finding) { note.finding = false }
     BackHandler(enabled = note.lightbox && !note.rendererGone) { note.channel.send(BridgeProtocol.encode(ToEditor.CloseLightbox)) }
+    // The drawing editor (PEN-189): Back keeps the drawing, as Done does and the Mac's Back does.
+    val finishDrawing = { action: DrawingAction -> note.channel.send(BridgeProtocol.encode(DrawingToEditor.Finish(action))) }
+    BackHandler(enabled = note.drawing != null && !note.rendererGone) { if (!note.drawingSaving) finishDrawing(DrawingAction.DONE) }
+    // Counted as the Mac's drawing dialog is: done when Done kept a drawing, cancel otherwise.
+    val drawingDialog = rememberTrackedDialog("drawing", open = note.drawing != null)
     val appCommands = app.penmoss.ui.keys.LocalAppCommands.current
     // A hardware keyboard's commands for this note, and the page's dispatcher (T40 P9, A493, A494).
     NoteCommands(
         controller,
-        ready = note.ready,
+        // Held while the drawing editor is open: a keyboard's keys are the drawing's (PEN-189).
+        ready = note.ready && note.drawing == null,
         editable = note.editable,
         launcherNote = if (!note.makingPeriodic && note.ready) noteId to state.title else null,
         nav = if (note.makingPeriodic) null else note.periodicNav,
@@ -209,7 +218,15 @@ fun NoteRoute(
 
     Scaffold(
         topBar = {
-            if (!note.lightbox) TopAppBar(
+            val drawing = note.drawing
+            if (drawing != null) {
+                DrawingBar(
+                    drawing,
+                    saving = note.drawingSaving,
+                    onCancel = { finishDrawing(DrawingAction.CANCEL) },
+                    onDone = { finishDrawing(DrawingAction.DONE) },
+                )
+            } else if (!note.lightbox) TopAppBar(
                 title = {
                     // A periodic screen names what it makes; a note shows its folder path (T40 P4,
                     // NT11): a tap opens the folder, a long press lists levels.
@@ -261,19 +278,19 @@ fun NoteRoute(
     ) { padding ->
         // The keyboard pushes the bar up and shrinks the editor above it (the T2 spike's layout).
         Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
-            note.ownCopy?.let { copy ->
+            note.ownCopy?.takeIf { note.drawing == null }?.let { copy ->
                 CopyNotice(copy.title, onOpen = { onOpenNote(copy.id) }, onDismiss = { note.ownCopy = null })
             }
             // On a periodic note, the row under the top bar: the previous and next, the period's
             // name, and the week (or the week's days), as the web shows them (T40 P5, JR4).
             val nav = note.periodicNav
-            if (!note.makingPeriodic && nav != null && !note.lightbox) {
+            if (!note.makingPeriodic && nav != null && !note.lightbox && note.drawing == null) {
                 // Its Week and day chips marked where the phone holds the note (T40 P9, N4).
                 val marks by remember { graph.store.observeJournalMarks().map(::journalMarksOf).distinctUntilChanged() }
                     .collectAsStateWithLifecycle(JournalMarks())
                 PeriodNavRow(nav, onOpenPeriodic = onOpenPeriodic, marks = marks)
             }
-            if (note.finding) {
+            if (note.finding && note.drawing == null) {
                 FindBar(remember(noteId) { WebViewFind { note.webView() } }, onClose = { note.finding = false }, refresh = note.counts)
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -289,13 +306,25 @@ fun NoteRoute(
                                         if (raw.contains("\"lightbox\"")) {
                                             (BridgeProtocol.decodeFromEditor(raw) as? FromEditor.Lightbox)?.let { note.lightbox = it.open }
                                         }
-                                        controller.onPageMessage(raw)
+                                        if (raw.contains("\"drawing\"")) {
+                                            (BridgeProtocol.decodeFromEditor(raw) as? DrawingFromEditor.Shown)?.let {
+                                                if (it.title == null && it.kept) drawingDialog.done()
+                                                note.drawingSaving = it.saving
+                                                note.drawing = it.title
+                                            }
+                                        }
+                                        // A keyboard's keys are the drawing's while it is open (PEN-189).
+                                        val heldKey = note.drawing != null && raw.contains("\"command\"") &&
+                                            BridgeProtocol.decodeFromEditor(raw) is FromEditor.Command
+                                        if (!heldKey) controller.onPageMessage(raw)
                                         note.services.onPageMessage(raw)
                                         note.linked.onPageMessage(raw)
                                     },
                                     onRendererGone = {
                                         note.rendererGone = true
                                         note.lightbox = false
+                                        note.drawing = null
+                                        note.drawingSaving = false
                                         note.services.stop()
                                         note.linked.stop()
                                         controller.pageGone()
@@ -322,7 +351,7 @@ fun NoteRoute(
                     )
                 }
             }
-            if (!note.lightbox && showsFormatBar(note.editable, source, format)) {
+            if (!note.lightbox && note.drawing == null && showsFormatBar(note.editable, source, format)) {
                 FormatBar(
                     format,
                     onCommand = controller::format,

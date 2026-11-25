@@ -247,6 +247,30 @@
     },
     {
       "v": 1,
+      "type": "drawing",
+      "action": "done"
+    },
+    {
+      "v": 1,
+      "type": "drawing",
+      "action": "cancel"
+    },
+    {
+      "v": 1,
+      "type": "drawingScene",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/abababababababababababababababababababababababababababababababab.excalidraw",
+      "text": "{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}"
+    },
+    {
+      "v": 1,
+      "type": "drawingScene",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/abababababababababababababababababababababababababababababababab.excalidraw",
+      "text": null
+    },
+    {
+      "v": 1,
       "type": "preview"
     },
     {
@@ -779,6 +803,30 @@
       "v": 1,
       "type": "lightbox",
       "open": false
+    },
+    {
+      "v": 1,
+      "type": "drawing",
+      "title": "New Excalidraw Diagram",
+      "saving": false
+    },
+    {
+      "v": 1,
+      "type": "drawing",
+      "title": "Edit Excalidraw Diagram",
+      "saving": true
+    },
+    {
+      "v": 1,
+      "type": "drawing",
+      "title": null,
+      "kept": true
+    },
+    {
+      "v": 1,
+      "type": "drawingScene",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/abababababababababababababababababababababababababababababababab.excalidraw"
     },
     {
       "v": 1,
@@ -1758,9 +1806,16 @@
     "{\"v\":1,\"type\":\"setDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
     "{\"v\":1,\"type\":\"setAiDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"value\":\"maybe\"}",
     "{\"v\":1,\"type\":\"answerDescription\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"answer\":\"later\"}",
-    "{\"v\":1,\"type\":\"underTitle\",\"description\":\"yes\"}"
+    "{\"v\":1,\"type\":\"underTitle\",\"description\":\"yes\"}",
+    "{\"v\":1,\"type\":\"drawing\",\"action\":\"save\"}",
+    "{\"v\":1,\"type\":\"drawing\"}",
+    "{\"v\":1,\"type\":\"drawingScene\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/abababababababababababababababababababababababababababababababab.svg\",\"text\":null}",
+    "{\"v\":1,\"type\":\"drawingScene\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/abababababababababababababababababababababababababababababababab.excalidraw\",\"text\":3}"
   ],
   "invalidFromEditor": [
+    "{\"v\":1,\"type\":\"drawing\",\"title\":\"New Excalidraw Diagram\"}",
+    "{\"v\":1,\"type\":\"drawing\",\"title\":null}",
+    "{\"v\":1,\"type\":\"drawing\",\"title\":null,\"kept\":\"yes\"}",
     "{\"v\":1,\"type\":\"click\"}",
     "{\"v\":1,\"type\":\"click\",\"id\":\"Editor.Callout.Fold\"}",
     "{\"v\":1,\"type\":\"click\",\"id\":\"editor\"}",
@@ -1829,6 +1884,9 @@
     "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00004\",\"status\":\"open\",\"quote\":\"Raised beds\",\"orphaned\":false,\"kind\":\"range\",\"created\":1761680000000,\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0004\",\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"body\":\"Can you check?\",\"at\":1761680000000}],\"target\":{\"writer\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YW1\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"},\"delivery\":{\"state\":\"sent\",\"at\":0,\"reason\":\"scope\"}}]}",
     "{\"v\":1,\"type\":\"commentSent\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"../x\"}",
     "{\"v\":1,\"type\":\"commentSent\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
-    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00004\",\"status\":\"open\",\"quote\":\"Raised beds\",\"orphaned\":false,\"kind\":\"range\",\"created\":1761680000000,\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0004\",\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"body\":\"Can you check?\",\"at\":1761680000000}],\"target\":{\"token\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YT1\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"}}]}"
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00004\",\"status\":\"open\",\"quote\":\"Raised beds\",\"orphaned\":false,\"kind\":\"range\",\"created\":1761680000000,\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0004\",\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"body\":\"Can you check?\",\"at\":1761680000000}],\"target\":{\"token\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YT1\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"}}]}",
+    "{\"v\":1,\"type\":\"drawing\",\"title\":\"\"}",
+    "{\"v\":1,\"type\":\"drawing\",\"title\":true}",
+    "{\"v\":1,\"type\":\"drawingScene\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/abababababababababababababababababababababababababababababababab.png\"}"
   ]
 }

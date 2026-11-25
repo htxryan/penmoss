@@ -13,9 +13,9 @@
  * The editor shows such a picture as a drawing block: the SVG as wide as a picture. A click selects
  * it, as it does a picture; Edit and Delete buttons in its top-right corner (on hover, or while it
  * is selected) open it in the drawing editor, through `DrawingServices`, or remove it, as Enter
- * and Backspace do on the selected drawing. The editor itself is the app's (apps/web loads
- * Excalidraw only then); without the services (Android) or in a read-only note, a drawing is a
- * picture you can look at, with no buttons.
+ * and Backspace do on the selected drawing. The editor itself is the app's (the Mac's apps/web
+ * and Android's note page each load Excalidraw only then, PEN-189); without the services or in a
+ * read-only note, a drawing is a picture you can look at, with no buttons.
  */
 import { parseAttachmentPath } from '@penmoss/core/attachments';
 import { Extension, type Editor } from '@tiptap/core';

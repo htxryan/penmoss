@@ -10,10 +10,13 @@
       The page loads only from the APK and talks only to the app (T32, A293): no
       network, no frames, no plug-ins. Notes come from other devices and agents, so
       a script injected through one could otherwise send what it reads elsewhere.
+      The one read the page makes is the drawing editor's (PEN-189): a drawing's
+      SVG carries the font files its text uses, read from the APK's own
+      `excalidraw/` folder, and nothing else.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src https://appassets.androidplatform.net/assets/editor/excalidraw/; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <title>Penmoss editor</title>
     <script type="module" src="./src/main.ts"></script>

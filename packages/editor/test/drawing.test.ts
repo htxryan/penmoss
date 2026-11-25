@@ -301,14 +301,14 @@ describe('a drawing in a note', () => {
     expect(replicaMarkdown(collab)).toBe(markdownOf(collab));
   });
 
-  it('without a drawing editor (Android), shows as a picture that a click does not follow', async () => {
+  it('without a drawing editor, shows as a picture that a click does not follow', async () => {
     const collab = withDrawing();
     const { view } = collab.editor;
     const shown = view.dom.querySelector<HTMLElement>('[data-testid="drawing"]')!;
     await flush();
     expect(shown.querySelector('img')!.getAttribute('src')).toMatch(/^data:image\/svg\+xml;/);
     expect(shown.hasAttribute('aria-label')).toBe(false);
-    // No Edit or Delete buttons: the phone has no drawing editor.
+    // No Edit or Delete buttons: this editor was made without a drawing editor.
     expect(shown.querySelector('.pm-drawing-tools')).toBeNull();
     expect(click(shown).defaultPrevented).toBe(true);
     // Edited around: the drawing stays as it is.

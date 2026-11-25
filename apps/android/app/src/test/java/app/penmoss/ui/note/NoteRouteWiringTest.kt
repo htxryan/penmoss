@@ -1,5 +1,6 @@
 package app.penmoss.ui.note
 
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import android.content.res.Configuration
 import android.os.Looper
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.assertTextEquals
@@ -37,12 +39,17 @@ import app.penmoss.editor.NotePages
 import app.penmoss.engine.api.ChangedNote
 import app.penmoss.engine.api.ChangesPage
 import app.penmoss.engine.bridge.BridgeProtocol
+import app.penmoss.engine.bridge.DrawingToEditor
+import app.penmoss.engine.bridge.DrawingFromEditor
+import app.penmoss.engine.bridge.DrawingAction
 import app.penmoss.engine.bridge.ContentState
 import app.penmoss.engine.bridge.FromEditor
 import app.penmoss.engine.bridge.ToEditor
 import app.penmoss.stopMainScope
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import app.penmoss.analytics.Analytics
+import app.penmoss.analytics.AnalyticsHarness
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -234,6 +241,58 @@ class NoteRouteWiringTest {
         // Still the note: back closed only the lightbox.
         scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(FromEditor.Lightbox(open = false))) }
         await { runCatching { compose.onNodeWithTag("noteInfo").assertExists() }.isSuccess }
+    }
+
+    /**
+     * The drawing editor (PEN-189): while the page shows it over the note, the drawing bar takes
+     * the note's place with its title, Cancel and Done; each, and the back gesture (as Done, the
+     * Mac's Back keeping the drawing), goes to the page. While Done is saved its buttons wait and
+     * the back gesture does nothing. The note's bar comes back once the page says the editor
+     * closed, and the `drawing` dialog is counted done when it kept a drawing, as the Mac's is.
+     */
+    @Test
+    fun theDrawingBarTakesTheNotesBarAndSendsDoneAndCancel() {
+        val phone = AnalyticsHarness()
+        Analytics.install(phone.service)
+        try {
+            openGarden()
+            scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(FromEditor.Ready)) }
+            await { sent.any { it is ToEditor.Fonts } }
+            compose.onNodeWithTag("noteInfo").assertExists()
+            scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(DrawingFromEditor.Shown("New Excalidraw Diagram"))) }
+            await { runCatching { compose.onNodeWithTag("drawingBar").assertExists() }.isSuccess }
+            compose.onNodeWithTag("noteInfo").assertDoesNotExist()
+            compose.onNodeWithText("New Excalidraw Diagram").assertExists()
+            compose.onNodeWithTag("drawingCancel").performClick()
+            await { sent.any { it == DrawingToEditor.Finish(DrawingAction.CANCEL) } }
+            compose.onNodeWithTag("drawingDone").performClick()
+            await { sent.any { it == DrawingToEditor.Finish(DrawingAction.DONE) } }
+            sent.clear()
+            scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            await { sent.any { it == DrawingToEditor.Finish(DrawingAction.DONE) } }
+            // Done being saved: both buttons wait, and so does the back gesture.
+            sent.clear()
+            scenario!!.onActivity {
+                hooks!!.onMessage(BridgeProtocol.encode(DrawingFromEditor.Shown("New Excalidraw Diagram", saving = true)))
+            }
+            await { runCatching { compose.onNodeWithTag("drawingDone").assertIsNotEnabled() }.isSuccess }
+            compose.onNodeWithTag("drawingCancel").assertIsNotEnabled()
+            scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            compose.waitForIdle()
+            assertTrue(sent.none { it is DrawingToEditor.Finish })
+            compose.onNodeWithTag("drawingBar").assertExists()
+            // Still the note: the page closes the editor, having kept the drawing, and the note's bar is back.
+            scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(DrawingFromEditor.Shown(null, kept = true))) }
+            await { runCatching { compose.onNodeWithTag("noteInfo").assertExists() }.isSuccess }
+            compose.onNodeWithTag("drawingBar").assertDoesNotExist()
+            await {
+                runBlocking { phone.store.page(null, null, 500) }
+                    .any { it.kind == "dialog" && it.name == "drawing" && it.props.toString().contains("done") }
+            }
+        } finally {
+            Analytics.install(null)
+            phone.close()
+        }
     }
 
     /**

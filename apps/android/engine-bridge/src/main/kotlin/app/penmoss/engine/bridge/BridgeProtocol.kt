@@ -686,6 +686,7 @@ object BridgeProtocol {
             is ParityToEditor -> EditorParity.encode(this, message)
             is CommentToEditor -> CommentsBridge.encode(this, message)
             is CommentAuthorToEditor -> CommentsBridge.encode(this, message)
+            is DrawingToEditor -> DrawingBridge.encode(this, message)
         }
     }.toString()
 
@@ -846,6 +847,7 @@ object BridgeProtocol {
             }
             is ParityFromEditor -> EditorParity.encode(this, message)
             is CommentFromEditor -> CommentsBridge.encode(this, message)
+            is DrawingFromEditor -> DrawingBridge.encode(this, message)
             is FromEditor.Error -> {
                 put("type", "error")
                 put("noteId", message.noteId?.let(::JsonPrimitive) ?: JsonNull)
@@ -879,6 +881,7 @@ object BridgeProtocol {
             val open = (value["open"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull ?: return null
             return FromEditor.Lightbox(open)
         }
+        if (type == "drawing") return DrawingBridge.decodeShown(value)
         if (type == "createdPeriodic") {
             val note = noteOf(value["note"]) ?: return null
             val kind = ToEditor.PeriodKind.of(value.string("kind")) ?: return null
@@ -1039,6 +1042,7 @@ object BridgeProtocol {
             )
             else -> EditorParity.decodeFromEditor(type, noteId, value)
                 ?: CommentsBridge.decodeFromEditor(type, noteId, value)
+                ?: DrawingBridge.decodeFromEditor(type, noteId, value)
         }
     }
 
@@ -1107,6 +1111,7 @@ object BridgeProtocol {
             }
             "preview" -> return ToEditor.Preview
             "closeLightbox" -> return ToEditor.CloseLightbox
+            "drawing" -> return DrawingBridge.decodeFinish(value)
             "createPeriodic" -> {
                 val kind = ToEditor.PeriodKind.of(value.string("kind")) ?: return null
                 val day = when (val raw = value["day"]) {
@@ -1221,6 +1226,7 @@ object BridgeProtocol {
             )
             else -> EditorParity.decodeToEditor(value.string("type"), noteId, value)
                 ?: CommentsBridge.decodeToEditor(value.string("type"), noteId, value)
+                ?: DrawingBridge.decodeToEditor(value.string("type"), noteId, value)
         }
     }
 
