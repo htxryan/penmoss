@@ -136,6 +136,12 @@ tasks:
       - pnpm exec prettier --check .
       # No planning or roadmap files in the repository: they live in GitHub issues (W13).
       - sh scripts/no-plan-files.sh
+      - task: lint:kotlin
+
+  lint:kotlin:
+    desc: "The Android app's Kotlin: detekt fails on an unused import or an unused private function, property or class, and nothing else (apps/android/detekt.yml, PEN-187). Needs Java 17+"
+    cmds:
+      - bash scripts/pinned-tool.sh detekt --input apps/android --excludes '**/build/**' --config apps/android/detekt.yml
 
   format:
     desc: Format the repo with Prettier

@@ -1,0 +1,54 @@
+# detekt for the Android app's Kotlin (PEN-187): dead code only. `task lint:kotlin` (part of
+# `task lint`) runs it with this config alone, never detekt's defaults, so only the four rules
+# below are on: an unused import, and an unused private function, property or class. Formatting,
+# naming and the rest stay with the compiler and review.
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+
+processors:
+  active: false
+
+console-reports:
+  active: true
+  exclude:
+    - 'ProjectStatisticsReport'
+    - 'ComplexityReport'
+    - 'NotificationReport'
+    - 'FileBasedFindingsReport'
+    - 'LiteFindingsReport'
+
+output-reports:
+  active: false
+
+comments:
+  active: false
+complexity:
+  active: false
+coroutines:
+  active: false
+empty-blocks:
+  active: false
+exceptions:
+  active: false
+naming:
+  active: false
+performance:
+  active: false
+potential-bugs:
+  active: false
+
+style:
+  active: true
+  UnusedImports:
+    active: true
+  UnusedPrivateClass:
+    active: true
+  UnusedPrivateMember:
+    active: true
+    # A preview is read by Android Studio, never called.
+    ignoreAnnotated: ['Preview']
+  UnusedPrivateProperty:
+    active: true

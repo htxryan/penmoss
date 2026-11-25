@@ -4,6 +4,7 @@
 #
 #   scripts/pinned-tool.sh actionlint [args]   `task ci:lint` runs it over .github/workflows
 #   scripts/pinned-tool.sh gitleaks [args]     `task audit:secrets` scans the tree with it
+#   scripts/pinned-tool.sh detekt [args]       `task lint:kotlin` checks the Android app's Kotlin
 #
 # Arguments after the name go to the tool. One table per tool: its version, how it says its
 # version, where its release lives, and each platform's archive and SHA-256.
@@ -12,6 +13,33 @@ set -euo pipefail
 name="${1:-}"
 shift || true
 platform="$(uname -s)-$(uname -m)"
+
+# detekt (PEN-187) is one jar for every platform, from Maven Central, run on a Java 17 or later:
+# JAVA_HOME's, else the JDK the Taskfile's Android tasks use, else the PATH's (CI's hosted Ubuntu
+# runners have one).
+if [ "$name" = detekt ]; then
+  VERSION=1.23.8
+  sum=3afe89a11120303c73c9bdda3d8fe558dd9070a6937d27819ddc04b275381245
+  url="https://repo1.maven.org/maven2/io/gitlab/arturbosch/detekt/detekt-cli/$VERSION/detekt-cli-$VERSION-all.jar"
+  java=''
+  for candidate in "${JAVA_HOME:+$JAVA_HOME/bin/java}" /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java "$HOME/opt/jdk-21/bin/java" java; do
+    if [ -n "$candidate" ] && "$candidate" -version >/dev/null 2>&1; then java="$candidate"; break; fi
+  done
+  if [ -z "$java" ]; then
+    echo "pinned-tool.sh: detekt needs Java 17 or later; set JAVA_HOME" >&2
+    exit 2
+  fi
+  cache="${PENMOSS_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/penmoss}/detekt-$VERSION"
+  jar="$cache/detekt-cli-$VERSION-all.jar"
+  if [ ! -f "$jar" ]; then
+    mkdir -p "$cache"
+    curl -fsSL --retry 3 -o "$jar.part" "$url"
+    echo "$sum  $jar.part" | shasum -a 256 -c - >/dev/null
+    mv "$jar.part" "$jar"
+  fi
+  exec "$java" -jar "$jar" "$@"
+fi
+
 case "$name" in
   actionlint)
     VERSION=1.7.12
@@ -35,7 +63,7 @@ case "$name" in
       *) asset='' ;;
     esac ;;
   *)
-    echo "pinned-tool.sh: no pinned tool \"$name\" (actionlint, gitleaks)" >&2
+    echo "pinned-tool.sh: no pinned tool \"$name\" (actionlint, gitleaks, detekt)" >&2
     exit 2 ;;
 esac
 if [ -z "$asset" ]; then

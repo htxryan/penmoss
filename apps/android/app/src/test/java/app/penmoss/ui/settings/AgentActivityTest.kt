@@ -14,8 +14,6 @@ import app.penmoss.engine.api.ActivityUndone
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.engine.api.ApiException
 import app.penmoss.ui.common.PenmossTheme
-import app.penmoss.ui.settings.AgentActivityScreen
-import app.penmoss.ui.settings.NO_AGENT_ACTIVITY
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin

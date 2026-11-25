@@ -13,11 +13,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.onChildren
-import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.assertIsSelected
 import androidx.test.espresso.Espresso
 import androidx.compose.ui.test.getBoundsInRoot
@@ -30,7 +26,6 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
-import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.capture.Captures
 import app.penmoss.capture.RefusedCapturesScreen
@@ -48,7 +43,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.NoteItem

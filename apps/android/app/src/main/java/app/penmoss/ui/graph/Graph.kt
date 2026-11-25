@@ -10,7 +10,6 @@ import app.penmoss.engine.bridge.ToGraph
 import app.penmoss.engine.tree.FolderRow
 import app.penmoss.engine.tree.FolderTree
 import app.penmoss.ui.common.Items
-import app.penmoss.ui.trash.titleOf
 import app.penmoss.ui.common.noteCount
 
 /** A note the graph's search field can find. */

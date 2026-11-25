@@ -9,7 +9,6 @@ import app.penmoss.engine.sync.ExchangeResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -26,7 +25,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit
 
 /**
  * Version history's state (T40 P3b, NT16–NT20) through the real client against a canned server:

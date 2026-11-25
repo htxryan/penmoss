@@ -9,7 +9,8 @@
 #
 # Changed means staged, unstaged or untracked against HEAD; with nothing uncommitted, the files of
 # HEAD's own commit. What runs:
-#   - ESLint, stylelint and Prettier on the changed files only;
+#   - ESLint, stylelint and Prettier on the changed files only, and detekt's dead-code rules
+#     (`task lint:kotlin`) when a Kotlin file changed;
 #   - typecheck and unit tests of every package with a changed file, and of every package that
 #     depends on one (pnpm's `...[<ref>]` filter);
 #   - the release-page and Play upload script tests when their folders changed.
@@ -83,6 +84,9 @@ if [ -n "$styles" ]; then
 fi
 if [ -n "$existing" ]; then
   echo "$existing" | tr '\n' '\0' | xargs -0 pnpm exec prettier --check --ignore-unknown
+fi
+if echo "$existing" | grep -qE '\.kts?$'; then
+  task lint:kotlin
 fi
 
 # Typecheck and tests: the changed packages and their dependents. pnpm compares against the ref

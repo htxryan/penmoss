@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -26,7 +25,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +72,6 @@ import app.penmoss.editor.NoteCounts
 import app.penmoss.engine.bridge.BlockAction
 import app.penmoss.engine.bridge.BlockEntry
 import app.penmoss.engine.bridge.BlockPurpose
-import app.penmoss.engine.bridge.CopyFormat
 import app.penmoss.ui.common.SheetTitle
 import app.penmoss.ui.common.roles
 import app.penmoss.ui.open

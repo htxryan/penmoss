@@ -12,8 +12,6 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import app.penmoss.ui.settings.ColourPicker
-import app.penmoss.ui.settings.ColourWheel
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.geometry.Offset
@@ -30,10 +28,6 @@ import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.Settings
-import app.penmoss.ui.settings.HexColours
-import app.penmoss.ui.settings.Hsva
-import app.penmoss.ui.settings.SETTINGS_WAIT
-import app.penmoss.ui.settings.SymbolsScreen
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import android.graphics.Color as AColor

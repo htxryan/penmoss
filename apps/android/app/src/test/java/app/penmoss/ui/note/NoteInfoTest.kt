@@ -22,7 +22,6 @@ import androidx.compose.ui.test.hasText
 import androidx.test.core.app.ApplicationProvider
 import app.penmoss.FakeApi
 import app.penmoss.data.BacklinkSource
-import app.penmoss.data.FolderEntity
 import app.penmoss.data.NoteStore
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.editor.NoteCounts

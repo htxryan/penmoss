@@ -30,7 +30,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.engine.git.GitNotebookView
 import app.penmoss.engine.settings.BadgeGlyph
-import app.penmoss.engine.settings.NotebookBadge
 import app.penmoss.engine.settings.NotebookBadges
 import app.penmoss.engine.settings.Settings
 import app.penmoss.git.GitNotebooksActions

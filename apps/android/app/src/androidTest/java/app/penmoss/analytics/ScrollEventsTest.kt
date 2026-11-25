@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -166,7 +165,7 @@ class ScrollEventsTest {
             // Note Actions, the note's ⋯: its own id, the Mac's too (AC4), never `menu.open`.
             val noteScreen = OnScreen.inFront()
             noteScreen.tap("noteMore")
-            val actions = until("click note.actions.open") { stored().firstOrNull { it.kind == "click" && it.name == "note.actions.open" && it.id > fold.id } }
+            until("click note.actions.open") { stored().firstOrNull { it.kind == "click" && it.name == "note.actions.open" && it.id > fold.id } }
             assertFalse("no generic id", stored().any { it.kind == "click" && it.name == "menu.open" })
             // Its menu open on screen a moment (a popup of its own), then closed by Back.
             SystemClock.sleep(1_500)

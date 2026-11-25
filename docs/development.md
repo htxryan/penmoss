@@ -80,7 +80,11 @@ Text takes its size, weight and line height from the role it plays, never from a
   shorthand outside `type.css` (stylelint's `penmoss/type-tokens`). A child is never larger or
   heavier than the heading it sits under.
 - On Android, name a role from `TextRoles` (`MaterialTheme.roles.help`), the same roles on
-  Material's scale; `TextRolesTest` refuses a `fontSize = N.sp`.
+  Material's scale, with `item`, `field`, `code`, `glyph` and `display` beside them;
+  `TextRolesTest` refuses a `fontSize = N.sp` and any `MaterialTheme.typography` outside
+  `TextRoles.kt`.
+- On Android, `task lint` (`task lint:kotlin`, detekt with `apps/android/detekt.yml`) refuses an
+  unused import and an unused private function, property or class, and checks nothing else.
 
 ## Testing
 

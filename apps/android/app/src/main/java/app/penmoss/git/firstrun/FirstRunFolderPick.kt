@@ -37,7 +37,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.rememberTrackedDialog
 import app.penmoss.analytics.trackedClick

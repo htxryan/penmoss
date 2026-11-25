@@ -15,15 +15,12 @@ import app.penmoss.engine.api.SettingsChange
 import app.penmoss.engine.api.SettingsReply
 import app.penmoss.engine.api.SyncTree
 import app.penmoss.engine.api.TagCount
-import app.penmoss.engine.api.HistoryAuthor
 import app.penmoss.engine.api.NoteHistory
-import app.penmoss.engine.api.NoteVersion
 import app.penmoss.engine.api.RestoredNote
 import app.penmoss.engine.api.RestoredVersion
 import app.penmoss.engine.api.RevertedVersion
 import app.penmoss.engine.api.TrashListed
 import app.penmoss.engine.api.TrashedNote
-import app.penmoss.engine.api.UnversionedChanges
 import app.penmoss.engine.api.VersionDetail
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList

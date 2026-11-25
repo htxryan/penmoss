@@ -22,7 +22,6 @@ import app.penmoss.editor.NoteCounts
 import app.penmoss.engine.bridge.BlockAction
 import app.penmoss.engine.bridge.BlockEntry
 import app.penmoss.engine.bridge.BlockPurpose
-import app.penmoss.engine.bridge.CopyFormat
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.bridge.TextCounts
 import app.penmoss.ui.common.PenmossTheme
