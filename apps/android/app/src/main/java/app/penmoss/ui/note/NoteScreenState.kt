@@ -225,6 +225,9 @@ internal class NoteScreenState(
      */
     var drawing by mutableStateOf<String?>(null)
 
+    /** The drawing's Done is being saved: the drawing bar's buttons wait. */
+    var drawingSaving by mutableStateOf(false)
+
     fun openPanel(tab: PanelTab) {
         panelName = tab.name
         PanelMemory.remember(context, tab)

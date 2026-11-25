@@ -123,7 +123,12 @@ describe('drawings on Android (PEN-189)', () => {
     host.handle(message({ type: 'insert', item: 'drawing' }));
     await settle();
     expect(editors.opened).toEqual([{ scene: null, title: 'New Excalidraw Diagram' }]);
-    expect(sent).toContainEqual({ v: 1, type: 'drawing', title: 'New Excalidraw Diagram' });
+    expect(sent).toContainEqual({
+      v: 1,
+      type: 'drawing',
+      title: 'New Excalidraw Diagram',
+      saving: false,
+    });
 
     host.handle({ v: 1, type: 'drawing', action: 'done' });
     for (let i = 0; i < 4; i++) {
@@ -139,7 +144,14 @@ describe('drawings on Android (PEN-189)', () => {
     expect(new TextDecoder().decode(bytes[0])).toBe('{"type":"excalidraw","elements":[{}]}');
     expect(new TextDecoder().decode(bytes[1])).toBe('<svg>1</svg>');
     expect(editors.closed).toBe(1);
-    expect(later).toContainEqual({ v: 1, type: 'drawing', title: null });
+    // The bar's buttons waited while Done was saved, and the drawing was kept.
+    expect(later).toContainEqual({
+      v: 1,
+      type: 'drawing',
+      title: 'New Excalidraw Diagram',
+      saving: true,
+    });
+    expect(later).toContainEqual({ v: 1, type: 'drawing', title: null, kept: true });
   });
 
   it('Cancel, or a new drawing left empty, puts nothing in the note', async () => {
@@ -150,7 +162,7 @@ describe('drawings on Android (PEN-189)', () => {
     await settle();
     expect(drawings(editor)).toEqual([]);
     expect(editors.closed).toBe(1);
-    expect(sent).toContainEqual({ v: 1, type: 'drawing', title: null });
+    expect(sent).toContainEqual({ v: 1, type: 'drawing', title: null, kept: false });
 
     editors.take = () => Promise.resolve(null);
     host.handle(message({ type: 'insert', item: 'drawing' }));
@@ -180,6 +192,37 @@ describe('drawings on Android (PEN-189)', () => {
     await settle();
     expect(editors.closed).toBe(1);
     expect(drawings(editor)).toEqual([]);
+  });
+
+  it('a file the phone could not store keeps the editor open too, and Done again saves it', async () => {
+    const { host, sent, editor, storeFiles, later } = opened();
+    host.handle(message({ type: 'insert', item: 'drawing' }));
+    await settle();
+    host.handle({ v: 1, type: 'drawing', action: 'done' });
+    for (let i = 0; i < 4; i++) {
+      await settle();
+      for (const each of sent.splice(0)) {
+        if (each.type === 'file')
+          host.handle(message({ type: 'fileStored', path: each.path, ok: false }));
+        else later.push(each);
+      }
+    }
+    expect(editors.closed).toBe(0);
+    const notices = later.flatMap((each) => (each.type === 'notice' ? [each.message] : []));
+    expect(notices.some((each) => each.startsWith("The drawing couldn't be saved"))).toBe(true);
+    expect(later.at(-1)).toEqual({
+      v: 1,
+      type: 'drawing',
+      title: 'New Excalidraw Diagram',
+      saving: false,
+    });
+    host.handle({ v: 1, type: 'drawing', action: 'done' });
+    for (let i = 0; i < 4; i++) {
+      await settle();
+      storeFiles();
+    }
+    expect(editors.closed).toBe(1);
+    expect(drawings(editor)).toHaveLength(1);
   });
 
   it('Edit asks the app for the scene and opens it; a scene the phone lacks is said', async () => {
@@ -224,6 +267,30 @@ describe('drawings on Android (PEN-189)', () => {
     );
   });
 
+  it('asks for a scene linked from a folder by its path in the notebook', async () => {
+    const { sent, editor } = opened();
+    const sha = '7'.repeat(64);
+    editor.commands.insertContent({
+      type: 'paragraph',
+      content: [
+        {
+          type: 'image',
+          attrs: { src: `../attachments/${'8'.repeat(64)}.svg`, alt: 'Excalidraw Diagram' },
+          marks: [{ type: 'link', attrs: { href: `../attachments/${sha}.excalidraw` } }],
+        },
+      ],
+    });
+    await settle();
+    document.querySelector<HTMLButtonElement>('.pm-drawing-edit')!.click();
+    await settle();
+    expect(sent).toContainEqual({
+      v: 1,
+      type: 'drawingScene',
+      noteId: NOTE,
+      path: `attachments/${sha}.excalidraw`,
+    });
+  });
+
   it('closing the note closes a drawing open over it, as Cancel', async () => {
     const { host, editor } = opened();
     host.handle(message({ type: 'insert', item: 'drawing' }));
@@ -232,5 +299,21 @@ describe('drawings on Android (PEN-189)', () => {
     await settle();
     expect(editors.closed).toBe(1);
     expect(drawings(editor)).toEqual([]);
+  });
+
+  it('closing the note while Done is saved closes the drawing once the save gives up', async () => {
+    const { host } = opened();
+    let fail: (error: Error) => void = () => {};
+    editors.take = () => new Promise((_, reject) => (fail = reject));
+    host.handle(message({ type: 'insert', item: 'drawing' }));
+    await settle();
+    host.handle({ v: 1, type: 'drawing', action: 'done' });
+    await settle();
+    host.handle(message({ type: 'close' }));
+    await settle();
+    expect(editors.closed).toBe(0);
+    fail(new Error('the note has closed'));
+    await settle();
+    expect(editors.closed).toBe(1);
   });
 });

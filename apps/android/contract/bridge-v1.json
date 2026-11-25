@@ -807,12 +807,20 @@
     {
       "v": 1,
       "type": "drawing",
-      "title": "New Excalidraw Diagram"
+      "title": "New Excalidraw Diagram",
+      "saving": false
     },
     {
       "v": 1,
       "type": "drawing",
-      "title": null
+      "title": "Edit Excalidraw Diagram",
+      "saving": true
+    },
+    {
+      "v": 1,
+      "type": "drawing",
+      "title": null,
+      "kept": true
     },
     {
       "v": 1,
@@ -1805,6 +1813,9 @@
     "{\"v\":1,\"type\":\"drawingScene\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/abababababababababababababababababababababababababababababababab.excalidraw\",\"text\":3}"
   ],
   "invalidFromEditor": [
+    "{\"v\":1,\"type\":\"drawing\",\"title\":\"New Excalidraw Diagram\"}",
+    "{\"v\":1,\"type\":\"drawing\",\"title\":null}",
+    "{\"v\":1,\"type\":\"drawing\",\"title\":null,\"kept\":\"yes\"}",
     "{\"v\":1,\"type\":\"click\"}",
     "{\"v\":1,\"type\":\"click\",\"id\":\"Editor.Callout.Fold\"}",
     "{\"v\":1,\"type\":\"click\",\"id\":\"editor\"}",

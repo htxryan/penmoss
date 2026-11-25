@@ -76,11 +76,7 @@ export class EditorHost extends HostNoteActions {
         if (this.current?.noteId === message.noteId) this.flush();
         return;
       case 'close':
-        if (this.current?.noteId === message.noteId) {
-          // A drawing open over the note goes with it, as Cancel (PEN-189).
-          this.drawings.finish('cancel');
-          this.close();
-        }
+        if (this.current?.noteId === message.noteId) this.close();
         // Said even when that note was not open, so the app never waits in vain.
         this.post({ v: BRIDGE_VERSION, type: 'closed', noteId: message.noteId });
         return;
@@ -152,6 +148,7 @@ export class EditorHost extends HostNoteActions {
         this.drawings.finish(message.action);
         return;
       case 'drawingScene': {
+        if (message.noteId !== this.current?.noteId) return;
         const waiting = this.scenes.get(message.path);
         this.scenes.delete(message.path);
         for (const done of waiting ?? []) done(message.text);

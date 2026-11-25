@@ -12,6 +12,7 @@
 import type { DrawingFiles, DrawingServices } from '@penmoss/editor';
 import type { DrawingStep } from './editor';
 import { keepFontFacesLocal } from './font-faces';
+import { DRAWING_EDITOR_UNLOADED, drawingMissing, drawingNotSaved } from './words';
 
 /** Where the drawing's files are kept: this device's attachment store (A1032). */
 export interface DrawingStore {
@@ -103,7 +104,7 @@ export function drawingServices(
         if (scene) {
           const bytes = await store.bytes(scene);
           if (!bytes) {
-            onError("This drawing's file isn't on this Mac yet");
+            onError(drawingMissing('Mac'));
             return null;
           }
           text = new TextDecoder().decode(bytes);
@@ -112,7 +113,7 @@ export function drawingServices(
         try {
           editor = await loadDrawingEditor();
         } catch {
-          onError("The drawing editor couldn't be loaded");
+          onError(DRAWING_EDITOR_UNLOADED);
           return null;
         }
         const resume = suspendShortcuts?.();
@@ -134,9 +135,7 @@ export function drawingServices(
         const svg = await store.addFile(encoder.encode(drawn.svg), 'drawing.svg');
         return { scene: saved.path, svg: svg.path };
       } catch (error) {
-        onError(
-          `The drawing couldn't be saved: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        onError(drawingNotSaved(error));
         return null;
       } finally {
         open = false;

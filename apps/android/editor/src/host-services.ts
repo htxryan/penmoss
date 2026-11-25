@@ -82,16 +82,26 @@ export abstract class HostServices extends HostBase {
    * scene comes from the app and both files go back to it as any file does.
    */
   protected readonly drawings: AndroidDrawings = androidDrawings({
-    scene: (path) => {
+    scene: (link) => {
       const noteId = this.current?.noteId;
-      if (!noteId) return Promise.resolve(null);
+      // The note may link it from a folder (`../attachments/…`); the app keeps it at the top.
+      const found = parseAttachmentPath(link);
+      if (!noteId || found?.ext !== 'excalidraw') return Promise.resolve(null);
+      const path = `attachments/${found.sha256}.excalidraw`;
       return new Promise<string | null>((resolve) => {
-        const timer = setTimeout(() => resolve(null), STORE_PICTURE_MS);
-        const waiting = this.scenes.get(path) ?? [];
-        waiting.push((text) => {
+        const answer = (text: string | null) => {
           clearTimeout(timer);
           resolve(text);
-        });
+        };
+        const timer = setTimeout(() => {
+          // Given up: a late answer finds nothing waiting.
+          const waiting = this.scenes.get(path)?.filter((each) => each !== answer) ?? [];
+          if (waiting.length) this.scenes.set(path, waiting);
+          else this.scenes.delete(path);
+          resolve(null);
+        }, STORE_PICTURE_MS);
+        const waiting = this.scenes.get(path) ?? [];
+        waiting.push(answer);
         this.scenes.set(path, waiting);
         if (waiting.length === 1) {
           this.post({ v: BRIDGE_VERSION, type: 'drawingScene', noteId, path });
@@ -105,9 +115,14 @@ export abstract class HostServices extends HostBase {
       if (!stored) throw new Error('files cannot be added here');
       return stored.path;
     },
-    shown: (title) => this.post({ v: BRIDGE_VERSION, type: 'drawing', title }),
+    shown: (state) => this.post({ v: BRIDGE_VERSION, type: 'drawing', ...state }),
     notice: (message) => this.notice(this.current?.noteId ?? null, message),
   });
+
+  /** The note's keys go to Excalidraw while it is open over the note. */
+  protected override drawingShown(): boolean {
+    return this.drawings.open();
+  }
 
   /**
    * The note's counts (T40 P8, NT24), as the web's status bar takes them

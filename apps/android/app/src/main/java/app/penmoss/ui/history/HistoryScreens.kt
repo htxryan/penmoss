@@ -76,11 +76,11 @@ import app.penmoss.engine.api.VersionDetail
 import app.penmoss.ui.common.Button
 import app.penmoss.ui.common.EmptyMessage
 import app.penmoss.ui.common.IconButton
-import app.penmoss.ui.common.LucideAssets
+import app.penmoss.ui.common.IconAndText
+import app.penmoss.ui.common.LucideGlyph
 import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.PenmossSnackbar
 import app.penmoss.ui.common.TextButton
-import app.penmoss.ui.common.rememberLucideIcons
 import app.penmoss.ui.common.roles
 import app.penmoss.ui.common.shortWhen
 import app.penmoss.ui.settings.SettingsIcons
@@ -283,12 +283,12 @@ private fun NowRow(ui: HistoryUi, about: Boolean, onAbout: () -> Unit, onSaveNow
             modifier = Modifier.testTag("saveVersion"),
             contentPadding = PaddingValues(horizontal = 8.dp),
         ) {
-            Glyph("save", null, 18)
+            LucideGlyph("save", null, 18)
             Spacer(Modifier.width(6.dp))
             Text("Save Version", maxLines = 1, softWrap = false)
         }
         IconButton(onClick = trackedClick("history.about", onAbout), modifier = Modifier.testTag("historyAbout").semantics { selected = about }) {
-            Glyph("info", "About Versions", 20)
+            LucideGlyph("info", "About Versions", 20)
         }
     }
 }
@@ -350,8 +350,8 @@ private fun WhoMark(authors: List<HistoryAuthor>) {
             first == null -> Unit
             first.kind == "agent" -> Icon(SettingsIcons.Spark, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Regex("android|phone|pixel", RegexOption.IGNORE_CASE).containsMatchIn(first.label) ->
-                Glyph("smartphone", null, 16, MaterialTheme.colorScheme.onSurfaceVariant)
-            else -> Glyph("laptop", null, 16, MaterialTheme.colorScheme.onSurfaceVariant)
+                LucideGlyph("smartphone", null, 16, MaterialTheme.colorScheme.onSurfaceVariant)
+            else -> LucideGlyph("laptop", null, 16, MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -372,7 +372,7 @@ private fun VersionScreen(
         HorizontalDivider()
         Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = trackedClick("history.view.back", onBack), modifier = Modifier.testTag("historyBack"), contentPadding = PaddingValues(start = 8.dp, end = 12.dp)) {
-                Glyph("chevron-left", null, 20)
+                LucideGlyph("chevron-left", null, 20)
                 Spacer(Modifier.width(4.dp))
                 Text("Versions", maxLines = 1, softWrap = false)
             }
@@ -382,7 +382,7 @@ private fun VersionScreen(
                     onClick = trackedClick("history.view.mode") { onToggleWhole(!ui.showWhole) },
                     modifier = Modifier.testTag("historyToggleWhole"),
                 ) {
-                    if (ui.showWhole) Glyph("file-diff", "Show Changes", 20) else Glyph("file-text", "Show Whole Version", 20)
+                    if (ui.showWhole) LucideGlyph("file-diff", "Show Changes", 20) else LucideGlyph("file-text", "Show Whole Version", 20)
                 }
             }
         }
@@ -442,7 +442,7 @@ private fun VersionScreen(
                 enabled = !ui.busy,
                 modifier = Modifier.weight(1f).testTag("restoreVersion").semantics { contentDescription = "Restore This Version" },
                 contentPadding = PaddingValues(horizontal = 8.dp),
-            ) { Action("history", "Restore") }
+            ) { IconAndText("history", "Restore") }
             // Not on a move to Trash or its restore: Trash undoes those (N7, A654, A1575).
             if (revertible(version)) {
                 OutlinedButton(
@@ -450,23 +450,16 @@ private fun VersionScreen(
                     enabled = !ui.busy,
                     modifier = Modifier.weight(1f).testTag("revertVersion").semantics { contentDescription = "Revert This Edit" },
                     contentPadding = PaddingValues(horizontal = 8.dp),
-                ) { Action("undo-2", "Revert") }
+                ) { IconAndText("undo-2", "Revert") }
             }
             OutlinedButton(
                 onClick = trackedClick("history.view.copy") { detail?.let(onCopy) },
                 enabled = detail != null,
                 modifier = Modifier.weight(1f).testTag("copyVersion").semantics { contentDescription = "Copy Text" },
                 contentPadding = PaddingValues(horizontal = 8.dp),
-            ) { Action("copy", "Copy") }
+            ) { IconAndText("copy", "Copy") }
         }
     }
-}
-
-@Composable
-private fun Action(icon: String, words: String) {
-    Glyph(icon, null, 18)
-    Spacer(Modifier.width(6.dp))
-    Text(words, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
 }
 
 /**
@@ -542,15 +535,5 @@ private fun NumberedDiff(detail: VersionDetail) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun Glyph(name: String, contentDescription: String?, size: Int, tint: Color = androidx.compose.material3.LocalContentColor.current) {
-    val icon = rememberLucideIcons()?.icon(name)
-    if (icon != null) {
-        Icon(LucideAssets.vector(icon), contentDescription, Modifier.size(size.dp), tint = tint)
-    } else {
-        Spacer(Modifier.size(size.dp))
     }
 }

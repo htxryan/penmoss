@@ -1,6 +1,9 @@
 package app.penmoss.editor
 
 import android.os.SystemClock
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
@@ -104,6 +107,9 @@ class DrawingInstrumentedTest {
     /** The page's messages the note screen reads itself: the drawing editor's title as it opens and closes. */
     private val shown = java.util.concurrent.CopyOnWriteArrayList<String?>()
 
+    /** The titles the page said were being saved (the drawing bar's buttons wait meanwhile). */
+    private val saving = java.util.concurrent.CopyOnWriteArrayList<String>()
+
     private lateinit var channel: EditorWebView.Channel
 
     /** A note's picture, answered as the app answers them: the Mac's drawing, or one kept here. */
@@ -127,7 +133,10 @@ class DrawingInstrumentedTest {
                 activity,
                 channel,
                 onMessage = { raw ->
-                    (BridgeProtocol.decodeFromEditor(raw) as? DrawingFromEditor.Shown)?.let { shown += it.title }
+                    (BridgeProtocol.decodeFromEditor(raw) as? DrawingFromEditor.Shown)?.let {
+                        shown += it.title
+                        if (it.saving) saving += it.title
+                    }
                     controller.onPageMessage(raw)
                 },
                 onRendererGone = {},
@@ -234,10 +243,14 @@ class DrawingInstrumentedTest {
         }
         waitUntil("the drawing bar told", 5_000) { shown.lastOrNull() == "New Excalidraw Diagram" }
 
-        // A rectangle, drawn with Excalidraw's own tool.
+        // A rectangle and a word, drawn with Excalidraw's own tools.
         drawRectangle()
         waitUntil("the rectangle drawn", 10_000) {
             js("document.querySelector('[data-testid=\"drawing-editor\"]').dataset.shapes") == "\"1\""
+        }
+        writeText("Beds")
+        waitUntil("the word written", 10_000) {
+            js("document.querySelector('[data-testid=\"drawing-editor\"]').dataset.shapes") == "\"2\""
         }
         // The proof's screenshot: the drawing editor over the note.
         SystemClock.sleep(1_000)
@@ -248,10 +261,18 @@ class DrawingInstrumentedTest {
         waitUntil("the drawing bar gone", 20_000) { shown.lastOrNull() == null && shown.size >= 2 }
         waitUntil("the drawing in the note", 10_000) { drawingFiles() != null }
         val (svg, scene) = drawingFiles()!!
-        assertEquals(true, String(kept.getValue(svg)).trimStart().startsWith("<svg"))
+        val picture = String(kept.getValue(svg))
+        assertEquals(true, picture.trimStart().startsWith("<svg"))
+        // Its words' font is inlined from the APK's own font files, so it draws the same anywhere.
+        assertEquals(true, picture.contains("@font-face"))
         val elements = (JSONTokener(String(kept.getValue(scene))).nextValue() as JSONObject).getJSONArray("elements")
-        assertEquals(1, elements.length())
-        assertEquals("rectangle", elements.getJSONObject(0).getString("type"))
+        val drawn = (0 until elements.length()).map { elements.getJSONObject(it) }.sortedBy { it.getString("type") }
+        assertEquals(listOf("rectangle", "text"), drawn.map { it.getString("type") })
+        // Drawn by the finger's drag and typed by the keys, not empty.
+        assertEquals(true, drawn[0].getDouble("width") > 50 && drawn[0].getDouble("height") > 30)
+        assertEquals("Beds", drawn[1].getString("text"))
+        // While Done was saved the drawing bar's buttons waited.
+        assertEquals(true, saving.isNotEmpty())
         assertEquals("false", js("!!document.querySelector('[data-testid=\"drawing-editor\"]')"))
         waitUntil("the new drawing shown", 20_000) {
             js("document.querySelector('[data-testid=\"drawing\"]')?.dataset.state") == "\"ready\""
@@ -269,6 +290,12 @@ class DrawingInstrumentedTest {
             js("!!document.querySelector('[data-testid=\"drawing-editor\"]')") == "false"
         }
         assertEquals(svg to scene, drawingFiles())
+
+        // A note that can't be edited shows the drawing with no Edit or Delete.
+        js("penmossEditor.editor.editor.setEditable(false), true")
+        js("document.querySelector('[data-testid=\"drawing\"]').click(), true")
+        assertEquals("true", js("document.querySelector('[data-testid=\"drawing\"] .pm-drawing-tools').hidden"))
+        js("penmossEditor.editor.editor.setEditable(true), true")
 
         // Delete takes it out of the note.
         js("document.querySelector('[data-testid=\"drawing\"]').click(), true")
@@ -298,28 +325,65 @@ class DrawingInstrumentedTest {
         return svg to scene
     }
 
-    /** Picks Excalidraw's rectangle and drags one out on its canvas, as a finger would. */
+    /** Picks Excalidraw's rectangle and drags one out on its canvas with a finger. */
     private fun drawRectangle() {
-        js(
-            """
-            (() => {
-              const editor = document.querySelector('[data-testid="drawing-editor"]');
-              editor.querySelector('[data-testid="toolbar-rectangle"]').click();
-              const canvas = editor.querySelector('canvas.interactive');
-              const box = canvas.getBoundingClientRect();
-              const at = (x, y) => ({ clientX: box.left + x, clientY: box.top + y, pointerId: 1, pointerType: 'touch',
-                isPrimary: true, button: 0, buttons: 1, bubbles: true, cancelable: true, composed: true });
-              canvas.dispatchEvent(new PointerEvent('pointerdown', at(60, 120)));
-              for (let step = 1; step <= 8; step++) {
-                canvas.dispatchEvent(new PointerEvent('pointermove', at(60 + step * 20, 120 + step * 12)));
-              }
-              canvas.dispatchEvent(new PointerEvent('pointerup', { ...at(220, 216), buttons: 0 }));
-              return true;
-            })()
-            """.trimIndent(),
-        )
+        tool("rectangle")
+        val (x, y) = canvasAt(60f, 120f)
+        val (toX, toY) = canvasAt(220f, 216f)
+        val down = SystemClock.uptimeMillis()
+        touch(MotionEvent.ACTION_DOWN, x, y, down)
+        for (step in 1..10) touch(MotionEvent.ACTION_MOVE, x + (toX - x) * step / 10, y + (toY - y) * step / 10, down)
+        touch(MotionEvent.ACTION_UP, toX, toY, down)
     }
 
+    /** Picks Excalidraw's text tool, taps the canvas and types [words] with keys, then Escape ends the text. */
+    private fun writeText(words: String) {
+        tool("text")
+        val (x, y) = canvasAt(80f, 320f)
+        val down = SystemClock.uptimeMillis()
+        touch(MotionEvent.ACTION_DOWN, x, y, down)
+        touch(MotionEvent.ACTION_UP, x, y, down)
+        waitUntil("the text box open", 5_000) {
+            js("document.activeElement?.classList.contains('excalidraw-wysiwyg') ?? false") == "true"
+        }
+        instrumentation.sendStringSync(words)
+        waitUntil("the words typed", 5_000) {
+            decode(js("document.querySelector('textarea.excalidraw-wysiwyg')?.value ?? ''")) == words
+        }
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_ESCAPE)
+    }
+
+    /** Picks one of Excalidraw's tools from its toolbar. */
+    private fun tool(name: String) {
+        js("document.querySelector('[data-testid=\"drawing-editor\"] [data-testid=\"toolbar-$name\"]').click(), true")
+    }
+
+    /** A point on Excalidraw's canvas, given in CSS pixels from its top left, as screen pixels. */
+    private fun canvasAt(cssX: Float, cssY: Float): Pair<Float, Float> {
+        val box = JSONArray(
+            decode(
+                js(
+                    "JSON.stringify((() => { const r = document.querySelector('[data-testid=\"drawing-editor\"] canvas.interactive')" +
+                        ".getBoundingClientRect(); return [r.left, r.top]; })())",
+                ),
+            ),
+        )
+        val origin = IntArray(2)
+        var density = 1f
+        instrumentation.runOnMainSync {
+            webView.getLocationOnScreen(origin)
+            density = webView.resources.displayMetrics.density
+        }
+        return (origin[0] + (box.getDouble(0).toFloat() + cssX) * density) to (origin[1] + (box.getDouble(1).toFloat() + cssY) * density)
+    }
+
+    /** A finger's touch at a screen point, as the touchscreen sends it. */
+    private fun touch(action: Int, x: Float, y: Float, downTime: Long) {
+        val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
+        event.source = InputDevice.SOURCE_TOUCHSCREEN
+        instrumentation.sendPointerSync(event)
+        event.recycle()
+    }
 
     /** A block's text, its inline nodes' text joined. */
     private fun text(block: JSONObject): String {

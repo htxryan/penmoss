@@ -48,6 +48,8 @@ export interface KeyHost {
   noteId(): string | null;
   /** Sends one of the app's commands to the app. */
   command(id: string): void;
+  /** Whether every key goes to what is over the note now (the drawing editor, PEN-189). */
+  passesKeys?(): boolean;
 }
 
 /**
@@ -92,6 +94,8 @@ export class PageKeys {
     if (isRightAlt(event)) this.altGraph = true;
     // With no note open the page shows nothing to act on.
     if (this.host.noteId() === null) return false;
+    // The drawing editor's keys are the drawing's (Undo, Duplicate, its tools), as on the Mac.
+    if (this.host.passesKeys?.()) return false;
     if (event.defaultPrevented || event.isComposing || isAltGraph(event)) return false;
     // AltGr (the right Alt) and an Alt the layout types with: a character, never a command.
     if (event.altKey && !event.ctrlKey && this.altGraph) return false;

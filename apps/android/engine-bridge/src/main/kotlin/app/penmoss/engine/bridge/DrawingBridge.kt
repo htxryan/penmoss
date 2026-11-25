@@ -35,8 +35,11 @@ sealed interface DrawingToEditor : ToEditor {
 }
 
 sealed interface DrawingFromEditor : FromEditor {
-    /** The drawing editor opened over the note with this title, or closed (null). */
-    data class Shown(val title: String?) : DrawingFromEditor
+    /**
+     * The drawing editor open over the note with this title, Done being saved while [saving] (the
+     * bar's buttons wait); or closed (a null title), having kept a drawing when [kept].
+     */
+    data class Shown(val title: String?, val saving: Boolean = false, val kept: Boolean = false) : DrawingFromEditor
 
     /** A drawing's `.excalidraw` file, to open it in the drawing editor. */
     data class SceneWanted(val noteId: String, val path: String) : DrawingFromEditor
@@ -69,6 +72,7 @@ object DrawingBridge {
             is DrawingFromEditor.Shown -> {
                 put("type", "drawing")
                 put("title", message.title)
+                if (message.title != null) put("saving", message.saving) else put("kept", message.kept)
             }
             is DrawingFromEditor.SceneWanted -> {
                 put("type", "drawingScene")
@@ -82,12 +86,12 @@ object DrawingBridge {
     fun decodeFinish(value: JsonObject): DrawingToEditor? =
         DrawingAction.of(value.string("action"))?.let(DrawingToEditor::Finish)
 
-    /** `drawing` from the page, which names no note: a title, or null once it closed. */
+    /** `drawing` from the page, which names no note: a title and `saving`, or null and `kept` once it closed. */
     fun decodeShown(value: JsonObject): DrawingFromEditor? = when (val raw = value["title"]) {
-        is JsonNull -> DrawingFromEditor.Shown(null)
+        is JsonNull -> DrawingFromEditor.Shown(null, kept = value.flag("kept") ?: return null)
         is JsonPrimitive -> raw.takeIf { it.isString }?.content
             ?.takeIf { it.isNotBlank() && it.length <= MAX_TITLE }
-            ?.let { DrawingFromEditor.Shown(it) }
+            ?.let { DrawingFromEditor.Shown(it, saving = value.flag("saving") ?: return null) }
         else -> null
     }
 
@@ -111,6 +115,9 @@ object DrawingBridge {
         )
         else -> null
     }
+
+    private fun JsonObject.flag(key: String): Boolean? =
+        (this[key] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toBooleanStrictOrNull()
 
     private fun JsonObject.string(key: String): String? =
         (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content

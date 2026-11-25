@@ -172,6 +172,9 @@ export abstract class HostNotes extends HostEditing {
   }
 
   close(): void {
+    // A drawing open over the note goes with it, as Cancel (PEN-189): the note it would go in is
+    // closing (`close`, or the note opened again).
+    this.drawings.finish('cancel');
     const open = this.current;
     this.current = null;
     // A selection or a delete belongs to the note as it was shown (re-review).

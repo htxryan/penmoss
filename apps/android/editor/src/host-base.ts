@@ -128,7 +128,13 @@ export abstract class HostBase {
     noteId: () => this.current?.noteId ?? null,
     command: (id) =>
       this.post({ v: BRIDGE_VERSION, type: 'command', noteId: this.current?.noteId ?? null, id }),
+    passesKeys: () => this.drawingShown(),
   });
+
+  /** Whether the drawing editor is open over the note (PEN-189): its keys are its own. */
+  protected drawingShown(): boolean {
+    return false;
+  }
   /** Sizes the title field to its text where CSS can't (`field-sizing`); otherwise nothing. */
   protected readonly fitTitle: () => void = () => undefined;
 

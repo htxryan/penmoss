@@ -602,6 +602,15 @@ export interface EditorState {
 }
 
 /** Messages from the editor to the app. */
+/**
+ * What the drawing bar shows: the editor open with its title, and whether Done is being saved
+ * (its buttons wait meanwhile); or the editor closed, and whether it kept a drawing (Done, as the
+ * Mac's dialog records it).
+ */
+export type DrawingShown =
+  | { readonly title: string; readonly saving: boolean }
+  | { readonly title: null; readonly kept: boolean };
+
 export type FromEditor =
   | { readonly v: 1; readonly type: 'ready' }
   /**
@@ -612,9 +621,9 @@ export type FromEditor =
   /**
    * The drawing editor opened over the note, named `title`, or closed (null) (PEN-189): while it
    * is open the note screen's drawing bar replaces its bars, and sends `drawing` for Done or
-   * Cancel.
+   * Cancel. `saving` holds the bar's buttons while Done is saved; `kept` says Done kept a drawing.
    */
-  | { readonly v: 1; readonly type: 'drawing'; readonly title: string | null }
+  | ({ readonly v: 1; readonly type: 'drawing' } & DrawingShown)
   /** A drawing's `.excalidraw` file, to open it (PEN-189): the app answers `drawingScene`. */
   | { readonly v: 1; readonly type: 'drawingScene'; readonly noteId: string; readonly path: string }
   | {

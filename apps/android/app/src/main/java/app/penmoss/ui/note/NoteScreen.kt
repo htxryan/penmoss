@@ -180,7 +180,9 @@ fun NoteRoute(
     BackHandler(enabled = note.lightbox && !note.rendererGone) { note.channel.send(BridgeProtocol.encode(ToEditor.CloseLightbox)) }
     // The drawing editor (PEN-189): Back keeps the drawing, as Done does and the Mac's Back does.
     val finishDrawing = { action: DrawingAction -> note.channel.send(BridgeProtocol.encode(DrawingToEditor.Finish(action))) }
-    BackHandler(enabled = note.drawing != null && !note.rendererGone) { finishDrawing(DrawingAction.DONE) }
+    BackHandler(enabled = note.drawing != null && !note.rendererGone) { if (!note.drawingSaving) finishDrawing(DrawingAction.DONE) }
+    // Counted as the Mac's drawing dialog is: done when Done kept a drawing, cancel otherwise.
+    val drawingDialog = rememberTrackedDialog("drawing", open = note.drawing != null)
     val appCommands = app.penmoss.ui.keys.LocalAppCommands.current
     // A hardware keyboard's commands for this note, and the page's dispatcher (T40 P9, A493, A494).
     NoteCommands(
@@ -218,7 +220,12 @@ fun NoteRoute(
         topBar = {
             val drawing = note.drawing
             if (drawing != null) {
-                DrawingBar(drawing, onCancel = { finishDrawing(DrawingAction.CANCEL) }, onDone = { finishDrawing(DrawingAction.DONE) })
+                DrawingBar(
+                    drawing,
+                    saving = note.drawingSaving,
+                    onCancel = { finishDrawing(DrawingAction.CANCEL) },
+                    onDone = { finishDrawing(DrawingAction.DONE) },
+                )
             } else if (!note.lightbox) TopAppBar(
                 title = {
                     // A periodic screen names what it makes; a note shows its folder path (T40 P4,
@@ -271,7 +278,7 @@ fun NoteRoute(
     ) { padding ->
         // The keyboard pushes the bar up and shrinks the editor above it (the T2 spike's layout).
         Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
-            note.ownCopy?.let { copy ->
+            note.ownCopy?.takeIf { note.drawing == null }?.let { copy ->
                 CopyNotice(copy.title, onOpen = { onOpenNote(copy.id) }, onDismiss = { note.ownCopy = null })
             }
             // On a periodic note, the row under the top bar: the previous and next, the period's
@@ -283,7 +290,7 @@ fun NoteRoute(
                     .collectAsStateWithLifecycle(JournalMarks())
                 PeriodNavRow(nav, onOpenPeriodic = onOpenPeriodic, marks = marks)
             }
-            if (note.finding) {
+            if (note.finding && note.drawing == null) {
                 FindBar(remember(noteId) { WebViewFind { note.webView() } }, onClose = { note.finding = false }, refresh = note.counts)
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -300,9 +307,16 @@ fun NoteRoute(
                                             (BridgeProtocol.decodeFromEditor(raw) as? FromEditor.Lightbox)?.let { note.lightbox = it.open }
                                         }
                                         if (raw.contains("\"drawing\"")) {
-                                            (BridgeProtocol.decodeFromEditor(raw) as? DrawingFromEditor.Shown)?.let { note.drawing = it.title }
+                                            (BridgeProtocol.decodeFromEditor(raw) as? DrawingFromEditor.Shown)?.let {
+                                                if (it.title == null && it.kept) drawingDialog.done()
+                                                note.drawingSaving = it.saving
+                                                note.drawing = it.title
+                                            }
                                         }
-                                        controller.onPageMessage(raw)
+                                        // A keyboard's keys are the drawing's while it is open (PEN-189).
+                                        val heldKey = note.drawing != null && raw.contains("\"command\"") &&
+                                            BridgeProtocol.decodeFromEditor(raw) is FromEditor.Command
+                                        if (!heldKey) controller.onPageMessage(raw)
                                         note.services.onPageMessage(raw)
                                         note.linked.onPageMessage(raw)
                                     },
@@ -310,6 +324,7 @@ fun NoteRoute(
                                         note.rendererGone = true
                                         note.lightbox = false
                                         note.drawing = null
+                                        note.drawingSaving = false
                                         note.services.stop()
                                         note.linked.stop()
                                         controller.pageGone()

@@ -20,6 +20,7 @@ import { macWindowStore, useMacWindowState } from '../desktop/mac-window';
 import { historyPlace } from '../router';
 import { DrawingCanvas } from './DrawingCanvas';
 import { takeDrawing, type DrawingResult } from './scene';
+import { drawingNotSaved, drawingTitle } from './words';
 import { useTrackedDialog } from '../analytics/dialog';
 
 /** Where the window goes once the drawing is kept: the bar's Back or Forward. */
@@ -64,16 +65,14 @@ export function DrawingDialog({
         onDone(drawn, step);
       } catch (error) {
         setSaving(false);
-        onError(
-          `The drawing couldn't be saved: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        onError(drawingNotSaved(error));
       }
     },
     [initial, onDone, onError, saving, tracked],
   );
 
   /** A drawing is named as the slash menu names it. */
-  const title = initial ? 'Edit Excalidraw Diagram' : 'New Excalidraw Diagram';
+  const title = drawingTitle(initial === null);
 
   return (
     <div

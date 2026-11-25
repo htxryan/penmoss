@@ -12,7 +12,15 @@
  */
 import type { DrawingFiles, DrawingServices } from '@penmoss/editor';
 import { keepFontFacesLocal } from '../../../web/src/drawing/font-faces';
+import {
+  DRAWING_EDITOR_UNLOADED,
+  DRAWING_UNREADABLE,
+  drawingMissing,
+  drawingNotSaved,
+  drawingTitle,
+} from '../../../web/src/drawing/words';
 import type { OpenDrawing } from './drawing-editor';
+import type { DrawingShown } from './protocol';
 
 /** The app's end of a drawing: its files, and its drawing bar. */
 export interface DrawingHooks {
@@ -20,8 +28,7 @@ export interface DrawingHooks {
   scene(path: string): Promise<string | null>;
   /** Stores a file of the drawing; resolves with its attachment path, rejects when it can't. */
   store(bytes: Uint8Array<ArrayBuffer>, name: string): Promise<string>;
-  /** The drawing editor opened with this title, or closed (null). */
-  shown(title: string | null): void;
+  shown(state: DrawingShown): void;
   notice(message: string): void;
 }
 
@@ -62,33 +69,34 @@ export interface AndroidDrawings {
 export function androidDrawings(hooks: DrawingHooks): AndroidDrawings {
   /** How the bar's next Done or Cancel reaches the drawing open now (while it waits for one). */
   let current: { readonly finished: (action: DrawingFinish) => void } | null = null;
+  /** A Cancel that came while Done was being saved (the note closing): taken once it fails. */
+  let cancelled = false;
   let busy = false;
   let shown = false;
 
   /** Waits for the bar until Done keeps something (or a new drawing left empty), or Cancel. */
-  async function finished(editor: OpenDrawing): Promise<DrawingFiles | null> {
+  async function finished(editor: OpenDrawing, title: string): Promise<DrawingFiles | null> {
     for (;;) {
+      if (cancelled) return null;
       const action = await new Promise<DrawingFinish>((resolve) => {
         current = { finished: resolve };
       });
-      // A second tap while this one is saved does nothing.
+      // A second tap while this one is saved does nothing (the bar's buttons wait too).
       current = null;
       if (action === 'cancel') return null;
-      let drawn;
+      hooks.shown({ title, saving: true });
       try {
-        drawn = await editor.take();
+        const drawn = await editor.take();
+        if (!drawn) return null;
+        const encoder = new TextEncoder();
+        const scene = await hooks.store(encoder.encode(drawn.scene), 'drawing.excalidraw');
+        const svg = await hooks.store(encoder.encode(drawn.svg), 'drawing.svg');
+        return { scene, svg };
       } catch (error) {
         // The editor stays open, as the Mac's does, so nothing drawn is lost.
-        hooks.notice(
-          `The drawing couldn't be saved: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        continue;
+        hooks.notice(drawingNotSaved(error));
+        hooks.shown({ title, saving: false });
       }
-      if (!drawn) return null;
-      const encoder = new TextEncoder();
-      const scene = await hooks.store(encoder.encode(drawn.scene), 'drawing.excalidraw');
-      const svg = await hooks.store(encoder.encode(drawn.svg), 'drawing.svg');
-      return { scene, svg };
     }
   }
 
@@ -96,13 +104,15 @@ export function androidDrawings(hooks: DrawingHooks): AndroidDrawings {
     async edit(scene): Promise<DrawingFiles | null> {
       if (busy) return null;
       busy = true;
+      cancelled = false;
       let editor: OpenDrawing | null = null;
+      let files: DrawingFiles | null = null;
       try {
         let text: string | null = null;
         if (scene) {
           text = await hooks.scene(scene);
           if (text === null) {
-            hooks.notice("This drawing's file isn't on this phone yet");
+            hooks.notice(drawingMissing('phone'));
             return null;
           }
         }
@@ -110,31 +120,27 @@ export function androidDrawings(hooks: DrawingHooks): AndroidDrawings {
         try {
           module = await loadDrawingEditor();
         } catch {
-          hooks.notice("The drawing editor couldn't be loaded");
+          hooks.notice(DRAWING_EDITOR_UNLOADED);
           return null;
         }
         // A drawing is named as the slash menu names it.
-        const title = scene ? 'Edit Excalidraw Diagram' : 'New Excalidraw Diagram';
+        const title = drawingTitle(!scene);
         try {
           editor = module.openDrawingEditor(text, title);
         } catch {
-          hooks.notice("This drawing's file couldn't be read");
+          hooks.notice(DRAWING_UNREADABLE);
           return null;
         }
         shown = true;
-        hooks.shown(title);
-        return await finished(editor);
-      } catch (error) {
-        hooks.notice(
-          `The drawing couldn't be saved: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        return null;
+        hooks.shown({ title, saving: false });
+        files = await finished(editor, title);
+        return files;
       } finally {
         current = null;
         if (editor) {
           editor.close();
           shown = false;
-          hooks.shown(null);
+          hooks.shown({ title: null, kept: files !== null });
         }
         busy = false;
       }
@@ -144,7 +150,8 @@ export function androidDrawings(hooks: DrawingHooks): AndroidDrawings {
   return {
     services,
     finish(action) {
-      current?.finished(action);
+      if (current) current.finished(action);
+      else if (shown && action === 'cancel') cancelled = true;
     },
     open: () => shown,
   };
