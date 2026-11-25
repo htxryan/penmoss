@@ -11,6 +11,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.font.FontWeight
@@ -325,10 +327,18 @@ class SearchScreensTest {
         val opened = mutableListOf<Int>()
         compose.setContent {
             PenmossTheme {
-                RecentSwitcher(listOf(NoteItem("a", "Alpha", "", ""), NoteItem("b", "Beta", "", "")), index = 1, onOpen = { opened += it }, onDismiss = {})
+                RecentSwitcher(
+                    listOf(NoteItem("a", "Alpha", "", "", updatedAt = System.currentTimeMillis() - 2 * 60_000), NoteItem("b", "Beta", "", "")),
+                    index = 1,
+                    onOpen = { opened += it },
+                    onDismiss = {},
+                )
             }
         }
-        compose.onNodeWithText("Recent notes").assertIsDisplayed()
+        compose.onNodeWithText("Recent Notes").assertIsDisplayed()
+        // When each note was edited, as the Mac's switcher says it (A1690); none for a note never edited.
+        compose.onNodeWithText("Edited 2 min ago", useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodesWithText("Edited", substring = true, useUnmergedTree = true).assertCountEquals(1)
         compose.onNodeWithTag("recent-1").assertIsSelected()
         compose.onNodeWithText("Alpha").performClick()
         assertEquals(listOf(0), opened)

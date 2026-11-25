@@ -8,6 +8,7 @@ import { SEARCH_MODES } from '@penmoss/core/search';
 import { STATUS_FILTERS } from '@penmoss/model/comment-delivery';
 import type { ObjectSchema, Schema } from './schema';
 import { formatBytes } from '@penmoss/core/words';
+import { MAX_MARKDOWN_BYTES } from '../notebook';
 
 /** What a tool is, without what it does. */
 export interface ToolDefinition {
@@ -105,7 +106,7 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     text_not_found: 'Call read_note to see the exact text; find must match it exactly.',
     text_ambiguous:
       'Make find longer so it occurs once, or set all: true to replace every occurrence.',
-    too_large: 'Send at most 256 KB of markdown per call; split a long edit into several appends.',
+    too_large: `Send at most ${formatBytes(MAX_MARKDOWN_BYTES)} of markdown per call; split a long edit into several appends.`,
     offset_past_end: 'Pass the nextOffset a previous read_note returned, or leave offset out.',
     folder_changed:
       'Someone renamed the folder since you saw it: call list_folder again, then retry with its current name as expectedName.',
@@ -117,7 +118,7 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     setting_changed: 'Call get_settings again, then retry with the values it gives as base.',
     invalid_setting: 'Call get_settings to see the settings and their current values.',
     version_not_found: 'Call get_history to list the note’s versions.',
-    file_too_large: `Send a file of at most ${formatBytes(attachmentMaxBytes)}; Ryan can attach larger ones in the app.`,
+    file_too_large: `Send a file of at most ${formatBytes(attachmentMaxBytes)}.`,
     daily_limit: 'Stop and tell Ryan what is left to do; he can do it in the app.',
     too_many_renames:
       'Wait for the running renames to finish, or ask Ryan to rename the tag in the app.',

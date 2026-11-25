@@ -67,7 +67,7 @@ describe('LIMITS', () => {
 });
 
 describe('readLimits', () => {
-  it('falls back to the default for each value missing, not whole or out of range', () => {
+  it('holds a value over its range at the most, and falls back to the default for any other', () => {
     expect(readLimits(undefined)).toEqual(DEFAULT_LIMITS);
     expect(readLimits(null)).toEqual(DEFAULT_LIMITS);
     expect(readLimits('7')).toEqual(DEFAULT_LIMITS);
@@ -82,7 +82,14 @@ describe('readLimits', () => {
         'report.lines': 2000,
         'report.kb': 4,
       }),
-    ).toEqual({ ...DEFAULT_LIMITS, 'events.days': 30, 'report.lines': 2000, 'report.kb': 4 });
+    ).toEqual({
+      ...DEFAULT_LIMITS,
+      'events.days': 30,
+      // Over the most (81,920 KB was the most before A1690): the most, so no logs go unasked.
+      'logs.fileKb': 80_000,
+      'report.lines': 2000,
+      'report.kb': 4,
+    });
   });
 
   it('keeps only the changed values', () => {

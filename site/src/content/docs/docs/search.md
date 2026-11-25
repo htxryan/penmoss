@@ -42,7 +42,7 @@ On the Mac, search also finds notes by what they are about, not only the words t
 - While Penmoss is still reading your notes, the results say how many notes meaning covers so far.
 - When meaning cannot answer, a **Words only** label says why, such as the model still downloading.
 
-It uses EmbeddingGemma, a small language model that runs on your Mac. Penmoss downloads it once, about 219 MB from Hugging Face, the first time it starts. Your notes never leave the Mac: the model and its index of your notes stay in `~/.penmoss`. The Gemma Terms of Use apply to the model.
+It uses EmbeddingGemma, a small language model that runs on your Mac. Penmoss downloads it once, about 219 MB from Hugging Face, the first time it starts. Your notes never leave the Mac: the model and its index of your notes stay in `~/.penmoss`. When an update brings a newer model, Penmoss downloads it and, a week after the old one was last used, deletes the old model and its index to free the space. The Gemma Terms of Use apply to the model.
 
 **Settings → Semantic Search** (once called Search by Meaning) has the switch, **Semantic Search**, then what it is doing (Not downloaded, Downloading, Indexing, Ready) with a progress bar and how many notes of your open notebooks it has read, then the model, its size and its licence. A notebook you remove from the Mac leaves that count. Turning it off stops it at once, and search goes back to words only; the model stays on the Mac, so turning it on again needs no download. **Delete Model…**, the red button in the model's row, frees the space: it asks first, naming the size, then deletes the model and its index from the Mac and turns Semantic Search off. Turning it on again downloads the model again.
 

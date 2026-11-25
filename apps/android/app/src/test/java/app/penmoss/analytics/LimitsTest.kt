@@ -44,8 +44,10 @@ class LimitsTest {
         assertEquals(200_000, Limits.spec(Limits.EVENTS_MAX).parse("200000"))
         assertEquals(2_000_000, Limits.spec(Limits.EVENTS_MAX).parse("2,000,000"))
         assertNull(Limits.spec(Limits.EVENTS_MAX).parse("2,000,001"))
-        // A stored value out of range reads as its default.
+        // Under the range reads as the default; over it, as the most (81,920 KB was the most before
+        // A1690), so nothing is deleted unasked.
         assertEquals(7, Limits.of(mapOf(Limits.EVENTS_DAYS to 0)).eventsDays)
+        assertEquals(80_000, Limits.of(mapOf(Limits.LOGS_FILE_KB to 81_920)).logsFileKb)
         assertEquals(5, Limits.of(mapOf(Limits.LOGS_FILES to 5)).logsFiles)
     }
 

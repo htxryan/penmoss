@@ -389,7 +389,7 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
     val haptics = LocalHapticFeedback.current
     val mark = SpanStyle(background = LocalSearchMatch.current, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
     val title = result.title.ifBlank { Items.UNTITLED }
-    val item = NoteItem(result.id, title, Items.plainSnippet(result.snippet).ifBlank { result.excerpt }, dateOf(result.updatedAt))
+    val item = NoteItem(result.id, title, Items.plainSnippet(result.snippet).ifBlank { result.excerpt }, dateOf(result.updatedAt), result.updatedAt)
     Column(
         Modifier.fillMaxWidth()
             .combinedClickable(

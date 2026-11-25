@@ -145,14 +145,15 @@ export class NodeMeaning {
    * Deletes what other models left on this Mac: their folders and partial downloads in
    * `~/.penmoss/models`, and their vectors in `~/.penmoss/vectors` (the lease stays). After an
    * update pins a new model, the old one (about 200 MB) and its vectors are never read again.
-   * The app's `open` calls it, so it runs once the new model is here. Anything changed in the
-   * last `keepMs` (an hour) stays, so an older `penmoss` still downloading or indexing its model
-   * keeps it until it stops. Answers the paths it removed.
+   * The app's `open` calls it, so it runs once the new model is here. A folder any file of which
+   * changed in the last `keepMs` (a week) stays, so an older `penmoss mcp` still downloading,
+   * indexing or searching with its model after an update keeps it while it runs. Answers the
+   * paths it removed.
    */
-  async removeOthers(keepMs = 60 * 60_000, now = Date.now()): Promise<string[]> {
+  async removeOthers(keepMs = KEEP_OTHER_MODELS_MS, now = Date.now()): Promise<string[]> {
     const stale = async (path: string) => {
-      const info = await stat(path).catch(() => null);
-      return info !== null && now - info.mtimeMs >= keepMs;
+      const newest = await newestChange(path);
+      return newest !== null && now - newest >= keepMs;
     };
     const removed: string[] = [];
     for (const path of await otherModels(this.manifest, this.home)) {
@@ -257,6 +258,26 @@ export class NodeMeaning {
 }
 
 /** The bytes of the files in `dir` and the folders in it; none when it is not there. */
+/** How long another model's files stay after they last changed (`NodeMeaning.removeOthers`). */
+const KEEP_OTHER_MODELS_MS = 7 * 24 * 60 * 60_000;
+
+/**
+ * When anything under `path` last changed (ms), its own folder and every file in it: appending
+ * to a segment or a download changes the file, never its folder. Null when it is gone.
+ */
+async function newestChange(path: string): Promise<number | null> {
+  const info = await stat(path).catch(() => null);
+  if (!info) return null;
+  let newest = info.mtimeMs;
+  if (info.isDirectory()) {
+    for (const entry of await readdir(path).catch(() => [] as string[])) {
+      const inner = await newestChange(join(path, entry));
+      if (inner !== null && inner > newest) newest = inner;
+    }
+  }
+  return newest;
+}
+
 async function folderBytes(dir: string): Promise<number> {
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
   let bytes = 0;

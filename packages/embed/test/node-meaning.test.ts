@@ -95,8 +95,21 @@ describe('NodeMeaning (T75)', () => {
     for (const dir of [oldModel, oldPartial, oldVectors]) mkdirSync(dir, { recursive: true });
     writeFileSync(join(oldModel, 'model.onnx'), 'old');
     writeFileSync(join(oldVectors, 'app.seg'), 'old');
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60_000);
-    for (const dir of [oldModel, oldPartial, oldVectors]) utimesSync(dir, twoHoursAgo, twoHoursAgo);
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60_000);
+    for (const path of [
+      oldModel,
+      join(oldModel, 'model.onnx'),
+      oldPartial,
+      oldVectors,
+      join(oldVectors, 'app.seg'),
+    ]) {
+      utimesSync(path, twoWeeksAgo, twoWeeksAgo);
+    }
+    // An older penmoss mcp still indexing with its model: its folder is old, a segment it appends to is not.
+    const busyVectors = join(home, 'vectors', 'tiny_0123abcd_4_p1');
+    mkdirSync(busyVectors, { recursive: true });
+    writeFileSync(join(busyVectors, 'seg-mcp.bin'), 'old');
+    utimesSync(busyVectors, twoWeeksAgo, twoWeeksAgo);
     // Another model's download still going (changed just now): an older penmoss may be at it.
     const freshPartial = join(home, 'models', '.other@0123456789abcdef.partial');
     mkdirSync(freshPartial, { recursive: true });
@@ -113,15 +126,17 @@ describe('NodeMeaning (T75)', () => {
     expect(lease).toBeDefined();
     for (const dir of [oldModel, oldPartial, oldVectors]) expect(existsSync(dir)).toBe(false);
     expect(existsSync(freshPartial)).toBe(true);
+    expect(existsSync(busyVectors)).toBe(true);
     // This model, its vectors and the lease stay.
     expect((await node.status()).state).toBe('ready');
     expect(await node.indexBytes()).toBeGreaterThan(0);
     expect(existsSync(join(home, 'vectors', 'indexer.lease'))).toBe(true);
     expect(await node.removeOthers()).toEqual([]);
-    // An hour on, the stopped download goes too.
-    expect(await node.removeOthers(60 * 60_000, Date.now() + 2 * 60 * 60_000)).toEqual([
-      freshPartial,
-    ]);
+    // A week on, the stopped download and the stopped index go too.
+    const weekOn = Date.now() + 8 * 24 * 60 * 60_000;
+    expect((await node.removeOthers(undefined, weekOn)).sort()).toEqual(
+      [freshPartial, busyVectors].sort(),
+    );
     await opened!.close();
   });
 });

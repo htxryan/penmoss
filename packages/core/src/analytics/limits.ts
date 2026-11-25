@@ -70,14 +70,20 @@ export function limitAllowed(key: LimitKey, value: unknown): value is number {
   );
 }
 
-/** The limits in force: each stored value when it is allowed, else its default. */
+/**
+ * The limits in force: each stored value when it is allowed; one above its range is held at the
+ * most (81,920 KB of logs, the most before A1690, keeps 80,000), so nothing is deleted the person
+ * never asked to delete; anything else (missing, not whole, under the range) is its default.
+ */
 export function readLimits(stored: unknown): Limits {
   const source =
     stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : ({} as const);
   return Object.fromEntries(
     LIMITS.map((spec) => {
       const value = source[spec.key];
-      return [spec.key, limitAllowed(spec.key, value) ? value : spec.default];
+      if (limitAllowed(spec.key, value)) return [spec.key, value];
+      const over = typeof value === 'number' && Number.isInteger(value) && value > spec.max;
+      return [spec.key, over ? spec.max : spec.default];
     }),
   ) as Limits;
 }

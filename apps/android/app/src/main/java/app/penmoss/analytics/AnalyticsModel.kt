@@ -169,8 +169,8 @@ data class LimitSpec(val key: String, val default: Int, val min: Int, val max: I
 
 /**
  * The adjustable limits (O7, N8): how much usage record and log the phone keeps, and how much of
- * the log a bug report attaches. Every reader goes through [Limits.of], which falls back to the
- * default for a value that is missing or out of range.
+ * the log a bug report attaches. Every reader goes through [Limits.of], which holds a stored value
+ * over its range at the most and falls back to the default for any other (core's `readLimits`).
  */
 data class Limits(val values: Map<String, Int>) {
     operator fun get(key: String): Int = values[key] ?: spec(key).default
@@ -228,9 +228,21 @@ data class Limits(val values: Map<String, Int>) {
 
         val DEFAULTS = Limits(SPECS.associate { it.key to it.default })
 
-        /** The limits in force: each stored value when it is allowed, else its default. */
-        fun of(stored: Map<String, Int?>): Limits =
-            Limits(SPECS.associate { spec -> spec.key to (stored[spec.key]?.takeIf(spec::allowed) ?: spec.default) })
+        /**
+         * The limits in force: each stored value when it is allowed; one over its range is held at
+         * the most (an older range's, so nothing is deleted unasked); any other is its default.
+         */
+        fun of(stored: Map<String, Int?>): Limits = Limits(
+            SPECS.associate { spec ->
+                val value = stored[spec.key]
+                spec.key to when {
+                    value == null -> spec.default
+                    spec.allowed(value) -> value
+                    value > spec.max -> spec.max
+                    else -> spec.default
+                }
+            },
+        )
 
         /** Bytes as the Advanced section writes them, as every size is: "2 MB", "400 MB" ([app.penmoss.ui.common.formatBytes]). */
         fun formatBytes(bytes: Long): String = app.penmoss.ui.common.formatBytes(bytes)

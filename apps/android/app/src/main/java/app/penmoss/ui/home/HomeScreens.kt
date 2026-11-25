@@ -129,7 +129,7 @@ data class HomeUi(
     val capturesWaitingWhy: String? = null,
     /**
      * The status needs attention (offline, or the server failing): TalkBack reads it out when it
-     * changes. "Synced at …" changes after every pass and is not read out (A530).
+     * changes. "Synced 2 min ago" changes after every pass and is not read out (A530).
      */
     val statusAlert: Boolean = false,
     /** The top level's sort order (T40 P4, NT6), from the Sort icon. */

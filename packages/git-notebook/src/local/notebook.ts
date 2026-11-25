@@ -112,8 +112,8 @@ export interface LocalNoteContent {
 const READ_PART_BYTES = 60_000;
 /** At most this many linked notes in read_note's `links` (A1656). */
 const MAX_LINKED = 50;
-/** Markdown in one edit. */
-const MAX_MARKDOWN_BYTES = 256 * 1024;
+/** Markdown in one edit: 256 KB as every size is written (A1690). */
+export const MAX_MARKDOWN_BYTES = 256_000;
 /** A create replayed with the same derived key within this returns its note. */
 export const CREATE_RETRY_WINDOW_MS = 10 * 60_000;
 const EXCERPT_LENGTH = 200;
@@ -452,7 +452,7 @@ export class LocalNotebook {
     }
     const markdown = input.markdown ?? '';
     if (utf8(markdown) > MAX_MARKDOWN_BYTES) {
-      throw new LocalError(413, 'too_large', 'markdown is over 256 KB');
+      throw new LocalError(413, 'too_large', `markdown is over ${formatBytes(MAX_MARKDOWN_BYTES)}`);
     }
     const folderId = input.folderId ?? null;
     if (folderId !== null && !this.notes.folder(folderId)) {
@@ -489,7 +489,7 @@ export class LocalNotebook {
   edit(id: string, op: EditOp, baseVersion: number | null): LocalEditReply {
     const markdown = incomingMarkdown(op);
     if (utf8(markdown) > MAX_MARKDOWN_BYTES) {
-      throw new LocalError(413, 'too_large', 'markdown is over 256 KB');
+      throw new LocalError(413, 'too_large', `markdown is over ${formatBytes(MAX_MARKDOWN_BYTES)}`);
     }
     const inTrashOk = op.op === 'rename-tag' || op.op === 'delete-tag';
     const { doc } = inTrashOk ? this.notes.require(id) : this.notes.writable(id);

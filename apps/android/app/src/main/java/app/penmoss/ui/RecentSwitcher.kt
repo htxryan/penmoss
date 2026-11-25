@@ -27,6 +27,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import app.penmoss.ui.common.rememberNow
+import app.penmoss.ui.common.timeAgo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -146,29 +148,42 @@ fun RecentSwitcher(notes: List<NoteItem>, index: Int, onOpen: (Int) -> Unit, onD
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.padding(24.dp).widthIn(max = 480.dp).testTag("recentSwitcher")) {
             Column(Modifier.padding(vertical = 12.dp)) {
                 Text(
-                    "Recent notes",
+                    "Recent Notes",
                     Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
                     style = MaterialTheme.roles.listHead,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                val now = rememberNow()
                 notes.forEachIndexed { at, note ->
                     val chosen = at == index
-                    Text(
-                        note.title,
+                    // Each row says when the note was edited, as the Mac's switcher does (A1690).
+                    Column(
                         Modifier.fillMaxWidth()
                             .background(if (chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
                             .clickable(role = Role.Button, onClick = trackedClick("recent.note") { onOpen(at) })
-                            .semantics {
+                            .semantics(mergeDescendants = true) {
                                 selected = chosen
                                 if (chosen) liveRegion = LiveRegionMode.Polite
                             }
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
                             .testTag("recent-$at"),
-                        style = MaterialTheme.roles.rowLabel,
-                        fontWeight = if (chosen) FontWeight.SemiBold else null,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    ) {
+                        Text(
+                            note.title,
+                            style = MaterialTheme.roles.rowLabel,
+                            fontWeight = if (chosen) FontWeight.SemiBold else null,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (note.updatedAt > 0) {
+                            Text(
+                                "Edited ${timeAgo(note.updatedAt, now)}",
+                                style = MaterialTheme.roles.meta,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
         }

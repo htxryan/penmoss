@@ -16,7 +16,7 @@ import java.util.Locale
  * Compose (off the main thread), so a row does no formatting while it scrolls.
  */
 @Immutable
-data class NoteItem(val id: String, val title: String, val excerpt: String, val date: String)
+data class NoteItem(val id: String, val title: String, val excerpt: String, val date: String, val updatedAt: Long = 0)
 
 /** A folder as the lists show it. */
 @Immutable
@@ -48,6 +48,7 @@ object Items {
         title = row.title.ifBlank { UNTITLED },
         excerpt = row.excerpt.replace(WHITESPACE, " ").trim().take(EXCERPT_CHARS),
         date = if (row.updatedAt > 0) dates.label(row.updatedAt) else "",
+        updatedAt = row.updatedAt,
     )
 
     /** A folder's subfolders and notes in the order every client shows them (A17). */

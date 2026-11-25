@@ -6,9 +6,10 @@
     "**/worker-configuration.d.ts",
     "types/workers-runtime.d.ts",
     "tools/factory/test/tmp-root.ts",
-    "tools/factory/sandbox/*.cjs"
+    "tools/factory/sandbox/*.cjs",
+    ".claude/worktrees/**"
   ],
-  "ignoreFiles": ["spikes/**", ".claude/**"],
+  "ignoreFiles": ["spikes/**"],
   "vitest": {
     "config": ["vitest.config.{ts,mts,js,mjs}", "vitest.*.config.{ts,mts}"]
   },
@@ -17,7 +18,11 @@
   },
   "workspaces": {
     ".": {
-      "entry": ["scripts/**/*.{mjs,ts}", ".github/scripts/**/*.mjs"]
+      "entry": [
+        "scripts/**/*.{mjs,ts}",
+        ".github/scripts/**/*.mjs",
+        ".claude/skills/*/scripts/*.{ts,mjs}"
+      ]
     },
     "apps/desktop": {
       "entry": ["src/{boot,preload,analytics-worker,embed-utility,cli-mode}.ts", "scripts/*.mjs"],
