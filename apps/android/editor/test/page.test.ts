@@ -33,9 +33,14 @@ describe('the editor page CSP', () => {
 
   it('makes no network requests, frames, workers or forms', () => {
     const csp = policy();
-    for (const name of ['connect-src', 'frame-src', 'worker-src', 'object-src', 'media-src']) {
+    for (const name of ['frame-src', 'worker-src', 'object-src', 'media-src']) {
       expect(csp.get(name), name).toEqual(["'none'"]);
     }
+    // One read, the drawing editor's (PEN-189, A1692): the APK's own Excalidraw font files, which
+    // a drawing's SVG inlines. Nothing else on the page's origin, and nothing off it.
+    expect(csp.get('connect-src')).toEqual([
+      'https://appassets.androidplatform.net/assets/editor/excalidraw/',
+    ]);
     expect(csp.get('base-uri')).toEqual(["'none'"]);
     expect(csp.get('form-action')).toEqual(["'none'"]);
   });

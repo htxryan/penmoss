@@ -357,6 +357,8 @@ export abstract class HostNotes extends HostEditing {
           links,
           images,
           files,
+          // Drawings (PEN-189): Excalidraw over the note, under the note screen's drawing bar.
+          drawings: this.drawings.services,
           // Toggles open as this phone left them (T40 P8, ED8), kept by the app per note.
           foldState: this.foldState(noteId),
           // Line symbols (T44, A747): the synced list, the picker's Edit symbols… opening

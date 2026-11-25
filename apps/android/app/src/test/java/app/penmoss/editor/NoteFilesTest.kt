@@ -10,6 +10,8 @@ import app.penmoss.data.NoteStore
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.UpdateEntity
 import app.penmoss.engine.bridge.BridgeProtocol
+import app.penmoss.engine.bridge.DrawingFromEditor
+import app.penmoss.engine.bridge.DrawingToEditor
 import app.penmoss.engine.bridge.FileAction
 import app.penmoss.engine.bridge.FileRef
 import app.penmoss.engine.bridge.FromEditor
@@ -264,5 +266,42 @@ class NoteFilesTest {
         assertTrue(sent.none { it is ParityToEditor.InsertFiles })
         page(controller, FromEditor.Opened("n", "Note", null, null))
         assertEquals(listOf(ParityToEditor.InsertFiles("n", listOf(FileRef(csvPath, "Budget.csv")))), sent.filterIsInstance<ParityToEditor.InsertFiles>())
+    }
+
+    /**
+     * A drawing made on the phone (PEN-189): its scene and its SVG come from the page as any file
+     * does, and Edit asks for the scene's text, which the app reads for the page; one the phone
+     * can't have is answered with none, and another note's ask is not this note's.
+     */
+    @Test
+    fun storesADrawingsFilesAndHandsItsSceneToThePage() {
+        val controller = opened()
+        val scene = "{\"type\":\"excalidraw\",\"elements\":[]}".toByteArray()
+        val svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"/>".toByteArray()
+        val scenePath = "attachments/${Attachments.sha256(scene)}.excalidraw"
+        val svgPath = "attachments/${Attachments.sha256(svg)}.svg"
+        page(controller, ParityFromEditor.File("n", scenePath, "drawing.excalidraw", scene.size.toLong()))
+        bytes(controller, scene)
+        page(controller, ParityFromEditor.File("n", svgPath, "drawing.svg", svg.size.toLong()))
+        bytes(controller, svg)
+        waitFor { sent.filterIsInstance<ParityToEditor.FileStored>().size == 2 }
+        // Stored side by side: either may be answered first.
+        assertEquals(
+            setOf(ParityToEditor.FileStored("n", scenePath, true), ParityToEditor.FileStored("n", svgPath, true)),
+            sent.filterIsInstance<ParityToEditor.FileStored>().toSet(),
+        )
+
+        page(controller, DrawingFromEditor.SceneWanted("n", scenePath))
+        waitFor { sent.any { it is DrawingToEditor.Scene } }
+        assertEquals(DrawingToEditor.Scene("n", scenePath, String(scene)), sent.last { it is DrawingToEditor.Scene })
+
+        val missing = "attachments/${"7".repeat(64)}.excalidraw"
+        page(controller, DrawingFromEditor.SceneWanted("n", missing))
+        waitFor { sent.count { it is DrawingToEditor.Scene } == 2 }
+        assertEquals(DrawingToEditor.Scene("n", missing, null), sent.last { it is DrawingToEditor.Scene })
+
+        page(controller, DrawingFromEditor.SceneWanted("other", scenePath))
+        runBlocking { kotlinx.coroutines.delay(200) }
+        assertEquals(2, sent.count { it is DrawingToEditor.Scene })
     }
 }

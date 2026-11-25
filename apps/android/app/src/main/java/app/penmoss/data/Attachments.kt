@@ -395,7 +395,7 @@ class Attachments(
         /**
          * A drawing's picture (PEN-28): the SVG Excalidraw rendered, beside its `.excalidraw`
          * scene. The note shows it as a picture only (an `<img>` runs none of an SVG's script);
-         * the phone has no drawing editor.
+         * the drawing editor (PEN-189) opens the scene, which the page gets through the bridge.
          */
         const val SVG_EXT = "svg"
         const val SVG_TYPE = "image/svg+xml"

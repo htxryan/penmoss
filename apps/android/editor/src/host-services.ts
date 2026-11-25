@@ -71,8 +71,44 @@ import {
   STORE_PICTURE_MS,
 } from './host-support';
 import { HostBase } from './host-base';
+import { androidDrawings, type AndroidDrawings } from './drawings';
 
 export abstract class HostServices extends HostBase {
+  /** Drawings' scene files asked of the app, by path (PEN-189). */
+  protected readonly scenes = new Map<string, Array<(text: string | null) => void>>();
+
+  /**
+   * Drawings (PEN-189): Excalidraw over the open note, under the note screen's drawing bar; the
+   * scene comes from the app and both files go back to it as any file does.
+   */
+  protected readonly drawings: AndroidDrawings = androidDrawings({
+    scene: (path) => {
+      const noteId = this.current?.noteId;
+      if (!noteId) return Promise.resolve(null);
+      return new Promise<string | null>((resolve) => {
+        const timer = setTimeout(() => resolve(null), STORE_PICTURE_MS);
+        const waiting = this.scenes.get(path) ?? [];
+        waiting.push((text) => {
+          clearTimeout(timer);
+          resolve(text);
+        });
+        this.scenes.set(path, waiting);
+        if (waiting.length === 1) {
+          this.post({ v: BRIDGE_VERSION, type: 'drawingScene', noteId, path });
+        }
+      });
+    },
+    store: async (bytes, name) => {
+      const noteId = this.current?.noteId;
+      if (!noteId) throw new Error('the note has closed');
+      const stored = await this.files(noteId).addFile?.(new File([bytes], name));
+      if (!stored) throw new Error('files cannot be added here');
+      return stored.path;
+    },
+    shown: (title) => this.post({ v: BRIDGE_VERSION, type: 'drawing', title }),
+    notice: (message) => this.notice(this.current?.noteId ?? null, message),
+  });
+
   /**
    * The note's counts (T40 P8, NT24), as the web's status bar takes them
    * (T41, A505): after typing pauses, the selection's shortly after it

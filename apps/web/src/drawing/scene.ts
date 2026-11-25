@@ -2,10 +2,11 @@
  * A drawing's files (PEN-28): reading a `.excalidraw` scene, and making its SVG, with the font
  * files its text uses inlined (font-faces.ts), so GitHub and any viewer show it as drawn.
  */
-import { exportToSvg } from '@excalidraw/excalidraw';
+import { exportToSvg, serializeAsJSON } from '@excalidraw/excalidraw';
 import type {
   AppState,
   BinaryFiles,
+  ExcalidrawImperativeAPI,
   ExcalidrawInitialDataState,
 } from '@excalidraw/excalidraw/types';
 import { facesFor, fontFamilies } from './font-faces';
@@ -103,7 +104,7 @@ const exportSvg = exportToSvg as unknown as (options: {
  * either mode, with its fonts inlined. Excalidraw's own inlining subsets fonts with code the
  * CSP refuses, so `inlineFonts` puts in the files whole.
  */
-export async function drawingSvg(
+async function drawingSvg(
   elements: SceneElements,
   appState: Pick<AppState, 'viewBackgroundColor'>,
   files: BinaryFiles,
@@ -122,4 +123,20 @@ export async function drawingSvg(
   });
   await inlineFonts(svg);
   return new XMLSerializer().serializeToString(svg);
+}
+
+/**
+ * What Done keeps: the scene as Excalidraw's JSON (the `.excalidraw` file) and its picture (the
+ * `.svg`), or null for a new drawing left empty, which goes nowhere, as Cancel.
+ */
+export async function takeDrawing(
+  api: ExcalidrawImperativeAPI,
+  isNew: boolean,
+): Promise<DrawingResult | null> {
+  const elements = api.getSceneElements();
+  if (isNew && elements.length === 0) return null;
+  const appState = api.getAppState();
+  const files = api.getFiles();
+  const scene = serializeAsJSON(elements, appState, files, 'local');
+  return { scene, svg: await drawingSvg(elements, appState, files) };
 }

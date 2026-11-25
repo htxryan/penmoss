@@ -138,6 +138,8 @@ export const MAX_FOLD_KEY = 2000;
  * extension core's `filePath` writes, pictures and PDFs included.
  */
 const FILE_PATH = /^attachments\/[0-9a-f]{64}\.[a-z0-9]{1,10}$/;
+/** A drawing's scene file (PEN-28): `attachments/<sha256>.excalidraw`. */
+const SCENE_PATH = /^attachments\/[0-9a-f]{64}\.excalidraw$/;
 
 /** The longest file name carried (a chip's name; most file systems stop at 255). */
 export const MAX_FILE_NAME = 255;
@@ -294,6 +296,11 @@ export type ToEditor =
   | { readonly v: 1; readonly type: 'preview' }
   /** Closes the image lightbox (T51, A948): the phone's back gesture while it is open. */
   | { readonly v: 1; readonly type: 'closeLightbox' }
+  /**
+   * The note screen's drawing bar (PEN-189): Done keeps the drawing open now and Cancel drops it;
+   * the back gesture is Done, as the Mac's Back keeps the drawing.
+   */
+  | { readonly v: 1; readonly type: 'drawing'; readonly action: 'done' | 'cancel' }
   /** Every note the phone knows, for wikilinks (A303). Replaces the last one sent. */
   | { readonly v: 1; readonly type: 'directory'; readonly notes: readonly DirectoryEntry[] }
   /**
@@ -445,6 +452,17 @@ export type ToEditor =
       readonly noteId: string;
       readonly files: readonly FileEntry[];
     }
+  /**
+   * The answer to `drawingScene` (PEN-189): the `.excalidraw` file's text, or null when the phone
+   * does not have it.
+   */
+  | {
+      readonly v: 1;
+      readonly type: 'drawingScene';
+      readonly noteId: string;
+      readonly path: string;
+      readonly text: string | null;
+    }
   /** The answer to `fileInfo`: the stored file's size and type, or null when unknown (ED12). */
   | {
       readonly v: 1;
@@ -591,6 +609,14 @@ export type FromEditor =
    * closes it (`closeLightbox`) and the note's bars step aside for it.
    */
   | { readonly v: 1; readonly type: 'lightbox'; readonly open: boolean }
+  /**
+   * The drawing editor opened over the note, named `title`, or closed (null) (PEN-189): while it
+   * is open the note screen's drawing bar replaces its bars, and sends `drawing` for Done or
+   * Cancel.
+   */
+  | { readonly v: 1; readonly type: 'drawing'; readonly title: string | null }
+  /** A drawing's `.excalidraw` file, to open it (PEN-189): the app answers `drawingScene`. */
+  | { readonly v: 1; readonly type: 'drawingScene'; readonly noteId: string; readonly path: string }
   | {
       readonly v: 1;
       readonly type: 'opened';
@@ -1026,6 +1052,10 @@ export function parseToEditor(raw: string): ToEditor | null {
       return { v: 1, type: 'preview' };
     case 'closeLightbox':
       return { v: 1, type: 'closeLightbox' };
+    case 'drawing': {
+      const { action } = value;
+      return action === 'done' || action === 'cancel' ? { v: 1, type: 'drawing', action } : null;
+    }
     case 'directory': {
       const notes = directory(value['notes']);
       return notes ? { v: 1, type: 'directory', notes } : null;
@@ -1210,6 +1240,12 @@ export function parseToEditor(raw: string): ToEditor | null {
     case 'insertFiles': {
       const files = fileEntries(value['files']);
       return files ? { v: 1, type: 'insertFiles', noteId, files } : null;
+    }
+    case 'drawingScene': {
+      const { path, text } = value;
+      if (!isString(path) || !SCENE_PATH.test(path)) return null;
+      if (text !== null && !isString(text)) return null;
+      return { v: 1, type: 'drawingScene', noteId, path, text };
     }
     case 'fileInfo': {
       const { path, info } = value;

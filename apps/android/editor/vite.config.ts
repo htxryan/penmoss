@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'node:url';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { excalidrawAssets } from '../../web/excalidraw-assets';
 
 /**
  * The editor page the Android app serves from its APK through
@@ -8,6 +10,9 @@ import { defineConfig } from 'vite';
  * Gradle build fails with a clear message when it is missing.
  */
 export default defineConfig({
+  // React for the drawing editor alone (PEN-189): Excalidraw, a lazy chunk loaded the first time
+  // a drawing opens; its fonts are files of the build at `excalidraw/fonts/`, as on the Mac.
+  plugins: [react(), excalidrawAssets()],
   // Relative URLs: the asset loader serves the page under /assets/editor/.
   base: './',
   build: {

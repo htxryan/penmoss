@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.assertTextEquals
@@ -37,6 +38,9 @@ import app.penmoss.editor.NotePages
 import app.penmoss.engine.api.ChangedNote
 import app.penmoss.engine.api.ChangesPage
 import app.penmoss.engine.bridge.BridgeProtocol
+import app.penmoss.engine.bridge.DrawingToEditor
+import app.penmoss.engine.bridge.DrawingFromEditor
+import app.penmoss.engine.bridge.DrawingAction
 import app.penmoss.engine.bridge.ContentState
 import app.penmoss.engine.bridge.FromEditor
 import app.penmoss.engine.bridge.ToEditor
@@ -234,6 +238,35 @@ class NoteRouteWiringTest {
         // Still the note: back closed only the lightbox.
         scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(FromEditor.Lightbox(open = false))) }
         await { runCatching { compose.onNodeWithTag("noteInfo").assertExists() }.isSuccess }
+    }
+
+    /**
+     * The drawing editor (PEN-189): while the page shows it over the note, the drawing bar takes
+     * the note's place with its title, Cancel and Done; each, and the back gesture (as Done, the
+     * Mac's Back keeping the drawing), goes to the page, and the note's bar comes back once the
+     * page says the editor closed.
+     */
+    @Test
+    fun theDrawingBarTakesTheNotesBarAndSendsDoneAndCancel() {
+        openGarden()
+        scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(FromEditor.Ready)) }
+        await { sent.any { it is ToEditor.Fonts } }
+        compose.onNodeWithTag("noteInfo").assertExists()
+        scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(DrawingFromEditor.Shown("New Excalidraw Diagram"))) }
+        await { runCatching { compose.onNodeWithTag("drawingBar").assertExists() }.isSuccess }
+        compose.onNodeWithTag("noteInfo").assertDoesNotExist()
+        compose.onNodeWithText("New Excalidraw Diagram").assertExists()
+        compose.onNodeWithTag("drawingCancel").performClick()
+        await { sent.any { it == DrawingToEditor.Finish(DrawingAction.CANCEL) } }
+        compose.onNodeWithTag("drawingDone").performClick()
+        await { sent.any { it == DrawingToEditor.Finish(DrawingAction.DONE) } }
+        sent.clear()
+        scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        await { sent.any { it == DrawingToEditor.Finish(DrawingAction.DONE) } }
+        // Still the note: the page closes the editor, and the note's bar is back.
+        scenario!!.onActivity { hooks!!.onMessage(BridgeProtocol.encode(DrawingFromEditor.Shown(null))) }
+        await { runCatching { compose.onNodeWithTag("noteInfo").assertExists() }.isSuccess }
+        compose.onNodeWithTag("drawingBar").assertDoesNotExist()
     }
 
     /**

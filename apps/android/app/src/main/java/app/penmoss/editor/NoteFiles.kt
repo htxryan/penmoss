@@ -3,6 +3,8 @@ package app.penmoss.editor
 import app.penmoss.data.FileStore
 import app.penmoss.data.PictureRefused
 import app.penmoss.engine.bridge.BridgeProtocol
+import app.penmoss.engine.bridge.DrawingFromEditor
+import app.penmoss.engine.bridge.DrawingToEditor
 import app.penmoss.engine.bridge.FileAction
 import app.penmoss.engine.bridge.FileLimits
 import app.penmoss.engine.bridge.FileRef
@@ -77,6 +79,22 @@ class NoteFiles(
             }
             is ParityFromEditor.OpenFile -> _requests.tryEmit(FileRequest(message.path, message.name, message.action))
             else -> Unit
+        }
+    }
+
+    /**
+     * A drawing's scene, to edit it (PEN-189): the `.excalidraw` file's text, fetched first when
+     * the phone lacks it; null when it can't be had, which the page says.
+     */
+    fun scene(message: DrawingFromEditor.SceneWanted) {
+        if (message.noteId != noteId) return
+        scope.launch {
+            val text = try {
+                store?.document(message.path)?.let { file -> withContext(Dispatchers.IO) { file.readText() } }
+            } catch (error: IOException) {
+                null
+            }
+            send(BridgeProtocol.encode(DrawingToEditor.Scene(noteId, message.path, text)))
         }
     }
 
