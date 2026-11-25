@@ -20,7 +20,7 @@
 import { parseAttachmentPath } from '@penmoss/core/attachments';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Mark, Node as PMNode, Schema } from '@tiptap/pm/model';
-import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 import type { ImageServices } from './image';
 
@@ -252,7 +252,7 @@ export class DrawingView implements NodeView {
   readonly dom: HTMLSpanElement;
   private readonly img: HTMLImageElement;
   private readonly fallback: HTMLSpanElement;
-  /** Edit and Delete, only where a drawing can be edited (not on Android). */
+  /** Edit and Delete, only where the app has a drawing editor. */
   private readonly tools: HTMLSpanElement | null = null;
   private loading: AbortController | null = null;
   /** The source whose URL this view holds (given back on change and on destroy). */
@@ -360,6 +360,11 @@ export class DrawingView implements NodeView {
     this.dom.classList.remove('ProseMirror-selectednode');
   }
 
+  /** Shows the buttons and the label again for whether the note can be edited now. */
+  refresh(): void {
+    this.render(false);
+  }
+
   /**
    * Clicks are the drawing's (they select it), not the editor's or the link's, which would open
    * the scene's file; so are the buttons' events.
@@ -449,6 +454,25 @@ export const DrawingExtension = Extension.create<DrawingOptions, DrawingStorage>
 
   addStorage() {
     return { services: this.options.services };
+  },
+
+  addProseMirrorPlugins() {
+    // A note turning read-only (or editable again) re-renders no node view, so the drawings
+    // shown are told: a selected one keeps no Edit or Delete, and no "press Enter to edit".
+    return [
+      new Plugin({
+        view(view) {
+          let editable = view.editable;
+          return {
+            update(view) {
+              if (view.editable === editable) return;
+              editable = view.editable;
+              for (const dom of view.dom.querySelectorAll('.pm-drawing')) views.get(dom)?.refresh();
+            },
+          };
+        },
+      }),
+    ];
   },
 
   addKeyboardShortcuts() {

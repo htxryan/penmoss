@@ -255,8 +255,13 @@ describe('a drawing in a note', () => {
     const { services, edit } = drawings();
     const collab = withDrawing({ drawings: services });
     const { view } = collab.editor;
-    collab.editor.setEditable(false);
     const shown = view.dom.querySelector<HTMLElement>('[data-testid="drawing"]')!;
+    // Selected while the note could be edited, then the note turns read-only: its buttons go.
+    click(shown.querySelector('img')!);
+    expect(button(view, 'edit').parentElement!.hidden).toBe(false);
+    collab.editor.setEditable(false);
+    expect(button(view, 'edit').parentElement!.hidden).toBe(true);
+    expect(shown.hasAttribute('aria-label')).toBe(false);
     const before = view.state.selection;
     click(shown.querySelector('img')!);
     expect(view.state.selection.eq(before)).toBe(true);
