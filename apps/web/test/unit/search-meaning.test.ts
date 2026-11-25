@@ -171,17 +171,37 @@ describe('a removed notebook (A1373)', () => {
   /** A source as `SourceSearches` sees it, counting its notes' subscribers. */
   const source = () => {
     const subscribers = new Set<() => void>();
+    const stored = new Set<(ids: readonly string[]) => void>();
     return {
       id: 'nb',
       subscribers,
+      stored,
       notes: {
         subscribe: (listener: () => void) => {
           subscribers.add(listener);
           return () => subscribers.delete(listener);
         },
+        onStored: (listener: (ids: readonly string[]) => void) => {
+          stored.add(listener);
+          return () => stored.delete(listener);
+        },
       },
     };
   };
+
+  it('hears of a stored write as well as a list change: an edit is stored after it lists', () => {
+    const invalidated: string[] = [];
+    const searches = new SourceSearches(() => ({
+      invalidate: () => invalidated.push('invalidate'),
+      close: () => undefined,
+    }));
+    const nb = source();
+    searches.get(nb);
+    for (const listener of nb.stored) listener(['a']);
+    expect(invalidated).toEqual(['invalidate']);
+    searches.release(new Set(['nb']));
+    expect(nb.stored.size).toBe(0);
+  });
 
   it('closes its meaning: the service forgets it, and nothing more is heard or sent', async () => {
     const { service, updates, known, closes, listeners, emit } = await setup();
@@ -199,6 +219,7 @@ describe('a removed notebook (A1373)', () => {
     expect(closes).toEqual(['nb']);
     expect(listeners).toHaveLength(0);
     expect(nb.subscribers.size).toBe(0);
+    expect(nb.stored.size).toBe(0);
     // A new start of the service, or a change, sends nothing for it.
     const before = updates.length;
     emit({ generation: 2 });

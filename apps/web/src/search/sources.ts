@@ -77,7 +77,11 @@ function merge(
 /** What `SourceSearches` needs of a source: its id, and its notes' changes. */
 export interface SearchedSource {
   readonly id: string;
-  readonly notes: { subscribe(listener: () => void): () => void };
+  readonly notes: {
+    subscribe(listener: () => void): () => void;
+    /** This window stored records: an open note's edit reaches its record here, after the list. */
+    onStored?(listener: (ids: readonly string[]) => void): () => void;
+  };
 }
 
 /**
@@ -97,7 +101,15 @@ export class SourceSearches<
     const known = this.entries.get(source.id);
     if (known) return known.service;
     const service = this.make(source);
-    const off = source.notes.subscribe(() => service.invalidate());
+    const offList = source.notes.subscribe(() => service.invalidate());
+    // An open note's edit lists at once but is stored a moment later: the index and meaning
+    // read the stored record, so they hear of the write too, or a write slower than meaning's
+    // delay is missed until the next change (PEN-188's CI).
+    const offStored = source.notes.onStored?.(() => service.invalidate());
+    const off = () => {
+      offList();
+      offStored?.();
+    };
     this.entries.set(source.id, { service, off });
     return service;
   }
