@@ -78,7 +78,7 @@ export const FEEDBACK_LIMITS = {
   versionMax: 80,
   screenshots: 6,
   /** Each image before it is scaled down and encoded again on the device. */
-  screenshotBytes: 10 * 1024 * 1024,
+  screenshotBytes: 10_000_000,
   /** The whole request. */
   requestBytes: 40 * 1024 * 1024,
   perHour: 20,

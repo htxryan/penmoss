@@ -21,9 +21,10 @@ export type ImageType = keyof typeof IMAGE_TYPES;
  * The largest file Penmoss keeps, on every path (A1533): pasted, dropped or picked in the app on
  * the Mac and on Android (A64, A486), and sent by agents through MCP, the CLI and Android's
  * `/api` (A828). The engine commits what the store holds; GitHub refuses files over 100 MB.
- * Android's Kotlin has the same number (`Attachments.MAX_BYTES`).
+ * Android's Kotlin has the same number (`Attachments.MAX_BYTES`). 50 MB as Finder and Android
+ * count it, 50,000,000 bytes, so the limit reads as every size is written (`formatBytes`).
  */
-export const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
+export const MAX_ATTACHMENT_BYTES = 50_000_000;
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 /** `attachments/<sha256>.<ext>` at the end of a path, after any folder prefix (`../../`). */

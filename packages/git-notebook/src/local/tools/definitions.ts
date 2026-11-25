@@ -7,6 +7,7 @@
 import { SEARCH_MODES } from '@penmoss/core/search';
 import { STATUS_FILTERS } from '@penmoss/model/comment-delivery';
 import type { ObjectSchema, Schema } from './schema';
+import { formatBytes } from '@penmoss/core/words';
 
 /** What a tool is, without what it does. */
 export interface ToolDefinition {
@@ -116,7 +117,7 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     setting_changed: 'Call get_settings again, then retry with the values it gives as base.',
     invalid_setting: 'Call get_settings to see the settings and their current values.',
     version_not_found: 'Call get_history to list the note’s versions.',
-    file_too_large: `Send a file of at most ${attachmentMaxBytes / 1024} KB; Ryan can attach larger ones in the app.`,
+    file_too_large: `Send a file of at most ${formatBytes(attachmentMaxBytes)}; Ryan can attach larger ones in the app.`,
     daily_limit: 'Stop and tell Ryan what is left to do; he can do it in the app.',
     too_many_renames:
       'Wait for the running renames to finish, or ask Ryan to rename the tag in the app.',
@@ -722,7 +723,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       title: 'Attach a file or picture',
       description:
         'Store a file in Penmoss and add it at the end of a note (or of the section under heading): a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. ' +
-        `Send the file in base64 as data, at most ${options.attachmentMaxBytes / 1024} KB (file_too_large), and at most 50 MB of new files a day. Attaching the same file to a note that already has it changes nothing (added: false).`,
+        `Send the file in base64 as data, at most ${formatBytes(options.attachmentMaxBytes)} (file_too_large), and at most 50 MB of new files a day. Attaching the same file to a note that already has it changes nothing (added: false).`,
       inputSchema: object(
         {
           id: ID,

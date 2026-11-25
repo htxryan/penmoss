@@ -16,10 +16,10 @@ import {
 describe('screenshots', () => {
   it('takes PNG, JPEG, WebP and GIF up to 10 MB', () => {
     expect(checkImage({ type: 'image/png', size: 10 })).toBeNull();
-    expect(checkImage({ type: 'image/webp', size: 10 * 1024 * 1024 })).toBeNull();
+    expect(checkImage({ type: 'image/webp', size: 10_000_000 })).toBeNull();
     expect(checkImage({ type: 'image/svg+xml', size: 10 })).toMatch(/PNG, JPEG, WebP or GIF/);
     expect(checkImage({ type: 'application/pdf', size: 10 })).toMatch(/PNG, JPEG, WebP or GIF/);
-    expect(checkImage({ type: 'image/jpeg', size: 10 * 1024 * 1024 + 1 })).toMatch(/10 MB/);
+    expect(checkImage({ type: 'image/jpeg', size: 10_000_001 })).toMatch(/10 MB/);
     expect(checkImage({ type: 'image/gif', size: 0 })).toMatch(/empty/);
   });
 

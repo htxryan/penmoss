@@ -15,7 +15,7 @@ import {
 } from '../src/local/tools';
 import fixture from './fixtures/mcp-tool-list.json';
 
-const SERVER = { attachmentMaxBytes: 700 * 1024 };
+const SERVER = { attachmentMaxBytes: 700_000 };
 
 describe('shared MCP tool definitions', () => {
   it("list exactly as the remote server's tools/list did", () => {
@@ -32,7 +32,7 @@ describe('shared MCP tool definitions', () => {
   it('say what each server takes, and give the same advice', () => {
     const local = toolDefinitions({ attachmentMaxBytes: MAX_ATTACHMENT_BYTES });
     expect(local.find((tool) => tool.name === 'attach_file')!.description).toContain(
-      'at most 51200 KB',
+      'at most 50 MB (file_too_large)',
     );
     expect(adviceFor('file_too_large', SERVER)).toContain('at most 700 KB');
     expect(

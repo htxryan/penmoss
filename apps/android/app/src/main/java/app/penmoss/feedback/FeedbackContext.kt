@@ -43,7 +43,7 @@ object FeedbackLimits {
     const val DESCRIPTION_MAX = 20_000
     const val VERSION_MAX = 80
     const val SCREENSHOTS = 6
-    const val SCREENSHOT_BYTES = 10L * 1024 * 1024
+    const val SCREENSHOT_BYTES = 10_000_000L
     const val REQUEST_BYTES = 40L * 1024 * 1024
     const val LONG_SIDE = 2560
     const val JPEG_QUALITY = 85

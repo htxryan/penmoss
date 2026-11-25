@@ -68,6 +68,7 @@ import {
 } from './search';
 import { LocalTags } from './tags';
 import { LocalVersions, type ServedTo } from './versions';
+import { formatBytes } from '@penmoss/core/words';
 
 export { LocalError, type NoteInfo } from './catalog';
 export { MAX_LISTED_THREADS, type ListedThread } from './comments';
@@ -787,7 +788,7 @@ export class LocalNotebook {
       throw new LocalError(
         413,
         'file_too_large',
-        `The file is ${Math.ceil(bytes.length / 1024)} KB; a git notebook keeps files of at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB`,
+        `The file is ${formatBytes(bytes.length)}; a git notebook keeps files of at most ${formatBytes(MAX_ATTACHMENT_BYTES)}`,
       );
     }
     const contentType = sniffFileType(bytes.subarray(0, 64));

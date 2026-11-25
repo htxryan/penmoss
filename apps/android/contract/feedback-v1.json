@@ -4,7 +4,7 @@
     "descriptionMax": 20000,
     "versionMax": 80,
     "screenshots": 6,
-    "screenshotBytes": 10485760,
+    "screenshotBytes": 10000000,
     "requestBytes": 41943040,
     "perHour": 20,
     "longSide": 2560,
