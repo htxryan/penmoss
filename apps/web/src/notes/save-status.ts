@@ -4,7 +4,7 @@
  * A860). It adds no new states of its own. The server's states (signed out, a conflict copy, a
  * note deleted for good elsewhere) went with the server (T59, D49).
  */
-import type { LocalSyncState } from './service';
+import type { LocalSyncState } from './service-types';
 
 export type SaveState =
   /** A change is not in this device's storage yet. */

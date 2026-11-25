@@ -7,7 +7,8 @@
 import { readIdentity, isDeleted } from '@penmoss/model/note';
 import type { WorkspaceSnapshot } from '@penmoss/model/workspace';
 import { docText, textStats } from '@penmoss/model/stats';
-import type { LocalLinks, OpenNote } from '../notes/service';
+import type { LocalLinks } from '../notes/service-types';
+import type { OpenNote } from '../notes/open-note';
 import type { NoteListEntry } from '../notes/list';
 import { localLinked } from '../notes/backlinks';
 import { parseRoute } from '../router';

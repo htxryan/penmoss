@@ -28,7 +28,7 @@ import { useNoteList } from './hooks';
 import { useNoteCounts, useSaveStatus, type NoteStats } from './note-stats';
 import { noteFields } from '@penmoss/model/note-fields';
 import type { SaveStatus } from './save-status';
-import type { OpenNote } from './service';
+import type { OpenNote } from './open-note';
 import { kindLabel } from './kind';
 import { gitNotebookPath, linkHandler } from '../router';
 import { charactersLabel, readingLabel, wordsLabel } from '@penmoss/model/stats';

@@ -65,67 +65,6 @@
   font-size: var(--pm-text-row-label);
 }
 
-/* A segmented control from real radio buttons: arrows move, Space picks, the reader says which. */
-.segmented {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.segment {
-  position: relative;
-  display: inline-flex;
-}
-
-.segment input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-/*
- * A column, its name over a hidden bold copy of it (`data-label`): as wide as when it is chosen
- * and bold, so picking one moves nothing beside it (A988).
- */
-.segment span {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--pm-control-sm);
-  padding: 0 0.75rem;
-  border: 1px solid var(--pm-border);
-  border-radius: 0;
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  font-size: var(--pm-text-item);
-}
-
-.segment span::after {
-  height: 0;
-  overflow: hidden;
-  visibility: hidden;
-  content: attr(data-label);
-  font-weight: var(--pm-weight-semibold);
-}
-
-.segment input:checked + span {
-  border-color: var(--pm-accent);
-  background: var(--pm-accent-soft);
-  font-weight: var(--pm-weight-semibold);
-}
-
-.segment input:focus-visible + span {
-  outline: 2px solid var(--pm-focus);
-  outline-offset: 1px;
-}
-
-.segment input[aria-invalid='true'] + span {
-  border-color: var(--pm-danger);
-}
-
 .field-error {
   margin: 0.3rem 0 0;
   color: var(--pm-danger);
@@ -380,10 +319,6 @@
 
   .feedback-dlg {
     max-height: calc(100dvh - 1rem);
-  }
-
-  .segment span {
-    min-height: var(--pm-hit);
   }
 
   .feedback-shots {

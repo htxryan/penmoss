@@ -4,7 +4,7 @@
  * note, and the recent-errors ring. One per window, made in main.tsx.
  */
 import { useContext, createContext, useSyncExternalStore } from 'react';
-import type { AppSyncState } from '../notes/service';
+import type { AppSyncState } from '../notes/service-types';
 import { parseFeedbackContext, type FeedbackContext as IssueContext } from '@penmoss/core/feedback';
 import { isEmptyDescription, loadFeedbackMarkdown } from '@penmoss/editor/feedback';
 import { errorRing, type ErrorRing } from './errors';

@@ -3,6 +3,8 @@
  * The group and focus colours (`--pm-graph-1`…`-8`, `-focus`, `-ungrouped`) come from the
  * theme (T28); the rest are derived here.
  */
+@import '../shell/sr-only.css'; /* its words for screen readers, on the Mac and on Android */
+
 :root {
   --pm-graph-bg: var(--pm-bg);
   --pm-graph-edge: color-mix(in oklab, var(--pm-fg) 22%, var(--pm-bg));
@@ -176,13 +178,4 @@
 .pm-graph-empty {
   margin: 18vh auto 0;
   color: var(--pm-muted);
-}
-
-.pm-visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }

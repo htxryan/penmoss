@@ -7,7 +7,7 @@ import type { CollabEditor } from '@penmoss/editor';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useNotes, useSyncState } from './hooks';
 import { gitSaveStatus, type SaveStatus } from './save-status';
-import type { OpenNote } from './service';
+import type { OpenNote } from './open-note';
 import { docText, textStats, type TextStats } from '@penmoss/model/stats';
 import { loadTokenCounter } from './tokens';
 

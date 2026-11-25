@@ -5,13 +5,9 @@ import { frontmatterTags, setFrontmatterTag } from '@penmoss/model/tags';
 import { createThread } from '@penmoss/model/comments';
 import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  Notes,
-  RestoreNeedsFolder,
-  type LocalSyncBackend,
-  type LocalSyncState,
-  type NoteRegistry,
-} from '../../src/notes/service';
+import { Notes } from '../../src/notes/service';
+import { RestoreNeedsFolder } from '../../src/notes/trash';
+import type { LocalSyncBackend, LocalSyncState, NoteRegistry } from '../../src/notes/service-types';
 import type { UnloadWrite } from '@penmoss/model/record';
 import { appendParagraph } from '../../../../packages/model/test/support/editing';
 import { TEST_NOTEBOOK } from './support/local-sources';

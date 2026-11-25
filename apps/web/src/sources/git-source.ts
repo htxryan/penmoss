@@ -11,12 +11,8 @@ import { NoteStore } from '../store/idb';
 import { WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 import type { DesktopGit, GitNotebookInfo, GitPendingPurge } from '../desktop/bridge';
 import type { NoteDirectory } from '../notes/directory';
-import {
-  Notes,
-  type LocalNotes,
-  type LocalSyncBackend,
-  type LocalSyncState,
-} from '../notes/service';
+import { Notes } from '../notes/service';
+import type { LocalNotes, LocalSyncBackend, LocalSyncState } from '../notes/service-types';
 import { Workspace, type RestorePlace } from '../workspace/service';
 import {
   EngineStorage,

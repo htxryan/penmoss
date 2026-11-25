@@ -10,7 +10,7 @@ import {
   type TagChange,
   type TagEditLog,
 } from '@penmoss/model/tags';
-import type { LocalNotes, TagChangeResult } from './service';
+import type { LocalNotes, TagChangeResult } from './service-types';
 
 /** Where tag changes (renames, merges, deletes) wait until every note on this device has them (T18). */
 const TAG_RENAMES_KEY = 'tagRenames';

@@ -42,7 +42,7 @@ import {
   SyncTimeout,
   type FailureWords,
 } from '@penmoss/git-notebook/host';
-import type { LocalNotes } from '../notes/service';
+import type { LocalNotes } from '../notes/service-types';
 
 /** What Settings → Notebooks and the pill show of a notebook's sync (A860). */
 export interface GitSyncStatus {

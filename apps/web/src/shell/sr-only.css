@@ -1,0 +1,13 @@
+/*
+ * Read only by a screen reader, never shown: the one rule, for the app (styles.css), the graph
+ * (graph.css, which Android's graph page loads too) and the editor's symbols label.
+ */
+.sr-only,
+.pm-symbols-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

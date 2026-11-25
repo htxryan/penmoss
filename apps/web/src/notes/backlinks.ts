@@ -8,7 +8,8 @@
  * searched in the stored text.
  */
 import type { ContextPart } from '@penmoss/core/links';
-import type { LocalLinks, Notes } from './service';
+import type { LocalLinks } from './service-types';
+import type { Notes } from './service';
 import type { NoteListEntry } from './list';
 
 export interface Mention {

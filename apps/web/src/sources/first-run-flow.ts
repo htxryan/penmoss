@@ -12,6 +12,7 @@ import type {
   GitHubOwner,
   GitHubRepo,
   GitHubVia,
+  RepoFolder,
   RepoFolders,
   RepoList,
 } from '../desktop/bridge';
@@ -197,3 +198,10 @@ export const folderWords = (dir: string) => (dir ? `${dir}/` : 'Root');
 
 /** The user docs page for the first run (the welcome's and the sign-in's Learn More). */
 export const FIRST_RUN_DOCS = 'https://penmoss.app/docs/first-notebook/';
+
+/** The notebooks in one repository's folders. */
+export const notebooksIn = (folders: RepoFolders) =>
+  folders.folders.filter(
+    (folder): folder is RepoFolder & { notebook: NonNullable<RepoFolder['notebook']> } =>
+      folder.notebook !== null,
+  );

@@ -14,400 +14,49 @@
  */
 import { ulid } from '@penmoss/core/ids';
 import type { DocJson, NoteLink } from '@penmoss/core/links';
-import { type AttachmentStore } from '../store/attachment-store';
 import { type NoteText } from '../store/idb';
-import {
-  type NoteMeta,
-  type NoteRecord,
-  type RecordUpdater,
-  type ReplicaStore,
-} from '@penmoss/model/record';
+import { type NoteMeta, type NoteRecord } from '@penmoss/model/record';
 import { toMeta } from '@penmoss/model/records';
-import { Attachments, type AttachmentsElsewhere } from '../store/attachments';
+import { Attachments } from '../store/attachments';
 import { ReplicaKeeper, type ReplicaSnapshot } from '../store/keeper';
-import {
-  initNote,
-  isDeleted,
-  readTrashInfo,
-  isoWithOffset,
-  readTitle,
-  setDeleted,
-} from '@penmoss/model/note';
+import { initNote, isoWithOffset } from '@penmoss/model/note';
 import { periodicNoteId, periodicSalt, type PeriodKind } from '@penmoss/core/periodic';
 import {
-  deleteRecord,
   linksField,
-  mergeRecords,
   needsLinks,
   newRev,
   recordFromUpdates,
   withLinks,
 } from '@penmoss/model/records';
-import { noteTags, type TagChange } from '@penmoss/model/tags';
-import { WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
-import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
-import { applyLive, mergeNotes, type LiveNote, type NoteListEntry } from './list';
+import { type TagChange } from '@penmoss/model/tags';
+import { bodyJson, createYjs14Replica } from '@penmoss/model/yjs14';
+import { applyLive, mergeNotes, sameListing, type LiveNote, type NoteListEntry } from './list';
 import { TagChanges } from './tag-changes';
-
-/** What the app needs from local storage; NoteStore (IndexedDB) implements it. */
-export interface LocalNotes extends ReplicaStore, AttachmentStore {
-  update(noteId: string, fn: RecordUpdater): Promise<NoteRecord | null>;
-  listMeta(): Promise<NoteMeta[]>;
-  /** Removes a record (a note deleted for good, T21). */
-  delete?(noteId: string): Promise<void>;
-  /** One note's list metadata (another window stored it, T45). */
-  getMeta?(noteId: string): Promise<NoteMeta | undefined>;
-  /** Tells `listener` which records each committed write changed (T45, A711). */
-  onWrite?(listener: (noteIds: readonly string[]) => void): () => void;
-  /** Every note's text (offline unlinked mentions, T16). */
-  listTexts?(): Promise<NoteText[]>;
-  /** Small values kept with the notes (the tag-rename journal, T18). */
-  getState?(key: string): Promise<unknown>;
-  setState?(key: string, value: unknown): Promise<void>;
-  /**
-   * Merges what another window keeps as it goes as soon as it is kept (A626, PR #167), telling
-   * `onMerged` which records it wrote; returns the unsubscribe.
-   */
-  watchUnloadWrites?(onMerged: (noteIds: readonly string[]) => void): () => void;
-}
-
-export interface TagChangeResult {
-  readonly notes: readonly string[];
-  /** Puts back what the changes did in each note, where its text is still as they left it. */
-  readonly undo: () => Promise<readonly string[]>;
-}
-
-/** One note's outgoing links in the local replica (T16 backlinks and graph). */
-export interface LocalLinks {
-  readonly id: string;
-  readonly title: string;
-  readonly updatedAt: number;
-  readonly unsynced: boolean;
-  readonly links: readonly NoteLink[];
-}
-
-/** A note open for the embeds showing it (T13). */
-interface EmbeddedNote {
-  readonly note: OpenNote;
-  readonly listeners: Set<() => void>;
-  off: (() => void) | null;
-  closing: ReturnType<typeof setTimeout> | null;
-}
-
-/** How long a note stays open after its last embed goes (T13). */
-const EMBED_CLOSE_DELAY_MS = 2000;
-/**
- * Notes open at once for embeds. Embeds follow notes only while on screen; past this many, the
- * rest wait for a turn and show this device's stored copy meanwhile.
- */
-export const MAX_LIVE_EMBEDS = 8;
-
-/** One embed's watch on a note: live once it has `off`, waiting for a turn before. */
-interface EmbedWatch {
-  readonly listener: () => void;
-  off: (() => void) | null;
-}
-
-/** Keys in the notes store that are not notes (T7 keeps the WorkspaceDoc under `workspace`). */
-export const RESERVED_KEYS: ReadonlySet<string> = new Set([WORKSPACE_RECORD_KEY]);
-const isReserved = (noteId: string) => RESERVED_KEYS.has(noteId);
-
-/** The WorkspaceDoc's note registry (T7), told when a note is deleted or restored. */
-export interface NoteRegistry {
-  unregister(noteId: string): void;
-  /** Files a new note beside `besideId` (a copy, A5): the same folder. */
-  register?(noteId: string, besideId?: string): void;
-  /** The note's folder now (null: top level), recorded when it goes to Trash (T21). */
-  folderOf?(noteId: string): string | null;
-  /** Files a note restored from Trash back in its folder, or the top level if that is gone (T21). */
-  restore?(noteId: string, folderId: string | null): void;
-  /**
-   * Where a note out of Trash would go (T43 review B2): a folder (null: the top level), or no
-   * place known (`refused`: Trash forgets the folder it was in), when the person is asked.
-   */
-  restorePlace?(
-    noteId: string,
-    folderId: string | null,
-  ): { readonly folderId: string | null } | { readonly refused: true };
-}
-
-/**
- * A note could not come out of Trash on its own (T43 review B2, A757): the folder it was deleted
- * from is gone and Trash no longer knows where that was, so there is no place for it. Nothing was
- * restored; the app asks where to put it.
- */
-export class RestoreNeedsFolder extends Error {
-  constructor(readonly noteId: string) {
-    super('The folder the note was in is gone. Choose a folder for it.');
-    this.name = 'RestoreNeedsFolder';
-  }
-}
-
-/** A note in Trash (T21). */
-export interface TrashEntry {
-  readonly id: string;
-  readonly title: string;
-  /** When it was deleted (epoch ms). */
-  readonly deletedAt: number;
-  /** Its folder when deleted (null: top level; undefined: not recorded here). */
-  readonly folderId?: string | null;
-}
-
-/**
- * How a source syncs (a git notebook's engine host, A860). The notes service's pill shows what
- * this says, and Delete for good goes through it.
- */
-export interface LocalSyncBackend {
-  /** Where its sync stands now (a stable reference between changes). */
-  state(): LocalSyncState;
-  subscribe(listener: () => void): () => void;
-  /** Deletes a note in Trash for good (A828: the notebook's `purged` map; history keeps it). */
-  purge(id: string): Promise<void>;
-}
-
-export interface LocalSyncState {
-  readonly phase: 'offline' | 'syncing' | 'synced' | 'stopped';
-  /** Why it stopped, or is offline, in the host's words where it gave some. */
-  readonly detail: string | null;
-  /**
-   * Notes (and `workspace`) with changes not in a pushed commit yet. The records' own `unsynced`
-   * flags mean nothing here: no server ever confirms them.
-   */
-  readonly pending: ReadonlySet<string>;
-}
-
-export interface NotesOptions {
-  /** How the notes sync (a git notebook's engine, A860). */
-  readonly backend: LocalSyncBackend;
-  /** Salts derived ids (daily and weekly notes) within a git notebook (A820, A827, A1021). */
-  readonly periodicSalt: string;
-  /** Whether a note id was deleted for good in this source (a git notebook's `purged`, A828). */
-  readonly isPurged?: (id: string) => boolean;
-  /** Opens this device's store of the source's notes (a git notebook's own database). */
-  readonly openStore: (hooks: StoreHooks) => Promise<LocalNotes>;
-  readonly registry?: NoteRegistry;
-  /** Whether the browser thinks it is online (`navigator.onLine`). */
-  readonly online?: () => boolean;
-  /** Asks the browser not to evict local storage (`navigator.storage.persist`). */
-  readonly persistStorage?: () => Promise<boolean>;
-  /** Where the notebook's attachments go and come from (its engine and clone, A1032). */
-  readonly attachments?: AttachmentsElsewhere;
-}
-
-/** How long after a change an open note's tags are read again (T18). */
-const TAGS_DELAY_MS = 400;
-
-/** What the store reports about database versions (see NoteStore.open). */
-export interface StoreHooks {
-  readonly onBlocked: () => void;
-  readonly onVersionChange: () => Promise<void>;
-}
-
-/** The app-wide sync state behind a source's dot. */
-export interface AppSyncState {
-  readonly phase: 'offline' | 'syncing' | 'synced' | 'stopped';
-  /** Notes with changes not pushed yet. */
-  readonly pending: number;
-  /** Why syncing stopped, or a storage problem; null when all is well. */
-  readonly detail: string | null;
-  /**
-   * What stopped it, while `phase` is `stopped` (T42, A578): this device's storage, or the git
-   * notebook's sync. Decides where "Sync stopped" leads and what fixes it.
-   */
-  readonly reason?: SyncStopKind | null;
-}
-
-/**
- * What can stop sync (T42, A578): this device's storage, or a git notebook's sync (A860), whose
- * reason Settings → Notebooks says.
- */
-export type SyncStopKind = 'storage' | 'git';
+import {
+  type AppSyncState,
+  type LocalLinks,
+  type LocalNotes,
+  type LocalSyncBackend,
+  type LocalSyncState,
+  type NoteRegistry,
+  type NotesOptions,
+  type StoreHooks,
+  type TagChangeResult,
+  isReserved,
+} from './service-types';
+import { OpenNote } from './open-note';
+import { EmbedWatcher, type EmbeddedNote } from './embed-watcher';
+import { untilStored } from './until-stored';
+import { Trash, type TrashEntry } from './trash';
+import { browserOnline, browserPersist, followPage } from './page-follow';
 
 const INITIAL_SYNC: AppSyncState = { phase: 'syncing', pending: 0, detail: null };
-const RETRY_MAX_MS = 30_000;
-
-/** One open note: its replica, its keeper and live list updates. */
-export class OpenNote {
-  readonly replica: Yjs14Replica = createYjs14Replica();
-  readonly keeper: ReplicaKeeper;
-  /** Resolves once the local copy (if any) is in the replica. */
-  readonly ready: Promise<void>;
-  private closed = false;
-  /** The replica holds the note's local copy (so its state may stand for the note). */
-  private loaded = false;
-  private offUpdate: (() => void) | null = null;
-
-  constructor(
-    readonly id: string,
-    private readonly notes: Notes,
-    store: Promise<LocalNotes>,
-    snapshot?: ReplicaSnapshot,
-  ) {
-    this.keeper = new ReplicaKeeper({
-      noteId: id,
-      replica: this.replica,
-      store: lazyStore(store),
-      title: () => readTitle(this.replica.doc),
-      tags: () => noteTags(this.replica.doc),
-      deleted: () => isDeleted(this.replica.doc),
-      trashInfo: () => readTrashInfo(this.replica.doc),
-      mergeRecords,
-    });
-    this.keeper.onChange(() => notes.syncChanged());
-    let loaded: Promise<void>;
-    if (snapshot) {
-      // The note's latest state while its last write is in flight.
-      this.keeper.restore(snapshot);
-      loaded = Promise.resolve();
-    } else {
-      loaded = this.keeper.load();
-    }
-    this.ready = loaded.then(() => {
-      if (this.closed) return;
-      this.loaded = true;
-      // Tags cost a walk of the document: read them once typing pauses (T18).
-      let tagTimer: ReturnType<typeof setTimeout> | null = null;
-      const readTags = () => {
-        tagTimer = null;
-        if (this.closed) return;
-        notes.noteTagsChanged(id, noteTags(this.replica.doc));
-        notes.noteLinksChanged(id, this.replica.links());
-      };
-      // Not now: opening a long note shows it first (T31); its tags follow a moment later.
-      tagTimer = setTimeout(readTags, TAGS_DELAY_MS);
-      const offTags = () => {
-        if (tagTimer) clearTimeout(tagTimer);
-      };
-      const offChanges = this.replica.onUpdate((_update, _origin, info) => {
-        // A comment is not an edit (T48, A770): it leaves the note where it is in Recent.
-        if (info?.commentsOnly) return;
-        notes.noteChanged(id, readTitle(this.replica.doc));
-        tagTimer ??= setTimeout(readTags, TAGS_DELAY_MS);
-      });
-      this.offUpdate = () => {
-        offChanges();
-        offTags();
-      };
-    });
-  }
-
-  /** Local edits not pushed by the engine yet, as the record says (always true once edited). */
-  get unsynced(): boolean {
-    return this.keeper.unsynced;
-  }
-
-  /** Every change is in this device's store. */
-  get savedLocally(): boolean {
-    return this.keeper.savedLocally;
-  }
-
-  /** The last failed local write, while it is being retried. */
-  get persistError(): unknown {
-    return this.keeper.persistError;
-  }
-
-  /** Called when the keeper's save state changes (stored, or a write failed). */
-  onSaveState(listener: () => void): () => void {
-    return this.keeper.onChange(listener);
-  }
-
-  get isLoaded(): boolean {
-    return this.loaded;
-  }
-
-  get isClosed(): boolean {
-    return this.closed;
-  }
-
-  flush(): Promise<void> {
-    return this.keeper.flush();
-  }
-
-  /** Writes the latest state at once, beside a write in flight. */
-  saveNow(): Promise<void> {
-    return this.keeper.saveNow();
-  }
-
-  /** Keeps what the store lacks as the page goes, in this event (A626). */
-  saveOnUnload(): void {
-    this.keeper.saveOnUnload();
-  }
-
-  close(): void {
-    if (this.closed) return;
-    this.closed = true;
-    this.offUpdate?.();
-    // Closed before loading finished (React StrictMode does this): nothing to stand for the note.
-    const snapshot: ReplicaSnapshot | null = this.loaded
-      ? {
-          update: this.replica.encodeStateAsUpdate(),
-          unsynced: this.keeper.unsynced,
-        }
-      : null;
-    // The keeper keeps retrying its final write; the replica stays until it lands.
-    const written = this.keeper.destroy().finally(() => this.replica.destroy());
-    this.notes.noteClosed(this, written, snapshot);
-  }
-}
 
 /** The source of a closed note's in-flight snapshot kept as the page goes (A626, A640). */
 const SNAPSHOT_SOURCE = 'snapshot';
 
 /** How often another window's edits (text and time only) re-sort this window's list (T45). */
 const LIST_REFRESH_MS = 1000;
-
-/** Whether two list entries differ only in what every write changes (text, time, size). */
-function sameListing(a: NoteMeta, b: NoteMeta): boolean {
-  return (
-    a.title === b.title &&
-    a.deleted === b.deleted &&
-    a.deletedAt === b.deletedAt &&
-    a.deletedFrom === b.deletedFrom &&
-    a.unsynced === b.unsynced &&
-    a.linksVersion === b.linksVersion &&
-    a.tags.join('\n') === b.tags.join('\n') &&
-    JSON.stringify(a.links ?? null) === JSON.stringify(b.links ?? null)
-  );
-}
-
-/** A ReplicaStore that waits for the store to open. */
-function lazyStore(store: Promise<LocalNotes>): ReplicaStore {
-  // The store once open, for the page-hide write, which cannot wait for a promise (A626).
-  let opened: LocalNotes | null = null;
-  void store.then(
-    (ready) => (opened = ready),
-    () => undefined,
-  );
-  return {
-    get: async (noteId) => (await store).get(noteId),
-    put: async (record) => (await store).put(record),
-    update: async (noteId, fn) => (await store).update(noteId, fn),
-    putOnUnload: (write) => opened?.putOnUnload?.(write) ?? false,
-    forgetUnload: (noteId, source) => opened?.forgetUnload?.(noteId, source),
-  };
-}
-
-/** Retries a local write with backoff until it lands (a full disk or a closing tab may fail it). */
-async function untilStored(write: () => Promise<unknown>): Promise<void> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await write();
-      return;
-    } catch (error) {
-      console.error('[notes] could not save locally; retrying', error);
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.min(RETRY_MAX_MS, 200 * 2 ** attempt)),
-      );
-    }
-  }
-}
-
-const browserOnline = () => typeof navigator === 'undefined' || navigator.onLine !== false;
-
-function browserPersist(): Promise<boolean> {
-  const storage = typeof navigator === 'undefined' ? undefined : navigator.storage;
-  return storage?.persist ? storage.persist() : Promise.resolve(false);
-}
 
 export class Notes {
   /** Images in notes (T10): stored here, shown from local bytes. */
@@ -448,8 +97,20 @@ export class Notes {
   private readonly pulledListeners = new Set<(ids: readonly string[]) => void>();
   /** Notes shown in embeds (T13), opened live while any embed shows them. */
   private readonly embedded = new Map<string, EmbeddedNote>();
-  /** Watches waiting for a turn (`MAX_LIVE_EMBEDS`), by note id, oldest first. */
-  private readonly embedWaiting = new Map<string, Set<EmbedWatch>>();
+  /** Follows notes for embeds (embed-watcher.ts). */
+  private readonly embeds = new EmbedWatcher((id) => this.openNote(id), this.embedded);
+  /** Deleting to Trash, restoring and deleting for good (T21, trash.ts). */
+  private readonly bin = new Trash({
+    localStore: () => this.localStore(),
+    refreshLocal: () => this.refreshLocal(),
+    listed: () => this.local.values(),
+    registry: () => this.registry,
+    backend: () => this.backend,
+    deleted: () => this.deleted,
+    openLoaded: (id) => [...this.open].find((note) => note.id === id && note.isLoaded),
+    settled: (id) => this.settled(id),
+    changed: () => this.changed(),
+  });
   private entries: NoteListEntry[] = [];
   private sync: AppSyncState = INITIAL_SYNC;
   private loaded = false;
@@ -514,50 +175,14 @@ export class Notes {
   /** Opens the local store and loads the list, and follows the engine's sync. Idempotent. */
   start(): Promise<void> {
     if (!this.stopped) {
-      // On page hide every change not stored yet is kept in that event, synchronously: a write
-      // that waits for a callback is lost with the page (A626).
-      const onPageHide = () => this.saveAllOnUnload();
-      const onOnlineChange = () => this.syncChanged();
-      // Hidden (the app in the background, maybe ended there): stored as on page hide, in case
-      // this is the last event, and written to the records too, which other windows read.
-      const onVisible = () => {
-        if (document.visibilityState === 'hidden') {
-          this.saveAllOnUnload();
-          void this.saveAll();
-        }
-      };
-      const browser = typeof window === 'undefined' ? null : window;
-      browser?.addEventListener('pagehide', onPageHide);
-      browser?.addEventListener('online', onOnlineChange);
-      browser?.addEventListener('offline', onOnlineChange);
-      if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisible);
-      const offBackend = this.backend.subscribe(() => this.syncChanged());
-      // Another window's last keystrokes, kept as it went without storing them (closed at once,
-      // or its renderer gone): merged here at once, so this window shows them and the engine's
-      // window takes them in and pushes them (PR #167).
-      let offKept: (() => void) | null = null;
-      let keptStopped = false;
-      this.localStore().then(
-        (store) => {
-          if (keptStopped) return;
-          offKept =
-            store.watchUnloadWrites?.((ids) => {
-              void this.pullStored(ids).catch(() => undefined);
-            }) ?? null;
-        },
-        () => undefined,
-      );
-      this.stopped = () => {
-        browser?.removeEventListener('pagehide', onPageHide);
-        browser?.removeEventListener('online', onOnlineChange);
-        browser?.removeEventListener('offline', onOnlineChange);
-        if (typeof document !== 'undefined') {
-          document.removeEventListener('visibilitychange', onVisible);
-        }
-        offBackend();
-        keptStopped = true;
-        offKept?.();
-      };
+      this.stopped = followPage({
+        saveAllOnUnload: () => this.saveAllOnUnload(),
+        saveAll: () => this.saveAll(),
+        syncChanged: () => this.syncChanged(),
+        backend: this.backend,
+        localStore: () => this.localStore(),
+        pullStored: (ids) => this.pullStored(ids),
+      });
       if (this.persisted === null) {
         this.persistStorage().then(
           (persisted) => (this.persisted = persisted),
@@ -813,88 +438,31 @@ export class Notes {
    * Soft-deletes a note (A16): the flag syncs like any edit and lists hide it. It also leaves
    * the workspace registry (T7).
    */
-  async deleteNote(id: string, options: { readonly folderId?: string | null } = {}): Promise<void> {
-    this.deleted.add(id);
-    this.changed();
-    // Trash (T21) remembers when and from which folder, so a restore puts it back; a caller
-    // whose note has left the registry already gives its folder.
-    const folderId =
-      options.folderId !== undefined ? options.folderId : (this.registry?.folderOf?.(id) ?? null);
-    const info = { at: Date.now(), folderId };
-    const open = [...this.open].find((note) => note.id === id && note.isLoaded);
-    if (open) {
-      setDeleted(open.replica.doc, true, null, info);
-    } else {
-      await this.settled(id);
-      await untilStored(async () =>
-        (await this.localStore()).update(id, (current) =>
-          current ? deleteRecord(current, true, info) : null,
-        ),
-      );
-    }
-    this.registry?.unregister(id);
+  deleteNote(id: string, options: { readonly folderId?: string | null } = {}): Promise<void> {
+    return this.bin.deleteNote(id, options);
   }
 
   /** Notes in Trash on this device, newest deletion first (T21), from the last list read. */
-  localTrash(metas: Iterable<NoteMeta> = this.local.values()): TrashEntry[] {
-    return [...metas]
-      .filter((meta) => meta.deleted && !isReserved(meta.noteId))
-      .map((meta) => ({
-        id: meta.noteId,
-        title: meta.title,
-        deletedAt: meta.deletedAt ?? meta.updatedAt,
-        ...(meta.deletedFrom !== undefined ? { folderId: meta.deletedFrom } : {}),
-      }))
-      .sort((a, b) => b.deletedAt - a.deletedAt);
+  localTrash(metas?: Iterable<NoteMeta>): TrashEntry[] {
+    return this.bin.localTrash(metas);
   }
 
   /** Trash (T21): this source's deleted notes, read from storage. */
-  async trash(): Promise<TrashEntry[]> {
-    // Read from storage: a note deleted while open is written when it closes.
-    return this.localTrash(await (await this.localStore()).listMeta());
+  trash(): Promise<TrashEntry[]> {
+    return this.bin.trash();
   }
 
   /**
    * Takes a note out of Trash and files it back in the folder it was deleted from (T21), or where
-   * the person chose. Restored on this device, offline too; it syncs like any edit. The note keeps
-   * its id, so links to it still resolve.
+   * the person chose (`folderId`: a folder, or null for the top level).
    */
-  async restoreFromTrash(
-    id: string,
-    options: {
-      /** Where the person chose to put it (a folder, or null for the top level). */
-      readonly folderId?: string | null;
-    } = {},
-  ): Promise<void> {
-    const chosen = 'folderId' in options;
-    const store = await this.localStore();
-    const record = await store.get(id);
-    if (!record?.deleted) throw new Error('This note is not in Trash on this device.');
-    let folderId = chosen ? (options.folderId ?? null) : (record.deletedFrom ?? null);
-    if (!chosen) {
-      const place = this.registry?.restorePlace?.(id, folderId);
-      if (place && 'refused' in place) throw new RestoreNeedsFolder(id);
-      if (place) folderId = place.folderId;
-    }
-    this.deleted.delete(id);
-    this.registry?.restore?.(id, folderId);
-    await untilStored(() =>
-      store.update(id, (current) => (current?.deleted ? deleteRecord(current, false) : null)),
-    );
-    await this.refreshLocal();
+  restoreFromTrash(id: string, options: { readonly folderId?: string | null } = {}): Promise<void> {
+    return this.bin.restoreFromTrash(id, options);
   }
 
-  /**
-   * Deletes a note in Trash for good (T21, A828): the notebook's `purged` map, then this device's
-   * copy. Git keeps its history.
-   */
-  async purgeFromTrash(id: string): Promise<void> {
-    const store = await this.localStore();
-    await this.backend.purge(id);
-    await store.delete?.(id);
-    // Gone, not hidden: a daily note made again under its derived id (T19) is listed.
-    this.deleted.delete(id);
-    await this.refreshLocal();
+  /** Deletes a note in Trash for good (T21, A828). */
+  purgeFromTrash(id: string): Promise<void> {
+    return this.bin.purgeFromTrash(id);
   }
 
   /** Resolves once this note's local writes in flight have finished. */
@@ -1009,84 +577,11 @@ export class Notes {
   }
 
   /**
-   * Follows a note's changes for embeds (T13): the note is opened as the editor opens one, shared
-   * by every embed showing it, and closed a moment after the last one goes (an editor
-   * re-rendering its embeds keeps it open). At most `MAX_LIVE_EMBEDS` notes are open: a watch
-   * past that waits for a turn. `listener` runs on every change and once the note is loaded.
-   * Nothing here writes to the note.
+   * Follows a note's changes for embeds (T13; embed-watcher.ts): `listener` runs on every change
+   * and once the note is loaded. Nothing here writes to the note.
    */
   watchNote(id: string, listener: () => void): () => void {
-    const watch: EmbedWatch = { listener, off: null };
-    this.startWatch(id, watch);
-    return () => {
-      if (watch.off) {
-        watch.off();
-        watch.off = null;
-        return;
-      }
-      const waiting = this.embedWaiting.get(id);
-      waiting?.delete(watch);
-      if (waiting?.size === 0) this.embedWaiting.delete(id);
-    };
-  }
-
-  /** Follows `id` for `watch`: opens it if a turn is free, else queues the watch. */
-  private startWatch(id: string, watch: EmbedWatch): void {
-    let entry = this.embedded.get(id);
-    if (!entry) {
-      if (this.embedded.size >= MAX_LIVE_EMBEDS) {
-        const waiting = this.embedWaiting.get(id) ?? new Set<EmbedWatch>();
-        this.embedWaiting.set(id, waiting);
-        waiting.add(watch);
-        return;
-      }
-      entry = this.openEmbedded(id);
-    }
-    const current = entry;
-    if (current.closing !== null) clearTimeout(current.closing);
-    current.closing = null;
-    current.listeners.add(watch.listener);
-    watch.off = () => {
-      current.listeners.delete(watch.listener);
-      if (current.listeners.size > 0 || current.closing !== null) return;
-      current.closing = setTimeout(() => {
-        current.closing = null;
-        if (current.listeners.size > 0 || this.embedded.get(id) !== current) return;
-        this.embedded.delete(id);
-        current.off?.();
-        current.note.close();
-        this.nextEmbedTurn();
-      }, EMBED_CLOSE_DELAY_MS);
-    };
-  }
-
-  private openEmbedded(id: string): EmbeddedNote {
-    const note = this.openNote(id);
-    const created: EmbeddedNote = {
-      note,
-      listeners: new Set(),
-      off: null,
-      closing: null,
-    };
-    void note.ready.then(() => {
-      if (this.embedded.get(id) !== created) return;
-      created.off = note.replica.onUpdate(() => {
-        for (const each of created.listeners) each();
-      });
-      // Loaded: the body may differ from what the embed first read.
-      for (const each of created.listeners) each();
-    });
-    this.embedded.set(id, created);
-    return created;
-  }
-
-  /** Opens notes waiting for a turn, oldest first, while turns are free. */
-  private nextEmbedTurn(): void {
-    for (const [id, waiting] of this.embedWaiting) {
-      if (this.embedded.size >= MAX_LIVE_EMBEDS) return;
-      this.embedWaiting.delete(id);
-      for (const watch of waiting) this.startWatch(id, watch);
-    }
+    return this.embeds.watchNote(id, listener);
   }
 
   /** Whether the browser thinks it is online. */

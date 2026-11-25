@@ -1140,7 +1140,7 @@
   text-align: center;
 }
 
-/* Their glyphs, read once before the line by screen readers (`.pm-symbols-label`): `.sr-only`'s rule. */
+/* Their glyphs, read once before the line by screen readers (`.pm-symbols-label`): `.sr-only`'s rule (shell/sr-only.css). */
 
 /*
  * More symbols than the gutter holds (T52 item 3): the editor draws as many as fit, at least one,

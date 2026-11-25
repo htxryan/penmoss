@@ -9,6 +9,7 @@
 @import './workspace/tree.css'; /* the folder tree */
 @import './shell/controls.css'; /* the note's header, buttons, menus, toasts and tooltips */
 @import './notes/note.css'; /* the note body */
+@import './shell/sr-only.css'; /* read only by a screen reader (the graph's stylesheet loads it too) */
 @import './commands/overlays.css'; /* the palette, quick open, the switcher and the pickers' lists */
 @import './pages/settings.css'; /* Settings */
 @import './tags/tags.css'; /* tags in the sidebar, under a note and in suggestions */

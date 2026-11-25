@@ -110,3 +110,17 @@ export function applyLive(
   rest.splice(at, 0, updated);
   return rest;
 }
+
+/** Whether two list entries differ only in what every write changes (text, time, size). */
+export function sameListing(a: NoteMeta, b: NoteMeta): boolean {
+  return (
+    a.title === b.title &&
+    a.deleted === b.deleted &&
+    a.deletedAt === b.deletedAt &&
+    a.deletedFrom === b.deletedFrom &&
+    a.unsynced === b.unsynced &&
+    a.linksVersion === b.linksVersion &&
+    a.tags.join('\n') === b.tags.join('\n') &&
+    JSON.stringify(a.links ?? null) === JSON.stringify(b.links ?? null)
+  );
+}

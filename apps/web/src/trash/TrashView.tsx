@@ -1,7 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useNoteList, useNotes } from '../notes/hooks';
-import { RestoreNeedsFolder, type TrashEntry } from '../notes/service';
+import { RestoreNeedsFolder, type TrashEntry } from '../notes/trash';
 import { TRASH_DAYS, trashDaysLeft } from './days-left';
 import { useIsGitSource } from '../sources/hooks';
 import { navigate, notePath } from '../router';

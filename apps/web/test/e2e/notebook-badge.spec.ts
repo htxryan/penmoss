@@ -131,25 +131,29 @@ test('notebooks get default badges, and one is changed in Settings (PEN-140, AC1
   await group.getByTestId(`badge-preset-${preset}`).click();
   await expect(group.getByTestId(`badge-preset-${preset}`)).toHaveAttribute('aria-checked', 'true');
   await group.getByTestId('badge-kind-icon').check();
-  // Shows is one segmented control, the chosen kind filled with the app's accent (ac17).
+  // Shows is the app's one segmented control (`Segmented`), the chosen kind raised as on every
+  // other page (ac17; PEN-188).
   const segment = (kind: string) =>
-    group.locator(`label:has([data-testid="badge-kind-${kind}"]) > span`);
-  const accent = await page.evaluate(() => {
+    group.locator(`label.seg-option:has([data-testid="badge-kind-${kind}"])`);
+  const raised = await page.evaluate(() => {
     const probe = document.createElement('span');
-    probe.style.background = 'var(--pm-accent)';
+    probe.style.background = 'var(--pm-raised)';
     document.body.append(probe);
     const colour = getComputedStyle(probe).backgroundColor;
     probe.remove();
     return colour;
   });
-  await expect(segment('icon')).toHaveCSS('background-color', accent);
-  await expect(segment('letter')).not.toHaveCSS('background-color', accent);
+  await expect(segment('icon')).toHaveCSS('background-color', raised);
+  await expect(segment('letter')).not.toHaveCSS('background-color', raised);
   const [letterBox, numberBox] = [
     (await segment('letter').boundingBox())!,
     (await segment('number').boundingBox())!,
   ];
-  // Side by side, touching: one control, not three loose radios.
-  expect(Math.abs(letterBox.x + letterBox.width - 1 - numberBox.x)).toBeLessThanOrEqual(1);
+  // Side by side in one frame: one control, not three loose radios.
+  await expect(group.getByTestId('badge-shows-row').locator('.seg .seg-option')).toHaveCount(3);
+  const gap = numberBox.x - (letterBox.x + letterBox.width);
+  expect(gap).toBeGreaterThanOrEqual(0);
+  expect(gap).toBeLessThanOrEqual(3);
   // Icon starts as Lucide's notebook; Choose Icon… opens the picker (A1568).
   await expect(group.getByTestId('badge-icon-current')).toHaveAttribute(
     'data-value',
