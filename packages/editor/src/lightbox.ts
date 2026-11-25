@@ -45,7 +45,7 @@ export interface Lightbox {
   close(): void;
 }
 
-export const MIN_ZOOM = 1;
+const MIN_ZOOM = 1;
 export const MAX_ZOOM = 8;
 /** Each button press or key multiplies or divides the zoom by this. */
 export const ZOOM_STEP = 1.5;

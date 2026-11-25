@@ -4,7 +4,6 @@ import {
   attachmentPath,
   fileExtension,
   filePath,
-  formatBytes,
   isImageType,
   isInlineType,
   isSha256,
@@ -93,13 +92,5 @@ describe('file attachments (T13)', () => {
     expect(filePath(sha, GENERIC_TYPE, 'weird.ex e')).toBe(`attachments/${sha}.bin`);
     expect(filePath(sha, GENERIC_TYPE, 'archive.verylongextension')).toBe(`attachments/${sha}.bin`);
     expect(fileExtension('a.tar.gz')).toBe('gz');
-  });
-
-  it('formats sizes for a chip', () => {
-    expect(formatBytes(0)).toBe('0 B');
-    expect(formatBytes(1023)).toBe('1023 B');
-    expect(formatBytes(1536)).toBe('1.5 KB');
-    expect(formatBytes(20 * 1024 * 1024)).toBe('20 MB');
-    expect(formatBytes(1.25 * 1024 * 1024 * 1024)).toBe('1.3 GB');
   });
 });

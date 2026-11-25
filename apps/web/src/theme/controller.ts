@@ -39,7 +39,7 @@ import type { KeyValueStore } from '../shell/key-value';
 /** The localStorage key for the last theme shown on this device. */
 export const THEME_CACHE_KEY = 'penmoss.theme';
 /** The window event fired whenever the theme shown changes. */
-export const THEME_EVENT = 'penmoss:theme';
+const THEME_EVENT = 'penmoss:theme';
 
 /** What a native shell needs to match the page (T29): fired as `penmoss:theme`. */
 export interface ThemeApplied {
@@ -53,7 +53,7 @@ export interface ThemeApplied {
   readonly foreground: string;
 }
 
-export interface SystemScheme {
+interface SystemScheme {
   readonly matches: boolean;
   subscribe(listener: () => void): () => void;
 }

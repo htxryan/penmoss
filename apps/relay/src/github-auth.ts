@@ -26,7 +26,7 @@ function derLength(length: number): number[] {
  * A PKCS#1 RSA key (`BEGIN RSA PRIVATE KEY`, what GitHub hands out) wrapped as PKCS#8, which
  * WebCrypto imports: SEQUENCE { 0, SEQUENCE { rsaEncryption, NULL }, OCTET STRING { key } }.
  */
-export function pkcs1ToPkcs8(pkcs1: Uint8Array): Uint8Array {
+function pkcs1ToPkcs8(pkcs1: Uint8Array): Uint8Array {
   const version = [0x02, 0x01, 0x00];
   const algorithm = [
     0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00,

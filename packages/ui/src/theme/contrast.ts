@@ -29,7 +29,7 @@ export interface ContrastCheck {
 }
 
 /** The stylesheet's derived surfaces for one variant. */
-export function derivedSurfaces(c: ThemeColours) {
+function derivedSurfaces(c: ThemeColours) {
   return {
     hoverBg: over(c.fg, 0.06, c.bg),
     hoverSidebar: over(c.fg, 0.06, c.sidebar),

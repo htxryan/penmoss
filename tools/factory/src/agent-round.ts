@@ -10,7 +10,7 @@ import { formatNote, parseReleaseNote } from '../../../.github/scripts/release-n
 import type { ResultRead, RunSandbox, RunDeps } from './run-deps.ts';
 
 /** How many usage-limit waits one agent round gets before the run stops. */
-export const MAX_LIMIT_WAITS = 3;
+const MAX_LIMIT_WAITS = 3;
 
 /**
  * Runs the agent, and when it stops on a usage limit, waits for the reset and runs the same
@@ -43,7 +43,7 @@ function ownerCommentLines(comments: readonly IssueComment[]): string {
 }
 
 /** Ryan's card comments that arrived while the run went on, for the next round (A1347). */
-export function ownerCommentsSection(comments: readonly IssueComment[]): string {
+function ownerCommentsSection(comments: readonly IssueComment[]): string {
   return `## Ryan's new comments on the issue\n\nRyan, the repository's owner, commented on the issue after this run read it. His comments are instructions, like the issue's; take them into account in this round:\n\n${ownerCommentLines(comments)}`;
 }
 

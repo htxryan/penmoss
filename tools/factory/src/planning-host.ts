@@ -119,7 +119,7 @@ export const agreedPlanPath = (files: PlanFiles) => join(files.root, 'agreed.htm
  * The planning session's model and effort: Claude's default alias in the config, as a run's
  * (A1363). Without them a session took whatever Ryan's own Claude Code defaults to.
  */
-export function planningModelFlags(config: FactoryConfig): string[] {
+function planningModelFlags(config: FactoryConfig): string[] {
   const alias = config.models[config.agents.claude.defaultModel];
   if (!alias) return [];
   return ['--model', alias.model, ...(alias.effort ? ['--effort', alias.effort] : [])];
@@ -153,7 +153,7 @@ export function planningFlags(files: PlanFiles): string[] {
  * `Edit` rules, never `Write`. PEN-70's planning session ran with `Write(/Users/…/out/**)`,
  * which matched nothing: every write of its state file was refused, and the factory saw it stuck.
  */
-export const under = (tool: 'Read' | 'Edit', dir: string): string =>
+const under = (tool: 'Read' | 'Edit', dir: string): string =>
   `${tool}(/${dir.replace(/\/+$/, '')}/**)`;
 
 /** Where a snapshot records the commit of main it was made from, for the session to quote. */
@@ -324,7 +324,7 @@ export interface JobOptions {
 }
 
 /** The job's chat link, once Claude Code has written it (a few seconds after `--bg` returns). */
-export async function waitForChatUrl(
+async function waitForChatUrl(
   dir: string,
   id: string,
   options: JobOptions = {},

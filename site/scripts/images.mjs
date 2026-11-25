@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 /** Where the site serves them from (`/img/<name>.webp`). */
 export const IMG_DIR = fileURLToPath(new URL('../public/img/', import.meta.url));
 
-export const SHOTS = /** @type {const} */ (['hero', 'editor', 'journal', 'history', 'themes']);
-export const SCHEMES = /** @type {const} */ (['light', 'dark']);
+const SHOTS = /** @type {const} */ (['hero', 'editor', 'journal', 'history', 'themes']);
+const SCHEMES = /** @type {const} */ (['light', 'dark']);
 
 /** Every image's file name: `<shot>-<scheme>.webp`. */
 export const NAMES = SHOTS.flatMap((shot) => SCHEMES.map((scheme) => `${shot}-${scheme}.webp`));

@@ -23,7 +23,7 @@ import { buildNumber } from './release-versions.mjs';
  * @typedef {import('./release-files.mjs').Scratch} Scratch
  */
 
-export const KEEP = 10;
+const KEEP = 10;
 /** Builds published before A403 were `android-build-<run>`; they count towards the 10. */
 const ANY_BUILD = /^(?:android-)?build-(\d+)$/;
 export const MAC_MARKER = '<!-- penmoss-mac -->';
@@ -53,7 +53,7 @@ export function macAsset(release) {
 
 /** The newest Mac app built at or before build `n`, and a release that holds it. */
 /** @param {Release[]} releases @param {number} n */
-export function newestMacUpTo(releases, n) {
+function newestMacUpTo(releases, n) {
   /** @type {{ name: string, build: number, tag: string } | null} */
   let best = null;
   for (const release of releases) {
@@ -67,7 +67,7 @@ export function newestMacUpTo(releases, n) {
 }
 
 /** @param {{ run: number, sha: string, subject: string }} build */
-export function headerNotes({ run, sha, subject }) {
+function headerNotes({ run, sha, subject }) {
   return [
     `Build ${run} from main at ${sha.slice(0, 7)}: ${subject}`,
     '',
@@ -84,7 +84,7 @@ export function headerNotes({ run, sha, subject }) {
  * `updates` when that app comes with its update files (A1015).
  * @param {number} n @param {number | null} from @param {boolean} [updates]
  */
-export function macNotes(n, from, updates = false) {
+function macNotes(n, from, updates = false) {
   const lines = [MAC_MARKER, '### Mac (Apple Silicon and Intel)', ''];
   if (from === null) {
     lines.push(
@@ -113,7 +113,7 @@ export function macNotes(n, from, updates = false) {
  * `body` with its Mac section replaced.
  * @param {string} body @param {number} n @param {number | null} from @param {boolean} [updates]
  */
-export function withMacNotes(body, n, from, updates = false) {
+function withMacNotes(body, n, from, updates = false) {
   const head = body.split(MAC_MARKER)[0]?.trimEnd() ?? '';
   return `${head}\n\n${macNotes(n, from, updates)}`;
 }

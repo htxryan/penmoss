@@ -11,7 +11,7 @@ const SVG = 'http://www.w3.org/2000/svg';
 
 type Attrs = Record<string, string | number>;
 
-export function svg<K extends keyof SVGElementTagNameMap>(
+function svg<K extends keyof SVGElementTagNameMap>(
   tag: K,
   attrs: Attrs = {},
   children: (SVGElement | string)[] = [],
@@ -80,7 +80,7 @@ function tipElement(): HTMLDivElement {
  * - `avoid`: a row or a node; the tooltip sits above it (below when there's no room), and no
  *   further left than `left` (a bar chart's labels end there).
  */
-export type Placement =
+type Placement =
   | { readonly beside: readonly [number, number]; readonly plot: DOMRect }
   | { readonly avoid: DOMRect; readonly left?: number };
 

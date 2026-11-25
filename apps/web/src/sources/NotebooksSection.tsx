@@ -5,7 +5,7 @@ import { useOnRevealNotebooks } from '../shell/reveal-notebooks';
 import { SectionHead } from '../shell/SectionHead';
 
 /** Whether Notebooks is collapsed on this device (T53 item 8). */
-export const NOTEBOOKS_COLLAPSED_KEY = 'penmoss.sidebar.notebooks';
+const NOTEBOOKS_COLLAPSED_KEY = 'penmoss.sidebar.notebooks';
 
 /**
  * Notebooks (T53 item 8, A983): a title over the notebooks, each with its own row (the personal

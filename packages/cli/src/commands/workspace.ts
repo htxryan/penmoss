@@ -9,6 +9,7 @@ import type { Command } from '../command';
 import { ApiError, CliError, EXIT } from '../errors';
 import { named } from '../format';
 import { resolveNote } from '../refs';
+import { formatBytes } from '@penmoss/core/words';
 
 const NOTE_HELP =
   'A note is its id or its exact title, ignoring the case of A–Z only; a note in Trash is named by its id.';
@@ -38,7 +39,6 @@ export const restore: Command = {
 };
 
 /** The largest file Penmoss keeps, in MB: the app's, attach_file's and this command's (A1533). */
-const MAX_MB = MAX_ATTACHMENT_BYTES / 1024 / 1024;
 
 /** Base64 of `bytes`, a chunk at a time (one call per byte would overflow the stack). */
 function base64(bytes: Uint8Array): string {
@@ -54,7 +54,7 @@ export const attach: Command = {
   summary: 'Attach a file or picture to a note',
   usage: ['attach <note> <file> [--alt <text>] [--heading <heading>]'],
   description: [
-    `Stores the file and adds it at the end of the note, or of the section under --heading: a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. At most ${MAX_MB} MB. A file the note already has is not added twice.`,
+    `Stores the file and adds it at the end of the note, or of the section under --heading: a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. At most ${formatBytes(MAX_ATTACHMENT_BYTES)}. A file the note already has is not added twice.`,
     NOTE_HELP,
   ],
   flags: [
@@ -73,7 +73,7 @@ export const attach: Command = {
     const tooLarge = (size: number) =>
       new CliError(
         EXIT.REFUSED,
-        `${file} is ${Math.ceil(size / 1024)} KB; Penmoss keeps files of at most ${MAX_MB} MB.`,
+        `${file} is ${formatBytes(size)}; Penmoss keeps files of at most ${formatBytes(MAX_ATTACHMENT_BYTES)}.`,
         'file_too_large',
       );
     // Its size first, so a large file is refused without reading it (T42 review N9).

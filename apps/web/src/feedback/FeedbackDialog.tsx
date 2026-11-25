@@ -6,14 +6,7 @@
  * kept on this device; a sent one goes through the outbox, so offline it waits (A796), with the
  * logs it previewed.
  */
-import {
-  analyticsCopy,
-  countBucket,
-  formatReportSize,
-  reportHours,
-  textBytes,
-  type Limits,
-} from '@penmoss/core/analytics';
+import { countBucket } from '@penmoss/core/analytics';
 import {
   contextMarkdown,
   FEEDBACK_GROUP_TITLES,
@@ -29,11 +22,9 @@ import {
   feedbackMarkdown,
   loadFeedbackMarkdown,
   FEEDBACK_FORMATS,
-  setFeedbackLink,
   type FeedbackEditor,
 } from '@penmoss/editor/feedback';
 import { ariaKeyShortcuts, formatCombo } from '@penmoss/editor/keys';
-import { Icon, type IconName } from '@penmoss/ui/icons';
 import {
   useEffect,
   useId,
@@ -49,8 +40,8 @@ import { useTrackedDialog, type TrackedDialog } from '../analytics/dialog';
 import { useTypedChars, useTypedLength } from '../analytics/typed';
 import { record } from '../analytics/record';
 import { useCommands } from '../commands/hooks';
-import { desktop } from '../desktop/bridge';
 import { DialogClose } from '../shell/DialogClose';
+import { Segmented } from '../shell/Segmented';
 import { buildContext, type ContextFacts } from './context';
 import { checkImage, nameFor, outputType, prepareImage, type Screenshot } from './images';
 import { appVersion } from './open';
@@ -58,8 +49,13 @@ import type { Attempt } from './outbox';
 import { problemsOf, sizeProblem, type Problems } from './problems';
 import { useFeedbackDraft } from './draft';
 import { FeedbackOutbox } from './FeedbackOutbox';
+import { FeedbackFormatting } from './FeedbackFormatting';
+import { FeedbackLogs } from './FeedbackLogs';
+import { FeedbackOutcome, type Status } from './FeedbackOutcome';
+import { FeedbackScreenshots } from './FeedbackScreenshots';
+import { useReportLogs } from './report-logs';
 import { useFeedbackService } from './service';
-import type { OutboxEntry, OutboxError } from './store';
+import type { OutboxEntry } from './store';
 
 const SEND_KEYS = 'Mod+Enter';
 
@@ -69,23 +65,10 @@ export interface FeedbackSnapshot {
   readonly capture: Blob | null;
 }
 
-type Status =
-  | { readonly kind: 'idle' }
-  | { readonly kind: 'sending' }
-  | { readonly kind: 'queued'; readonly error: OutboxError | null }
-  | { readonly kind: 'elsewhere' }
-  | { readonly kind: 'failed'; readonly error: OutboxError };
-
 /** The description's length in characters, each line break one, as Android counts its field's. */
 const bodyLength = (editor: {
   getText: (options?: { readonly blockSeparator?: string }) => string;
 }): number => editor.getText({ blockSeparator: '\n' }).length;
-
-const keysOf = (keys: string) =>
-  keys
-    .split('-')
-    .map((part) => (part.length === 1 ? part.toUpperCase() : part))
-    .join('+');
 
 export function FeedbackDialog({
   snapshot,
@@ -106,42 +89,6 @@ export function FeedbackDialog({
       onReopen={() => setRound((n) => n + 1)}
     />
   );
-}
-
-/** A bug report's logs as the form shows and attaches them (PEN-137). */
-interface ShownLogs {
-  readonly lines: readonly string[];
-  readonly limits: Limits;
-}
-
-/**
- * The anonymised logs a bug report attaches, read as the form opens (after scrub #2 with the
- * open notebooks' names), or the ones a report taken back by Edit previewed. Null outside the
- * Mac app, or until they are read.
- */
-function useReportLogs(
-  loaded: boolean,
-  keptLogs: readonly string[] | null,
-  names: readonly string[],
-): ShownLogs | null {
-  const [logs, setLogs] = useState<ShownLogs | null>(null);
-  useEffect(() => {
-    const analytics = desktop()?.analytics;
-    if (!loaded || !analytics) return;
-    let live = true;
-    void Promise.all([
-      analytics.status(),
-      keptLogs ? { lines: keptLogs } : analytics.reportLogs(names),
-    ])
-      .then(([status, report]) => {
-        if (live) setLogs({ lines: report.lines, limits: status.limits });
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, [loaded, keptLogs, names]);
-  return logs;
 }
 
 function FeedbackForm({
@@ -202,7 +149,6 @@ function FeedbackForm({
   const firstField = useRef<HTMLInputElement>(null);
   const titleField = useRef<HTMLInputElement>(null);
   const priorityField = useRef<HTMLInputElement>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
   const done = status.kind === 'queued' || status.kind === 'failed' || status.kind === 'elsewhere';
 
   // The dispatcher stands aside while the form is open: its keys are the form's and the
@@ -316,14 +262,6 @@ function FeedbackForm({
     event.stopPropagation();
     addFiles(files);
   };
-
-  const move = (index: number, by: -1 | 1) =>
-    setShots((current) => {
-      const next = [...current];
-      const [shot] = next.splice(index, 1);
-      next.splice(index + by, 0, shot!);
-      return next;
-    });
 
   const answer = (attempt: Attempt) => {
     if (attempt.kind === 'sent') {
@@ -523,26 +461,19 @@ function FeedbackForm({
                 aria-describedby={problems.type ? `${id}-type-error` : undefined}
               >
                 <legend>Type</legend>
-                <div className="segmented">
-                  {FEEDBACK_TYPES.map((value, index) => (
-                    <label key={value} className="segment">
-                      <input
-                        ref={index === 0 ? firstField : undefined}
-                        type="radio"
-                        name={`${id}-type`}
-                        value={value}
-                        checked={type === value}
-                        aria-invalid={problems.type ? true : undefined}
-                        data-event="feedback.type"
-                        data-testid={`feedback-type-${value}`}
-                        onChange={() => setType(value)}
-                      />
-                      <span data-label={FEEDBACK_TYPE_LABELS[value]}>
-                        {FEEDBACK_TYPE_LABELS[value]}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                <Segmented
+                  name={`${id}-type`}
+                  value={type}
+                  options={FEEDBACK_TYPES.map((value) => ({
+                    value,
+                    label: FEEDBACK_TYPE_LABELS[value],
+                    testId: `feedback-type-${value}`,
+                  }))}
+                  event="feedback.type"
+                  invalid={Boolean(problems.type)}
+                  firstRef={firstField}
+                  onChange={setType}
+                />
                 {problems.type ? (
                   <p id={`${id}-type-error`} className="field-error">
                     {problems.type}
@@ -554,26 +485,19 @@ function FeedbackForm({
                 aria-describedby={problems.priority ? `${id}-priority-error` : undefined}
               >
                 <legend>Priority</legend>
-                <div className="segmented">
-                  {FEEDBACK_PRIORITIES.map((value, index) => (
-                    <label key={value} className="segment">
-                      <input
-                        ref={index === 0 ? priorityField : undefined}
-                        type="radio"
-                        name={`${id}-priority`}
-                        value={value}
-                        checked={priority === value}
-                        aria-invalid={problems.priority ? true : undefined}
-                        data-event="feedback.priority"
-                        data-testid={`feedback-priority-${value}`}
-                        onChange={() => setPriority(value)}
-                      />
-                      <span data-label={FEEDBACK_PRIORITY_LABELS[value]}>
-                        {FEEDBACK_PRIORITY_LABELS[value]}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                <Segmented
+                  name={`${id}-priority`}
+                  value={priority}
+                  options={FEEDBACK_PRIORITIES.map((value) => ({
+                    value,
+                    label: FEEDBACK_PRIORITY_LABELS[value],
+                    testId: `feedback-priority-${value}`,
+                  }))}
+                  event="feedback.priority"
+                  invalid={Boolean(problems.priority)}
+                  firstRef={priorityField}
+                  onChange={setPriority}
+                />
                 {problems.priority ? (
                   <p id={`${id}-priority-error`} className="field-error">
                     {problems.priority}
@@ -608,109 +532,14 @@ function FeedbackForm({
                 <span id={`${id}-desc-label`} className="feedback-label">
                   Description
                 </span>
-                <div className="feedback-toolbar" role="toolbar" aria-label="Formatting">
-                  {FEEDBACK_FORMATS.map((format) => (
-                    <button
-                      key={format.id}
-                      type="button"
-                      className="icon-btn feedback-format"
-                      data-ui="option"
-                      data-event="feedback.format"
-                      data-testid={`feedback-format-${format.id}`}
-                      aria-pressed={
-                        ['indent', 'outdent'].includes(format.id)
-                          ? undefined
-                          : active.has(format.id)
-                      }
-                      aria-keyshortcuts={ariaKeyShortcuts([keysOf(format.keys)]) || undefined}
-                      data-tip={`${format.label} (${formatCombo(keysOf(format.keys))})`}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => {
-                        const editor = editorRef.current;
-                        if (editor) format.run(editor);
-                      }}
-                    >
-                      {ICONS[format.id] ? (
-                        <Icon name={ICONS[format.id]!} />
-                      ) : (
-                        <span className="feedback-format-glyph" aria-hidden="true">
-                          {GLYPHS[format.id]}
-                        </span>
-                      )}
-                      <span className="sr-only">{format.label}</span>
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="icon-btn feedback-format"
-                    data-ui="option"
-                    data-event="feedback.format.link"
-                    data-testid="feedback-format-link"
-                    aria-pressed={active.has('link')}
-                    aria-expanded={linkHref !== null}
-                    data-tip="Link"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() =>
-                      setLinkHref(
-                        linkHref === null
-                          ? ((editorRef.current?.getAttributes('link')['href'] as
-                              string | undefined) ?? '')
-                          : null,
-                      )
-                    }
-                  >
-                    <Icon name="link" />
-                    <span className="sr-only">Link</span>
-                  </button>
-                </div>
-                {linkHref !== null ? (
-                  <div className="feedback-link">
-                    <label className="sr-only" htmlFor={`${id}-link`}>
-                      Link address
-                    </label>
-                    <input
-                      id={`${id}-link`}
-                      type="url"
-                      autoFocus
-                      placeholder="https://"
-                      value={linkHref}
-                      {...typedLink}
-                      data-testid="feedback-link-href"
-                      onChange={(event) => setLinkHref(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault();
-                          if (editorRef.current && setFeedbackLink(editorRef.current, linkHref))
-                            setLinkHref(null);
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn"
-                      data-ui="submit"
-                      data-event="feedback.link.apply"
-                      onClick={() => {
-                        if (editorRef.current && setFeedbackLink(editorRef.current, linkHref))
-                          setLinkHref(null);
-                      }}
-                    >
-                      Apply
-                    </button>
-                    <button
-                      type="button"
-                      className="btn quiet"
-                      data-ui="dismiss"
-                      data-event="feedback.link.remove"
-                      onClick={() => {
-                        if (editorRef.current) setFeedbackLink(editorRef.current, '');
-                        setLinkHref(null);
-                      }}
-                    >
-                      Remove Link
-                    </button>
-                  </div>
-                ) : null}
+                <FeedbackFormatting
+                  id={id}
+                  editorRef={editorRef}
+                  active={active}
+                  linkHref={linkHref}
+                  setLinkHref={setLinkHref}
+                  typedLink={typedLink}
+                />
                 <div
                   ref={editorHost}
                   className="feedback-editor"
@@ -727,122 +556,14 @@ function FeedbackForm({
                   </p>
                 ) : null}
               </div>
-              <div className="feedback-field">
-                <span className="feedback-label" id={`${id}-shots`}>
-                  Screenshots
-                </span>
-                <p className="muted feedback-hint">
-                  Up to {FEEDBACK_LIMITS.screenshots} PNG, JPEG, WebP or GIF images, 10 MB each:
-                  paste, drop or choose them.
-                </p>
-                {shots.length > 0 ? (
-                  <ul
-                    className="feedback-shots"
-                    aria-labelledby={`${id}-shots`}
-                    data-testid="feedback-shots"
-                  >
-                    {shots.map((shot, index) => (
-                      <li key={shot.id} className="feedback-shot" data-testid="feedback-shot">
-                        <img
-                          src={thumbs.get(shot.id)}
-                          alt={`Screenshot ${index + 1}: ${shot.name}`}
-                        />
-                        <label className="feedback-shot-include">
-                          <input
-                            type="checkbox"
-                            checked={shot.included}
-                            data-event="feedback.screenshot.include"
-                            data-testid="feedback-shot-include"
-                            onChange={(event) => {
-                              const included = event.target.checked;
-                              setShots((current) =>
-                                current.map((item) =>
-                                  item.id === shot.id ? { ...item, included } : item,
-                                ),
-                              );
-                            }}
-                          />
-                          {shot.source === 'window'
-                            ? 'Send this capture of the window'
-                            : shot.source === 'tab'
-                              ? 'Send this capture of the tab'
-                              : 'Send'}
-                        </label>
-                        <span className="row">
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            data-ui="item"
-                            data-event="feedback.screenshot.earlier"
-                            aria-label={`Move Screenshot ${index + 1} Earlier`}
-                            data-tip="Move Earlier"
-                            disabled={index === 0}
-                            onClick={() => move(index, -1)}
-                          >
-                            <Icon name="arrowL" />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            data-ui="item"
-                            data-event="feedback.screenshot.later"
-                            aria-label={`Move Screenshot ${index + 1} Later`}
-                            data-tip="Move Later"
-                            disabled={index === shots.length - 1}
-                            onClick={() => move(index, 1)}
-                          >
-                            <Icon name="arrowR" />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            data-ui="item"
-                            aria-label={`Remove Screenshot ${index + 1}`}
-                            data-tip="Remove"
-                            data-event="feedback.screenshot.remove"
-                            data-testid="feedback-shot-remove"
-                            onClick={() =>
-                              setShots((current) => current.filter((item) => item.id !== shot.id))
-                            }
-                          >
-                            <Icon name="trash" />
-                          </button>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                <div className="row feedback-shot-actions">
-                  <button
-                    type="button"
-                    className="btn"
-                    data-ui="item"
-                    data-event="feedback.screenshot.add"
-                    data-testid="feedback-add-image"
-                    onClick={() => fileInput.current?.click()}
-                  >
-                    <Icon name="plus" />
-                    Add Images…
-                  </button>
-                  <input
-                    ref={fileInput}
-                    type="file"
-                    hidden
-                    multiple
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    data-testid="feedback-file"
-                    onChange={(event) => {
-                      addFiles([...(event.target.files ?? [])]);
-                      event.target.value = '';
-                    }}
-                  />
-                </div>
-                {imageError ? (
-                  <p role="alert" className="field-error" data-testid="feedback-image-error">
-                    {imageError}
-                  </p>
-                ) : null}
-              </div>
+              <FeedbackScreenshots
+                id={id}
+                shots={shots}
+                setShots={setShots}
+                thumbs={thumbs}
+                addFiles={addFiles}
+                imageError={imageError}
+              />
               {kept ? (
                 <p className="muted feedback-hint" data-testid="feedback-context-kept">
                   This report keeps the context it was captured with, not this screen’s.
@@ -918,171 +639,6 @@ function FeedbackForm({
             </footer>
           </form>
         )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Attach Anonymised Logs (PEN-137, ac3): the box, the sentence that follows the limits, and the
- * exact text attached, collapsed under its line count and size.
- */
-function FeedbackLogs({
-  id,
-  logs,
-  attach,
-  onAttach,
-}: {
-  id: string;
-  logs: ShownLogs;
-  attach: boolean;
-  onAttach: (attach: boolean) => void;
-}) {
-  const { lines, limits } = logs;
-  const hours = reportHours(limits);
-  if (lines.length === 0) {
-    return (
-      <p className="muted feedback-hint" data-testid="feedback-logs-empty">
-        {analyticsCopy('feedback.logs.empty', 'mac', { hours })}
-      </p>
-    );
-  }
-  const summary = analyticsCopy('feedback.logs.summary', 'mac', {
-    lines: lines.length,
-    size: formatReportSize(textBytes(lines)),
-  });
-  return (
-    <div className="feedback-logs" data-testid="feedback-logs">
-      <label className="feedback-logs-attach">
-        <input
-          type="checkbox"
-          checked={attach}
-          aria-describedby={`${id}-logs-hint`}
-          data-event="feedback.logs.toggle"
-          data-testid="feedback-logs-attach"
-          onChange={(event) => onAttach(event.target.checked)}
-        />
-        {analyticsCopy('feedback.logs.label')}
-      </label>
-      <p id={`${id}-logs-hint`} className="muted feedback-hint">
-        {analyticsCopy('feedback.logs.hint', 'mac', {
-          hours,
-          maxLines: limits['report.lines'],
-          kb: limits['report.kb'],
-        })}
-      </p>
-      <details className="feedback-context" data-testid="feedback-logs-preview">
-        <summary data-event="feedback.logs.preview">{summary}</summary>
-        <pre
-          className="feedback-preview"
-          data-testid="feedback-logs-text"
-          tabIndex={0}
-          aria-label="The anonymised logs as the issue will hold them"
-        >
-          {lines.join('\n')}
-        </pre>
-      </details>
-    </div>
-  );
-}
-
-/** The toolbar's icons, and glyphs where the icon set has none. */
-const ICONS: Readonly<Record<string, IconName>> = {
-  bold: 'bold',
-  italic: 'italic',
-  code: 'code',
-  bulletList: 'list',
-};
-const GLYPHS: Readonly<Record<string, string>> = {
-  orderedList: '1.',
-  indent: '→',
-  outdent: '←',
-  blockquote: '❝',
-  codeBlock: '{ }',
-};
-
-/** After Send, when it did not go at once: queued (offline) or kept with its error. */
-function FeedbackOutcome({
-  status,
-  onClose,
-  onRetry,
-  onDiscard,
-  onEdit,
-}: {
-  status: Status;
-  onClose: () => void;
-  onRetry: () => void;
-  onDiscard: () => void;
-  onEdit: () => void;
-}) {
-  const close = useRef<HTMLButtonElement>(null);
-  useLayoutEffect(() => close.current?.focus(), []);
-  return (
-    <div className="feedback-outcome" data-testid="feedback-outcome">
-      {status.kind === 'queued' && status.error?.code === 'no_github_token' ? (
-        // The Mac files it with the person's own token (T57, A1012): it waits for one.
-        <p role="status" data-testid="feedback-queued">
-          Queued. {status.error.message}
-        </p>
-      ) : status.kind === 'queued' ? (
-        <p role="status" data-testid="feedback-queued">
-          Queued, will send when you’re online.
-          {status.error && status.error.status !== 0 ? ` (${status.error.message})` : ''}
-        </p>
-      ) : status.kind === 'elsewhere' ? (
-        <p role="status" data-testid="feedback-elsewhere">
-          Queued: another Penmoss window is sending feedback now, and this goes next.
-        </p>
-      ) : status.kind === 'failed' ? (
-        <p role="alert" data-testid="feedback-failed">
-          Not sent: {status.error.message.replace(/\.$/, '')}. It waits under Waiting to Send in
-          this form, where you can edit, retry or discard it.
-        </p>
-      ) : null}
-      <div className="row">
-        {status.kind === 'failed' ? (
-          <>
-            <button
-              type="button"
-              className="btn quiet"
-              data-ui="dismiss"
-              data-event="feedback.outcome.discard"
-              onClick={onDiscard}
-            >
-              Discard
-            </button>
-            <button
-              type="button"
-              className="btn"
-              data-ui="item"
-              data-event="feedback.outcome.edit"
-              data-testid="feedback-edit"
-              onClick={onEdit}
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              className="btn"
-              data-ui="submit"
-              data-event="feedback.outcome.retry"
-              onClick={onRetry}
-            >
-              Retry
-            </button>
-          </>
-        ) : null}
-        <button
-          ref={close}
-          type="button"
-          className="btn primary"
-          data-ui="dismiss"
-          data-event="feedback.outcome.close"
-          data-testid="feedback-close"
-          onClick={onClose}
-        >
-          Close
-        </button>
       </div>
     </div>
   );

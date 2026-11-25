@@ -102,11 +102,11 @@ export interface LocalIndexSnapshot {
 }
 
 /** 2: the words as written, for completions (A680). */
-export const LOCAL_INDEX_FORMAT = 2;
+const LOCAL_INDEX_FORMAT = 2;
 /** The shortest term matched inside longer words (A1126): shorter ones match too much. */
-export const MIN_INFIX_LENGTH = 3;
+const MIN_INFIX_LENGTH = 3;
 /** How many words holding a term inside them it matches, the most common first (A1126). */
-export const MAX_INFIX_WORDS = 24;
+const MAX_INFIX_WORDS = 24;
 
 const DEFAULT_SLICE = 200;
 const nextTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));

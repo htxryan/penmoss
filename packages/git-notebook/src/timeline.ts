@@ -28,7 +28,7 @@ import { Lru } from './lru';
 import type { CommitInfo, GitTransport } from './transport';
 
 /** The most commits the Time Machine reads (main's own cap on a log, A855). */
-export const MAX_TIMELINE_COMMITS = 10_000;
+const MAX_TIMELINE_COMMITS = 10_000;
 
 export interface TimelineCommit {
   readonly id: string;
@@ -37,7 +37,7 @@ export interface TimelineCommit {
   readonly author: HistoryAuthor;
 }
 
-export interface TimelineNote {
+interface TimelineNote {
   readonly id: string;
   readonly title: string;
   /** Its folder in the registry then; null at the top level (or not filed). */

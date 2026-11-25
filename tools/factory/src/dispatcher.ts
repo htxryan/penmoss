@@ -35,7 +35,7 @@ export interface Tick {
  * In progress cards the factory claimed (a marker comment) but no live run holds: the daemon
  * died mid-run (R12). They are restarted on the same branch, ahead of new Ready cards.
  */
-export function orphans(
+function orphans(
   board: Board,
   config: FactoryConfig,
   running: readonly Running[],

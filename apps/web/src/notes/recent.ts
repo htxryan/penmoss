@@ -8,7 +8,7 @@
 import type { NoteListEntry } from './list';
 import type { KeyValueStore } from '../shell/key-value';
 
-export const RECENT_STORAGE_KEY = 'penmoss.recent';
+const RECENT_STORAGE_KEY = 'penmoss.recent';
 /** How many opened notes this device remembers. */
 const MAX_REMEMBERED = 50;
 

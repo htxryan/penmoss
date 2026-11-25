@@ -1,5 +1,4 @@
 // Types for scripts/vitest-shared.mjs, which every package's vitest config imports.
-export declare const budgets: boolean;
 export declare function workers(
   env?: Readonly<Record<string, string | undefined>>,
   cpus?: number,

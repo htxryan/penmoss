@@ -79,14 +79,14 @@ export function commentsSince(issue: Issue, owner: string, since: string | undef
 }
 
 /** Everyone else's comments after `since`: data for the session, never instructions (R14). */
-export function othersSince(issue: Issue, owner: string, since: string | undefined) {
+function othersSince(issue: Issue, owner: string, since: string | undefined) {
   return issue.comments.filter(
     (c) => c.author !== owner && !c.body.includes(MARKER) && (!since || c.createdAt > since),
   );
 }
 
 /** Whether Ryan's own words on the issue hold the quote the session recorded as his yes. */
-export function saidOnIssue(issue: Issue, owner: string, quote: string): boolean {
+function saidOnIssue(issue: Issue, owner: string, quote: string): boolean {
   const norm = (t: string) =>
     t
       .toLowerCase()
@@ -378,10 +378,10 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
 }
 
 /** How many times the design check sends one revision back before Ryan sees it (A1649). */
-export const MAX_DESIGN_FIXES = 2;
+const MAX_DESIGN_FIXES = 2;
 
 /** What the session hears when the design check finds problems. */
-export function designCheckMessage(problems: readonly string[]): string {
+function designCheckMessage(problems: readonly string[]): string {
   return [
     "Before Ryan sees this revision, the factory's design check found these problems:",
     problems.map((p) => `- ${p}`).join('\n'),
@@ -450,7 +450,7 @@ async function postNewChat(
 }
 
 /** How many times the session gets to fix a plan that breaks the contract before Ryan hears. */
-export const MAX_CONTRACT_FIXES = 2;
+const MAX_CONTRACT_FIXES = 2;
 
 function versionsText(v: { planVersion: number; designVersion: number | null } | null): string {
   if (!v) return '';
@@ -458,7 +458,7 @@ function versionsText(v: { planVersion: number; designVersion: number | null } |
 }
 
 /** Structured questions for the issue: each with its options, the proposal first. */
-export function questionsText(questions: readonly PlanQuestion[]): string {
+function questionsText(questions: readonly PlanQuestion[]): string {
   if (questions.length === 0) return '';
   return [
     'Pick an answer in the Factory UI, or reply here:',

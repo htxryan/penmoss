@@ -41,7 +41,7 @@ export function GraphPage({ note, local }: GraphPageProps) {
 
   return (
     <div className="graph-page">
-      <h2 className="pm-visually-hidden">Graph</h2>
+      <h2 className="sr-only">Graph</h2>
       <GraphView
         notes={input.notes}
         groups={input.groups}

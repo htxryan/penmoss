@@ -189,12 +189,12 @@ export function buildTree(
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 /** Subfolders: manual order in manual mode, otherwise by name (folders have no modified time). */
-export function folderComparator(mode: SortMode): (a: FolderRecord, b: FolderRecord) => number {
+function folderComparator(mode: SortMode): (a: FolderRecord, b: FolderRecord) => number {
   if (mode === 'manual') return compareOrder;
   return (a, b) => collator.compare(a.name, b.name) || (a.id < b.id ? -1 : 1);
 }
 
-export function noteComparator(mode: SortMode): (a: NoteEntry, b: NoteEntry) => number {
+function noteComparator(mode: SortMode): (a: NoteEntry, b: NoteEntry) => number {
   switch (mode) {
     case 'manual':
       return compareOrder;

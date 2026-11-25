@@ -90,10 +90,10 @@ type Meta =
   | { readonly threads: readonly ShownThread[]; readonly active: string | null }
   | { readonly checked: true };
 
-export const commentsKey = new PluginKey<CommentsState>('penmossComments');
+const commentsKey = new PluginKey<CommentsState>('penmossComments');
 
 /** The note's Yjs document the editor is bound to. */
-export function boundDoc(state: EditorState): Y.Doc | null {
+function boundDoc(state: EditorState): Y.Doc | null {
   const sync = ySyncPluginKey.getState(state) as
     { ytype?: { doc?: Y.Doc | null } | null } | undefined;
   return sync?.ytype?.doc ?? null;
@@ -295,7 +295,7 @@ function pastSymbols(state: EditorState, pos: number): number {
 }
 
 /** The visible text between two positions: blocks on their own lines, each without its symbols. */
-export function visibleText(state: EditorState, from: number, to: number): string {
+function visibleText(state: EditorState, from: number, to: number): string {
   const lines: string[] = [];
   const symbols = lineSymbolsOf(state);
   state.doc.nodesBetween(from, to, (node, pos) => {
@@ -394,7 +394,7 @@ interface PendingState {
   readonly decorations: DecorationSet;
 }
 
-export const pendingCommentKey = new PluginKey<PendingState>('penmossPendingComment');
+const pendingCommentKey = new PluginKey<PendingState>('penmossPendingComment');
 
 function pendingDecorations(state: EditorState, anchor: CommentAnchor | null): DecorationSet {
   if (!anchor) return DecorationSet.empty;

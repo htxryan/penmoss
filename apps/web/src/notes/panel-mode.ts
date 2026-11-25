@@ -29,14 +29,14 @@ export const NOTE_PANEL_MODES: ReadonlyArray<{
 ];
 
 /** This device's default for notes without a state of their own. */
-export const PANEL_DEFAULT_KEY = 'penmoss.notePanelMode';
+const PANEL_DEFAULT_KEY = 'penmoss.notePanelMode';
 /** Each note's own state, most recent first: `[[noteId, state], …]`. */
-export const PANEL_NOTES_KEY = 'penmoss.notePanelModes';
+const PANEL_NOTES_KEY = 'penmoss.notePanelModes';
 /** How many notes keep their own state; the least recently changed goes first. */
 export const MAX_NOTE_MODES = 300;
 
 /** The note pane's width (in rem) from which the open panel, at its first width, shows beside the text. */
-export const WIDE_PANE_REM = 60;
+const WIDE_PANE_REM = 60;
 
 /**
  * Whether a pane this wide (px) has room for the side panel, at this root font size (px): the
@@ -50,7 +50,7 @@ export function paneIsWide(width: number, remPx: number, panelRem = 26): boolean
  * A stored state, read: T52's modes count too (Expanded was open; Hidden and Compact were
  * closed), so a note keeps what it showed. Null for anything else.
  */
-export function readPanelMode(value: unknown): NotePanelMode | null {
+function readPanelMode(value: unknown): NotePanelMode | null {
   if (value === 'open' || value === 'expanded') return 'open';
   if (value === 'closed' || value === 'hidden' || value === 'compact') return 'closed';
   return null;
@@ -89,7 +89,7 @@ export function parsePanelModes(raw: string | null): Remembered {
  * where the panel covers the note and every tab is in the ⋯ sheet, so the note keeps the
  * screen's width (T52); open elsewhere.
  */
-export function unchosenPanelMode(phone: boolean): NotePanelMode {
+function unchosenPanelMode(phone: boolean): NotePanelMode {
   return phone ? 'closed' : 'open';
 }
 
@@ -118,7 +118,7 @@ export function readNotePanelMode(
   }
 }
 
-export function writeNotePanelMode(
+function writeNotePanelMode(
   noteId: string,
   mode: NotePanelMode,
   store: KeyValueStore | null = deviceStorage(),

@@ -12,7 +12,7 @@ export interface SyntheticNote {
   readonly updatedAt: number;
 }
 
-export function mulberry32(seed: number): () => number {
+function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -29,7 +29,7 @@ const SYLLABLES =
   );
 
 /** `size` distinct pseudo-words; the first ones are the most frequent. */
-export function vocabulary(size: number, random: () => number): string[] {
+function vocabulary(size: number, random: () => number): string[] {
   const words = new Set<string>();
   while (words.size < size) {
     const length = 1 + Math.floor(random() * 3) + (words.size > 200 ? 1 : 0);

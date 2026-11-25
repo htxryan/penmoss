@@ -24,7 +24,7 @@ export const CONCEPTS: Readonly<Record<string, number>> = Object.fromEntries(
 );
 const AXES = 4;
 
-export const conceptEmbedder: Embedder = {
+const conceptEmbedder: Embedder = {
   model: 'concepts/4',
   dimensions: AXES,
   floor: 0.28,

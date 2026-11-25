@@ -139,7 +139,7 @@ export function compareRows(
 export const differs = (rows: readonly CompareRow[]) => rows.some((row) => row.change !== 'same');
 
 /** How many rows of the same blocks Diff keeps around each change, as a code review does. */
-export const DIFF_CONTEXT = 3;
+const DIFF_CONTEXT = 3;
 
 /**
  * What Diff shows, in order: a row (by its index in the rows), or a fold of the unchanged rows

@@ -20,7 +20,7 @@ import {
 import { rowElement } from './tree-dom';
 
 /** Where a drop would land now: on a row, on the top level, or nowhere. */
-export type DropHint = { readonly key: string; readonly zone: DropZone } | 'root' | null;
+type DropHint = { readonly key: string; readonly zone: DropZone } | 'root' | null;
 
 export interface TreeDrop {
   readonly dropHint: DropHint;

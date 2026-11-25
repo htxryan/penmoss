@@ -258,7 +258,7 @@ test('Settings → Semantic Search recreates the index while on, and deletes it 
   // Delete Model… is the solid red button.
   await expect(section.getByRole('button', { name: 'Delete Model…' })).toHaveClass(/danger-fill/);
   // On: Recreate alone, with the index's size.
-  await expect(state).toHaveText(/^\d+ KB on this Mac, from your notes$/);
+  await expect(state).toHaveText(/^[\d.,]+ (B|KB|MB) on this Mac, from your notes$/);
   await expect(recreate).toBeVisible();
   await expect(remove).toHaveCount(0);
   // Asked first; Cancel keeps it.
@@ -267,13 +267,13 @@ test('Settings → Semantic Search recreates the index while on, and deletes it 
   await expect(again).toContainText('is deleted and built again from your notes');
   await again.getByRole('button', { name: 'Cancel' }).click();
   await expect(again).toBeHidden();
-  await expect(state).toHaveText(/ KB on this Mac/);
+  await expect(state).toHaveText(/ (B|KB) on this Mac/);
   // Recreate Index: deleted, then built again from the notes, the model kept.
   await recreate.click();
   await again.getByRole('button', { name: 'Recreate Index' }).click();
   await expect(again).toBeHidden();
   await expect.poll(indexed, { timeout: 30_000 }).toBe('4/4');
-  await expect(state).toHaveText(/ KB on this Mac/, { timeout: 30_000 });
+  await expect(state).toHaveText(/ (B|KB) on this Mac/, { timeout: 30_000 });
   await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · 219 MB$/);
 
   // Off: Delete Index alone, in red.
@@ -301,7 +301,7 @@ test('Settings → Semantic Search recreates the index while on, and deletes it 
   await section.getByRole('switch', { name: 'Semantic Search' }).click();
   await expect(recreate).toBeVisible({ timeout: 30_000 });
   await expect(remove).toHaveCount(0);
-  await expect(state).toHaveText(/ KB on this Mac/, { timeout: 30_000 });
+  await expect(state).toHaveText(/ (B|KB) on this Mac/, { timeout: 30_000 });
   expect(errors).toEqual([]);
 });
 

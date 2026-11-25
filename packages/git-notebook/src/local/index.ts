@@ -9,5 +9,4 @@ export * from './mcp';
 export * from './router';
 export * from './comment-tools';
 export * from './channel';
-export { COMMENT_TOOL_NAMES, commentToolDefinitions, toolDefinitions } from './tools';
-export type { ToolDefinition, ToolOptions } from './tools';
+export { COMMENT_TOOL_NAMES } from './tools';

@@ -144,7 +144,7 @@ export const INK_LIGHT: string = NOTEBOOK_BADGE_INK.light;
 export const INK_DARK: string = NOTEBOOK_BADGE_INK.dark;
 
 /** A stable 32-bit hash of the notebook's id (FNV-1a): the same on every device. */
-export function idHash(id: string): number {
+function idHash(id: string): number {
   return fnv1a(id);
 }
 

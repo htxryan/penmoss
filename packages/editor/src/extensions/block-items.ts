@@ -15,7 +15,7 @@ import { editFormulaAt } from './math';
 import { tableFromHeaders } from './table';
 import type { LinkServices } from './wikilink';
 
-export interface BlockContext {
+interface BlockContext {
   readonly editor: Editor;
   /** The typed `/query` to remove; empty for the toolbar. */
   readonly range: Range;
@@ -472,7 +472,7 @@ export function filterBlockItems(items: readonly BlockItem[], query: string): re
 }
 
 /** Whether the caret is where only inline content goes (a table cell). */
-export function inlineOnly(editor: Editor): boolean {
+function inlineOnly(editor: Editor): boolean {
   const { $from } = editor.state.selection;
   const role = $from.parent.type.spec.tableRole as string | undefined;
   return role === 'cell' || role === 'header_cell';

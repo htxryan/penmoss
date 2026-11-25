@@ -115,7 +115,7 @@ export class GitTransportError extends Error {
 }
 
 /** Every `GitErrorCode`: a host app's refusal with one of these is git's own (A824). */
-export const GIT_ERROR_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
+const GIT_ERROR_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
   'auth',
   'network',
   'not_found',

@@ -1,39 +1,16 @@
 // TipTap extensions, clipboard, slash menu and platform adapters (docs/architecture.md#packages).
-export {
-  createCollabEditor,
-  UnsupportedContentError,
-  type CollabEditor,
-  type CollabEditorOptions,
-} from './collab';
-export { NOTE_MARKS, NOTE_NODES, noteExtensions, type NoteExtensionsOptions } from './extensions';
+export { createCollabEditor, UnsupportedContentError, type CollabEditor } from './collab';
+export { noteExtensions } from './extensions';
 export type { ImageServices } from './extensions/image';
 // PEN-28: drawings, an SVG picture linked to its Excalidraw scene.
-export {
-  DRAWING_ALT,
-  drawingOf,
-  editDrawing,
-  insertDrawing,
-  type DrawingFiles,
-  type DrawingServices,
-} from './extensions/drawing';
+export { type DrawingFiles, type DrawingServices } from './extensions/drawing';
 // T51 (A948): the image lightbox, opened from an image's tools or a double click.
-export {
-  openLightbox,
-  openLightboxNow,
-  setLightboxHooks,
-  type Lightbox,
-  type LightboxHooks,
-  type LightboxImage,
-  type LightboxOptions,
-} from './lightbox';
-export { calloutKey, memoryFoldState, type FoldState } from './extensions/callout';
-export { CODE_LANGUAGES, resolveLanguage } from './extensions/highlight';
+export { openLightbox, openLightboxNow, setLightboxHooks } from './lightbox';
+export { type FoldState } from './extensions/callout';
 export { LINK_REFUSED, normaliseHref } from './extensions/bubble-toolbar';
 export { copyText } from './clipboard/copy';
 export { indentCode } from './extensions/code-block';
 export {
-  deleteSelectedBlock,
-  duplicateSelectedBlock,
   hasPendingUpdates,
   latestUndoStep,
   moveSelectedBlock,
@@ -41,68 +18,23 @@ export {
 } from './extensions/block-move';
 export {
   availableBlockItems,
-  BLOCK_ITEMS,
   canTurnInto,
   filterBlockItems,
   TURN_INTO_ITEMS,
   turnInto,
   type BlockItem,
 } from './extensions/block-items';
-export {
-  CLIPBOARD_COMMANDS,
-  defaultKeys,
-  loadCodec,
-  looksLikeMarkdown,
-  sanitizeClipboardHTML,
-  pastePlainText,
-  setNativeClipboard,
-  type ClipboardCommand,
-  type NativeClipboardPayload,
-  type NativeClipboardWriter,
-  type ClipboardOptions,
-  type NoteFields,
-} from './clipboard';
-export {
-  followLink,
-  notePath,
-  openWhere,
-  wikilinkExtension,
-  type OpenWhere,
-  type LinkServices,
-  type NoteCandidate,
-} from './extensions/wikilink';
-export { insertLink, linkMenuOf, type LinkOption } from './extensions/link-menu';
-export { attachmentExtension, insertFiles, type FileServices } from './extensions/attachment';
-export {
-  embedExtension,
-  MAX_EMBED_DEPTH,
-  renderBlocks,
-  resolveEmbed,
-  type EmbedResolution,
-} from './extensions/embed';
-export {
-  EDITING_KEYS,
-  EDITOR_COMMANDS,
-  insertCommandId,
-  SYMBOL_COMMANDS,
-  type EditorCommand,
-  type EditorCommandContext,
-} from './commands';
-export { AGENT_HIGHLIGHT_MS, highlightAgentEdit } from './extensions/agent-highlight';
+export { pastePlainText, setNativeClipboard, type NativeClipboardPayload } from './clipboard';
+export { type OpenWhere, type LinkServices, type NoteCandidate } from './extensions/wikilink';
+export { type FileServices } from './extensions/attachment';
+export { renderBlocks } from './extensions/embed';
+export { EDITOR_COMMANDS } from './commands';
 export {
   activeSymbols,
   canHaveSymbols,
   closeSymbolPicker,
-  fixedSymbols,
-  lineSymbolsKey,
-  lineSymbolsOf,
   openSymbolPicker,
-  setLineSymbols,
   symbolPickerOpen,
-  toggleLineSymbol,
-  symbolGutterSlots,
-  toggleCheckbox,
-  toggleListItem,
   toggleSymbolIn,
   type SymbolSource,
 } from './extensions/line-symbols';
@@ -116,7 +48,6 @@ export {
   COMMENT_ADD_EVENT,
   COMMENT_OPEN_EVENT,
   anchorRange,
-  commentsEnabled,
   rangeRect,
   revealThread,
   selectionAnchor,
@@ -127,11 +58,4 @@ export {
   type ShownThread,
 } from './extensions/comments';
 // PEN-177: session detail, a note's shape and typing by block position and length.
-export {
-  attachNoteUsage,
-  blockTokens,
-  NoteUsage,
-  type NoteUsageOptions,
-  type NoteUsageRecord,
-} from './usage';
-export { isRemoteTransaction } from './collab/binding';
+export { attachNoteUsage, NoteUsage } from './usage';

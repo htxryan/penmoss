@@ -23,7 +23,7 @@ export function cleanError(raw: string): string {
 }
 
 /** Errors that mean the Mac, not the card, needs fixing. */
-export const MACHINE = /exit 127|command not found|ENOENT|EACCES|not mode 600|permission denied/i;
+const MACHINE = /exit 127|command not found|ENOENT|EACCES|not mode 600|permission denied/i;
 
 /** The step each ledger event puts a card on. */
 export const STAGE_OF: Readonly<Record<string, number>> = {

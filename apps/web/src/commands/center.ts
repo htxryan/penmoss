@@ -25,7 +25,7 @@ import { recordCommand } from '../analytics/track';
 import { usableBindings } from './bindings';
 import type { CommandDefinition, CommandScope } from './definitions';
 
-export type RunSource = 'key' | 'palette' | 'button' | 'menu';
+type RunSource = 'key' | 'palette' | 'button' | 'menu';
 
 export interface RunContext {
   readonly source: RunSource;
@@ -84,7 +84,7 @@ export function memoryBindings(initial: Record<string, readonly string[]> = {}):
 }
 
 /** Why a combination cannot be bound, in words (A90). */
-export const BINDING_PROBLEMS: Readonly<Record<BindingProblem, (combo: string) => string>> = {
+const BINDING_PROBLEMS: Readonly<Record<BindingProblem, (combo: string) => string>> = {
   types: (combo) => `${combo} would type a character`,
   altgr: (combo) => `${combo} is AltGr on many keyboards, which types a character`,
   reserved: (combo) => `${combo} is kept for the clipboard and editing text`,

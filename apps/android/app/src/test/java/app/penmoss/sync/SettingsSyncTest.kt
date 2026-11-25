@@ -13,7 +13,6 @@ import app.penmoss.engine.api.HttpPenmossApi
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.engine.settings.ThemeEdits
-import app.penmoss.engine.settings.string
 import app.penmoss.engine.sync.SyncEngine
 import app.penmoss.stopScope
 import kotlinx.coroutines.CoroutineScope

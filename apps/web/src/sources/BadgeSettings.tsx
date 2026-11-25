@@ -1,6 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ColourPicker } from '../shell/ColourPicker';
+import { Segmented } from '../shell/Segmented';
 import { SettingRow } from '../theme/look-rows';
 import { PreviewZoom } from '../theme/PreviewZoom';
 import {
@@ -185,26 +186,18 @@ export function BadgeSettings({ source }: { source: GitSource }) {
         labelId={`${id}-shows`}
         testId="badge-shows-row"
       >
-        {/* A segmented control from real radios, the chosen kind in the accent (ac17, A988). */}
-        <span
-          className="segmented badge-kind-segments"
-          role="radiogroup"
-          aria-labelledby={`${id}-shows`}
-        >
-          {KINDS.map((each) => (
-            <label key={each.kind} className="segment badge-kind">
-              <input
-                data-event="settings.git-notebooks.badge.kind"
-                type="radio"
-                name={`${id}-kind`}
-                checked={glyph.kind === each.kind}
-                data-testid={`badge-kind-${each.kind}`}
-                onChange={() => chooseKind(each.kind)}
-              />
-              <span data-label={each.label}>{each.label}</span>
-            </label>
-          ))}
-        </span>
+        <Segmented
+          name={`${id}-kind`}
+          value={glyph.kind}
+          options={KINDS.map((each) => ({
+            value: each.kind,
+            label: each.label,
+            testId: `badge-kind-${each.kind}`,
+          }))}
+          event="settings.git-notebooks.badge.kind"
+          labelledBy={`${id}-shows`}
+          onChange={chooseKind}
+        />
       </SettingRow>
       {glyph.kind === 'letter' ? (
         <SettingRow

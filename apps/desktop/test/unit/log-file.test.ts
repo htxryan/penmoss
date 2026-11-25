@@ -125,7 +125,7 @@ describe('rotation by size (AC28: non-default limits)', () => {
     await w.file.flushed();
     expect(w.names()).toEqual(['penmoss.1.log', 'penmoss.2.log', 'penmoss.log']);
     for (const name of w.names()) {
-      expect(statSync(join(w.dir, name)).size).toBeLessThanOrEqual(256 * 1024);
+      expect(statSync(join(w.dir, name)).size).toBeLessThanOrEqual(256 * 1000);
     }
     // The newest line is last in the current file; the oldest kept is first in penmoss.2.log.
     expect(w.read().trimEnd().split('\n').at(-1)).toContain(' 1199 ');
@@ -142,7 +142,7 @@ describe('rotation by size (AC28: non-default limits)', () => {
     await w.file.flushed();
     expect(w.names()).toEqual(['penmoss.log']);
     const size = statSync(w.file.path).size;
-    expect(size).toBeLessThanOrEqual(256 * 1024);
+    expect(size).toBeLessThanOrEqual(256 * 1000);
     expect(size).toBeGreaterThan(100 * 1024);
     expect(w.read().trimEnd().split('\n').at(-1)).toContain(' 399 ');
     // Whole lines only.

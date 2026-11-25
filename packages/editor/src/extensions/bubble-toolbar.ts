@@ -68,7 +68,7 @@ const ICON_COPY =
 const ICON_MENU = 'm7 10 5 5 5-5';
 
 /** `Mod-Shift-h` as `aria-keyshortcuts` wants it (`Control+Shift+H`, or `Meta+Shift+H`). */
-export function ariaKeys(keys: string): string {
+function ariaKeys(keys: string): string {
   return keys
     .split('-')
     .map((part) => {
@@ -79,7 +79,7 @@ export function ariaKeys(keys: string): string {
 }
 
 /** `Mod-Shift-c` as people read it: ⌘⇧C on Apple platforms, Ctrl+Shift+C elsewhere. */
-export function shortcutLabel(keys: string): string {
+function shortcutLabel(keys: string): string {
   const apple = isApple();
   const symbols: Record<string, string> = apple
     ? { Mod: '⌘', Shift: '⇧', Alt: '⌥', Ctrl: '⌃' }
@@ -135,7 +135,7 @@ function lineIcon(doc: Document, path: string, size = 15): SVGSVGElement {
   return svg;
 }
 
-export class SelectionToolbar {
+class SelectionToolbar {
   readonly element: HTMLDivElement;
   private readonly controls: HTMLButtonElement[] = [];
   private readonly markButtons = new Map<MarkButton['mark'], HTMLButtonElement>();

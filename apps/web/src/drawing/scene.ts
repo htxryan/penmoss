@@ -54,7 +54,7 @@ async function fontDataUrl(url: string): Promise<string> {
  * Puts the font files the SVG's text needs into it, as `@font-face` rules of `data:` URLs, so it
  * shows hand-drawn wherever it is opened (font-faces.ts).
  */
-export async function inlineFonts(svg: SVGSVGElement): Promise<void> {
+async function inlineFonts(svg: SVGSVGElement): Promise<void> {
   const texts = [...svg.querySelectorAll('text')];
   if (texts.length === 0) return;
   const families = new Set(

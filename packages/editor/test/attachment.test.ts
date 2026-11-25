@@ -20,7 +20,7 @@ function files(overrides: Partial<FileServices> = {}) {
       Promise.resolve(
         src === PDF
           ? { size: 1536, type: 'application/pdf' }
-          : { size: 20 * 1024 * 1024, type: 'application/octet-stream' },
+          : { size: 20_000_000, type: 'application/octet-stream' },
       ),
     ),
     resolve: vi.fn((src: string) => Promise.resolve(`blob:test/${src}`)),

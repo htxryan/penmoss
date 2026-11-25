@@ -17,7 +17,7 @@ import type { Source } from './registry';
 import './sources.css';
 
 /** Which sections are collapsed on this device (A862). */
-export const COLLAPSED_SECTIONS_KEY = 'penmoss.sidebar.sections.collapsed';
+const COLLAPSED_SECTIONS_KEY = 'penmoss.sidebar.sections.collapsed';
 
 const collapsedSections = devicePref(COLLAPSED_SECTIONS_KEY, {
   parse: (stored): ReadonlySet<string> => {

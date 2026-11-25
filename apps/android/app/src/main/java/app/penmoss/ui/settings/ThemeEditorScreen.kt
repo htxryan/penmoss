@@ -91,6 +91,8 @@ import app.penmoss.engine.settings.Contrast
 import app.penmoss.engine.settings.ContrastCheck
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.engine.settings.ThemeEdits
+import app.penmoss.ui.common.SheetTitle
+import app.penmoss.ui.common.roles
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -340,7 +342,7 @@ private fun ContrastSummary(problems: List<ContrastCheck>, variant: String, chec
         Text(
             text,
             Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("themeContrast"),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.roles.help,
             color = if (problems.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
         )
         if (problems.size > 4) {
@@ -414,7 +416,7 @@ private fun FontField(key: String, label: String, stack: String, fonts: List<The
 private fun WidthField(rem: Int, range: IntRange, enabled: Boolean, onWidth: (Int) -> Unit) {
     var value by remember(rem) { mutableStateOf(rem.toFloat()) }
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text("Note Width: ${value.toInt()} rem", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyLarge)
+        Text("Note Width: ${value.toInt()} rem", Modifier.clearAndSetSemantics {}, style = MaterialTheme.roles.rowLabel)
         Slider(
             value = value,
             onValueChange = { value = it },
@@ -453,7 +455,7 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
     val tracked = rememberTrackedDialog("colourPicker")
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding().imePadding().testTag("colourSheet")) {
-            Text(label, style = MaterialTheme.typography.titleMedium)
+            SheetTitle(label, padded = false)
             Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(40.dp).background(colourOf(initial), RectangleShape).border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape))
                 Text("→")
@@ -488,10 +490,10 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
                 singleLine = true,
                 isError = !Colour.isHex(hexText),
                 supportingText = { if (!Colour.isHex(hexText)) Text("A colour is # and six hex digits, like #2e3440.") },
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+                textStyle = MaterialTheme.roles.field.copy(fontFamily = FontFamily.Monospace),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("colourHex").typedLength("colourPicker", "other", hexText),
             )
-            Text("This Theme’s Colours", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
+            Text("This Theme’s Colours", Modifier.padding(top = 8.dp), style = MaterialTheme.roles.listHead)
             FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (pick in quickPicks) {
                     val chosen = pick.hex == current
@@ -519,7 +521,7 @@ internal fun ColourSheet(label: String, initial: String, quickPicks: List<QuickP
 private fun SheetSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, state: String, event: String, onChange: (Float) -> Unit) {
     Column {
         // Seen, not read: the slider says its name and value itself.
-        Text("$label: $state", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyMedium)
+        Text("$label: $state", Modifier.clearAndSetSemantics {}, style = MaterialTheme.roles.body)
         Slider(
             value = value,
             onValueChange = onChange,

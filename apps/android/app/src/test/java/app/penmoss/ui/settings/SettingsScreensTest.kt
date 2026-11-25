@@ -1,9 +1,6 @@
 package app.penmoss.ui.settings
 
-import android.content.Context
 import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.compose.ui.platform.testTag
@@ -39,30 +36,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.NotebookGraph
-import app.penmoss.security.SecretBox
 import app.penmoss.data.NoteStore
-import app.penmoss.data.PenmossDatabase
-import app.penmoss.engine.api.SyncTree
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLimits
 import app.penmoss.engine.settings.Settings
 import app.penmoss.engine.settings.ThemeCatalogue
-import app.penmoss.stopMainScope
-import app.penmoss.ui.settings.AppearanceScreen
-import app.penmoss.ui.settings.DailyNotesScreen
-import app.penmoss.ui.settings.QuickCaptureScreen
-import app.penmoss.ui.settings.SETTINGS_WAIT
-import app.penmoss.ui.settings.SettingsHome
-import app.penmoss.ui.settings.TemplateField
-import app.penmoss.ui.settings.TimeZonePicker
-import app.penmoss.ui.settings.matchingZones
-import app.penmoss.ui.settings.regionTimeZones
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
@@ -536,15 +515,6 @@ class SettingsScreensTest {
         compose.onNodeWithText("Your primary notebook · change it on All Notebooks").assertIsDisplayed()
         compose.onNodeWithTag("captureNotebook").performClick()
         assertEquals(1, notebooks)
-    }
-
-    private fun await(condition: () -> Boolean) = runBlocking {
-        withTimeout(5_000) {
-            while (!condition()) {
-                compose.waitForIdle()
-                delay(10)
-            }
-        }
     }
 
     @Test

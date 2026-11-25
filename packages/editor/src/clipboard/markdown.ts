@@ -174,7 +174,7 @@ export function escapeCurrency(markdown: string): string {
  *   `===` underline makes a (setext) heading. Penmoss itself writes `#`
  *   headings, and text with a dashed line under it is rarely a heading.
  */
-export function prepareMarkdown(markdown: string): string {
+function prepareMarkdown(markdown: string): string {
   return mapProse(escapeCurrency(markdown), (line, previous) => {
     const underline = /^ {0,3}(-+|=+)[ \t]*$/.exec(line);
     if (underline && previous !== null && isParagraphLine(previous)) {
@@ -289,7 +289,7 @@ function picture(node: Json, attrs: Record<string, string | null>): Json[] {
 }
 
 /** Parses markdown into editor blocks (frontmatter is dropped). */
-export function markdownToFragment(markdown: string, schema: Schema, codec: Codec): Fragment {
+function markdownToFragment(markdown: string, schema: Schema, codec: Codec): Fragment {
   const { doc } = codec.parseMarkdown(prepareMarkdown(markdown));
   const content = adapt(doc.toJSON() as Json, schema)[0]?.content ?? [];
   try {

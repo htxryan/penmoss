@@ -65,7 +65,7 @@ export function shortArgs(args: string): string {
 }
 
 /** `ps -o pid=,args=`'s output, by pid. */
-export function argsByPid(ps: string): Map<number, string> {
+function argsByPid(ps: string): Map<number, string> {
   const out = new Map<number, string>();
   for (const line of ps.split('\n')) {
     const match = /^\s*(\d+)\s+(.*)$/.exec(line);
@@ -93,7 +93,7 @@ const real = (dir: string) => {
 };
 
 /** How long a process gets after SIGTERM before SIGKILL. */
-export const GRACE_MS = 3000;
+const GRACE_MS = 3000;
 
 /**
  * Stops the processes left in `worktree`; returns what they were. `kill` sends a signal and says

@@ -21,7 +21,7 @@ import {
 } from '@penmoss/core/feedback';
 import type { RecentError } from './errors';
 
-export interface AppFacts {
+interface AppFacts {
   readonly client: 'web' | 'mac';
   readonly version: string;
   readonly os: string;
@@ -39,7 +39,7 @@ export interface AppFacts {
   readonly keepOnTop?: boolean;
 }
 
-export interface WhereFacts {
+interface WhereFacts {
   /** What kind of screen it is ("note", "settings (appearance)"), never its path (PEN-137, O5). */
   readonly screen: string;
   /** Panels and dialogs open behind the form (Info, Version history, Settings…). */
@@ -208,7 +208,7 @@ export function buildContext(facts: ContextFacts): FeedbackContext {
 }
 
 /** The recent errors redacted, without any that quotes a note this window holds (A791). */
-export function safeErrors(
+function safeErrors(
   errors: readonly RecentError[],
   secret: ContextFacts['private'],
 ): RecentError[] {

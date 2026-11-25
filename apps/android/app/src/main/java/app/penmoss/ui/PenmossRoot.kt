@@ -33,6 +33,8 @@ import app.penmoss.sync.SyncStatus
 import app.penmoss.ui.common.LocalNoteSelection
 import app.penmoss.ui.common.NoteSelection
 import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.common.rememberNow
+import app.penmoss.ui.common.timeAgo
 import app.penmoss.ui.folders.folderRoutes
 import app.penmoss.ui.graph.graphRoutes
 import app.penmoss.ui.home.SyncLine
@@ -48,8 +50,6 @@ import app.penmoss.ui.settings.feedbackRoutes
 import app.penmoss.ui.settings.settingsRoutes
 import app.penmoss.ui.tags.tagRoutes
 import app.penmoss.ui.trash.trashRoutes
-import java.text.DateFormat
-import java.util.Date
 
 /** The note in front, when a note's screen is: feedback's context describes it (T49). */
 private fun noteOpen(nav: NavController): String? =
@@ -183,7 +183,7 @@ private fun rememberSyncLine(graph: NotebookGraph): SyncLine {
     var settled by remember { mutableStateOf<SyncStatus>(SyncStatus.Idle) }
     LaunchedEffect(status) { if (status !is SyncStatus.Syncing) settled = status }
     val stop by graph.sync.stop.collectAsStateWithLifecycle()
-    val pass = statusText(if (status is SyncStatus.Syncing && settled !is SyncStatus.Idle) settled else status)
+    val pass = statusText(if (status is SyncStatus.Syncing && settled !is SyncStatus.Idle) settled else status, rememberNow())
     return SyncLine(
         text = stop?.let(::stoppedLine) ?: pass,
         pass = pass,
@@ -337,10 +337,11 @@ internal fun NavBackStackEntry.markNoteMade() {
 }
 
 
-internal fun statusText(status: SyncStatus): String = when (status) {
+/** Home's sync line: "Synced 2 min ago" as the Mac's sidebar says it ([timeAgo]), or what is wrong. */
+internal fun statusText(status: SyncStatus, now: Long = System.currentTimeMillis()): String = when (status) {
     SyncStatus.Idle -> ""
     SyncStatus.Syncing -> "Syncing…"
-    is SyncStatus.Synced -> "Synced at ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(status.at))}"
+    is SyncStatus.Synced -> "Synced ${timeAgo(status.at, now)}"
     is SyncStatus.Offline ->
         if (status.serverError) "Penmoss couldn’t sync just now and will try again. Showing what’s on this phone."
         else "Offline: showing what’s on this phone"

@@ -134,7 +134,7 @@ export async function validate(
 }
 
 /** What the capturing session hears when it left criteria out (A1650). */
-export function coverageFeedback(missing: readonly string[]): string {
+function coverageFeedback(missing: readonly string[]): string {
   return [
     '## Criteria you left out',
     '',

@@ -43,7 +43,7 @@ import type { Node as PMNode } from 'prosemirror-model';
 import { bodyDelta, noteBody, noteBodyForDisplay, unfitBody, unsupportedTypes } from './markdown';
 
 /** What find-and-replace may match: prose only (the default), or the whole markdown. */
-export type ReplaceScope = 'text' | 'markdown';
+type ReplaceScope = 'text' | 'markdown';
 
 /** Where `section` content goes: in place of the section's body, or at its start or end. */
 export type SectionMode = 'replace' | 'prepend' | 'append';
@@ -111,7 +111,7 @@ const fail = (
 ): EditFailure => ({ ok: false, status, code, message, ...(details ? { details } : {}) });
 
 /** At most this much of each text a 409 shows (review): the agent reads the note again anyway. */
-export const MAX_CONFLICT_TEXT = 4000;
+const MAX_CONFLICT_TEXT = 4000;
 
 function clip(text: string): string {
   return text.length > MAX_CONFLICT_TEXT ? `${text.slice(0, MAX_CONFLICT_TEXT)}…` : text;
@@ -123,7 +123,7 @@ export function headingRefs(body: PMNode): string[] {
 }
 
 /** The properties a note keeps (A16, A73): all an agent may set, on create or afterwards. */
-export const NOTE_PROPERTIES: readonly string[] = ['title', 'tags'];
+const NOTE_PROPERTIES: readonly string[] = ['title', 'tags'];
 
 /** What set_properties sets: the properties, and the note's description (A1656). */
 export const SETTABLE_PROPERTIES: readonly string[] = [...NOTE_PROPERTIES, 'description'];
@@ -154,21 +154,6 @@ export interface EditPlan {
   readonly deleteTag?: string;
   /** For the version's summary, e.g. `Replaced section “Plans”`. */
   readonly label: string;
-}
-
-/** The wikilink and embed targets written in markdown, so the caller can resolve them first. */
-export function linkTargets(markdown: string): string[] {
-  const targets = new Set<string>();
-  parseMarkdown(markdown, {
-    links: {
-      resolve: (target) => {
-        if (target.trim()) targets.add(target.trim());
-        return null;
-      },
-      linkText: () => null,
-    },
-  });
-  return [...targets];
 }
 
 /** The markdown an operation brings in (its links need resolving before planning). */
@@ -219,7 +204,7 @@ export function bodyText(body: PMNode, links: LinkResolver): string {
  * builds bodies that fit (its property tests), so this is a backstop: the
  * agent hears why, and nothing is written.
  */
-export function unopenableBody(body: PMNode): EditFailure | null {
+function unopenableBody(body: PMNode): EditFailure | null {
   const problem = unfitBody(body);
   return problem === null
     ? null

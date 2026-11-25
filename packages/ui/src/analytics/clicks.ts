@@ -19,7 +19,7 @@ export type ClickState = 'on' | 'off';
 export type SendClick = (id: string, state: ClickState | undefined) => void;
 
 /** Which way a switch or a check box goes with this click, or undefined for any other control. */
-export function clickState(control: Element): ClickState | undefined {
+function clickState(control: Element): ClickState | undefined {
   if (control instanceof HTMLInputElement) {
     if (control.type !== 'checkbox' && control.type !== 'radio') return undefined;
     // A click toggles a check box before its listeners run, so this is the new state.
@@ -32,7 +32,7 @@ export function clickState(control: Element): ClickState | undefined {
 }
 
 /** A control counted when its value changes rather than when it is clicked. */
-export function changesOnly(control: Element): boolean {
+function changesOnly(control: Element): boolean {
   return (
     control instanceof HTMLSelectElement ||
     (control instanceof HTMLInputElement && control.type === 'range')

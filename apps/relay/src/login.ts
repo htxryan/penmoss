@@ -27,7 +27,7 @@ const escape = (text: string) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 
-export function page(status: number, title: string, body: string, headers: HeadersInit = {}) {
+function page(status: number, title: string, body: string, headers: HeadersInit = {}) {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title>
 <style>:root{color-scheme:light dark}body{font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:34rem;margin:12vh auto;padding:0 20px}h1{font-size:1.4rem}button{font:inherit;padding:.6em 1.2em;cursor:pointer}code{font-size:.9em}</style>
 </head><body><h1>${escape(title)}</h1>${body}</body></html>`;

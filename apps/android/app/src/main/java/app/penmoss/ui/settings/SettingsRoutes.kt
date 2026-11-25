@@ -157,6 +157,7 @@ internal fun notebookEntries(
     statuses: Map<String, GitEngineStatus>,
     primary: String?,
     badges: Map<String, app.penmoss.engine.settings.NotebookBadge> = emptyMap(),
+    now: Long = System.currentTimeMillis(),
 ): List<NotebookEntry> =
     views.map { view ->
         val status = statuses[view.localId]
@@ -164,7 +165,7 @@ internal fun notebookEntries(
             view.localId,
             view.name,
             view.localId == primary,
-            app.penmoss.git.gitStatusLine(status, view.host),
+            app.penmoss.git.gitStatusLine(status, view.host, now),
             app.penmoss.git.dotOf(status),
             badges[view.localId] ?: app.penmoss.engine.settings.NotebookBadges.defaultBadge(view.notebookId, view.name),
         )
@@ -269,7 +270,7 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
             state.settings,
             themeName,
             daily = daily?.settings ?: state.settings,
-            notebooks = notebookEntries(views, statuses, hub?.journal(), badges),
+            notebooks = notebookEntries(views, statuses, hub?.journal(), badges, app.penmoss.ui.common.rememberNow()),
             storage = storage,
             github = github,
             privacy = privacy,

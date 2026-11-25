@@ -29,16 +29,16 @@ import { within } from './media.ts';
 /** A text file is cut to this many bytes: its last ones, or an error context's first ones. */
 export const EVIDENCE_TEXT_BYTES = 200 * 1024;
 /** A screenshot larger than this is left out. */
-export const EVIDENCE_IMAGE_BYTES = 5 * 1024 * 1024;
+const EVIDENCE_IMAGE_BYTES = 5 * 1024 * 1024;
 /** All of one platform's evidence; what doesn't fit is named in the index, not copied. */
-export const EVIDENCE_TOTAL_BYTES = 4 * 1024 * 1024;
+const EVIDENCE_TOTAL_BYTES = 4 * 1024 * 1024;
 /** Failing tests kept per platform, and files per test. */
-export const EVIDENCE_TESTS = 10;
-export const EVIDENCE_FILES = 12;
+const EVIDENCE_TESTS = 10;
+const EVIDENCE_FILES = 12;
 /** A failing test's error, as the index shows it. */
 const ERROR_CHARS = 8000;
 
-export interface EvidenceFile {
+interface EvidenceFile {
   /** The attachment's name, or what the file is. */
   readonly label: string;
   readonly kind: 'screenshot' | 'error-context' | 'text' | 'image';
@@ -246,7 +246,7 @@ function cappedText(file: EvidenceFile): { text: Buffer; cut?: string } {
 }
 
 /** The index of a platform's failing tests in `raw/`, which the prompt names. */
-export function failuresIndex(platform: string): string {
+function failuresIndex(platform: string): string {
   return `${platform}-failures.md`;
 }
 

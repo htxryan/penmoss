@@ -26,7 +26,6 @@ type Settings = Readonly<Record<string, unknown>>;
 
 /** A level's value. Global is On or Off only. */
 export type AiSetting = 'inherit' | 'on' | 'off';
-export const AI_SETTINGS: readonly AiSetting[] = ['inherit', 'on', 'off'];
 
 /** The note's frontmatter key for its own value (`on` or `off`; absent is Inherit). */
 export const AI_DESCRIPTION_FRONTMATTER = 'ai-description';
@@ -62,7 +61,7 @@ export const DEFAULT_PAUSE_SECONDS = 120;
 export const PAUSE_CHOICES_SECONDS: readonly number[] = [30, 60, 120, 300, 600];
 
 /** The providers this build knows. More are added as entries, not new settings. */
-export const AI_PROVIDER_IDS = ['none', 'anthropic', 'claude-code'] as const;
+const AI_PROVIDER_IDS = ['none', 'anthropic', 'claude-code'] as const;
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
 
 /** The Anthropic models offered, fastest first; the first is the default. */
@@ -79,7 +78,7 @@ export const CLAUDE_CODE_MODELS: readonly { readonly id: string; readonly label:
 /** A description is at most this long once written (agents read many at once). */
 export const DESCRIPTION_MAX_CHARS = 600;
 /** Notes over this many tokens are cut before they are sent (AD9). */
-export const PROMPT_TOKEN_LIMIT = 24_000;
+const PROMPT_TOKEN_LIMIT = 24_000;
 /** About this many characters make a token, for cutting without loading a tokenizer. */
 const CHARS_PER_TOKEN = 4;
 
@@ -106,14 +105,14 @@ export const PROMPT_TOKENS = [
   'description',
   'date',
 ] as const;
-export type PromptToken = (typeof PROMPT_TOKENS)[number];
+type PromptToken = (typeof PROMPT_TOKENS)[number];
 
 export function parseAiSetting(value: unknown): AiSetting {
   return value === 'on' || value === 'off' ? value : 'inherit';
 }
 
 /** Where an effective value came from. */
-export type AiSource =
+type AiSource =
   | { readonly level: 'note' }
   | { readonly level: 'folder'; readonly id: string; readonly name: string }
   | { readonly level: 'notebook'; readonly name: string }
@@ -306,12 +305,6 @@ export function cleanDescription(answer: string): string | null {
   return text;
 }
 
-/** A description as an agent's list shows it: one line, at most `max` characters. */
-export function descriptionLine(description: string, max = 240): string {
-  const line = description.replace(/\s+/g, ' ').trim();
-  return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
-}
-
 // --- Tag descriptions (A1677) ---
 
 export const DEFAULT_TAG_PROMPT = `Write a description of a tag for an AI agent choosing tags for a note, or looking for the notes a tag finds.
@@ -335,11 +328,11 @@ export const TAG_PROMPT_TOKENS = [
   'description',
   'date',
 ] as const;
-export type TagPromptToken = (typeof TAG_PROMPT_TOKENS)[number];
+type TagPromptToken = (typeof TAG_PROMPT_TOKENS)[number];
 export type TagPromptValues = Readonly<Record<TagPromptToken, string>>;
 
 /** The notes listed in a tag's prompt are cut to about this many tokens, newest first. */
-export const TAG_PROMPT_TOKEN_LIMIT = 8_000;
+const TAG_PROMPT_TOKEN_LIMIT = 8_000;
 /** At most this many notes are listed, newest first; the count and the tags cover them all. */
 export const TAG_PROMPT_MAX_NOTES = 100;
 /** Each note's description or the start of its text, cut to this many characters. */

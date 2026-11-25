@@ -110,7 +110,7 @@ const shape: Check = (value) => isShape(value);
 
 const screenKind: Check = (value) => typeof value === 'string' && isCatalogued('screen', value);
 
-export const CLI_EXITS = [
+const CLI_EXITS = [
   'OK',
   'ERROR',
   'USAGE',
@@ -121,7 +121,7 @@ export const CLI_EXITS = [
   'REFUSED',
 ] as const;
 
-export const FIRSTRUN_ERRORS = [
+const FIRSTRUN_ERRORS = [
   'offline',
   'auth',
   'notFound',
@@ -274,7 +274,7 @@ export const NAME_PROP_SPECS: Readonly<Record<string, Readonly<Record<string, Pr
  * The clients that may send a name NAME_PROP_SPECS lists: the apps, which have windows. The CLI
  * and the MCP server never record a window or a layout (PEN-174), so the check refuses one from them.
  */
-export const NAME_CLIENTS: Readonly<Record<string, readonly string[]>> = {
+const NAME_CLIENTS: Readonly<Record<string, readonly string[]>> = {
   'app.window': ['mac', 'android'],
   'app.layout': ['mac', 'android'],
 };

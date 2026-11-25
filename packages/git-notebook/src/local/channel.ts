@@ -41,8 +41,6 @@ import type { LocalNotebook } from './notebook';
 /** How often the channel asks the remote whether its head moved (A1063). */
 export const CHANNEL_CHECK_MS = 10_000;
 export { HEARTBEAT_MS };
-/** The longest session name (the old hub's). */
-export const MAX_SESSION_NAME = 200;
 /** Claude Code's channel notification (the channels reference). */
 export const CHANNEL_METHOD = 'notifications/claude/channel';
 
@@ -73,7 +71,7 @@ export interface ChannelOptions {
 }
 
 /** A channel notification as Claude Code takes it: identifier keys and string values in meta. */
-export function channelNotification(payload: DeliveryPayload): Record<string, unknown> {
+function channelNotification(payload: DeliveryPayload): Record<string, unknown> {
   return {
     jsonrpc: '2.0',
     method: CHANNEL_METHOD,

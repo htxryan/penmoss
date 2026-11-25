@@ -41,16 +41,14 @@ import {
 } from './first-run-flow';
 import { Action, Frame, Options } from './FirstRunFrame';
 import { GitHubAccess } from './FirstRunGitHub';
-import {
-  AccountSwitcher,
-  CreateRepo,
-  FolderPick,
-  GitMissing,
-  NameNotebook,
-  PasteUrl,
-  RepoPicked,
-  RepoTree,
-} from './FirstRunRepos';
+import { AccountSwitcher } from './FirstRunAccountSwitcher';
+import { CreateRepo } from './FirstRunCreateRepo';
+import { FolderPick } from './FirstRunFolderPick';
+import { GitMissing } from './FirstRunGitMissing';
+import { NameNotebook } from './FirstRunNameNotebook';
+import { PasteUrl } from './FirstRunPasteUrl';
+import { RepoPicked } from './FirstRunRepoPicked';
+import { RepoTree } from './FirstRunRepos';
 import { AiProviderStep, AiQuestion } from './FirstRunAi';
 import { SettingUp } from './FirstRunSetup';
 import { useAllSources } from './hooks';
@@ -108,7 +106,7 @@ function BareWindow({ children }: { children: ReactNode }) {
 type Way = 'create' | 'existing' | 'url';
 
 /** The first run, or, outside the Mac app's bridge, where to find it. */
-export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
+function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
   const git = desktop()?.git ?? null;
   if (!git) {
     return (

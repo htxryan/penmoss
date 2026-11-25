@@ -2,25 +2,13 @@
  * Words for the notebook steps' repository and folder screens (T81, #229, A1562):
  * FirstRunRepos.tsx, which the first run and Add Notebook both show.
  */
+import { timeAgo } from '@penmoss/core/words';
 
-/** "3 days ago", "last week": when a repository was last pushed. */
+/** "2 min ago", "Nov 7", "Mar 2, 2024": when a repository was last pushed (core's `timeAgo`). */
 export function pushedWords(iso: string | null, now = Date.now()): string {
   if (!iso) return 'never pushed';
-  const ms = now - Date.parse(iso);
-  if (!Number.isFinite(ms)) return '';
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 2) return 'just now';
-  if (minutes < 60) return `${minutes} minutes ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return hours === 1 ? 'an hour ago' : `${hours} hours ago`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return days === 1 ? 'yesterday' : `${days} days ago`;
-  if (days < 14) return 'last week';
-  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
-  const months = Math.round(days / 30);
-  if (months < 12) return `${months} months ago`;
-  const years = Math.round(days / 365);
-  return years === 1 ? 'a year ago' : `${years} years ago`;
+  const at = Date.parse(iso);
+  return Number.isFinite(at) ? timeAgo(at, now) : '';
 }
 
 /** A folder name as the typed Directory takes it: no slashes, no `.` or `..`, no `.git`. */

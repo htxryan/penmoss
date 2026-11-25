@@ -78,7 +78,7 @@ export function commitAuthor(commit: CommitInfo): HistoryAuthor {
  * Who made a commit's change to one note (PEN-152): the agent sessions its `Penmoss-Session`
  * trailers name for that note, else `commitAuthor`.
  */
-export function noteAuthors(commit: CommitInfo, noteId: string): HistoryAuthor[] {
+function noteAuthors(commit: CommitInfo, noteId: string): HistoryAuthor[] {
   const author = commitAuthor(commit);
   const sessions = commitSessions(commit.message).filter((each) => each.notes.includes(noteId));
   if (author.kind !== 'agent' || sessions.length === 0) return [author];
@@ -91,7 +91,7 @@ export function noteAuthors(commit: CommitInfo, noteId: string): HistoryAuthor[]
 }
 
 /** The most versions listed, newest first. */
-export const MAX_VERSIONS = 1000;
+const MAX_VERSIONS = 1000;
 
 /** Versions rendered to markdown before `summaries` lets other work run (a page's input). */
 const RENDERS_PER_TURN = 8;

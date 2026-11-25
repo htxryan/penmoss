@@ -1,7 +1,8 @@
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { NotesProvider } from '../../src/notes/context';
-import type { AppSyncState, Notes } from '../../src/notes/service';
+import type { AppSyncState } from '../../src/notes/service-types';
+import type { Notes } from '../../src/notes/service';
 import { SyncAnnouncer } from '../../src/notes/SyncAnnouncer';
 import { syncHint } from '../../src/notes/sync-label';
 

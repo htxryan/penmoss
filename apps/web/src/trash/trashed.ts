@@ -24,7 +24,7 @@ export interface Trashed {
 /** How long the toast stays once it is neither pointed at nor focused. */
 export const TRASHED_MS = 8000;
 
-export class TrashedNote {
+class TrashedNote {
   private current: Trashed | null = null;
   private readonly listeners = new Set<() => void>();
 

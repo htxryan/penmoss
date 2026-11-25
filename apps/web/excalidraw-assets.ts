@@ -11,7 +11,7 @@ import type { Plugin } from 'vite';
  * Korean hand-drawn font, 12 MB of the 13 in many small files): Excalidraw reads it for any text it
  * puts in a drawing's SVG, and would otherwise ask a CDN.
  */
-export const EXCALIDRAW_FONTS = fileURLToPath(
+const EXCALIDRAW_FONTS = fileURLToPath(
   new URL('./node_modules/@excalidraw/excalidraw/dist/prod/fonts', import.meta.url),
 );
 
@@ -19,7 +19,7 @@ export const EXCALIDRAW_FONTS = fileURLToPath(
 const PREFIX = 'excalidraw/fonts/';
 
 /** Every font file to bundle, as paths relative to the fonts folder (`Excalifont/….woff2`). */
-export function excalidrawFontFiles(root = EXCALIDRAW_FONTS): string[] {
+function excalidrawFontFiles(root = EXCALIDRAW_FONTS): string[] {
   const files: string[] = [];
   const walk = (dir: string) => {
     for (const name of readdirSync(dir).sort()) {

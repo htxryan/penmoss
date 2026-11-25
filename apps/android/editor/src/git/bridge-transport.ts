@@ -12,9 +12,9 @@ import {
 import { ChannelError, type Channel } from './channel';
 
 /** Reads go in parts of at most this many bytes, so no frame gets large. */
-export const READ_PART_BYTES = 8 * 1024 * 1024;
+const READ_PART_BYTES = 8 * 1024 * 1024;
 /** … and at most this many files. */
-export const READ_PART_FILES = 400;
+const READ_PART_FILES = 400;
 
 /** No git call the app makes may take longer than this (JGit's own timeouts are shorter). */
 const CALL_LIMIT_MS = 5 * 60_000;

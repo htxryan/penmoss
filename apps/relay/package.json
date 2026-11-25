@@ -7,8 +7,9 @@
   "description": "The relay (T55, D48): a stateless Worker serving a git notebook's MCP tools to claude.ai over HTTP, through GitHub's API",
   "scripts": {
     "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs worker) --inspector-port $(node ../../scripts/ports.mjs inspector)",
-    "types": "wrangler types",
-    "typecheck": "tsc --noEmit -p .",
+    "types": "wrangler types --include-runtime=false --env-file /dev/null && wrangler types --include-env=false ../../types/workers-runtime.d.ts",
+    "types:check": "wrangler types --include-runtime=false --env-file /dev/null --check && wrangler types --include-env=false --check ../../types/workers-runtime.d.ts",
+    "typecheck": "pnpm run types:check && tsc --noEmit -p .",
     "test": "vitest run && vitest run --config vitest.workers.config.ts",
     "deploy": "sh ../../scripts/no-factory-deploy.sh && wrangler deploy"
   },

@@ -25,10 +25,10 @@ import { pathToFileURL } from 'node:url';
 import { FORK_GUARD, isSelfHosted, parseWorkflow } from './workflow-yaml.mjs';
 
 /** GitHub's standard hosted runners, free for a public repository (macos-latest: Apple Silicon). */
-export const STANDARD_HOSTED = ['ubuntu-latest', 'ubuntu-24.04', 'macos-latest'];
+const STANDARD_HOSTED = ['ubuntu-latest', 'ubuntu-24.04', 'macos-latest'];
 
 /** The labels of Ryan's self-hosted Macs (docs/ci.md §2, .github/actionlint.yaml). */
-export const MAC_LABELS = [
+const MAC_LABELS = [
   'self-hosted',
   'macOS',
   'ARM64',
@@ -47,7 +47,7 @@ const HOSTED_IMAGE = /^(ubuntu|windows|macos)-[\w.-]+$/i;
  * @param {string} text
  * @returns {{ line: number; value: string; group: boolean }[]}
  */
-export function runsOnValues(text) {
+function runsOnValues(text) {
   const lines = text.split('\n');
   /** @type {{ line: number; value: string; group: boolean }[]} */
   const found = [];
@@ -94,7 +94,7 @@ function labelsOf(value) {
  * @param {{ value: string; group: boolean }} runsOn
  * @returns {string | null}
  */
-export function runsOnProblem({ value, group }) {
+function runsOnProblem({ value, group }) {
   if (value.includes('${{')) {
     return `runs-on is an expression (${value}); name ${STANDARD_HOSTED.join(' or ')}, or the self-hosted Mac labels`;
   }
@@ -129,7 +129,7 @@ const FORK_REACHES = ['pull_request', 'pull_request_target', 'workflow_call'];
  * @param {string} text
  * @returns {{ job: string; problem: string }[]}
  */
-export function forkProblems(text) {
+function forkProblems(text) {
   const workflow = parseWorkflow(text);
   if (!workflow.triggers.some((t) => FORK_REACHES.includes(t))) return [];
   /** @type {{ job: string; problem: string }[]} */
@@ -155,7 +155,7 @@ export function forkProblems(text) {
  * @param {string} text
  * @returns {{ line: number; problem: string }[]}
  */
-export function workflowProblems(text) {
+function workflowProblems(text) {
   const workflow = parseWorkflow(text);
   const lines = text.split('\n');
   const at = (/** @type {RegExp} */ re) => Math.max(1, lines.findIndex((l) => re.test(l)) + 1);

@@ -9,10 +9,10 @@ import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import type { Embedder, VectorCache } from '@penmoss/core/search';
 import type { EmbedWorkerData, EmbedWorkerHello } from './embed-worker';
-import { FileVectorCache, vectorsDir } from './file-cache';
+import { FileVectorCache, removeOtherVectors, vectorsDir } from './file-cache';
 import { Lease } from './lease';
 import { EMBEDDING_GEMMA, modelId, type ModelManifest } from './manifest';
-import { fetchModel, modelStatus, openModel, removeModel } from './model-store';
+import { fetchModel, modelStatus, openModel, otherModels, removeModel } from './model-store';
 import { createOnnxEmbedder } from './onnx-embedder';
 import { remoteEmbedder } from './remote-embedder';
 
@@ -30,7 +30,7 @@ export interface MeaningStatus {
   readonly license: { readonly name: string; readonly url: string };
 }
 
-export interface MeaningLease {
+interface MeaningLease {
   held(): Promise<boolean>;
   release(): Promise<void>;
 }
@@ -142,9 +142,46 @@ export class NodeMeaning {
   }
 
   /**
+   * Deletes what other models left on this Mac: their folders and partial downloads in
+   * `~/.penmoss/models`, and their vectors in `~/.penmoss/vectors` (the lease stays). After an
+   * update pins a new model, the old one (about 200 MB) and its vectors are never read again.
+   * The app's `open` calls it, so it runs once the new model is here. A folder any file of which
+   * changed in the last `keepMs` (a week) stays, so an older `penmoss mcp` still downloading,
+   * indexing or searching with its model after an update keeps it while it runs. Answers the
+   * paths it removed.
+   */
+  async removeOthers(keepMs = KEEP_OTHER_MODELS_MS, now = Date.now()): Promise<string[]> {
+    const stale = async (path: string) => {
+      const newest = await newestChange(path);
+      return newest !== null && now - newest >= keepMs;
+    };
+    const removed: string[] = [];
+    for (const path of await otherModels(this.manifest, this.home)) {
+      if (!(await stale(path))) continue;
+      await rm(path, { recursive: true, force: true });
+      removed.push(path);
+    }
+    const keep = modelId(this.manifest);
+    const others = await readdir(join(this.home, 'vectors'), { withFileTypes: true }).catch(
+      () => [],
+    );
+    const fresh: string[] = [];
+    for (const entry of others) {
+      const path = join(this.home, 'vectors', entry.name);
+      if (entry.isDirectory() && path !== vectorsDir(this.home, keep) && !(await stale(path))) {
+        fresh.push(path);
+      }
+    }
+    removed.push(...(await removeOtherVectors(this.home, keep, fresh)));
+    return removed;
+  }
+
+  /**
    * The model and vectors for `writer`, or null when Search by Meaning is off or the model is not
    * here. Throws `ModelError('corrupt')` when a file fails its checksum (it is deleted, so a fetch
-   * gets it again). With `thread`, inference runs in a worker thread.
+   * gets it again). With `thread`, inference runs in a worker thread. The app's service, opening
+   * the model, first removes other models' files (`removeOthers`), so a model change frees the
+   * old one's space; the CLI and `penmoss mcp` never do, as an older one may still use them.
    */
   async open(
     writer: 'cli' | 'mcp' | 'app',
@@ -153,6 +190,8 @@ export class NodeMeaning {
     const status = await this.status();
     if (!status.enabled || status.state !== 'ready') return null;
     const dir = await openModel(this.manifest, this.home);
+    // Best effort: a file another process holds open is removed next time.
+    if (writer === 'app') await this.removeOthers().catch(() => []);
     const threads = this.options.threads ?? 4;
     let embedder: Embedder;
     let close: () => Promise<void>;
@@ -219,6 +258,26 @@ export class NodeMeaning {
 }
 
 /** The bytes of the files in `dir` and the folders in it; none when it is not there. */
+/** How long another model's files stay after they last changed (`NodeMeaning.removeOthers`). */
+const KEEP_OTHER_MODELS_MS = 7 * 24 * 60 * 60_000;
+
+/**
+ * When anything under `path` last changed (ms), its own folder and every file in it: appending
+ * to a segment or a download changes the file, never its folder. Null when it is gone.
+ */
+async function newestChange(path: string): Promise<number | null> {
+  const info = await stat(path).catch(() => null);
+  if (!info) return null;
+  let newest = info.mtimeMs;
+  if (info.isDirectory()) {
+    for (const entry of await readdir(path).catch(() => [] as string[])) {
+      const inner = await newestChange(join(path, entry));
+      if (inner !== null && inner > newest) newest = inner;
+    }
+  }
+  return newest;
+}
+
 async function folderBytes(dir: string): Promise<number> {
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
   let bytes = 0;

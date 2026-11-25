@@ -14,8 +14,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const desktop = join(dirname(fileURLToPath(import.meta.url)), '..');
-export const SOURCE = join(desktop, 'native', 'penmoss-auth.swift');
-export const HELPER = join(desktop, 'dist', 'native', 'Penmoss');
+const SOURCE = join(desktop, 'native', 'penmoss-auth.swift');
+const HELPER = join(desktop, 'dist', 'native', 'Penmoss');
 const MIN_MACOS = '12.0';
 const ARCHES = ['arm64', 'x86_64'];
 

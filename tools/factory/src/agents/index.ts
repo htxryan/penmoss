@@ -20,7 +20,7 @@ export function agentFor(config: FactoryConfig, spec: IssueSpec): Promise<AgentP
 }
 
 /** A run's sessions' name in the Claude app: the card as people know it, marked as the factory's. */
-export const runSessionName = (config: FactoryConfig, issue: number) =>
+const runSessionName = (config: FactoryConfig, issue: number) =>
   `${FACTORY_PREFIX}Penmoss ${issueKey(config, issue)} run`;
 
 /**

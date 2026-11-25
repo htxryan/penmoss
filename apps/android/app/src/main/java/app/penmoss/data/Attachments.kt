@@ -376,10 +376,10 @@ class Attachments(
 
     companion object {
         /** The largest file Penmoss keeps, on every path: core's `MAX_ATTACHMENT_BYTES` (A1533). */
-        const val MAX_BYTES = 50 * 1024 * 1024
+        const val MAX_BYTES = 50_000_000
 
         /** Files over this upload on Wi-Fi only (review PS2): the git mirror's limit. */
-        const val LARGE_UPLOAD = 10L * 1024 * 1024
+        const val LARGE_UPLOAD = 10_000_000L
 
         /** The picture types the server takes (core's `IMAGE_TYPES`), by extension. */
         val TYPES = mapOf(

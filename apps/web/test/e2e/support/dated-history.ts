@@ -17,9 +17,9 @@ import { NodeGitTransport } from '@penmoss/git-notebook/node';
 import { setTitle } from '@penmoss/model/note';
 
 /** A writer (a device or an agent) that commits and pushes a change on the day it is given. */
-export type DatedWriter = (iso: string, change: (ops: NotebookOps) => void) => Promise<void>;
+type DatedWriter = (iso: string, change: (ops: NotebookOps) => void) => Promise<void>;
 
-export function datedWriter(
+function datedWriter(
   /** Where the writer's clone goes, and git's environment (a test's own config). */
   host: { readonly root: string; readonly env: Readonly<Record<string, string>> },
   remote: string,

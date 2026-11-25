@@ -1,4 +1,4 @@
-import { mergedSettings, readWorkspace, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
+import { mergedSettings, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 import { createYjs14Replica } from '@penmoss/model/yjs14';
 import type { Page } from '@playwright/test';
 import { isLocalSetting } from '@penmoss/core/settings';
@@ -10,7 +10,7 @@ import { LOCAL_SETTINGS_KEY } from '../../src/workspace/local-settings';
 // test's one notebook is found by itself unless `notebookId` names another.
 
 /** The IndexedDB name of a git notebook's notes store (`gitStoreName`). */
-export const gitStoreName = (notebookId: string) => `penmoss-git-${notebookId}`;
+const gitStoreName = (notebookId: string) => `penmoss-git-${notebookId}`;
 
 /** The record this browser stored under `key`: a note's, or the workspace's. */
 export async function storedRecord(
@@ -88,16 +88,6 @@ export async function storedDocumentText(
 ): Promise<string | null> {
   const record = await storedRecord(page, noteId, notebookId);
   return record ? withDoc(new Uint8Array(record.update), (replica) => replica.plainText()) : null;
-}
-
-/** The folder names in the workspace this browser stored. */
-export async function storedFolders(page: Page, notebookId?: string): Promise<string[]> {
-  const names = await storedWorkspace(
-    page,
-    (replica) => readWorkspace(replica.doc).folders.map((folder) => folder.name),
-    notebookId,
-  );
-  return names ?? [];
 }
 
 /**

@@ -23,8 +23,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.engine.settings.DisplayKeys
@@ -34,7 +32,6 @@ import app.penmoss.ui.settings.DisplayScreen
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -153,8 +150,8 @@ class DisplayAndSyncStopTest {
         compose.onNodeWithTag("display-${DisplayKeys.COMMANDS}").performScrollTo().performClick()
         assertEquals(listOf(DisplayKeys.TODAY to false, DisplayKeys.TODAY to true, DisplayKeys.COMMANDS to false), changes)
         assertEquals(listOf("Tags", "Today", "This Week", "Journal", "Graph", "Commands", "Capture"), displayChoices(Settings()).map { it.label })
-        // The phone's own are kept for the phones (A1613, A1605), as the rest are.
-        assertTrue(DisplayKeys.PHONE.all(app.penmoss.engine.settings.PlatformSettings::isPlatform))
+        // The phone's own stay on this phone (A1613, A1626), as the rest of Home's layout does.
+        assertTrue(DisplayKeys.PHONE.all(app.penmoss.engine.settings.LocalSettings::isLocal))
         // Android's Home has only what Home has (PEN-146): no "on the web and the Mac" words or rows.
         compose.onNodeWithText("on the web and the Mac", substring = true).assertDoesNotExist()
         compose.onNodeWithTag("display-section-calendar").assertDoesNotExist()

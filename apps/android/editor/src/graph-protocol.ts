@@ -11,7 +11,7 @@
  * `apps/android/contract/graph-v1.json` holds an example of every message;
  * this file's tests and the Kotlin `GraphProtocol` tests both check it.
  */
-import { isRecord } from './guards';
+import { isRecord, isString } from './guards';
 import { NOTE_ID } from './protocol';
 
 export const GRAPH_VERSION = 1;
@@ -20,13 +20,13 @@ export const GRAPH_VERSION = 1;
 export const GRAPH_DEPTHS = [1, 2, 3] as const;
 
 /** More than any vault Penmoss is built for (D20 tests 2,000 notes); a bigger list is refused. */
-export const MAX_GRAPH_NOTES = 20_000;
+const MAX_GRAPH_NOTES = 20_000;
 
 /** The links one note may bring (the editor page reports at most 1,000, A473). */
-export const MAX_NOTE_LINKS = 1000;
+const MAX_NOTE_LINKS = 1000;
 
 /** Longer than any title or folder name the server keeps (300). */
-export const MAX_GRAPH_TEXT = 1000;
+const MAX_GRAPH_TEXT = 1000;
 
 /** A note as the graph draws it: its title, its top-level folder (its colour) and its links. */
 export interface GraphNote {
@@ -74,7 +74,6 @@ export type FromGraph =
   /** The chip was tapped: open this note. */
   | { readonly v: 1; readonly type: 'open'; readonly noteId: string };
 
-const isString = (value: unknown): value is string => typeof value === 'string';
 const isNoteId = (value: unknown): value is string => isString(value) && NOTE_ID.test(value);
 const isText = (value: unknown): value is string =>
   isString(value) && value.length <= MAX_GRAPH_TEXT;

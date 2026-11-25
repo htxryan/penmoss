@@ -11,7 +11,8 @@
  * fetched by its path, and only on a click. Rendering never writes to the
  * document.
  */
-import { formatBytes, isImageType, PDF_TYPE } from '@penmoss/core/attachments';
+import { isImageType, PDF_TYPE } from '@penmoss/core/attachments';
+import { formatBytes } from '@penmoss/core/words';
 import { Node, type Attributes } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
@@ -158,7 +159,7 @@ export const FILE_URL_HOLD_MS = 60_000;
 const OPEN_FILE_TIMEOUT_MS = 30_000;
 
 /** Saves a file under its name from its URL (a chip's Download). */
-export function downloadUrl(doc: Document, url: string, name: string): void {
+function downloadUrl(doc: Document, url: string, name: string): void {
   const link = doc.createElement('a');
   link.href = url;
   link.download = name;

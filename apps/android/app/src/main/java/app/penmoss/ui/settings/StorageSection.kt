@@ -15,22 +15,10 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.trackedClick
 import app.penmoss.editor.WebPictureSetting
 import app.penmoss.ui.common.ConfirmDialog
+import app.penmoss.ui.common.formatBytes
 
-/**
- * A file's or a store's size for people, as core's `formatBytes` in `attachments.ts`: `512 B`,
- * `1.5 KB`, `20 MB`. Analytics' limits have their own ([app.penmoss.analytics.Limits.formatBytes]).
- */
-fun attachmentSize(bytes: Long): String {
-    val units = listOf("B", "KB", "MB", "GB")
-    var value = bytes.toDouble()
-    var unit = 0
-    while (value >= 1024 && unit < units.size - 1) {
-        value /= 1024
-        unit++
-    }
-    val shown = if (unit == 0 || value >= 10) Math.round(value).toString() else (Math.round(value * 10) / 10.0).toString().removeSuffix(".0")
-    return "$shown ${units[unit]}"
-}
+/** A file's or a store's size for people: `512 B`, `1.5 KB`, `20 MB`, as every size is written ([formatBytes]). */
+fun attachmentSize(bytes: Long): String = formatBytes(bytes)
 
 /** What files and pictures take on this phone (ED12, ED13): every notebook's files, and the web pictures kept. */
 data class StorageUse(val files: Long, val webPictures: Long, val webPictureCount: Int = 0) {

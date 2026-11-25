@@ -175,7 +175,7 @@ export async function insertDrawing(editor: Editor, at: number): Promise<boolean
  * Opens the drawing at `getPos()` in the drawing editor and, on Done, points it at the new files.
  * `getPos` is read again once the editor closes, so the drawing is found where it moved to.
  */
-export async function editDrawing(
+async function editDrawing(
   view: EditorView,
   services: DrawingServices,
   getPos: () => number | undefined,

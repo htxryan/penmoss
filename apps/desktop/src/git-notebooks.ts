@@ -42,14 +42,8 @@ import {
 import { fitWords, noteWords, repositoryName, repositoryWords } from './owner-words';
 
 // What other modules and the tests take from here, wherever it is kept.
-export { PURGE_TTL_MS } from './git-notebook-guards';
-export {
-  CADENCE,
-  withCadence,
-  type GitNotebookEntry,
-  type PurgeConfirmation,
-} from './git-notebook-store';
-export { checkWords, fitWords, noteWords, repositoryName, repositoryWords } from './owner-words';
+export { withCadence, type GitNotebookEntry } from './git-notebook-store';
+export { checkWords, fitWords, noteWords, repositoryName } from './owner-words';
 
 /** What the page is told about a notebook: never its token. */
 interface GitNotebookView {
@@ -157,7 +151,7 @@ interface PendingPurge {
 /** At most this many confirmed purges wait for their push. */
 const MAX_PURGES = 1000;
 /** How long a notebook may be named (the sidebar shows it). */
-export const MAX_NAME = NOTEBOOK_NAME_MAX;
+const MAX_NAME = NOTEBOOK_NAME_MAX;
 
 const refuse = (code: string, message: string, hostMessage?: string): GitRefusal => ({
   code,

@@ -27,7 +27,7 @@ export function useTabPage(): TabPage | null {
 }
 
 /** How often, at most, a scroll is written to the tab. */
-export const SCROLL_WRITE_MS = 250;
+const SCROLL_WRITE_MS = 250;
 
 /**
  * The view's scroll position, kept by its tab: restored once its content has laid out (unless

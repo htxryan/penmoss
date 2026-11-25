@@ -21,7 +21,7 @@
  * trying again later may work (GitHub's 5xx, a primary or secondary rate limit, no answer),
  * otherwise a refusal that only a change of token or request fixes (a 401, 403, 404 or 422).
  */
-import { limitSpec } from './analytics/limits';
+import { LIMIT_KB, limitSpec } from './analytics/limits';
 import { isUlid } from './ids';
 import {
   contextWithoutSecrets,
@@ -57,7 +57,7 @@ export interface FeedbackGitHubConfig {
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-export class FeedbackGitHubError extends Error {
+class FeedbackGitHubError extends Error {
   constructor(
     message: string,
     /** GitHub's status, or 0 when it never answered. */
@@ -311,7 +311,7 @@ const FIND_PAGES = 3;
  * The issue an earlier attempt filed for `submissionId`, found by its footer among the issues
  * updated since `since`; null when there is none.
  */
-export async function findIssue(
+async function findIssue(
   github: FeedbackGitHub,
   submissionId: string,
   since: number,
@@ -352,7 +352,7 @@ async function reasonOf(response: Response): Promise<string> {
 
 // --- the submission, checked ---
 
-export interface FeedbackSubmission {
+interface FeedbackSubmission {
   readonly submissionId: string;
   readonly type: FeedbackType;
   readonly priority: FeedbackPriority;
@@ -366,7 +366,7 @@ export interface FeedbackSubmission {
 
 /** At most the form's own maximums for the logs it attaches (`report.lines`, `report.kb`). */
 const MAX_LOG_LINES = limitSpec('report.lines').max;
-const MAX_LOG_BYTES = limitSpec('report.kb').max * 1024;
+const MAX_LOG_BYTES = limitSpec('report.kb').max * LIMIT_KB;
 
 /** The `logs` part of a payload, checked: lines of text within the form's maximums. */
 function readLogs(logs: unknown): string[] {
@@ -380,12 +380,12 @@ function readLogs(logs: unknown): string[] {
   }
   const bytes = new TextEncoder().encode(lines.join('\n')).length;
   if (bytes > MAX_LOG_BYTES) {
-    throw new FeedbackInvalid(`logs must be at most ${MAX_LOG_BYTES / 1024} KB`, 413);
+    throw new FeedbackInvalid(`logs must be at most ${MAX_LOG_BYTES / LIMIT_KB} KB`, 413);
   }
   return lines;
 }
 
-export class FeedbackInvalid extends Error {
+class FeedbackInvalid extends Error {
   constructor(
     message: string,
     readonly status: 400 | 413 = 400,
@@ -396,7 +396,7 @@ export class FeedbackInvalid extends Error {
 }
 
 /** The `payload` part, checked; throws `FeedbackInvalid` naming the field. */
-export function readFeedbackPayload(raw: unknown): FeedbackSubmission {
+function readFeedbackPayload(raw: unknown): FeedbackSubmission {
   if (typeof raw !== 'string')
     throw new FeedbackInvalid('payload is required (a JSON string part)');
   let payload: Record<string, unknown>;
@@ -462,7 +462,7 @@ const SIGNATURES: Readonly<Record<string, (head: Uint8Array) => boolean>> = {
  * One screenshot's type, checked against its size and first 12 bytes; throws `FeedbackInvalid`.
  * Answers the plain type (`image/png`).
  */
-export function checkFeedbackImage(type: string, size: number, head: Uint8Array): string {
+function checkFeedbackImage(type: string, size: number, head: Uint8Array): string {
   const kind = type.split(';')[0]!.trim().toLowerCase();
   if (!FEEDBACK_IMAGE_TYPES[kind]) {
     throw new FeedbackInvalid('Screenshots must be PNG, JPEG, GIF or WebP images');
@@ -477,9 +477,9 @@ export function checkFeedbackImage(type: string, size: number, head: Uint8Array)
 }
 
 /** GitHub's limit on an issue body. */
-export const FEEDBACK_BODY_MAX = 65_536;
+const FEEDBACK_BODY_MAX = 65_536;
 /** The longest address an attachment is given, for checking the body's length before uploads. */
-export const LONGEST_ASSET_URL = `https://github.com/user-attachments/assets/${'0'.repeat(36)}`;
+const LONGEST_ASSET_URL = `https://github.com/user-attachments/assets/${'0'.repeat(36)}`;
 
 // --- filing on the device (T57, A1010) ---
 

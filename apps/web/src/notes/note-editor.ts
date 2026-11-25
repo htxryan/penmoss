@@ -34,7 +34,7 @@ import {
   type EditorHost,
   type NoteEditor,
 } from './kept-editors';
-import type { OpenNote } from './service';
+import type { OpenNote } from './open-note';
 import {
   fitHeight,
   growingTitle,

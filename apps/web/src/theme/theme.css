@@ -110,7 +110,21 @@
   color: var(--pm-fg);
 }
 
-.seg-option input,
+/*
+ * The radio, unseen, in the segment's top corner (its padding, clear of the label's words): the
+ * words take a click, and the radio itself can still be clicked (a test's `check()`).
+ */
+.seg-option input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
 .theme-card input {
   position: absolute;
   width: 1px;
@@ -118,6 +132,11 @@
   margin: 0;
   opacity: 0;
   pointer-events: none;
+}
+
+/* A choice still to be made, as a form refused it (Send Feedback's Type and Priority). */
+.seg:has(input[aria-invalid='true']) {
+  border-color: var(--pm-danger);
 }
 
 /* Bold when chosen; its name is a `.bold-steady`, so the segments beside it keep still (A988). */

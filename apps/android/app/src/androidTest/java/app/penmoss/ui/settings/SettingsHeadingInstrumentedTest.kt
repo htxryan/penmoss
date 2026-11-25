@@ -14,10 +14,6 @@ import app.penmoss.ScreenTree
 import app.penmoss.proof.ProofShot
 import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.common.TooltipDelayInstrumentedTest
-import app.penmoss.ui.settings.SettingsGroup
-import app.penmoss.ui.settings.SettingsHome
-import app.penmoss.ui.settings.SettingsIcons
-import app.penmoss.ui.settings.SettingsSection
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith

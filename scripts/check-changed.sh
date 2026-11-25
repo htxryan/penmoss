@@ -9,12 +9,15 @@
 #
 # Changed means staged, unstaged or untracked against HEAD; with nothing uncommitted, the files of
 # HEAD's own commit. What runs:
-#   - ESLint, stylelint and Prettier on the changed files only;
+#   - ESLint, stylelint and Prettier on the changed files only; knip's unused exports (the whole
+#     repo, a few seconds) when a script changed, and detekt's dead-code rules
+#     (`task lint:kotlin`) when a Kotlin file changed;
 #   - typecheck and unit tests of every package with a changed file, and of every package that
 #     depends on one (pnpm's `...[<ref>]` filter);
 #   - the release-page and Play upload script tests when their folders changed.
 # A change to shared config (lockfile, root package.json, tsconfig.base.json, the lint and format
-# configs, the Taskfile, the vitest config every package starts from) can affect any package, so it runs the whole `task check` instead.
+# configs, the Taskfile, the vitest config every package starts from, the Workers' shared runtime
+# types) can affect any package, so it runs the whole `task check` instead.
 #
 # Only heavy work waits for one of the Mac's heavy-job slots (scripts/heavy.sh, W12): that whole
 # `task check`, and unit tests that select more than PENMOSS_CHECK_LIGHT_PACKAGES packages
@@ -53,7 +56,7 @@ if [ -z "$changed" ]; then
   exit 0
 fi
 
-if echo "$changed" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|eslint\.config\.js|stylelint\.config\.js|\.prettierrc[^/]*|\.prettierignore|Taskfile\.yml|scripts/vitest-shared\.mjs)$'; then
+if echo "$changed" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|eslint\.config\.js|stylelint\.config\.js|\.prettierrc[^/]*|\.prettierignore|Taskfile\.yml|scripts/vitest-shared\.mjs|types/workers-runtime\.d\.ts)$'; then
   plan 'full'
   echo '[check:changed] shared config changed: running the whole `task check`'
   exec task check
@@ -77,11 +80,17 @@ if [ -n "$scripts" ]; then
   echo "$scripts" | tr '\n' '\0' |
     NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" xargs -0 pnpm exec eslint --no-warn-ignored
 fi
+if [ -n "$scripts" ]; then
+  pnpm exec knip
+fi
 if [ -n "$styles" ]; then
   echo "$styles" | tr '\n' '\0' | xargs -0 pnpm exec stylelint --allow-empty-input
 fi
 if [ -n "$existing" ]; then
   echo "$existing" | tr '\n' '\0' | xargs -0 pnpm exec prettier --check --ignore-unknown
+fi
+if echo "$existing" | grep -qE '\.kts?$'; then
+  task lint:kotlin
 fi
 
 # Typecheck and tests: the changed packages and their dependents. pnpm compares against the ref

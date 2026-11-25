@@ -34,7 +34,7 @@ export const TOKEN_HELPER: readonly string[] = [
 ];
 
 /** The environment of every host git command: PATH and HOME, and no config but the repo's. */
-export function gitEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
+function gitEnv(extra: Readonly<Record<string, string>> = {}): Record<string, string> {
   return {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',
@@ -62,7 +62,7 @@ export interface GitOptions {
 export const GIT_TIMEOUT_MS = 15 * 60_000;
 
 /** The arguments for `git <args>` in `dir`, hardened. */
-export function gitArgs(dir: string, args: readonly string[], token = false): string[] {
+function gitArgs(dir: string, args: readonly string[], token = false): string[] {
   return ['-C', dir, ...GIT_HARDENING, ...(token ? TOKEN_HELPER : []), ...args];
 }
 

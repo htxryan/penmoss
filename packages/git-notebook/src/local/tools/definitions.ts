@@ -7,6 +7,8 @@
 import { SEARCH_MODES } from '@penmoss/core/search';
 import { STATUS_FILTERS } from '@penmoss/model/comment-delivery';
 import type { ObjectSchema, Schema } from './schema';
+import { formatBytes } from '@penmoss/core/words';
+import { MAX_MARKDOWN_BYTES } from '../notebook';
 
 /** What a tool is, without what it does. */
 export interface ToolDefinition {
@@ -37,41 +39,41 @@ export interface ToolOptions {
 
 // --- argument schemas ---
 
-export const ID: Schema = {
+const ID: Schema = {
   type: 'string',
   maxLength: 80,
   description:
     'The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder.',
 };
-export const FOLDER_ID: Schema = {
+const FOLDER_ID: Schema = {
   type: 'string',
   maxLength: 80,
   description: 'The folder id, from list_folder.',
 };
-export const VERSION_ID: Schema = {
+const VERSION_ID: Schema = {
   type: 'integer',
   minimum: 1,
   description: 'A version id from get_history.',
 };
-export const BASE_VERSION: Schema = {
+const BASE_VERSION: Schema = {
   type: 'integer',
   minimum: 1,
   description:
     'The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on.',
 };
-export const MARKDOWN: Schema = {
+const MARKDOWN: Schema = {
   type: 'string',
   description:
     'Markdown (CommonMark plus GFM tables and task lists). [[Note title]] links to another note.',
 };
-export const TAGS: Schema = {
+const TAGS: Schema = {
   type: 'array',
   maxItems: 100,
   items: { type: 'string', maxLength: 200 },
   description: 'Tag names without #, e.g. ["homelab", "projects/garden"] (nested with /).',
 };
 
-export const object = (
+const object = (
   properties: Record<string, Schema>,
   required: readonly string[] = [],
 ): ObjectSchema => ({
@@ -81,10 +83,10 @@ export const object = (
   additionalProperties: false,
 });
 
-export const READ = { readOnlyHint: true, openWorldHint: false } as const;
-export const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
+const READ = { readOnlyHint: true, openWorldHint: false } as const;
+const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 
-export const BASE_HINT =
+const BASE_HINT =
   'Call read_note first and pass the baseVersion it returns (or the baseVersion your previous edit of this note returned).';
 
 // --- advice ---
@@ -104,7 +106,7 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     text_not_found: 'Call read_note to see the exact text; find must match it exactly.',
     text_ambiguous:
       'Make find longer so it occurs once, or set all: true to replace every occurrence.',
-    too_large: 'Send at most 256 KB of markdown per call; split a long edit into several appends.',
+    too_large: `Send at most ${formatBytes(MAX_MARKDOWN_BYTES)} of markdown per call; split a long edit into several appends.`,
     offset_past_end: 'Pass the nextOffset a previous read_note returned, or leave offset out.',
     folder_changed:
       'Someone renamed the folder since you saw it: call list_folder again, then retry with its current name as expectedName.',
@@ -116,7 +118,7 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     setting_changed: 'Call get_settings again, then retry with the values it gives as base.',
     invalid_setting: 'Call get_settings to see the settings and their current values.',
     version_not_found: 'Call get_history to list the note’s versions.',
-    file_too_large: `Send a file of at most ${attachmentMaxBytes / 1024} KB; Ryan can attach larger ones in the app.`,
+    file_too_large: `Send a file of at most ${formatBytes(attachmentMaxBytes)}.`,
     daily_limit: 'Stop and tell Ryan what is left to do; he can do it in the app.',
     too_many_renames:
       'Wait for the running renames to finish, or ask Ryan to rename the tag in the app.',
@@ -149,7 +151,7 @@ export function adviceFor(code: string, options: ToolOptions): string | undefine
  * knows (A176): another device or agent, the agent's own later edit, or
  * neither ("This part changed…"). Never "someone else" for the agent's own edit.
  */
-export function conflictAdvice(details: Record<string, unknown>): string {
+function conflictAdvice(details: Record<string, unknown>): string {
   const others = Array.isArray(details['changedBy'])
     ? (details['changedBy'] as unknown[]).filter((each): each is string => typeof each === 'string')
     : [];
@@ -722,7 +724,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       title: 'Attach a file or picture',
       description:
         'Store a file in Penmoss and add it at the end of a note (or of the section under heading): a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. ' +
-        `Send the file in base64 as data, at most ${options.attachmentMaxBytes / 1024} KB (file_too_large), and at most 50 MB of new files a day. Attaching the same file to a note that already has it changes nothing (added: false).`,
+        `Send the file in base64 as data, at most ${formatBytes(options.attachmentMaxBytes)} (file_too_large), and at most 50 MB of new files a day. Attaching the same file to a note that already has it changes nothing (added: false).`,
       inputSchema: object(
         {
           id: ID,

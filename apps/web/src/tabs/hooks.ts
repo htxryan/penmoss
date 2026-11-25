@@ -16,7 +16,7 @@ export function useTabsState(): TabsState | null {
 }
 
 /** The main window's tabs controller, through context (tests give their own). */
-export const TabsContext = createContext<TabsController | null>(null);
+const TabsContext = createContext<TabsController | null>(null);
 
 /** The controller in context, else the main window's own. */
 export function useTabs(): TabsController | null {

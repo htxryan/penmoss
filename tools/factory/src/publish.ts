@@ -34,7 +34,7 @@ export interface Identity {
  * `refs/remotes/origin/<branch>`, so a new publish repo starts from what GitHub has, as a fresh
  * clone did.
  */
-export async function preparePublishRepo(
+async function preparePublishRepo(
   exec: Exec,
   dir: string,
   url: string,
@@ -65,7 +65,7 @@ export async function preparePublishRepo(
 const fetching = new Map<string, Promise<void>>();
 
 /** How long a fetch that found `origin/main` locked waits before its one retry. */
-export const LOCKED_RETRY_MS = 2_000;
+const LOCKED_RETRY_MS = 2_000;
 
 /**
  * Fetches origin into `dir` one fetch at a time, and retries once when another git still held
@@ -117,7 +117,7 @@ export async function fetchMainInto(
   return mainOf(exec, dir);
 }
 
-export async function mainOf(exec: Exec, dir: string): Promise<string> {
+async function mainOf(exec: Exec, dir: string): Promise<string> {
   return (await mustGit(exec, dir, ['rev-parse', '--verify', `${MAIN}^{commit}`])).trim();
 }
 

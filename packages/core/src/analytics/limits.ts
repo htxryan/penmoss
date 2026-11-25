@@ -6,6 +6,12 @@
  * for a value that is missing, not a whole number or out of range.
  */
 
+/**
+ * A KB in a limit (`logs.fileKb`, `report.kb`) is 1,000 bytes, as `formatBytes` (`@penmoss/core/words`)
+ * and Finder count, so "1,000 KB" of logs reads as "1 MB". Every reader converts with this.
+ */
+export const LIMIT_KB = 1000;
+
 export interface LimitSpec {
   readonly key: LimitKey;
   readonly default: number;
@@ -32,7 +38,7 @@ export type LimitKey = (typeof LIMIT_KEYS)[number];
 export const LIMITS: readonly LimitSpec[] = [
   { key: 'events.days', default: 7, min: 1, max: 360, unit: 'days', group: 'usage' },
   { key: 'events.max', default: 200_000, min: 500, max: 2_000_000, unit: 'events', group: 'usage' },
-  { key: 'logs.fileKb', default: 1024, min: 256, max: 81_920, unit: 'KB', group: 'logs' },
+  { key: 'logs.fileKb', default: 1000, min: 250, max: 80_000, unit: 'KB', group: 'logs' },
   { key: 'logs.files', default: 2, min: 1, max: 5, unit: 'files', group: 'logs' },
   { key: 'logs.days', default: 7, min: 1, max: 360, unit: 'days', group: 'logs' },
   { key: 'report.hours', default: 24, min: 1, max: 168, unit: 'hours', group: 'report' },
@@ -64,14 +70,20 @@ export function limitAllowed(key: LimitKey, value: unknown): value is number {
   );
 }
 
-/** The limits in force: each stored value when it is allowed, else its default. */
+/**
+ * The limits in force: each stored value when it is allowed; one above its range is held at the
+ * most (81,920 KB of logs, the most before A1690, keeps 80,000), so nothing is deleted the person
+ * never asked to delete; anything else (missing, not whole, under the range) is its default.
+ */
 export function readLimits(stored: unknown): Limits {
   const source =
     stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : ({} as const);
   return Object.fromEntries(
     LIMITS.map((spec) => {
       const value = source[spec.key];
-      return [spec.key, limitAllowed(spec.key, value) ? value : spec.default];
+      if (limitAllowed(spec.key, value)) return [spec.key, value];
+      const over = typeof value === 'number' && Number.isInteger(value) && value > spec.max;
+      return [spec.key, over ? spec.max : spec.default];
     }),
   ) as Limits;
 }
@@ -119,16 +131,7 @@ export function eventSpace(limits: Limits): number {
 
 /** The most space the logs take at these limits, in bytes. */
 export function logSpace(limits: Limits): number {
-  return limits['logs.fileKb'] * 1024 * limits['logs.files'];
-}
-
-/** Bytes as the Advanced section writes them: "2 MB", "400 MB", "640 KB". */
-export function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024) {
-    const mb = bytes / (1024 * 1024);
-    return `${mb >= 10 || Number.isInteger(mb) ? Math.round(mb) : mb.toFixed(1)} MB`;
-  }
-  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return limits['logs.fileKb'] * LIMIT_KB * limits['logs.files'];
 }
 
 /** How many hours of logs a bug report may attach: no more than the logs keep. */

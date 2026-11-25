@@ -16,7 +16,7 @@ import { stagingDir } from './claude-login.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Secrets } from './secrets.ts';
 
-export interface Mount {
+interface Mount {
   readonly hostPath: string;
   readonly sandboxPath: string;
   readonly readonly?: boolean;
@@ -30,7 +30,7 @@ export interface SandboxSpec {
 }
 
 /** pnpm 12 keeps these lock folders at fixed paths in /tmp, outside the sandbox's own temp. */
-export const PNPM_LOCK_DIRS = [
+const PNPM_LOCK_DIRS = [
   'dir-locks',
   'modules-swaps',
   'store-operation-locks',
@@ -46,7 +46,7 @@ export interface SandboxPaths {
   readonly runner?: string;
 }
 
-export const hostPaths = (): SandboxPaths => ({
+const hostPaths = (): SandboxPaths => ({
   uid: process.getuid?.() ?? 501,
   home: process.env['HOME'] ?? '',
   realpath: (path) => realpathSync(path),

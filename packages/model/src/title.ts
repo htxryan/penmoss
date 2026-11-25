@@ -18,7 +18,7 @@ export interface TitleField {
 }
 
 /** Origin of title edits made in this field. */
-export const TITLE_ORIGIN = Symbol('penmoss-title-field');
+const TITLE_ORIGIN = Symbol('penmoss-title-field');
 
 /** Where `position` in `previous` ends up once the text becomes `next`. */
 export function mapPosition(previous: string, next: string, position: number): number {

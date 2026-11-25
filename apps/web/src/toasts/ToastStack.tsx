@@ -32,7 +32,7 @@ export function ToastStack() {
 }
 
 /** A check for a success, a warning for a refusal or failure, nothing otherwise. */
-export function ToneGlyph({ tone }: { readonly tone: ToastTone }) {
+function ToneGlyph({ tone }: { readonly tone: ToastTone }) {
   if (tone === 'done') return <Icon name="check" className="toast-glyph" />;
   if (tone === 'error') return <Icon name="warning" className="toast-glyph" />;
   return null;

@@ -1,7 +1,6 @@
 package app.penmoss.ui.note
 
 import android.content.Context
-import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.NotebookGraph
@@ -13,20 +12,15 @@ import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.UpdateEntity
 import app.penmoss.security.SecretBox
 import app.penmoss.stopMainScope
-import app.penmoss.ui.open
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Shadows.shadowOf
-import java.io.File
 
 /**
  * What the note's sync icon and feedback's scrub read from Room (T40 P2b, review of #93, S4):

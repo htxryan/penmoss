@@ -35,7 +35,7 @@ let clock: ScrollClock = realScrollClock;
 const gates = new Map<ScrollArea, ScrollGate>();
 
 /** The page's gate for `area`: one per area, made the first time it is asked for. */
-export function scrollGate(area: ScrollArea): ScrollGate {
+function scrollGate(area: ScrollArea): ScrollGate {
   let gate = gates.get(area);
   if (!gate) {
     gate = new ScrollGate((position) => emit(area, position), clock);

@@ -8,7 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { tokenize as tokenizeText, type QueryClause, type SearchQuery } from '../../src/search';
 
 /** The tokenizer of `notes_fts` (apps/server/migrations/0002_index.sql and 0006). */
-export const NOTES_FTS_TOKENIZE = 'porter unicode61 remove_diacritics 2';
+const NOTES_FTS_TOKENIZE = 'porter unicode61 remove_diacritics 2';
 
 /** The terms SQLite's tokenizer makes of each text, in order (empty texts give none). */
 export function sqliteTerms(texts: readonly string[], tokenize = NOTES_FTS_TOKENIZE): string[][] {
@@ -76,5 +76,3 @@ export function searchWords(columns: readonly string[]): string[] {
   }
   return [...out];
 }
-
-export { DatabaseSync };

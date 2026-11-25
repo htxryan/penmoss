@@ -1,4 +1,5 @@
 import { useId, useLayoutEffect, useRef } from 'react';
+import { timeAgo } from '@penmoss/core/words';
 import { PickerListbox } from '../shell/picker';
 import { ModalOverlay } from '../shell/ModalOverlay';
 import { usePickerList } from '../shell/picker-list';
@@ -20,15 +21,8 @@ export interface RecentSwitcherProps {
   readonly onClose: () => void;
 }
 
-const ago = (time: number) => {
-  if (!time) return '';
-  const minutes = Math.round((Date.now() - time) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
-  return new Date(time).toLocaleDateString();
-};
+/** When the note was last opened, as every screen says how long ago (`timeAgo`). */
+const ago = (time: number) => (time ? timeAgo(time) : '');
 
 /**
  * The ⌘E recent-notes switcher (T20), like an app switcher: ⌘E opens it on

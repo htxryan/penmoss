@@ -43,7 +43,7 @@ import { webPreviewPort } from '../../../../scripts/checkout-ports.mjs';
 // Everything else of Playwright's, so a spec imports from here only.
 export * from '@playwright/test';
 export { expect };
-export type { SeedNote, SeededNotebook, FakeAnalyticsConfig };
+export type { SeededNotebook, FakeAnalyticsConfig };
 export { GitHost, GITHUB_TOKEN };
 
 /** What a test starts with: a notebook (with folders and notes), or none (null). */

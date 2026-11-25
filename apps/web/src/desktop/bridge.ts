@@ -179,7 +179,7 @@ export interface GitNotebookInfo {
 }
 
 /** A refusal from the main process, shown as it is (A824: with the host's own words). */
-export interface GitRefusal {
+interface GitRefusal {
   readonly code: string;
   readonly message: string;
   readonly hostMessage?: string;
@@ -533,7 +533,7 @@ export type DesktopAiAnswer =
       readonly message: string;
     };
 
-export interface DesktopAi {
+interface DesktopAi {
   status(): Promise<DesktopAiStatus | null>;
   /** Checks the key with Anthropic and keeps it sealed (after a key press or click only). */
   saveKey(
@@ -698,7 +698,7 @@ export interface DesktopReleaseNotes {
 }
 
 /** Where the embedding service is (T76, A1158): Settings → Search by Meaning shows it. */
-export type DesktopMeaningState =
+type DesktopMeaningState =
   | 'off'
   | 'absent'
   | 'downloading'

@@ -26,9 +26,9 @@ class FeedbackLogsBlockTest {
     @Test
     fun sizesAreWrittenAsCoreWritesThem() {
         assertEquals("512 B", FeedbackLogs.formatReportSize(512))
-        assertEquals("9.6 KB", FeedbackLogs.formatReportSize(9830))
-        assertEquals("1.0 KB", FeedbackLogs.formatReportSize(1024))
-        assertEquals("16 KB", FeedbackLogs.formatReportSize(16 * 1024))
+        assertEquals("9.6 KB", FeedbackLogs.formatReportSize(9630))
+        assertEquals("1 KB", FeedbackLogs.formatReportSize(1000))
+        assertEquals("16 KB", FeedbackLogs.formatReportSize(16_000))
         assertEquals(7, FeedbackLogs.textBytes(listOf("é", "abcd")))
     }
 

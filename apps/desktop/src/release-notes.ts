@@ -23,8 +23,8 @@ export const NOTES_EVERY_MS = 60 * 60 * 1000;
 /** The largest file read: the record grows by a few notes a build, so this is years of them. */
 const NOTES_MAX_BYTES = 4 * 1024 * 1024;
 
-export type ReleaseNote = DesktopReleaseNote;
-export type NoteKind = ReleaseNote['kind'];
+type ReleaseNote = DesktopReleaseNote;
+type NoteKind = ReleaseNote['kind'];
 type NotePlatform = NonNullable<ReleaseNote['platform']>;
 type ReleaseNotesRelease = DesktopReleaseNotesRelease;
 /** What the page gets: the page's own type (ipc-contract.ts). */

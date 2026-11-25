@@ -7,7 +7,7 @@
 import { readFileSync, statSync } from 'node:fs';
 
 /** The names a sandbox may receive, and what each is for. */
-export const SECRET_KEYS = {
+const SECRET_KEYS = {
   CLAUDE_CODE_OAUTH_TOKEN: "Claude Code's token from `claude setup-token`",
   OPENCODE_API_KEY: 'the OpenCode Go key',
   CLOUDFLARE_API_TOKEN: 'a Penmoss-only Cloudflare API token',
@@ -41,7 +41,7 @@ export type EnvResult<K extends string> =
   | { readonly ok: false; readonly error: string };
 
 /** `KEY=value` lines, keeping only the names in `allowed`: others are listed, never kept. */
-export function parseEnvKeys<K extends string>(
+function parseEnvKeys<K extends string>(
   text: string,
   allowed: Readonly<Record<K, string>>,
 ): EnvResult<K> {

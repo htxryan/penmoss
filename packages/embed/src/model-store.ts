@@ -24,8 +24,6 @@ import { penmossHome } from '@penmoss/core/node/home';
 import { manifestBytes, type ModelFile, type ModelManifest } from './manifest';
 
 /** Where Penmoss keeps notebooks, models and vectors (the CLI's PENMOSS_HOME). */
-export { penmossHome };
-
 export type ModelErrorCode = 'absent' | 'corrupt' | 'hash_mismatch' | 'download_failed' | 'aborted';
 
 export class ModelError extends Error {
@@ -304,7 +302,10 @@ export async function removeModel(
   await rm(paths.partial, { recursive: true, force: true });
 }
 
-/** Model folders on disk other than this manifest's (older revisions, to offer removing). */
+/**
+ * What other models left in `~/.penmoss/models`: every model folder but this manifest's, and
+ * their partial downloads (an older revision, after an update pinned a new one). Lock files stay.
+ */
 export async function otherModels(
   manifest: ModelManifest,
   home: string = penmossHome(),
@@ -313,6 +314,8 @@ export async function otherModels(
   const own = `${manifest.name}@${manifest.revision}`;
   const names = await readdir(models).catch(() => [] as string[]);
   return names
-    .filter((name) => !name.startsWith('.') && name !== own)
+    .filter((name) =>
+      name.startsWith('.') ? name.endsWith('.partial') && name !== `.${own}.partial` : name !== own,
+    )
     .map((name) => join(models, name));
 }

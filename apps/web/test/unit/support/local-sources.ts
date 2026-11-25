@@ -4,19 +4,19 @@
  * over an in-memory store.
  */
 import type { ReplicaStore } from '@penmoss/model/record';
-import {
-  Notes,
-  type LocalNotes,
-  type LocalSyncBackend,
-  type LocalSyncState,
-  type NotesOptions,
-} from '../../../src/notes/service';
+import { Notes } from '../../../src/notes/service';
+import type {
+  LocalNotes,
+  LocalSyncBackend,
+  LocalSyncState,
+  NotesOptions,
+} from '../../../src/notes/service-types';
 import { Workspace, type WorkspaceOptions } from '../../../src/workspace/service';
 
 export const TEST_NOTEBOOK = 'nb-test';
 
 /** A sync backend that stays where a test puts it. */
-export function staticBackend(initial: Partial<LocalSyncState> = {}): LocalSyncBackend & {
+function staticBackend(initial: Partial<LocalSyncState> = {}): LocalSyncBackend & {
   set(next: Partial<LocalSyncState>): void;
   readonly purged: string[];
 } {

@@ -19,7 +19,7 @@
  */
 
 /** The sections, in the default order. */
-export const SIDEBAR_SECTIONS = ['quickAccess', 'recent', 'notebooks', 'calendar', 'tags'] as const;
+const SIDEBAR_SECTIONS = ['quickAccess', 'recent', 'notebooks', 'calendar', 'tags'] as const;
 export type SidebarSection = (typeof SIDEBAR_SECTIONS)[number];
 
 /** Each section's name, as its title and Settings → Display say it. */
@@ -38,7 +38,7 @@ export const QUICK_ACCESS_NOTEBOOK_SETTING = 'quickAccess.showNotebook';
 export const QUICK_ACCESS_IN_DRAWER_SETTING = 'quickAccess.inDrawer';
 
 /** Recent Notes' length: unset, and the least and most it may be. */
-export const RECENT_COUNT_DEFAULT = 10;
+const RECENT_COUNT_DEFAULT = 10;
 export const RECENT_COUNT_MIN = 1;
 export const RECENT_COUNT_MAX = 50;
 

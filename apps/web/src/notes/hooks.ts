@@ -1,6 +1,7 @@
 import { createContext, useContext, useSyncExternalStore } from 'react';
 import type { NoteListEntry } from './list';
-import type { AppSyncState, Notes } from './service';
+import type { AppSyncState } from './service-types';
+import type { Notes } from './service';
 
 export const NotesContext = createContext<Notes | null>(null);
 

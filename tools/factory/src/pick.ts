@@ -65,7 +65,7 @@ export function modeFor(input: ModeInput, config: FactoryConfig): Mode | null {
   return null;
 }
 
-export type Skip = { readonly item: BoardItem; readonly reason: string };
+type Skip = { readonly item: BoardItem; readonly reason: string };
 
 export interface Pick {
   readonly item: BoardItem;

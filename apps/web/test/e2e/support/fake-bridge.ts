@@ -43,7 +43,7 @@ export const SIGN_IN_CHANGED = '__penmossSignInChanged';
 export const MEANING_CHANGED = '__penmossMeaningChanged';
 
 /** What the page's fake keeps for specs to look at. */
-export interface FakeBridgeState {
+interface FakeBridgeState {
   menus: unknown;
   theme: unknown;
 }
@@ -68,7 +68,7 @@ export interface FakeAnalyticsConfig {
 }
 
 /** The fake's state, as `window.__penmossFakeAnalytics` shows it (and localStorage keeps it). */
-export interface FakeAnalyticsState {
+interface FakeAnalyticsState {
   consent: 'yes' | 'no' | null;
   ask: boolean;
   install: string;
@@ -229,7 +229,7 @@ export function installFakeBridge(config: {
     const DEFAULTS: Record<string, number> = {
       'events.days': 7,
       'events.max': 200_000,
-      'logs.fileKb': 1024,
+      'logs.fileKb': 1000,
       'logs.files': 2,
       'logs.days': 7,
       'report.hours': 24,
@@ -338,7 +338,8 @@ export function installFakeBridge(config: {
         (event, index) =>
           event.at < now - limits['events.days']! * DAY || index >= limits['events.max']!,
       );
-      const room = limits['logs.fileKb']! * 1024 * limits['logs.files']!;
+      // A KB in a limit is 1,000 bytes (core's LIMIT_KB).
+      const room = limits['logs.fileKb']! * 1000 * limits['logs.files']!;
       const aged = limits['logs.days']! < fake.limits['logs.days']! ? fake.logBytes / 2 : 0;
       const logBytes = Math.max(fake.logBytes - room, Math.round(aged), 0);
       return { gone: new Set(gone.map((event) => event.id)), logBytes };

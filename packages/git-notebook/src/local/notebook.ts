@@ -68,18 +68,15 @@ import {
 } from './search';
 import { LocalTags } from './tags';
 import { LocalVersions, type ServedTo } from './versions';
+import { formatBytes } from '@penmoss/core/words';
 
 export { LocalError, type NoteInfo } from './catalog';
-export { MAX_LISTED_THREADS, type ListedThread } from './comments';
 export type { FolderPatch, LocalFolder } from './folders';
 export {
-  WORDS_ONLY_NOTICE,
   coverageNotice,
-  type LocalBacklink,
   type LocalMeaning,
   type LocalSearchAnswer,
   type LocalSearchInput,
-  type LocalSearchResult,
 } from './search';
 export type { ServedTo } from './versions';
 
@@ -112,17 +109,17 @@ export interface LocalNoteContent {
 }
 
 /** What one read gives an agent at once (A150). */
-export const READ_PART_BYTES = 60_000;
+const READ_PART_BYTES = 60_000;
 /** At most this many linked notes in read_note's `links` (A1656). */
 const MAX_LINKED = 50;
-/** Markdown in one edit. */
-export const MAX_MARKDOWN_BYTES = 256 * 1024;
+/** Markdown in one edit: 256 KB as every size is written (A1690). */
+export const MAX_MARKDOWN_BYTES = 256_000;
 /** A create replayed with the same derived key within this returns its note. */
 export const CREATE_RETRY_WINDOW_MS = 10 * 60_000;
 const EXCERPT_LENGTH = 200;
 
 /** The settings a git notebook keeps (A827): its time zone and templates. */
-export const NOTEBOOK_SETTING_KEYS = [
+const NOTEBOOK_SETTING_KEYS = [
   TIME_ZONE_SETTING,
   templateSetting('daily'),
   templateSetting('weekly'),
@@ -133,7 +130,7 @@ const encoder = new TextEncoder();
 const utf8 = (text: string) => encoder.encode(text).byteLength;
 
 /** At most `maxBytes` of `text` from `offset`, ending at a line break when one is near (A150). */
-export function readPart(
+function readPart(
   text: string,
   offset: number,
   maxBytes = READ_PART_BYTES,
@@ -455,7 +452,7 @@ export class LocalNotebook {
     }
     const markdown = input.markdown ?? '';
     if (utf8(markdown) > MAX_MARKDOWN_BYTES) {
-      throw new LocalError(413, 'too_large', 'markdown is over 256 KB');
+      throw new LocalError(413, 'too_large', `markdown is over ${formatBytes(MAX_MARKDOWN_BYTES)}`);
     }
     const folderId = input.folderId ?? null;
     if (folderId !== null && !this.notes.folder(folderId)) {
@@ -492,7 +489,7 @@ export class LocalNotebook {
   edit(id: string, op: EditOp, baseVersion: number | null): LocalEditReply {
     const markdown = incomingMarkdown(op);
     if (utf8(markdown) > MAX_MARKDOWN_BYTES) {
-      throw new LocalError(413, 'too_large', 'markdown is over 256 KB');
+      throw new LocalError(413, 'too_large', `markdown is over ${formatBytes(MAX_MARKDOWN_BYTES)}`);
     }
     const inTrashOk = op.op === 'rename-tag' || op.op === 'delete-tag';
     const { doc } = inTrashOk ? this.notes.require(id) : this.notes.writable(id);
@@ -787,7 +784,7 @@ export class LocalNotebook {
       throw new LocalError(
         413,
         'file_too_large',
-        `The file is ${Math.ceil(bytes.length / 1024)} KB; a git notebook keeps files of at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB`,
+        `The file is ${formatBytes(bytes.length)}; a git notebook keeps files of at most ${formatBytes(MAX_ATTACHMENT_BYTES)}`,
       );
     }
     const contentType = sniffFileType(bytes.subarray(0, 64));

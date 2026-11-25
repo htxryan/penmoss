@@ -2,7 +2,7 @@ import type { FolderRecord } from '@penmoss/core/workspace';
 import { describe, expect, it } from 'vitest';
 import { GraphInputCache, graphInput, topLevelOf } from '../../src/graph/data';
 import { graphPath } from '../../src/graph/path';
-import type { LocalLinks } from '../../src/notes/service';
+import type { LocalLinks } from '../../src/notes/service-types';
 
 const folder = (id: string, parentId: string | null, position: string): FolderRecord => ({
   id,

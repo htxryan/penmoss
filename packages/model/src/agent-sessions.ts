@@ -13,7 +13,7 @@
 import * as Y from '@y/y';
 import { readThreads, setThreadDelivery } from './comments';
 
-export const WORKSPACE_AGENT_SESSIONS = 'agentSessions';
+const WORKSPACE_AGENT_SESSIONS = 'agentSessions';
 
 /** How often a running channel refreshes `lastSeen`. */
 export const HEARTBEAT_MS = 60 * 60_000;

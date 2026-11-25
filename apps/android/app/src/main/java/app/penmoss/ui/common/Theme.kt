@@ -250,8 +250,8 @@ fun symbolColour(colour: String): Color =
 
 /**
  * The family Settings → Appearance's Interface Font names (T51, A944), or null for the theme's
- * own (Material's): a preset is the phone's own sans, serif or mono face (core
- * `FONT_PRESET_ANDROID`); a custom family is the installed one of that name, else the sans.
+ * own (Material's): a preset is the phone's own sans, serif or mono face
+ * ([FontSettings]); a custom family is the installed one of that name, else the sans.
  */
 internal fun interfaceFontFamily(choice: String): FontFamily? {
     if (choice == FontSettings.THEME || FontSettings.choiceProblem(choice) != null) return null

@@ -169,10 +169,10 @@ export async function framesToMp4(
 }
 
 /** Where in a recording the proof review looks: through it, and its very end (A1650). */
-export const FRAME_POINTS = [0.2, 0.4, 0.6, 0.8, 0.98] as const;
+const FRAME_POINTS = [0.2, 0.4, 0.6, 0.8, 0.98] as const;
 
 /** ffmpeg arguments for one still at `seconds`, at most 960 px wide. */
-export function frameArgs(video: string, seconds: number, output: string): string[] {
+function frameArgs(video: string, seconds: number, output: string): string[] {
   return [
     '-y',
     '-loglevel',

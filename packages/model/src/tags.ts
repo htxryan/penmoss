@@ -157,7 +157,7 @@ export interface TagChange {
  * now (`now`, which must still be there to undo), how many of those characters go, and what goes
  * back in their place.
  */
-export interface InlineTagEdit {
+interface InlineTagEdit {
   readonly at: RelativePositionJson;
   readonly now: string;
   readonly remove: number;

@@ -1,7 +1,8 @@
 import type { CollabEditor, FileServices } from '@penmoss/editor';
 import { isDeleted } from '@penmoss/model/note';
 import type { NoteDirectory } from './directory';
-import type { Notes, OpenNote } from './service';
+import type { Notes } from './service';
+import type { OpenNote } from './open-note';
 
 /** The note view showing an editor: where the editor's messages go. */
 export interface EditorHost {

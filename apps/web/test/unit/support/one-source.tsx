@@ -8,7 +8,8 @@ import type { ReactNode } from 'react';
 import type { DesktopGit, GitNotebookInfo } from '../../../src/desktop/bridge';
 import { NotesProvider } from '../../../src/notes/context';
 import { NoteDirectory } from '../../../src/notes/directory';
-import type { LocalNotes, Notes } from '../../../src/notes/service';
+import type { LocalNotes } from '../../../src/notes/service-types';
+import type { Notes } from '../../../src/notes/service';
 import { SourcesProvider } from '../../../src/sources/context';
 import type { GitSource } from '../../../src/sources/git-source';
 import { SourceContext } from '../../../src/sources/hooks';
@@ -20,7 +21,7 @@ import { TEST_NOTEBOOK } from './local-sources';
 import { memoryNotes } from './memory-notes';
 
 /** A git notebook as main lists it. */
-export function notebookInfo(overrides: Partial<GitNotebookInfo> = {}): GitNotebookInfo {
+function notebookInfo(overrides: Partial<GitNotebookInfo> = {}): GitNotebookInfo {
   return {
     localId: `local-${overrides.notebookId ?? TEST_NOTEBOOK}`,
     notebookId: TEST_NOTEBOOK,

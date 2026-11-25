@@ -24,7 +24,7 @@ import {
 import type { Limits } from '../limits';
 import type { Cursor, Page, PageQuery, StoredEvent } from '../viewer';
 
-export type { ClientFilter, Cursor, Page, PageQuery, StoredEvent } from '../viewer';
+export type { Cursor, Page, PageQuery, StoredEvent } from '../viewer';
 
 /**
  * `node:sqlite`, loaded when a store is first opened, never at import: a bundle (the CLI's)
@@ -95,7 +95,7 @@ export const PRUNE_BATCH = 200;
 const MIN_ROWS = 16;
 const MAX_ROWS = 4000;
 /** Free pages the first vacuum slice gives back, and the bounds of later ones. */
-export const VACUUM_PAGES = 16;
+const VACUUM_PAGES = 16;
 const MIN_PAGES = 1;
 const MAX_PAGES = 512;
 
@@ -136,7 +136,7 @@ export interface PruneOptions {
  * The size of the next chunk, from how long the last took: aims each chunk at a share of the
  * step, growing at most twice and shrinking at most to a quarter at a time, within its bounds.
  */
-export class ChunkSizer {
+class ChunkSizer {
   private current: number;
 
   constructor(

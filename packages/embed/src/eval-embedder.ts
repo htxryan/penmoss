@@ -6,6 +6,7 @@ import { EMBEDDING_GEMMA } from './manifest';
 import { fetchModel, openModel } from './model-store';
 import { createOnnxEmbedder, type OnnxEmbedder } from './onnx-embedder';
 
+/** @public `eval-search.ts` imports this module by name (PENMOSS_EVAL_EMBEDDER) and calls it. */
 export async function evalEmbedder(): Promise<OnnxEmbedder> {
   let shown = -1;
   await fetchModel(EMBEDDING_GEMMA, {

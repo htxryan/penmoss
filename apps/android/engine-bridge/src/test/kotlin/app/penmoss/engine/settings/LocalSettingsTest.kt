@@ -11,26 +11,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The per-platform settings (PEN-156, A1605), held to core's by `contract/platform-settings-v1.json`
- * (written by the web's `android-platform-settings-contract.test.ts`).
+ * The settings this phone keeps alone (A1626), held to core's by `contract/platform-settings-v1.json`'s
+ * `local` (written by the web's `android-platform-settings-contract.test.ts`). Settings' device-only
+ * marks come from them (A1685).
  */
-class PlatformSettingsTest {
+class LocalSettingsTest {
     private val folder: File = System.getProperty("penmoss.contract")?.let { File(it).parentFile } ?: File("../contract")
     private val contract: JsonObject = Json.parseToJsonElement(folder.resolve("platform-settings-v1.json").readText()).jsonObject
-
-    @Test
-    fun theKeysAndPrefixesAreCores() {
-        assertEquals(contract.getValue("keys").jsonArray.map { it.jsonPrimitive.content }, PlatformSettings.KEYS)
-        assertEquals(contract.getValue("prefixes").jsonArray.map { it.jsonPrimitive.content }, PlatformSettings.PREFIXES)
-        assertEquals("mobile", contract.getValue("android").jsonPrimitive.content)
-    }
-
-    @Test
-    fun eachSampleIsKeptPerPlatformOrSharedAsCoreSays() {
-        for ((key, kept) in contract.getValue("samples").jsonObject) {
-            assertEquals(key, kept.jsonPrimitive.boolean, PlatformSettings.isPlatform(key))
-        }
-    }
 
     @Test
     fun theLocalKeysAreCores() {

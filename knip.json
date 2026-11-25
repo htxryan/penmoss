@@ -1,0 +1,67 @@
+{
+  "$schema": "https://unpkg.com/knip@6.44.2/schema.json",
+  "include": ["exports", "types"],
+  "includeEntryExports": true,
+  "ignore": [
+    "**/worker-configuration.d.ts",
+    "types/workers-runtime.d.ts",
+    "tools/factory/test/tmp-root.ts",
+    "tools/factory/sandbox/*.cjs",
+    ".claude/worktrees/**"
+  ],
+  "ignoreFiles": ["spikes/**"],
+  "vitest": {
+    "config": ["vitest.config.{ts,mts,js,mjs}", "vitest.*.config.{ts,mts}"]
+  },
+  "playwright": {
+    "config": ["playwright.config.ts", "test/e2e/playwright.config.ts"]
+  },
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/**/*.{mjs,ts}",
+        ".github/scripts/**/*.mjs",
+        ".claude/skills/*/scripts/*.{ts,mjs}"
+      ]
+    },
+    "apps/desktop": {
+      "entry": ["src/{boot,preload,analytics-worker,embed-utility,cli-mode}.ts", "scripts/*.mjs"],
+      "playwright": {
+        "config": [],
+        "entry": ["test/e2e/**/*.spec.ts"]
+      }
+    },
+    "apps/telemetry": {
+      "vitest": {
+        "config": [],
+        "entry": ["test/**/*.test.ts", "test/apply-migrations.ts"]
+      }
+    },
+    "apps/telemetry-dashboard": {
+      "entry": [
+        "src/client/main.ts",
+        "src/client/replay/frame.ts",
+        "test/*.test.ts",
+        "test/apply-migrations.ts"
+      ],
+      "vitest": {
+        "config": ["vitest.config.ts"]
+      }
+    },
+    "apps/android/editor": {
+      "entry": ["runner/*.ts"]
+    },
+    "packages/git-notebook": {
+      "entry": ["scripts/*.ts"]
+    },
+    "apps/web": {
+      "entry": ["test/perf/**/*.tsx", "test/unit/support/platform.ts"]
+    },
+    "site": {
+      "entry": ["scripts/*.mjs"],
+      "playwright": {
+        "config": ["playwright.config.ts", "scripts/screenshots.config.ts"]
+      }
+    }
+  }
+}

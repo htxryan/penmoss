@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import app.penmoss.ui.common.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -130,7 +129,7 @@ data class HomeUi(
     val capturesWaitingWhy: String? = null,
     /**
      * The status needs attention (offline, or the server failing): TalkBack reads it out when it
-     * changes. "Synced at …" changes after every pass and is not read out (A530).
+     * changes. "Synced 2 min ago" changes after every pass and is not read out (A530).
      */
     val statusAlert: Boolean = false,
     /** The top level's sort order (T40 P4, NT6), from the Sort icon. */
@@ -438,7 +437,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                                 // No drag to pin here, so not the web's "Drag Here to Pin"; as quiet.
                                                 "No Notes",
                                                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("homeQuickAccessEmpty"),
-                                                style = MaterialTheme.typography.bodySmall,
+                                                style = MaterialTheme.roles.help,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
@@ -543,11 +542,11 @@ private fun QuickAccessRow(
                 )
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text(note.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note.title, style = MaterialTheme.roles.rowLabel, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (notebook != null) {
                 Text(
                     notebook,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.roles.meta,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -574,7 +573,7 @@ private fun KeptApartNotice(notes: Int) {
             "restored or deleted elsewhere, or Penmoss refused them. They are kept here and become " +
             "conflict copies the next time you open a note.",
         Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("keptApart"),
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.roles.body,
         color = MaterialTheme.colorScheme.error,
     )
 }
@@ -589,14 +588,14 @@ private fun CapturesNotice(waiting: Int, refused: Int, why: String?, onRefused: 
         Text(
             "${if (waiting == 1) "1 capture is" else "$waiting captures are"} saved on this phone and will be added once it syncs.",
             Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("capturesWaiting"),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.roles.help,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (why != null) {
             Text(
                 why,
                 Modifier.padding(horizontal = 16.dp).testTag("capturesWaitingWhy"),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -606,7 +605,7 @@ private fun CapturesNotice(waiting: Int, refused: Int, why: String?, onRefused: 
             "Penmoss refused ${if (refused == 1) "1 capture" else "$refused captures"}. " +
                 "${if (refused == 1) "It is" else "They are"} kept on this phone.",
             Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("capturesRefused"),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.roles.body,
             color = MaterialTheme.colorScheme.error,
         )
         TextButton(onClick = trackedClick("home.captures-refused.open", onRefused), Modifier.padding(horizontal = 4.dp).testTag("capturesRefusedOpen")) {
@@ -666,7 +665,7 @@ fun FolderScreen(
                         if (subtitle != null) {
                             Text(
                                 subtitle,
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.roles.meta,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -790,7 +789,7 @@ fun CenteredMessage(text: String?, busy: Boolean = false, action: Pair<String, (
             Text(
                 text,
                 Modifier.padding(top = 16.dp),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.roles.body,
                 textAlign = TextAlign.Center,
             )
         }

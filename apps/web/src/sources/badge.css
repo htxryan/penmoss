@@ -112,22 +112,6 @@
   color: var(--nb-badge-ink);
 }
 
-/* Letter, Number and Icon side by side as one control; the chosen one in the accent. */
-.segmented.badge-kind-segments {
-  gap: 0;
-}
-
-.badge-kind-segments .badge-kind + .badge-kind > span {
-  margin-inline-start: -1px;
-}
-
-.badge-kind-segments .badge-kind input:checked + span {
-  position: relative;
-  border-color: var(--pm-accent);
-  background: var(--pm-accent);
-  color: var(--pm-on-accent);
-}
-
 .badge-field {
   inline-size: 4.5rem;
 }

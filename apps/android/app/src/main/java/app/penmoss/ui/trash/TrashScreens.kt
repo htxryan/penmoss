@@ -50,6 +50,7 @@ import app.penmoss.ui.common.BackButton
 import app.penmoss.ui.common.ConfirmDialog
 import app.penmoss.ui.common.SheetTitle
 import app.penmoss.ui.common.SectionTitle
+import app.penmoss.ui.common.roles
 
 /** One note in Trash as the screen shows it (NT13). */
 data class TrashEntryUi(
@@ -137,7 +138,7 @@ fun TrashScreen(
                     Text(
                         "Notes and folders moved to Trash on any device stay here for 30 days, then go for good.",
                         Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.roles.help,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -146,7 +147,7 @@ fun TrashScreen(
                         Text(
                             problem,
                             Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("trashProblem"),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.roles.body,
                         )
                     }
                 }
@@ -191,9 +192,9 @@ private fun TrashFolderRow(folder: TrashFolderUi, enabled: Boolean, onRestore: (
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 4.dp).testTag("trashFolder-${folder.id}")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(FolderIcon, contentDescription = null, Modifier.padding(end = 8.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(folder.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(folder.name, style = MaterialTheme.roles.rowLabel, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(folder.detail, spokenAs(folder.detail, folder.spoken), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(folder.detail, spokenAs(folder.detail, folder.spoken), style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(
                 onClick = trackedClick("trash.folder.restore", onRestore),
@@ -208,8 +209,8 @@ private fun TrashFolderRow(folder: TrashFolderUi, enabled: Boolean, onRestore: (
 @Composable
 private fun TrashRowView(entry: TrashEntryUi, enabled: Boolean, onRestore: () -> Unit, onDelete: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 4.dp).testTag("trash-${entry.id}")) {
-        Text(entry.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(entry.detail, spokenAs(entry.detail, entry.spoken), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(entry.title, style = MaterialTheme.roles.rowLabel, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(entry.detail, spokenAs(entry.detail, entry.spoken), style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = trackedClick("trash.restore", onRestore), enabled = enabled, modifier = Modifier.testTag("restore-${entry.id}")) { Text("Restore") }
             TextButton(

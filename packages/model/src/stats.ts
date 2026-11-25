@@ -25,7 +25,7 @@ export interface TextStats {
   readonly minutes: number;
 }
 
-export const WORDS_PER_MINUTE = 230;
+const WORDS_PER_MINUTE = 230;
 
 const WORD =
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]|[\p{L}\p{N}\p{M}]+(?:['’.-][\p{L}\p{N}\p{M}]+)*/gu;

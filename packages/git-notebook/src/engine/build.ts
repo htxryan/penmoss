@@ -45,6 +45,7 @@ import { NotebookError, WriterFull } from './errors';
 import { foreignAt, headPaths, namesAt, renderedPaths } from './names-at';
 import { MAX_ACTOR_BYTES, MAX_LOG_BYTES, type EngineOptions } from './options';
 import { sessionTrailers, type CommitSession, type SessionEdits } from '../sessions';
+import { formatBytes } from '@penmoss/core/words';
 
 /**
  * Commits name how many notes they carry; `[skip ci]` keeps a code repo's CI quiet (A825). The
@@ -701,7 +702,7 @@ export class Build {
       }
       throw new NotebookError(
         'actor_full',
-        `Even a new writer's actor file would pass ${maxActor / 1024 / 1024} MB. Nothing was pushed; your changes are kept.`,
+        `Even a new writer's actor file would pass ${formatBytes(maxActor)}. Nothing was pushed; your changes are kept.`,
       );
     }
     if (actor) changes.set(actorPath, actor.bytes);

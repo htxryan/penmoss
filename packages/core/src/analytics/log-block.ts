@@ -5,7 +5,8 @@
  * line can close, and cut from the oldest line so the body stays inside the Linear intake's
  * 60,000 characters.
  */
-import { reportHours, type Limits } from './limits';
+import { formatBytes } from '../words';
+import { LIMIT_KB, reportHours, type Limits } from './limits';
 
 /** A log line starts with its ISO time: `2026-11-19T11:54:16.525Z info main …`. */
 export function lineTime(line: string): number | null {
@@ -23,7 +24,7 @@ export function lineTime(line: string): number | null {
 export function reportLines(lines: readonly string[], limits: Limits, now: number): string[] {
   const since = now - reportHours(limits) * 3_600_000;
   const maxLines = limits['report.lines'];
-  const maxBytes = limits['report.kb'] * 1024;
+  const maxBytes = limits['report.kb'] * LIMIT_KB;
   const encoder = new TextEncoder();
   const kept: string[] = [];
   let bytes = 0;
@@ -49,12 +50,8 @@ export function textBytes(lines: readonly string[]): number {
   return new TextEncoder().encode(lines.join('\n')).length;
 }
 
-/** "9.6 KB": the size the form's summary shows. */
-export function formatReportSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
-}
+/** "9.6 KB": the size the form's summary shows, as every size is written (`formatBytes`). */
+export const formatReportSize: (bytes: number) => string = formatBytes;
 
 /** A fence longer than any run of backticks in `text`. */
 function fence(text: string): string {
@@ -62,7 +59,7 @@ function fence(text: string): string {
   return '`'.repeat(longest + 1);
 }
 
-export const LOG_BLOCK_TITLE = 'Anonymised Logs';
+const LOG_BLOCK_TITLE = 'Anonymised Logs';
 
 /** The issue's collapsed block for `lines`, or '' when there are none. */
 export function logBlock(lines: readonly string[]): string {

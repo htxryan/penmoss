@@ -4,7 +4,7 @@
  * note, and the recent-errors ring. One per window, made in main.tsx.
  */
 import { useContext, createContext, useSyncExternalStore } from 'react';
-import type { AppSyncState } from '../notes/service';
+import type { AppSyncState } from '../notes/service-types';
 import { parseFeedbackContext, type FeedbackContext as IssueContext } from '@penmoss/core/feedback';
 import { isEmptyDescription, loadFeedbackMarkdown } from '@penmoss/editor/feedback';
 import { errorRing, type ErrorRing } from './errors';
@@ -64,7 +64,7 @@ function draftOfPayload(entry: OutboxEntry): FeedbackDraftText {
 }
 
 /** When sync last finished and what last stopped it, as the app showed them. */
-export class SyncTracker {
+class SyncTracker {
   lastSynced: number | null = null;
   lastError: string | null = null;
 

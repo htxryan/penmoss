@@ -13,9 +13,9 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useCommand } from '../commands/hooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 
-export const FULL_WIDTH_KEY = 'penmoss.fullWidth';
+const FULL_WIDTH_KEY = 'penmoss.fullWidth';
 /** Set while a choice made here has not reached the synced setting yet (signed out). */
-export const FULL_WIDTH_PENDING_KEY = 'penmoss.fullWidth.pending';
+const FULL_WIDTH_PENDING_KEY = 'penmoss.fullWidth.pending';
 
 /**
  * What the note shows and what to write, from the synced value (null: none, or it cannot be

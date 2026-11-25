@@ -50,7 +50,7 @@ const NoUnderline = Extension.create({
 });
 
 /** The reduced editor's extensions: marks first, in core's order (link outermost). */
-export function feedbackExtensions(): AnyExtension[] {
+function feedbackExtensions(): AnyExtension[] {
   return [
     alignMark(
       Link.configure({

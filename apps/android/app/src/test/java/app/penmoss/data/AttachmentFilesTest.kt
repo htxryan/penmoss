@@ -106,6 +106,7 @@ class AttachmentFilesTest {
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         val piece = ByteArray(64 * 1024)
         repeat(Attachments.MAX_BYTES / piece.size) { digest.update(piece) }
+        digest.update(piece, 0, Attachments.MAX_BYTES % piece.size)
         val sha = digest.digest().joinToString("") { "%02x".format(it) }
         assertEquals("attachments/$sha.bin", attachments.addFile(input, "zeros", "n"))
         assertTrue(input.largestRead <= 64 * 1024)

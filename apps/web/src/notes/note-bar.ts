@@ -10,7 +10,6 @@ export {
   NOTE_BAR_BUTTON_INFO,
   noteBarShows,
   type NoteBarButton,
-  type NoteBarButtonInfo,
 } from './note-bar-buttons';
 
 /** The title bar's buttons, and a way to change which show. */

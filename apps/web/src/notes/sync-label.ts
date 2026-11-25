@@ -1,4 +1,4 @@
-import type { AppSyncState } from './service';
+import type { AppSyncState } from './service-types';
 import { counted } from '@penmoss/core/words';
 
 /** What the state means, read out when sync needs attention (A522). */

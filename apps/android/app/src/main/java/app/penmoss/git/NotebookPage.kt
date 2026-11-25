@@ -41,6 +41,7 @@ import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
 import app.penmoss.ui.common.Toggle
 import app.penmoss.ui.common.noteCount
+import app.penmoss.ui.common.rememberNow
 
 /** A notebook page's tabs (PEN-146), as its route names them. */
 object NotebookTab {
@@ -146,8 +147,9 @@ private fun StatusRow(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActi
     ListItem(
         headlineContent = {
             Text(
-                gitStatusLine(row.status, view.host),
-                Modifier.testTag("gitStatus-${view.localId}").semantics { liveRegion = LiveRegionMode.Polite },
+                gitStatusLine(row.status, view.host, rememberNow()),
+                // Synced is not read out as its minutes go by; a sync running, offline or stopped is (as A530).
+                Modifier.testTag("gitStatus-${view.localId}").semantics { if (row.status?.phase != "synced") liveRegion = LiveRegionMode.Polite },
                 color = if (row.status?.phase == "stopped") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             )
         },

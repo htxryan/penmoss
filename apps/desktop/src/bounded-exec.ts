@@ -12,7 +12,7 @@
 import { spawn } from 'node:child_process';
 
 /** How long to wait for the pipes to close after the program exits. */
-export const DRAIN_MS = 100;
+const DRAIN_MS = 100;
 
 export interface BoundedExecOptions {
   readonly command: string;

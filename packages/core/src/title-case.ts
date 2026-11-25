@@ -50,9 +50,6 @@ const PARTICLE_VERBS: ReadonlySet<string> = new Set([
 ]);
 const PARTICLES: ReadonlySet<string> = new Set(['in', 'on', 'off', 'up', 'out']);
 
-/** Starts with a lower-case letter. */
-const startsLower = (word: string): boolean => /^\p{Ll}/u.test(word);
-
 /** A word written its own way: code, a command, a name with inner capitals, a shortcut. */
 function keepsSpelling(raw: string): boolean {
   const word = raw.replace(/^[(“"‘'[]+/u, '');
@@ -126,4 +123,3 @@ export function titleCaseProblem(text: string): string | null {
 }
 
 // Re-exported for the checks that read a word's case.
-export { startsLower };

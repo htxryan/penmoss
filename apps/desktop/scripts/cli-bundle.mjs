@@ -37,9 +37,9 @@ import {
 import { join } from 'node:path';
 
 export const CLI_BUNDLE_ID = 'app.penmoss.mac.cli';
-export const CLI_APP_NAME = 'Penmoss CLI.app';
+const CLI_APP_NAME = 'Penmoss CLI.app';
 /** The bundle's path inside the app's Contents (local-agents.ts has the same, CLI_EXECUTABLE). */
-export const CLI_APP_IN_CONTENTS = `Helpers/${CLI_APP_NAME}`;
+const CLI_APP_IN_CONTENTS = `Helpers/${CLI_APP_NAME}`;
 
 /** Keys the CLI bundle must not claim: links and files open in the app, never in the CLI. */
 const DROPPED_KEYS = ['CFBundleURLTypes', 'CFBundleDocumentTypes', 'NSUserActivityTypes'];

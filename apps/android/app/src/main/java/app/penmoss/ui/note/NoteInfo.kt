@@ -63,6 +63,7 @@ import app.penmoss.engine.notes.Backlinks
 import app.penmoss.engine.notes.ContextPart
 import app.penmoss.engine.notes.LinkedNote
 import app.penmoss.engine.notes.UnlinkedNote
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.settings.SettingsIcons
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -346,9 +347,9 @@ internal fun InfoSheet(
                                 .background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.small)
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.roles.item,
                         )
-                        kind.period?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
+                        kind.period?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.roles.help) }
                     }
                 }
             }
@@ -358,7 +359,7 @@ internal fun InfoSheet(
                     row.label,
                     row.value,
                     rowLabels,
-                    MaterialTheme.typography.bodyMedium,
+                    MaterialTheme.roles.body,
                     Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp).testTag("infoRow-${row.label}"),
                 )
             }
@@ -373,7 +374,7 @@ internal fun InfoSheet(
                         // Inline tags only: the line below lists them, so not "No tags yet." (A502).
                         tags.isEmpty() && inline.isEmpty() ->
                             Text("No tags yet.", Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        else -> tags.forEach { tag -> Text("#$tag", Modifier.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium) }
+                        else -> tags.forEach { tag -> Text("#$tag", Modifier.padding(vertical = 12.dp), style = MaterialTheme.roles.body) }
                     }
                     if (canTag) {
                         AssistChip(onClick = trackedClick("note.info.edit-tags", onTags), label = { Text("Edit Tags…") }, modifier = Modifier.testTag("infoEditTags"))
@@ -386,7 +387,7 @@ internal fun InfoSheet(
                         line,
                         Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp).testTag("infoInlineTags"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.roles.body,
                     )
                 }
             }
@@ -398,7 +399,7 @@ internal fun InfoSheet(
                     field.key,
                     field.value,
                     fieldKeys,
-                    MaterialTheme.typography.bodySmall,
+                    MaterialTheme.roles.meta,
                     Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 2.dp).testTag("frontmatter-${field.key}"),
                 )
             }
@@ -442,7 +443,7 @@ private fun SheetHeading(text: String, large: Boolean = false) {
     Text(
         text,
         Modifier.padding(horizontal = 24.dp, vertical = if (large) 8.dp else 12.dp).semantics { heading() },
-        style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
+        style = if (large) MaterialTheme.roles.sectionHead else MaterialTheme.roles.listHead,
     )
 }
 
@@ -462,7 +463,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
         Text(
             "Backlinks ${if (first) "…" else linked.size}",
             Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }.testTag("backlinksHeading"),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.roles.groupHead,
         )
     }
     backlinksNote(view, now)?.let { note ->
@@ -470,7 +471,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
             Text(
                 note,
                 Modifier.padding(horizontal = 24.dp).testTag("backlinksNote"),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -481,11 +482,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
     }
     items(linked, key = { "linked-${it.id}" }) { entry ->
         Column(Modifier.fillMaxWidth().clickable(onClick = trackedClick("note.backlinks.linked") { onOpen(entry.id) }).heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("linked-${entry.id}")) {
-            Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.roles.rowLabel, fontWeight = FontWeight.Medium)
             for (mention in entry.mentions) {
                 Text(
                     contextString(mention.context, mention.embed, noteId, titleOf),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.help,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -497,14 +498,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.backlinksItems(
     }
     items(unlinked, key = { "unlinked-${it.id}" }) { entry ->
         Column(Modifier.fillMaxWidth().clickable(onClick = trackedClick("note.backlinks.unlinked") { onOpen(entry.id) }).heightIn(min = 48.dp).padding(horizontal = 24.dp, vertical = 8.dp).testTag("unlinked-${entry.id}")) {
-            Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(entry.title.ifBlank { Items.UNTITLED }, style = MaterialTheme.roles.rowLabel, fontWeight = FontWeight.Medium)
             Text(
                 buildAnnotatedString {
                     for (part in entry.snippet) {
                         if (part.match) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(part.text) } else append(part.text)
                     }
                 },
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -516,7 +517,7 @@ private fun EmptyLine(text: String, tag: String) {
     Text(
         text,
         Modifier.padding(horizontal = 24.dp, vertical = 4.dp).testTag(tag),
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.roles.help,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -589,7 +590,7 @@ private fun AiEffectiveRow(status: app.penmoss.engine.api.AiNoteStatus) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(if (status.effective.on) "● On" else "○ Off", style = MaterialTheme.typography.bodyMedium)
+        Text(if (status.effective.on) "● On" else "○ Off", style = MaterialTheme.roles.body)
         if (source.level != "note") {
             val (icon, name) = when (source.level) {
                 "folder" -> app.penmoss.ui.settings.SettingsIcons.Folder to source.name.orEmpty()
@@ -603,7 +604,7 @@ private fun AiEffectiveRow(status: app.penmoss.engine.api.AiNoteStatus) {
             ) {
                 Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(icon, contentDescription = null, Modifier.size(14.dp))
-                    Text(name, Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelMedium)
+                    Text(name, Modifier.padding(start = 4.dp), style = MaterialTheme.roles.meta)
                 }
             }
         }
@@ -631,7 +632,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.descriptionItems(ui: 
             Text(
                 if (ui.by == "hand") "Written by you" else "Written by AI Descriptions",
                 Modifier.padding(horizontal = 24.dp).testTag("infoDescriptionBy"),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -643,8 +644,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.descriptionItems(ui: 
                     .background(MaterialTheme.colorScheme.secondaryContainer).padding(12.dp).testTag("infoDescriptionAsk"),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text("Keep Your Description?", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                Text("Claude would rewrite it the next time this note changes.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text("Keep Your Description?", style = MaterialTheme.roles.groupHead, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text("Claude would rewrite it the next time this note changes.", style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     app.penmoss.ui.common.FilledTonalButton(onClick = trackedClick("note.ai.keep-mine") { ui.onAnswer(true) }, modifier = Modifier.testTag("infoKeepMine")) { Text("Keep Mine") }
                     app.penmoss.ui.common.TextButton(onClick = trackedClick("note.ai.let-claude") { ui.onAnswer(false) }, modifier = Modifier.testTag("infoLetClaude")) { Text("Let Claude Update It") }
@@ -671,7 +672,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.descriptionItems(ui: 
         Text(
             ui.said ?: if (ui.describing) "Describing…" else aiStatusLine(ui),
             Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp).testTag("infoAiStatus"),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.help,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

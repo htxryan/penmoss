@@ -102,7 +102,7 @@ function scrollParent(element: HTMLElement): HTMLElement {
   );
 }
 
-export class DragHandleView implements PluginView {
+class DragHandleView implements PluginView {
   private readonly container: HTMLElement;
   private readonly handle: HTMLButtonElement;
   private readonly indicator: HTMLDivElement;
@@ -352,10 +352,10 @@ export class DragHandleView implements PluginView {
   }
 }
 
-export const dragHandleKey = new PluginKey('penmossDragHandle');
+const dragHandleKey = new PluginKey('penmossDragHandle');
 
 /** The handle and drop line, for editable views. */
-export function dragHandlePlugin(): Plugin {
+function dragHandlePlugin(): Plugin {
   return new Plugin({
     key: dragHandleKey,
     view: (view) => new DragHandleView(view),

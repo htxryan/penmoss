@@ -14,18 +14,9 @@ import { copyAs } from './copy';
 import { loadCodec, type NoteFields } from './markdown';
 import { clipboardPlugin } from './paste';
 
-export { CLIPBOARD_COMMANDS, defaultKeys, type ClipboardCommand } from './commands';
-export {
-  setNativeClipboard,
-  type CopyFormat,
-  type NativeClipboardPayload,
-  type NativeClipboardWriter,
-} from './copy';
-export type { NoteFields } from './markdown';
-export { looksLikeMarkdown, loadCodec } from './markdown';
+export { CLIPBOARD_COMMANDS } from './commands';
+export { setNativeClipboard, type NativeClipboardPayload } from './copy';
 export { pastePlainText } from './paste';
-export { sanitizeClipboardHTML } from './sanitize';
-
 export interface ClipboardOptions {
   /** Where pictures inside pasted HTML are stored (T10). */
   readonly images?: ImageServices | undefined;

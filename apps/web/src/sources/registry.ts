@@ -56,7 +56,7 @@ export interface SourcesOptions {
 }
 
 /** A git notebook's records in the windows' announcements: `<notebookId>/<record id>`. */
-export const scopedId = (notebookId: string, id: string) => `${notebookId}/${id}`;
+const scopedId = (notebookId: string, id: string) => `${notebookId}/${id}`;
 
 /** Splits announced ids by notebook; an id with no notebook (from no source) is dropped. */
 export function routeChanged(ids: ChangedRecords): ReadonlyMap<string, readonly string[]> | null {

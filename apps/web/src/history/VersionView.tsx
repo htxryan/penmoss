@@ -57,17 +57,17 @@ export type ViewImages = Pick<ImageServices, 'resolve' | 'release'>;
 const WEB_IMAGE = /^https?:\/\//i;
 
 /** Diff (just the changes) or Full File (every block). */
-export type ViewMode = 'diff' | 'full';
+type ViewMode = 'diff' | 'full';
 
 /** Diff or Full File, as last chosen on this device: Diff unless Full File was. */
-export const VIEW_MODE_KEY = 'penmoss.historyView.mode';
+const VIEW_MODE_KEY = 'penmoss.historyView.mode';
 const viewMode = devicePref<ViewMode>(VIEW_MODE_KEY, {
   parse: (stored) => (stored === 'full' ? 'full' : 'diff'),
   serialise: (mode) => (mode === 'diff' ? null : mode),
 });
 
 /** Wrap Lines, as last chosen on this device: on unless it was turned off (Ryan's review of #210). */
-export const VIEW_WRAP_KEY = 'penmoss.historyView.wrap';
+const VIEW_WRAP_KEY = 'penmoss.historyView.wrap';
 const viewWrap = devicePref<boolean>(VIEW_WRAP_KEY, {
   parse: (stored) => stored !== 'off',
   serialise: (wrap) => (wrap ? null : 'off'),

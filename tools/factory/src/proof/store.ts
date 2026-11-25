@@ -12,7 +12,7 @@ import { expandHome, type FactoryConfig } from '../config.ts';
 import { loadEnvFile } from '../secrets.ts';
 
 /** The names `proof.env` may hold. It is read on the host alone. */
-export const PROOF_KEYS = {
+const PROOF_KEYS = {
   R2_ACCOUNT_ID: 'the Penmoss Cloudflare account ID',
   R2_ACCESS_KEY_ID: "the proof bucket's R2 access key ID (Object Read & Write, that bucket only)",
   R2_SECRET_ACCESS_KEY: "that key's secret",

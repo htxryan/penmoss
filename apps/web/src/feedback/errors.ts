@@ -33,7 +33,7 @@ const MAX_MESSAGE = 500;
 const MAX_DETAIL = 4000;
 
 /** An error's message and stack, trimmed; anything else is named by its type only (review N3). */
-export function describeClientError(error: unknown): { message: string; detail: string } {
+function describeClientError(error: unknown): { message: string; detail: string } {
   if (error instanceof Error) {
     return {
       message: `${error.name}: ${error.message}`.slice(0, MAX_MESSAGE),

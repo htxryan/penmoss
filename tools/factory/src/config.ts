@@ -22,10 +22,10 @@ export interface SlotConfig {
 }
 
 /** Claude Code's `--effort` levels. */
-export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type Effort = (typeof EFFORTS)[number];
 
-export interface ModelAlias {
+interface ModelAlias {
   readonly agent: AgentName;
   readonly model: string;
   /** Claude only: the session's `--effort`. Unset, Claude Code's default applies. */
@@ -34,7 +34,7 @@ export interface ModelAlias {
 
 export type TrackerName = 'github' | 'linear';
 
-export interface StatusNames {
+interface StatusNames {
   readonly pick: string;
   readonly planning: string;
   readonly working: string;
@@ -42,7 +42,7 @@ export interface StatusNames {
   readonly done: string;
 }
 
-export interface LinearConfig {
+interface LinearConfig {
   /** The team's issue key, `PEN`: issue PEN-36 is number 36. */
   readonly team: string;
   /** Ryan's Linear user ID: the only user whose words count as instructions (R14). */
@@ -145,7 +145,7 @@ export type ConfigResult =
   | { readonly ok: true; readonly config: FactoryConfig }
   | { readonly ok: false; readonly error: string };
 
-export const DEFAULT_CONFIG_PATH = new URL('../factory.config.json', import.meta.url);
+const DEFAULT_CONFIG_PATH = new URL('../factory.config.json', import.meta.url);
 
 /** Expands a leading `~/` to the home folder; other paths are returned as they are. */
 export function expandHome(path: string, home: string = homedir()): string {

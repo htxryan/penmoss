@@ -42,7 +42,7 @@ export interface Layout {
   stop(): void;
 }
 
-export const radiusOf = (node: GraphNode) =>
+const radiusOf = (node: GraphNode) =>
   node.kind === 'tag' ? 3.5 : 4 + Math.min(10, Math.sqrt(node.degree) * 2.2);
 
 /**

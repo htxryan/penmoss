@@ -51,7 +51,6 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.trash.moveToTrashWithUndo
 import app.penmoss.ui.folders.oneMoveSaid
-import app.penmoss.ui.open
 
 /**
  * Several notes at once (T42, A570; T40 NT26, A652): a long press on a note in a list starts

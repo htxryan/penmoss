@@ -12,7 +12,7 @@ import type {
 } from '@penmoss/core/feedback';
 import type { JSONContent } from '@penmoss/editor/feedback';
 
-export interface StoredScreenshot {
+interface StoredScreenshot {
   readonly id: string;
   readonly name: string;
   readonly type: string;
@@ -27,10 +27,10 @@ export interface StoredScreenshot {
 }
 
 /** Whether a screenshot is kept with the draft: all but an unticked capture of the window. */
-export const keptWithDraft = (shot: StoredScreenshot) => shot.source !== 'window' || shot.included;
+const keptWithDraft = (shot: StoredScreenshot) => shot.source !== 'window' || shot.included;
 
 /** An unsent form, kept until it is queued (then its entry keeps it) or discarded. */
-export interface FeedbackDraft {
+interface FeedbackDraft {
   readonly submissionId: string;
   readonly type: FeedbackType | null;
   readonly priority: FeedbackPriority | null;
@@ -55,7 +55,7 @@ export interface FeedbackDraft {
 /** The draft without its screenshots: what is saved as you type. */
 export type FeedbackDraftText = Omit<FeedbackDraft, 'screenshots'>;
 
-export type OutboxState = 'queued' | 'sending' | 'failed';
+type OutboxState = 'queued' | 'sending' | 'failed';
 
 export interface OutboxError {
   readonly status: number;

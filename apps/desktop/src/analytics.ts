@@ -123,7 +123,7 @@ interface AnalyticsOptions {
 }
 
 /** The real ids a page's event names (PEN-177), swapped for refs here. */
-export interface PageEventRefs {
+interface PageEventRefs {
   readonly note?: string;
   readonly folder?: string;
 }

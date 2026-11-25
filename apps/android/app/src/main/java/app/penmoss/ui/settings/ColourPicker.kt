@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import app.penmoss.analytics.Analytics
@@ -56,6 +55,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import app.penmoss.ui.common.roles
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -258,7 +258,7 @@ fun ColourPicker(hex: String, onChange: (String) -> Unit, modifier: Modifier = M
                 drawCircle(Color.Black.copy(alpha = 0.45f), 8.dp.toPx(), at, style = Stroke(1.dp.toPx()))
             }
         }
-        Text("Brightness", style = MaterialTheme.typography.labelMedium)
+        Text("Brightness", style = MaterialTheme.roles.meta)
         GradientSlider(
             brush = Brush.horizontalGradient(listOf(Color.Black, HexColours.color(HexColours.of(hsva.copy(value = 1f, alpha = 1f))))),
             value = hsva.value,
@@ -267,7 +267,7 @@ fun ColourPicker(hex: String, onChange: (String) -> Unit, modifier: Modifier = M
             valueRange = 0f..1f,
             modifier = Modifier.testTag("symbol-colour-value").semantics { contentDescription = "Brightness" },
         )
-        Text("Opacity", style = MaterialTheme.typography.labelMedium)
+        Text("Opacity", style = MaterialTheme.roles.meta)
         GradientSlider(
             brush = Brush.horizontalGradient(listOf(solid.copy(alpha = 0f), solid)),
             checks = true,

@@ -42,11 +42,11 @@ export function interruptsParagraph(node: RootContent | undefined): boolean {
  * (`my type` → `my-type`) and an empty type becomes `note`, so the header
  * always reads back as a callout.
  */
-export function calloutType(type: string): string {
+function calloutType(type: string): string {
   return type.trim().replace(/[\s\]]+/g, '-') || 'note';
 }
 
-export function calloutHeader(
+function calloutHeader(
   node: Pick<Callout, 'calloutType' | 'title' | 'foldable' | 'collapsed'>,
 ): string {
   const fold = node.foldable ? (node.collapsed ? '-' : '+') : '';

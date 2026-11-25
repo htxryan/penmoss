@@ -71,7 +71,7 @@ export function parseReview(
  * The reviewer's code review (the penmoss-review skill's checks on the branch's diff): each
  * problem is a row the builder hears about like any other mismatch.
  */
-export function codeRows(raw: unknown): FidelityRow[] {
+function codeRows(raw: unknown): FidelityRow[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((r: unknown) => {
     if (typeof r !== 'object' || r === null) return [];
@@ -93,7 +93,7 @@ const PROOF_VERDICTS = ['shown', 'thin', 'missing'] as const;
  * mismatch: a proof spec that stops short of what its criterion shows (PEN-137's Android Send
  * Feedback spec never opened the preview) is fixed in the spec. A proof shown is no row.
  */
-export function proofRows(raw: unknown): FidelityRow[] {
+function proofRows(raw: unknown): FidelityRow[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((r: unknown) => {
     if (typeof r !== 'object' || r === null) return [];

@@ -45,9 +45,10 @@ import {
   propertiesOp,
   type LocalNotebook,
 } from './notebook';
+import { formatBytes } from '@penmoss/core/words';
 
-export const LOCAL_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
-export const LOCAL_SERVER_VERSION = '1.0.0';
+const LOCAL_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+const LOCAL_SERVER_VERSION = '1.0.0';
 
 const NO_VERSION = 'Call get_history without versionId to list the note’s versions.';
 
@@ -80,7 +81,7 @@ const LOCAL_ADVICE: Readonly<Record<string, string>> = {
   in_trash:
     'The note is in Trash. Restore it with restore_note first; it cannot be changed until then.',
   version_not_found: NO_VERSION,
-  file_too_large: `Send a file of at most ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB: larger files do not go into a git notebook.`,
+  file_too_large: `Send a file of at most ${formatBytes(MAX_ATTACHMENT_BYTES)}: larger files do not go into a git notebook.`,
   setting_not_allowed:
     'A git notebook keeps only its time zone and its daily and weekly templates (timeZone, template.daily, template.weekly).',
   invalid_setting:
@@ -119,7 +120,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = {
     'The folder goes to Trash, where Ryan can restore it with its subfolders and notes. Deleting a folder that is already gone changes nothing (deleted: false).',
   attach_file:
     'Store a file in this git notebook (committed under attachments/) and add it at the end of a note (or of the section under heading): a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. ' +
-    `Send the file in base64 as data, at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB (file_too_large). Attaching the same file to a note that already has it changes nothing (added: false).`,
+    `Send the file in base64 as data, at most ${formatBytes(MAX_ATTACHMENT_BYTES)} (file_too_large). Attaching the same file to a note that already has it changes nothing (added: false).`,
   get_settings:
     'This git notebook’s own settings: timeZone, template.daily and template.weekly (how its daily and weekly notes are made). A setting not listed has its default.',
   set_settings:
@@ -176,7 +177,7 @@ export type LocalToolOutcome =
   | { readonly error: string; readonly result?: Exclude<ToolResult, 'ok'> };
 
 /** How an outcome ended. */
-export function toolResultOf(outcome: LocalToolOutcome): ToolResult {
+function toolResultOf(outcome: LocalToolOutcome): ToolResult {
   return 'error' in outcome ? (outcome.result ?? 'failed') : 'ok';
 }
 

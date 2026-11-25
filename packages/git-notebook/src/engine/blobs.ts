@@ -6,6 +6,7 @@
 import type { Layout } from '../layout';
 import type { GitTransport } from '../transport';
 import { isUpdate } from '../yjs';
+import { formatBytes } from '@penmoss/core/words';
 
 export class BlobReader {
   /** Blob bytes read during this process, by git blob id (logs are content-addressed). */
@@ -98,5 +99,5 @@ export class BlobReader {
 }
 
 function tooLarge(max: number): string {
-  return `larger than ${Math.round(max / (1024 * 1024))} MB`;
+  return `larger than ${formatBytes(max)}`;
 }

@@ -1,7 +1,7 @@
 import { type StoredAttachment } from '../../../src/store/attachment-store';
 import { type NoteRecord } from '@penmoss/model/record';
 import { toMeta } from '@penmoss/model/records';
-import type { LocalNotes } from '../../../src/notes/service';
+import type { LocalNotes } from '../../../src/notes/service-types';
 
 /** An in-memory stand-in for NoteStore (IndexedDB), attachments included (T10). */
 export function memoryNotes(): LocalNotes & {

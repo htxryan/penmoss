@@ -68,7 +68,7 @@ class PenmossLogFiles(
     private fun write(text: String) {
         dir.mkdirs()
         val bytes = text.toByteArray()
-        val max = limits.logsFileKb * 1024L
+        val max = limits.logsFileKb * Limits.KB
         if (current.isFile && current.length() > 0 && current.length() + bytes.size > max) rotate()
         current.appendBytes(bytes)
     }
@@ -102,7 +102,7 @@ class PenmossLogFiles(
                 fresh = true
             }
         }
-        val max = limits.logsFileKb * 1024L
+        val max = limits.logsFileKb * Limits.KB
         for (file in kept) {
             var offset = offsets.getValue(file)
             if (offset < 0) {
@@ -210,7 +210,7 @@ class PenmossLogFiles(
             if (line.isEmpty()) continue
             val time = lineTime(line)
             if (time != null && time < since) break
-            if (raw.size >= limits.reportLines || rawBytes > limits.reportKb * 1024L * 2 + CHUNK) break
+            if (raw.size >= limits.reportLines || rawBytes > limits.reportKb * Limits.KB * 2 + CHUNK) break
             raw += line
             rawBytes += line.toByteArray().size + 1
         }
@@ -273,7 +273,7 @@ class PenmossLogFiles(
          */
         fun select(lines: List<String>, limits: Limits, now: Long): List<String> {
             val since = now - limits.reportHours * HOUR
-            val maxBytes = limits.reportKb * 1024L
+            val maxBytes = limits.reportKb * Limits.KB
             val kept = mutableListOf<String>()
             var bytes = 0L
             for (index in lines.indices.reversed()) {

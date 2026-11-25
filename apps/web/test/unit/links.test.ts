@@ -10,7 +10,8 @@ import {
   othersKey,
 } from '../../src/notes/backlinks';
 import { NoteDirectory, noteHref } from '../../src/notes/directory';
-import { MAX_LIVE_EMBEDS, type Notes } from '../../src/notes/service';
+import { MAX_LIVE_EMBEDS } from '../../src/notes/embed-watcher';
+import type { Notes } from '../../src/notes/service';
 import {
   appendHeading,
   appendLinkParagraph,

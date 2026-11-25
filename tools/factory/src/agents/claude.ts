@@ -44,7 +44,7 @@ export const REMOTE_RUNNER = fileURLToPath(
  * The hooks the runner ends a session by: each keeps its input where the runner looks
  * (`$FACTORY_RC_DIR`), and the runner sets both variables for Claude Code.
  */
-export const REMOTE_HOOKS = Object.fromEntries(
+const REMOTE_HOOKS = Object.fromEntries(
   ['SessionStart', 'Stop', 'StopFailure'].map((event) => [
     event,
     [{ hooks: [{ type: 'command', command: 'node "$FACTORY_RC_SELF" hook' }] }],
@@ -87,7 +87,7 @@ export async function claudeAgent(
  * `claude --remote-control`: the same command line, which the runner turns into an interactive
  * one, and the same stream-json out, so Sandcastle reads it as it reads `claude -p`.
  */
-export function withRemoteControl(
+function withRemoteControl(
   base: AgentProvider,
   name: string,
   runner = REMOTE_RUNNER,
@@ -108,7 +108,7 @@ export function withRemoteControl(
 }
 
 /** A provider whose print command carries extra flags after `claude`. */
-export function withFlags(base: AgentProvider, flags: string): AgentProvider {
+function withFlags(base: AgentProvider, flags: string): AgentProvider {
   return {
     ...base,
     parseStreamLine: (line) => base.parseStreamLine(line),

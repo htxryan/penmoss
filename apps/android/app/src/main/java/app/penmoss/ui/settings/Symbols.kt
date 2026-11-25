@@ -3,12 +3,10 @@ package app.penmoss.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.NotebookGraph
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.Settings
-import app.penmoss.ui.settings.SymbolsScreen
 
 /*
  * Settings → Symbols on the phone (T44, ST13, A747): the web's synced `symbols.list`, the line

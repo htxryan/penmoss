@@ -23,14 +23,14 @@ import type { Downloaded } from './tracker/linear-client.ts';
 
 export type Download = (url: string, maxBytes: number) => Promise<Downloaded>;
 
-export interface AttachmentLimits {
+interface AttachmentLimits {
   /** The most images taken from one issue; the rest are noted, not downloaded. */
   readonly maxFiles: number;
   /** The largest image taken, in bytes. */
   readonly maxBytes: number;
 }
 
-export const ATTACHMENT_LIMITS: AttachmentLimits = { maxFiles: 10, maxBytes: 10 * 1_048_576 };
+const ATTACHMENT_LIMITS: AttachmentLimits = { maxFiles: 10, maxBytes: 10 * 1_048_576 };
 
 /** The folder the images go in: in a run's folder on the host, and in its worktree's `.factory`. */
 export const ATTACHMENTS = 'attachments';
@@ -50,7 +50,7 @@ const IMAGE_TYPES: Readonly<Record<string, string>> = {
 const UPLOAD =
   /(!?\[[^\]\n]*\]\()?(https:\/\/uploads\.linear\.app\/[^\s()<>"'\]]*[^\s()<>"'\].,;:!?])(\))?/g;
 
-export interface Attachment {
+interface Attachment {
   readonly url: string;
   /** The file as the agent reads it, when it was downloaded. */
   readonly path?: string;
@@ -165,7 +165,7 @@ async function take(
 }
 
 /** The prompt's list of the issue's images: where each one is, or why it isn't. */
-export function imagesNote(attachments: readonly Attachment[], relativeTo?: string): string {
+function imagesNote(attachments: readonly Attachment[], relativeTo?: string): string {
   if (attachments.length === 0) return '';
   return [
     "## The issue's images",

@@ -108,7 +108,7 @@ export const GITHUB_CALLS = [
 /** Where the stand-in Mac's Sign in with GitHub sends the person (the fake's own address). */
 export const GITHUB_WEB = 'https://github.test';
 /** The token git's credential helper has for github.com once a test signs in. */
-export const BROWSE_TOKEN = 'gho_e2e0browse0token0000000000000000';
+const BROWSE_TOKEN = 'gho_e2e0browse0token0000000000000000';
 /** Search by meaning's calls (T77), which go to the stand-in Mac's `MeaningHost`. */
 export const MEANING_CALLS = [
   'meaningStatus',
@@ -135,7 +135,7 @@ export const SLOW_SHELL_MS = 3000;
  * feed `offeredAlpha` (null: nothing newer), a download goes 0 → 100, and quitAndInstall is only
  * counted. Setting the channel turns downgrades on, as electron-updater's does (A1196).
  */
-export class FakeUpdateFeed {
+class FakeUpdateFeed {
   offered: string | null = null;
   offeredAlpha: string | null = null;
   checks = 0;

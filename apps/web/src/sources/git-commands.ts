@@ -13,7 +13,7 @@ import type { GitSource } from './git-source';
 import { useSourcesRegistry, useSourcesState } from './hooks';
 
 /** The command ids, in the order the palette and the menu list them. */
-export const GIT_COMMANDS = {
+const GIT_COMMANDS = {
   syncNow: 'git.syncNow',
   signCommits: 'git.signCommits',
   pushAfter: 'git.pushAfter',
@@ -61,7 +61,7 @@ export function onGitControl(listener: () => void): () => void {
  * Which git notebook a command acts on: the open note's, when it is in one; otherwise the only
  * git notebook on this Mac; otherwise none (the command is greyed out, and Settings chooses).
  */
-export function gitTarget(
+function gitTarget(
   sources: readonly { readonly kind: string }[],
   noteSource: { readonly kind: string } | null,
 ): GitSource | null {

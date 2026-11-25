@@ -30,10 +30,6 @@ import app.penmoss.editor.EditorWebView
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.engine.settings.ThemeEdits
 import app.penmoss.engine.settings.string
-import app.penmoss.ui.settings.AppearanceScreen
-import app.penmoss.ui.settings.THEME_SAVE_DELAY_MS
-import app.penmoss.ui.settings.ThemeEditorEntry
-import app.penmoss.ui.settings.ThemeEditorScreen
 import kotlinx.serialization.json.JsonObject
 import org.junit.After
 import org.junit.Assert.assertEquals

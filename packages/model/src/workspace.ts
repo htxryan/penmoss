@@ -43,11 +43,11 @@ import * as Y from '@y/y';
 
 export const WORKSPACE_FOLDERS = 'folders';
 export const WORKSPACE_NOTES = 'notes';
-export const WORKSPACE_ROOT = 'root';
-export const WORKSPACE_SETTINGS = 'settings';
-export const WORKSPACE_FOLDER_TRASH = 'folderTrash';
+const WORKSPACE_ROOT = 'root';
+const WORKSPACE_SETTINGS = 'settings';
+const WORKSPACE_FOLDER_TRASH = 'folderTrash';
 /** Each tag's description, by its full path (PEN-68). */
-export const WORKSPACE_TAG_DESCRIPTIONS = 'tagDescriptions';
+const WORKSPACE_TAG_DESCRIPTIONS = 'tagDescriptions';
 /** How long a deleted folder can be restored, as a deleted note (A83). */
 export const FOLDER_TRASH_DAYS = 30;
 const FOLDER_TRASH_MS = FOLDER_TRASH_DAYS * 24 * 60 * 60 * 1000;
@@ -358,7 +358,7 @@ function trashedFoldersOf(record: Y.Node): TrashedFolderRecord[] {
 }
 
 /** The folders Trash remembers, for `fallbackFolder`: each deleted folder and its subfolders. */
-export function goneFolders(doc: Y.Doc): GoneFolder[] {
+function goneFolders(doc: Y.Doc): GoneFolder[] {
   const out: GoneFolder[] = [];
   for (const [id, value] of doc.get(WORKSPACE_FOLDER_TRASH).attrEntries()) {
     if (!(value instanceof Y.Node)) continue;
@@ -787,7 +787,7 @@ export const DEVICE_MAP = 'device';
  * the Macs and browsers, `mobile/<key>` for the phones, beside the shared `device/<key>`. A null
  * there is that platform's "back to the default", which the shared value doesn't override.
  */
-export const platformMap = (platform: SettingsPlatform): string => platform;
+const platformMap = (platform: SettingsPlatform): string => platform;
 
 /**
  * The device map, without the notebook's own keys (a client may once have put one there). With a

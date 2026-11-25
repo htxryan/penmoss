@@ -23,7 +23,7 @@ export const ISOLATED = {
 } as const;
 
 /** This process's environment with GIT_ENV, and git never prompts: for a test's own git. */
-export const gitEnv = (): NodeJS.ProcessEnv => ({
+const gitEnv = (): NodeJS.ProcessEnv => ({
   ...process.env,
   ...GIT_ENV,
   GIT_TERMINAL_PROMPT: '0',
@@ -58,7 +58,7 @@ export interface Sandbox {
   cleanup(): void;
 }
 
-export interface Colleague {
+interface Colleague {
   readonly path: string;
   /** Writes files (null removes one), commits and pushes to `branch`. */
   commit(files: Record<string, string | null>, message?: string, branch?: string): string;

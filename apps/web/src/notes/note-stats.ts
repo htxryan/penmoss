@@ -7,14 +7,14 @@ import type { CollabEditor } from '@penmoss/editor';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useNotes, useSyncState } from './hooks';
 import { gitSaveStatus, type SaveStatus } from './save-status';
-import type { OpenNote } from './service';
+import type { OpenNote } from './open-note';
 import { docText, textStats, type TextStats } from '@penmoss/model/stats';
 import { loadTokenCounter } from './tokens';
 
 type Editor = CollabEditor['editor'];
 
 /** How long typing must pause before the counts are taken again. */
-export const COUNT_DELAY_MS = 400;
+const COUNT_DELAY_MS = 400;
 const SELECTION_DELAY_MS = 150;
 
 export interface NoteCounts {

@@ -4,7 +4,7 @@
  */
 import { PLATFORMS, type Platform } from './config.ts';
 
-export interface PlatformResult {
+interface PlatformResult {
   readonly inScope: boolean;
   readonly proofSpecs: readonly string[];
 }

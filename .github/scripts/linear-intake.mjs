@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-export const LINEAR_API = 'https://api.linear.app/graphql';
+const LINEAR_API = 'https://api.linear.app/graphql';
 
 /** The Penmoss team (PEN) in the Redhale workspace, and its ids this needs. */
 export const PEN = {
@@ -73,7 +73,7 @@ export function issueInput(issue, repo) {
  * @param {Record<string, unknown>} variables
  * @param {typeof fetch} [fetcher]
  */
-export async function linear(key, query, variables, fetcher = fetch) {
+async function linear(key, query, variables, fetcher = fetch) {
   const res = await fetcher(LINEAR_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: key },

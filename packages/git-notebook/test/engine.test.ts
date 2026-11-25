@@ -809,7 +809,7 @@ describe('what a review of G1+G2 found (#165)', () => {
     a.ops.createNote({ title: 'Two', markdown: 'y' });
     const report = await a.engine.sync();
     expect(report.commit).not.toBeNull();
-    expect(report.skipped).toEqual({ [bad]: 'not a Yjs update', [huge]: 'larger than 0 MB' });
+    expect(report.skipped).toEqual({ [bad]: 'not a Yjs update', [huge]: 'larger than 4.1 KB' });
     expect(titles(a)).toEqual(['One', 'Two']);
     // Still skipped, and still reported, on the next sync and after a restart.
     a.ops.createNote({ title: 'Three', markdown: 'z' });

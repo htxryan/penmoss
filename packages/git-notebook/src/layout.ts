@@ -134,17 +134,6 @@ export class Layout {
   }
 }
 
-/** A directory target as a layout root: `docs/notes` → `docs/notes/`, '' or `/` → ''. */
-export function rootOf(dir: string | null | undefined): string {
-  const clean = (dir ?? '')
-    .split('/')
-    .filter((part) => part !== '' && part !== '.')
-    .join('/');
-  if (clean.split('/').some((part) => part === '..'))
-    throw new RangeError(`Not a directory: ${dir}`);
-  return clean ? `${clean}/` : '';
-}
-
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 

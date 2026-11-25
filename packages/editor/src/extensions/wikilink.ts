@@ -168,7 +168,7 @@ export function wikilinkExtension(services?: LinkServices) {
  * Opens the link at `pos`. An unresolved link creates its note first and
  * points the link at it (a user action, so it may write).
  */
-export function followLink(
+function followLink(
   view: EditorView,
   pos: number,
   where: OpenWhere,

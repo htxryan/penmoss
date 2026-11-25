@@ -4,7 +4,7 @@ import { usePopover } from '../shell/popover';
 import { GIT_VERSIONS } from './source';
 
 /** The user docs' page on History, for the ⓘ's Learn More. */
-export const HISTORY_DOCS = 'https://penmoss.app/docs/history/#version-history';
+const HISTORY_DOCS = 'https://penmoss.app/docs/history/#version-history';
 
 /**
  * History's ⓘ, in the note panel's head beside Close (Ryan's review of #192, finding 13): how

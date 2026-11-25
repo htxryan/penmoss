@@ -15,7 +15,6 @@ import app.penmoss.engine.git.OwnerAnswer
 import app.penmoss.engine.git.OwnerConfirm
 import app.penmoss.security.SecretBox
 import kotlinx.coroutines.runBlocking
-import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -124,7 +124,7 @@ tasks:
       - node --test scripts/audit-secrets.test.mjs
 
   lint:
-    desc: ESLint, stylelint (no literal colours, T28; no literal type sizes, A1561) and Prettier check across the repo
+    desc: ESLint, stylelint (no literal colours, T28; no literal type sizes, A1561), Prettier, knip's unused exports and detekt's dead Kotlin (PEN-187) across the repo
     cmds:
       # Type-aware linting of the whole repo outgrew Node's default heap on an 11 GB machine
       # (about 2 GB there; T39 pass 3): it ran out of memory on the agent worker.
@@ -136,6 +136,14 @@ tasks:
       - pnpm exec prettier --check .
       # No planning or roadmap files in the repository: they live in GitHub issues (W13).
       - sh scripts/no-plan-files.sh
+      # An export nothing outside its own file uses (knip.json, PEN-187).
+      - pnpm exec knip
+      - task: lint:kotlin
+
+  lint:kotlin:
+    desc: "The Android app's Kotlin: detekt fails on an unused import or an unused private function, property or class, and nothing else (apps/android/detekt.yml, PEN-187). Needs Java 17+"
+    cmds:
+      - bash scripts/pinned-tool.sh detekt --input apps/android --excludes '**/build/**' --config apps/android/detekt.yml
 
   format:
     desc: Format the repo with Prettier

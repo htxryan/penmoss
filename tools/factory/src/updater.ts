@@ -19,7 +19,7 @@ import type { Exec } from './exec.ts';
 import { mustGit } from './git.ts';
 
 /** What main changes that the factory runs from its code checkout. */
-export const FACTORY_PATHS = ['tools/factory/', 'scripts/vm/'] as const;
+const FACTORY_PATHS = ['tools/factory/', 'scripts/vm/'] as const;
 
 /**
  * Whether a changed file under FACTORY_PATHS changes what the installed factory runs (A1344).

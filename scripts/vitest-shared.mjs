@@ -8,7 +8,7 @@ import { availableParallelism } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 
 /** `pnpm budgets` (`task budgets`) sets this: run only the *.budget.test.* files, one at a time. */
-export const budgets = process.env.PENMOSS_BUDGETS === '1';
+const budgets = process.env.PENMOSS_BUDGETS === '1';
 
 /**
  * How many test files run at once. `PENMOSS_VITEST_WORKERS` decides when set. CI's hosted

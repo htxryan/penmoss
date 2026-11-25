@@ -18,14 +18,14 @@ const GENERIC: Readonly<Record<string, string>> = {
 };
 
 /** The first family in a computed `font-family`, as a person names it. */
-export function firstFamily(stack: string): string {
+function firstFamily(stack: string): string {
   const first = (stack.split(',')[0] ?? '').trim().replace(/^["']|["']$/g, '');
   if (first === '') return 'System';
   return GENERIC[first.toLowerCase()] ?? first;
 }
 
 /** A computed `font-size` in px, to a tenth: "16 px", "13.5 px". */
-export function pixels(size: string): string {
+function pixels(size: string): string {
   const value = Number.parseFloat(size);
   if (!Number.isFinite(value)) return size;
   const rounded = Math.round(value * 10) / 10;

@@ -263,7 +263,7 @@ function overLights(page: Page): Promise<string[]> {
         const width = box.right - box.left;
         const height = box.bottom - box.top;
         if (width <= 0 || height <= 0) continue;
-        if (element.closest('[inert], [hidden], .pm-visually-hidden')) continue;
+        if (element.closest('[inert], [hidden], .sr-only')) continue;
         const hits =
           box.left < area.right &&
           box.right > area.left &&

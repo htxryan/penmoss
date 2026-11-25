@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -83,6 +83,60 @@ describe('NodeMeaning (T75)', () => {
     await setMeaningEnabled(home, true);
     const opened = await node.open('mcp');
     expect(opened).not.toBeNull();
+    await opened!.close();
+  });
+
+  it('frees an older model and its vectors once the new model opens', async () => {
+    const node = meaning();
+    // What the model before an update left: its folder, a partial download and its vectors.
+    const oldModel = join(home, 'models', 'tiny@fedcba9876543210');
+    const oldPartial = join(home, 'models', '.tiny@fedcba9876543210.partial');
+    const oldVectors = join(home, 'vectors', 'tiny_fedcba98_4_p1');
+    for (const dir of [oldModel, oldPartial, oldVectors]) mkdirSync(dir, { recursive: true });
+    writeFileSync(join(oldModel, 'model.onnx'), 'old');
+    writeFileSync(join(oldVectors, 'app.seg'), 'old');
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60_000);
+    for (const path of [
+      oldModel,
+      join(oldModel, 'model.onnx'),
+      oldPartial,
+      oldVectors,
+      join(oldVectors, 'app.seg'),
+    ]) {
+      utimesSync(path, twoWeeksAgo, twoWeeksAgo);
+    }
+    // An older penmoss mcp still indexing with its model: its folder is old, a segment it appends to is not.
+    const busyVectors = join(home, 'vectors', 'tiny_0123abcd_4_p1');
+    mkdirSync(busyVectors, { recursive: true });
+    writeFileSync(join(busyVectors, 'seg-mcp.bin'), 'old');
+    utimesSync(busyVectors, twoWeeksAgo, twoWeeksAgo);
+    // Another model's download still going (changed just now): an older penmoss may be at it.
+    const freshPartial = join(home, 'models', '.other@0123456789abcdef.partial');
+    mkdirSync(freshPartial, { recursive: true });
+    await node.fetch();
+    // Fetched but not opened yet: nothing is removed.
+    expect(existsSync(oldModel)).toBe(true);
+    // The CLI and penmoss mcp never remove another model's files: an older one may use them.
+    const byMcp = await node.open('mcp');
+    await byMcp!.close();
+    expect(existsSync(oldModel)).toBe(true);
+    const opened = await node.open('app');
+    await opened!.cache.put(new Map([['a'.repeat(64), new Float32Array(4).fill(0.5)]]));
+    const lease = await opened!.lease();
+    expect(lease).toBeDefined();
+    for (const dir of [oldModel, oldPartial, oldVectors]) expect(existsSync(dir)).toBe(false);
+    expect(existsSync(freshPartial)).toBe(true);
+    expect(existsSync(busyVectors)).toBe(true);
+    // This model, its vectors and the lease stay.
+    expect((await node.status()).state).toBe('ready');
+    expect(await node.indexBytes()).toBeGreaterThan(0);
+    expect(existsSync(join(home, 'vectors', 'indexer.lease'))).toBe(true);
+    expect(await node.removeOthers()).toEqual([]);
+    // A week on, the stopped download and the stopped index go too.
+    const weekOn = Date.now() + 8 * 24 * 60 * 60_000;
+    expect((await node.removeOthers(undefined, weekOn)).sort()).toEqual(
+      [freshPartial, busyVectors].sort(),
+    );
     await opened!.close();
   });
 });

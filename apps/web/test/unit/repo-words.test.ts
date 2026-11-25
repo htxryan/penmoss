@@ -7,9 +7,10 @@ describe('the repository and folder words', () => {
   it('says when a repository was last pushed', () => {
     const now = Date.parse('2026-11-07T12:00:00Z');
     expect(pushedWords(null, now)).toBe('never pushed');
-    expect(pushedWords('2026-11-07T11:30:00Z', now)).toBe('30 minutes ago');
-    expect(pushedWords('2026-11-06T12:00:00Z', now)).toBe('yesterday');
-    expect(pushedWords('2026-10-29T12:00:00Z', now)).toBe('last week');
+    // Core's timeAgo, as every screen says how long ago (PEN-188).
+    expect(pushedWords('2026-11-07T11:30:00Z', now)).toBe('30 min ago');
+    expect(pushedWords('2026-11-07T09:00:00Z', now)).toBe('3 h ago');
+    expect(pushedWords('not a date', now)).toBe('');
   });
 
   it('checks folder names', () => {

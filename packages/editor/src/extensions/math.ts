@@ -23,7 +23,7 @@ type Katex = (typeof import('katex'))['default'];
 let katex: Promise<Katex> | null = null;
 
 /** KaTeX and its stylesheet (fonts are files next to it, loaded by the browser as needed). */
-export function loadKatex(): Promise<Katex> {
+function loadKatex(): Promise<Katex> {
   katex ??= Promise.all([import('katex'), import('katex/dist/katex.min.css')]).then(
     ([module]) => module.default,
   );
@@ -89,7 +89,7 @@ function openFormulaTracker(): Plugin<OpenFormula | null> {
  * Enter while it is selected) opens a field to edit the LaTeX. A block
  * formula previews while it is edited.
  */
-export class MathView implements NodeView {
+class MathView implements NodeView {
   readonly dom: HTMLElement;
   private readonly output: HTMLElement;
   private readonly preview: HTMLElement | null;

@@ -29,7 +29,7 @@ export const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
  * No network at all, from the first request: every connection goes to a
  * proxy nobody listens on (loopback included), and no name resolves.
  */
-export const OFFLINE_ARGS = [
+const OFFLINE_ARGS = [
   '--proxy-server=http://127.0.0.1:9',
   '--proxy-bypass-list=<-loopback>',
   '--host-resolver-rules=MAP * ~NOTFOUND',
@@ -39,7 +39,7 @@ const dirs: string[] = [];
 let sharedGitConfig: string | null = null;
 
 /** A git config for the app's git: a committer, and no signing (written once per run). */
-export function gitConfig(): string {
+function gitConfig(): string {
   if (sharedGitConfig) return sharedGitConfig;
   const file = join(mkdtempSync(join(tmpdir(), 'penmoss-gitconfig-')), 'gitconfig');
   writeFileSync(
@@ -92,7 +92,7 @@ export interface Launched {
 export type AnalyticsAnswer = 'ask' | 'yes' | 'no';
 
 /** A stand-in endpoint nobody listens on: without a spec's own, nothing is ever sent anywhere. */
-export const NO_ANALYTICS_ENDPOINT = 'http://127.0.0.1:9';
+const NO_ANALYTICS_ENDPOINT = 'http://127.0.0.1:9';
 
 /** Writes `home`'s analytics.json with `answer`, unless it has one (a launch again keeps it). */
 export function answerAnalytics(home: string, answer: AnalyticsAnswer): void {
@@ -120,7 +120,7 @@ export function answerAnalytics(home: string, answer: AnalyticsAnswer): void {
 }
 
 /** Writes `userData`'s ai-keys.json saying the first run asked, unless it has one. */
-export function answerAiQuestion(userData: string): void {
+function answerAiQuestion(userData: string): void {
   const file = join(userData, 'ai-keys.json');
   if (existsSync(file)) return;
   mkdirSync(userData, { recursive: true });
@@ -307,24 +307,8 @@ async function windowAt(app: ElectronApplication, capture: boolean): Promise<Pag
   return find()!;
 }
 
-export const mainPage = (app: ElectronApplication) => windowAt(app, false);
+const mainPage = (app: ElectronApplication) => windowAt(app, false);
 export const capturePage = (app: ElectronApplication) => windowAt(app, true);
-
-/** Stands in for the browser: links the app opens are recorded (`openedUrls`), not opened. */
-export async function stubBrowser(app: ElectronApplication): Promise<void> {
-  await app.evaluate(({ shell }) => {
-    const opened: string[] = [];
-    Object.assign(globalThis, { openedUrls: opened });
-    shell.openExternal = (url: string) => {
-      opened.push(url);
-      return Promise.resolve();
-    };
-  });
-}
-
-/** What the app has opened in the (stubbed) browser so far. */
-export const openedUrls = (app: ElectronApplication): Promise<string[]> =>
-  app.evaluate(() => [...(globalThis as unknown as { openedUrls: string[] }).openedUrls]);
 
 /** The main process's test hooks (main.ts, `penmossDesktop`). */
 interface MainHooks {
@@ -494,7 +478,7 @@ export const notebookSection = (page: Page, name: string) =>
   });
 
 /** Waits until the notebook's row in Settings → Notebooks says it has synced. */
-export async function notebookSynced(page: Page, name: string): Promise<void> {
+async function notebookSynced(page: Page, name: string): Promise<void> {
   const back = page.url();
   if (!back.endsWith('/settings/git-notebooks')) await go(page, '/settings/git-notebooks');
   const row = page.getByTestId('git-notebook-row').filter({ hasText: name });

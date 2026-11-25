@@ -5,7 +5,7 @@
  * value set before, or by hand, that is not one of the menu's is kept as an extra choice.
  */
 import type { GitSyncStatus } from './engine-host';
-import { counted } from '@penmoss/core/words';
+import { counted, timeAgo } from '@penmoss/core/words';
 
 export interface CadenceChoice {
   readonly value: number;
@@ -55,15 +55,8 @@ export const PHASE_WORDS: Record<GitSyncStatus['phase'], string> = {
   stopped: 'Sync Stopped',
 };
 
-/** "just now", "2 min ago", "3 h ago", or the day for anything older than a day. */
-export function agoWords(at: number, now = Date.now()): string {
-  const minutes = Math.floor((now - at) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(at);
-}
+/** "just now", "2 min ago", "3 h ago", or the day for anything older: core's `timeAgo`. */
+export const agoWords = (at: number, now = Date.now()): string => timeAgo(at, now);
 
 /** The dot's state, as the sidebar and the Settings nav show it: fine, at work, or stopped. */
 export type DotState = 'ok' | 'syncing' | 'offline' | 'error';

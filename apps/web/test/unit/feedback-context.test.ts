@@ -21,7 +21,7 @@ import {
   sidebarOn,
   type GatherDeps,
 } from '../../src/feedback/gather';
-import type { OpenNote } from '../../src/notes/service';
+import type { OpenNote } from '../../src/notes/open-note';
 
 const MARKER = 'MARKER-7f3a9c-quietly-unique';
 const NOTE = '01JBX0000000000000000000AA';

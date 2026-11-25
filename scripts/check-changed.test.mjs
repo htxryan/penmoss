@@ -56,6 +56,10 @@ test('shared config in the change itself runs the whole check', () => {
   assert.equal(plan(dir), '[check:changed] plan: full');
   const committed = repo([['Taskfile.yml']]);
   assert.equal(plan(committed), '[check:changed] plan: full');
+  // The Workers' runtime types sit in no package, and every Worker's typecheck reads them.
+  const runtime = repo([['tools/a/one.ts']]);
+  write(runtime, 'types/workers-runtime.d.ts');
+  assert.equal(plan(runtime), '[check:changed] plan: full');
 });
 
 test('a ref still checks everything since its merge base', () => {

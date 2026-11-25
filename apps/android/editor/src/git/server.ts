@@ -125,13 +125,13 @@ export interface ServerState {
 export const SERVER_STATE_KEY = 'android:server';
 
 /** Rows per `/sync/changes` page (the server's page size). */
-export const CHANGES_PAGE = 200;
+const CHANGES_PAGE = 200;
 /** Notes per `/sync/batch` request (the server's limit). */
-export const BATCH_MAX_NOTES = 50;
+const BATCH_MAX_NOTES = 50;
 /** Uploads per note in one request (the server's `BATCH_MAX_UPDATES`). */
-export const BATCH_MAX_UPDATES = 200;
+const BATCH_MAX_UPDATES = 200;
 /** A note's text in a batch reply, as the server caps it (T40 P6). */
-export const MAX_TEXT_BYTES = 256 * 1024;
+const MAX_TEXT_BYTES = 256 * 1024;
 /** Captures remembered for retries. */
 const MAX_CAPTURES = 2_000;
 const EXCERPT_CHARS = 200;
@@ -167,20 +167,20 @@ export async function captureNoteId(captureId: string): Promise<string> {
 const SHA256 = /^[0-9a-f]{64}$/;
 
 /** The app's own route for them: only Penmoss's Kotlin reaches this server (never an agent). */
-export const DEVICE_SETTINGS_PATH = '/android/device-settings';
+const DEVICE_SETTINGS_PATH = '/android/device-settings';
 /** Every phone shares the phones' copy of the look and layout (PEN-156, A1605). */
-export const SETTINGS_PLATFORM: SettingsPlatform = 'mobile';
+const SETTINGS_PLATFORM: SettingsPlatform = 'mobile';
 /**
  * The agent sessions the WorkspaceDoc lists (T60, A1060, A1076), for Send to… and the gone check:
  * the app's own route, as the device settings'.
  */
-export const AGENT_SESSIONS_PATH = '/android/agent-sessions';
+const AGENT_SESSIONS_PATH = '/android/agent-sessions';
 /** At most this many settings in one change, as the server's `PUT /api/settings`. */
 const DEVICE_SETTINGS_PER_CHANGE = 50;
 const SETTING_KEY = /^[A-Za-z0-9._-]{1,200}$/;
 
-export const EPOCH_MISMATCH = 'Epoch mismatch';
-export const GONE = 'Gone';
+const EPOCH_MISMATCH = 'Epoch mismatch';
+const GONE = 'Gone';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -198,7 +198,7 @@ const empty = (status: number): LocalReply => ({ status, headers: {}, body: new 
 const refusal = (status: number, code: string, message: string, extra: Body = {}) =>
   json(status, { error: { code, message, ...extra } });
 
-export function newEpoch(): string {
+function newEpoch(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(12));
   return `git-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }

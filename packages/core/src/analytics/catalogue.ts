@@ -203,7 +203,7 @@ export const COMMAND_NAMES: readonly string[] = [
  * Screen kinds: what kind of page, never a route or an id. `settings.<section>` for each
  * Settings page, and `firstrun.<step>` for each first-run screen.
  */
-export const SETTINGS_SCREENS: readonly string[] = [
+const SETTINGS_SCREENS: readonly string[] = [
   'appearance',
   'sidebar',
   'note',
@@ -330,7 +330,7 @@ export const DIALOG_NAMES: readonly string[] = [
 ];
 
 /** The Mac's native menu roles, and the tray's and the menu bar's own items. */
-export const MENU_NAMES: readonly string[] = [
+const MENU_NAMES: readonly string[] = [
   'about',
   'undo',
   'redo',
@@ -1291,7 +1291,7 @@ export const CLICK_NAMES: readonly string[] = [
  * `layout` (the sidebar, the note panel, Full Width, the theme's mode and the tabs) take props of
  * their own (`NAME_PROP_SPECS`), and no other app event takes those.
  */
-export const APP_NAMES: readonly string[] = [
+const APP_NAMES: readonly string[] = [
   'launch',
   'quit',
   'foreground',
@@ -1299,7 +1299,7 @@ export const APP_NAMES: readonly string[] = [
   'window',
   'layout',
 ];
-export const FEEDBACK_NAMES: readonly string[] = ['sent'];
+const FEEDBACK_NAMES: readonly string[] = ['sent'];
 
 /**
  * The areas a `scroll` event names (PEN-175): the note, the sidebar and its own scrollers (the
@@ -1333,22 +1333,22 @@ export const RETIRED_CLICK_NAMES: readonly string[] = [
   'firstrun.link',
   'firstrun.option',
 ];
-export const SYNC_NAMES: readonly string[] = ['pass'];
+const SYNC_NAMES: readonly string[] = ['pass'];
 
 /**
  * Session detail (PEN-177): a note's shape when it opens, typing bursts, block splices, the cursor
  * and the selection, by the note's ref and block positions, never a word.
  */
-export const NOTE_NAMES: readonly string[] = ['open', 'typing', 'blocks', 'cursor', 'select'];
+const NOTE_NAMES: readonly string[] = ['open', 'typing', 'blocks', 'cursor', 'select'];
 
 /**
  * The fields an `input` event names (PEN-177): the dialog the field is in (DIALOG_NAMES), and
  * Settings' Search Settings field, which is on a page, not in a dialog.
  */
-export const INPUT_NAMES: readonly string[] = [...DIALOG_NAMES, 'settingsSearch'];
+const INPUT_NAMES: readonly string[] = [...DIALOG_NAMES, 'settingsSearch'];
 
 /** The sidebar tree (PEN-177): a folder expanded or collapsed, a note opened from it. */
-export const TREE_NAMES: readonly string[] = ['expand', 'collapse', 'open'];
+const TREE_NAMES: readonly string[] = ['expand', 'collapse', 'open'];
 
 /** The CLI's commands (COMMANDS in packages/cli/src/main.ts), and help and version. */
 export const CLI_NAMES: readonly string[] = [

@@ -84,6 +84,7 @@ import app.penmoss.search.SearchActions
 import app.penmoss.search.SearchRequest
 import app.penmoss.search.SearchResult
 import app.penmoss.search.SearchService
+import app.penmoss.ui.common.roles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.size
@@ -266,7 +267,7 @@ fun SearchScreen(
                     if (view.searching && query.isNotBlank()) {
                         CircularProgressIndicator(Modifier.size(12.dp).testTag("searchSpinner"), strokeWidth = 2.dp)
                     }
-                    Text(searchStatus(query, view), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(searchStatus(query, view), style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (query.isNotBlank() && view.answered && !view.searching && view.results.isEmpty() && actions.isEmpty()) {
@@ -283,7 +284,7 @@ fun SearchScreen(
                                 .clickable(role = Role.Button, onClickLabel = "Run", onClick = trackedClick("search.action") { onAction(action) })
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
                                 .testTag("action-${action.id}"),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.roles.rowLabel,
                         )
                     }
                     if (view.results.isNotEmpty()) item(key = "notes", contentType = "heading") { SearchHeading("Notes") }
@@ -377,7 +378,7 @@ private fun SearchHeading(text: String) {
     Text(
         text,
         Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp).semantics { heading() },
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.roles.listHead,
         color = MaterialTheme.colorScheme.primary,
     )
 }
@@ -388,7 +389,7 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
     val haptics = LocalHapticFeedback.current
     val mark = SpanStyle(background = LocalSearchMatch.current, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
     val title = result.title.ifBlank { Items.UNTITLED }
-    val item = NoteItem(result.id, title, Items.plainSnippet(result.snippet).ifBlank { result.excerpt }, dateOf(result.updatedAt))
+    val item = NoteItem(result.id, title, Items.plainSnippet(result.snippet).ifBlank { result.excerpt }, dateOf(result.updatedAt), result.updatedAt)
     Column(
         Modifier.fillMaxWidth()
             .combinedClickable(
@@ -408,7 +409,7 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
     ) {
         Text(
             if (result.titleMarked.isNotEmpty()) markedText(result.titleMarked, mark) else AnnotatedString(title),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.roles.rowLabel,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -420,7 +421,7 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
         if (meta.isNotEmpty()) {
             Text(
                 meta.joinToString("  "),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.roles.meta,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -430,7 +431,7 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
         if (body.isNotEmpty()) {
             Text(
                 body,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.help,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

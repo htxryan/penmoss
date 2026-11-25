@@ -25,15 +25,6 @@ export function insertText(
   (replica.doc.get(NOTE_ROOT).get(block) as Y.Node).insert(offset, text);
 }
 
-export function deleteText(
-  replica: Yjs14Replica,
-  block: number,
-  offset: number,
-  length: number,
-): void {
-  (replica.doc.get(NOTE_ROOT).get(block) as Y.Node).delete(offset, length);
-}
-
 /** Appends a paragraph `before [[link]] after`, laid out as the binding writes an inline atom. */
 export function appendLinkParagraph(
   replica: Yjs14Replica,

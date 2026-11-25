@@ -83,7 +83,7 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("Advanced", PRIVACY, SettingsRoutes.PRIVACY, "How much Penmoss keeps on this phone", "analytics", "telemetry", "limits", "storage", "retention", "diagnostics"),
     entry("Keep Events For", PRIVACY_ADVANCED, SettingsRoutes.PRIVACY, "1–360 days", "analytics", "telemetry", "usage", "retention", "history", "limit"),
     entry("Keep at Most", PRIVACY_ADVANCED, SettingsRoutes.PRIVACY, "500–800,000 events", "analytics", "telemetry", "usage", "retention", "history", "limit"),
-    entry("Log File Size", PRIVACY_ADVANCED, SettingsRoutes.PRIVACY, "256–81,920 KB", "logs", "diagnostics", "disk space", "retention"),
+    entry("Log File Size", PRIVACY_ADVANCED, SettingsRoutes.PRIVACY, "250–80,000 KB", "logs", "diagnostics", "disk space", "retention"),
     entry("Log Files Kept", PRIVACY_ADVANCED, SettingsRoutes.PRIVACY, "1–5 files", "logs", "diagnostics", "disk space", "retention"),
     entry("Keep Log Lines For", PRIVACY_ADVANCED, SettingsRoutes.PRIVACY, "1–360 days", "logs", "diagnostics", "disk space", "retention"),
     entry("Attach Logs from the Last", PRIVACY_ADVANCED, SettingsRoutes.PRIVACY, "1–168 hours of logs in a bug report", "logs", "diagnostics", "bug report", "feedback"),

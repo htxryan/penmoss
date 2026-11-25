@@ -36,7 +36,7 @@ export function macosVersionOf(darwin: string): string {
 }
 
 /** This system's version, major.minor: Electron's own answer for macOS where there is one. */
-export function osVersionOf(platform: NodeJS.Platform, kernel: string = release()): string {
+function osVersionOf(platform: NodeJS.Platform, kernel: string = release()): string {
   if (platform === 'darwin') {
     const system = (process as { getSystemVersion?: () => string }).getSystemVersion?.();
     return system ? majorMinor(system) : macosVersionOf(kernel);

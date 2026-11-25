@@ -5,8 +5,8 @@ import { drawingEditorOpen } from '../drawing/drawings';
 import { goBack, goForward, useHistoryPlace } from '../router';
 
 /** The mouse's back and forward buttons (`MouseEvent.button`). */
-export const MOUSE_BACK = 3;
-export const MOUSE_FORWARD = 4;
+const MOUSE_BACK = 3;
+const MOUSE_FORWARD = 4;
 
 /**
  * Which way a mouse button steps through history, or null for any other button (T51, A943).

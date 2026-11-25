@@ -8,19 +8,19 @@
 import { linkLabel, type ContextPart } from '@penmoss/core/links';
 import { Fragment, type MouseEvent, type ReactNode } from 'react';
 
-export interface BacklinkMention {
+interface BacklinkMention {
   readonly context: readonly ContextPart[];
   readonly embed: boolean;
   readonly heading: string | null;
 }
 
-export interface BacklinkNote {
+interface BacklinkNote {
   readonly id: string;
   readonly title: string;
   readonly mentions: readonly BacklinkMention[];
 }
 
-export interface MentionNote {
+interface MentionNote {
   readonly id: string;
   readonly title: string;
   readonly snippet: readonly { readonly text: string; readonly match: boolean }[];

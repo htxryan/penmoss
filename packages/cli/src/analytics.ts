@@ -37,7 +37,7 @@ const EXIT_NAMES = new Map<number, string>(
 );
 
 /** An exit code's name ("OK", "USAGE"); anything else is ERROR. */
-export function exitName(code: number): string {
+function exitName(code: number): string {
   return EXIT_NAMES.get(code) ?? 'ERROR';
 }
 
@@ -98,7 +98,7 @@ export function recordRun(io: Io, seen: RunSeen, code: number, started: number):
 }
 
 /** How often the MCP server writes what it has recorded. */
-export const TOOL_FLUSH_MS = 1000;
+const TOOL_FLUSH_MS = 1000;
 
 /**
  * The MCP server's recorder: one session per connection, each tool call buffered and written

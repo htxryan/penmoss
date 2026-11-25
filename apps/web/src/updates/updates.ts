@@ -3,7 +3,7 @@
  * reads. Main does the work (apps/desktop/src/updater.ts); UpdatesSettings.tsx shows it.
  */
 import { useEffect, useState } from 'react';
-import { pushedWords } from '../sources/repo-words';
+import { timeAgo } from '@penmoss/core/words';
 import {
   desktop,
   type DesktopReleaseNotes,
@@ -15,18 +15,18 @@ import {
 export const RELEASES_URL = 'https://github.com/htxryan/penmoss/releases';
 
 /** `0.1.436` as people read it: build 436. */
-export function buildOf(version: string): string {
+function buildOf(version: string): string {
   return /^0\.1\.(\d+)$/.exec(version)?.[1] ?? version;
 }
 
 /** A version as people read it: `build 436` from before P5, else `version 0.2.0`. */
-export function nameOf(version: string): string {
+function nameOf(version: string): string {
   const build = buildOf(version);
   return build === version ? `version ${version}` : `build ${build}`;
 }
 
 /** A build from main (`0.2.1-alpha.12`), not a stable release (A1196). */
-export function isAlphaBuild(version: string): boolean {
+function isAlphaBuild(version: string): boolean {
   return /^\d+\.\d+\.\d+-/.test(version);
 }
 
@@ -127,9 +127,9 @@ export function updateChip(state: DesktopUpdateState): string | null {
   }
 }
 
-/** "Stable · checked 5 minutes ago": the channel, and when main last asked. */
+/** "Stable · Checked 5 min ago": the channel, and when main last asked. */
 export function checkedLine(state: DesktopUpdateState, now = Date.now()): string {
   const channel = state.channel === 'alpha' ? 'Alpha' : 'Stable';
   if (!state.checkedAt) return `${channel} · Not Checked Yet`;
-  return `${channel} · Checked ${pushedWords(new Date(state.checkedAt).toISOString(), now)}`;
+  return `${channel} · Checked ${timeAgo(state.checkedAt, now)}`;
 }

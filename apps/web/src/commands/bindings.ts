@@ -8,8 +8,6 @@ import { BINDING_PREFIX, isApplePlatform, rawBindings, usableBindings } from '@p
 import type { BindingStore } from './center';
 import { COMMANDS } from './definitions';
 
-export { BINDING_PREFIX };
-
 /** What the store needs from the Workspace service. */
 export interface SettingsSource {
   settings(): Record<string, unknown>;

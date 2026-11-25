@@ -15,7 +15,7 @@ import { LocalNotebook } from '@penmoss/git-notebook/local';
 import type { NotebookIo, NotebookSyncSummary } from '../../src/io';
 
 /** 22 Oct 2026, 12:00 UTC: when every test notebook's clock starts. */
-export const T0 = Date.UTC(2026, 9, 22, 12, 0, 0);
+const T0 = Date.UTC(2026, 9, 22, 12, 0, 0);
 
 const SYNCED: Omit<NotebookSyncSummary, 'name'> = {
   commit: null,
@@ -92,7 +92,7 @@ export async function memoryNotebook(name = 'notes'): Promise<MemoryNotebook> {
 }
 
 /** What a command did with its notebook: which one, what for, its syncs and saves. */
-export interface Opened {
+interface Opened {
   readonly name: string;
   readonly what: string;
   syncs: number;

@@ -89,7 +89,7 @@ export function selectionSlice(state: EditorState): Slice {
 }
 
 /** Readable plain text for a slice: block text separated by blank lines, no markup. */
-export function plainText(slice: Slice): string {
+function plainText(slice: Slice): string {
   return slice.content.textBetween(0, slice.content.size, '\n\n', leafText).replace(/\s+$/, '');
 }
 
@@ -136,7 +136,7 @@ export function writePayload(data: DataTransfer, payload: ClipboardPayload): voi
  * WebView without a permission; where it does not, the async Clipboard API
  * takes over.
  */
-export async function writeClipboard(doc: Document, payload: ClipboardPayload): Promise<boolean> {
+async function writeClipboard(doc: Document, payload: ClipboardPayload): Promise<boolean> {
   let written = false;
   const onCopy = (event: ClipboardEvent) => {
     if (!event.clipboardData) return;

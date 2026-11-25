@@ -79,12 +79,12 @@ export const BODY_SETTLE_MS = 400;
 
 /** What the page says when a comment cannot be written. */
 export const COMMENT_READ_ONLY = "This note can't be changed here.";
-export const COMMENT_NO_PLACE = 'Put the caret in the note, or select some text, to comment on it.';
+const COMMENT_NO_PLACE = 'Put the caret in the note, or select some text, to comment on it.';
 export const COMMENT_NO_DRAFT =
   'Choose where the comment goes first: select text, or tap in the note.';
 export const COMMENT_GONE = 'That comment is no longer in the note.';
-export const COMMENT_TOO_MANY_THREADS = `A note holds at most ${MAX_THREADS} comment threads.`;
-export const COMMENT_TOO_MANY_REPLIES = `A thread holds at most ${MAX_COMMENTS_PER_THREAD} comments.`;
+const COMMENT_TOO_MANY_THREADS = `A note holds at most ${MAX_THREADS} comment threads.`;
+const COMMENT_TOO_MANY_REPLIES = `A thread holds at most ${MAX_COMMENTS_PER_THREAD} comments.`;
 export const COMMENT_NOT_YOURS = 'Only your own comments can be edited.';
 
 export interface CommentServices {
@@ -109,7 +109,7 @@ export interface CommentServices {
 }
 
 /** Ryan's newest comment in a thread, the one a delivery is for (A1061); null for none. */
-export function newestOwnComment(thread: ThreadData): string | null {
+function newestOwnComment(thread: ThreadData): string | null {
   for (let at = thread.comments.length - 1; at >= 0; at--) {
     const comment = thread.comments[at]!;
     if (comment.author.kind === 'device' && !comment.removed) return comment.id;

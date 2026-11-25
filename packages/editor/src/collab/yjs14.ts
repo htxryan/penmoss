@@ -134,7 +134,7 @@ export function createCollabEditor(options: CollabEditorOptions): CollabEditor {
  * them the editor wrote the defaults back, outside the step. A later change to an attribute
  * has an earlier value to its left, and is undone as usual.
  */
-export function keepsLastBlock(ytype: Y.Node): (item: Y.Item) => boolean {
+function keepsLastBlock(ytype: Y.Node): (item: Y.Item) => boolean {
   interface Node {
     readonly parent: Node | null;
     readonly length: number;
@@ -189,7 +189,7 @@ const guarded = new WeakSet<Plugin>();
  * cannot write a repair into Yjs, so it is left unguarded: it must see a click and an arrow key
  * (transactions that change nothing), and the binding's own changes.
  */
-export interface SelectionOnlySpec {
+interface SelectionOnlySpec {
   readonly selectionOnly?: boolean;
 }
 

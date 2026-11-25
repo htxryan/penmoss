@@ -67,7 +67,7 @@ export interface GitSyncStatus {
   readonly head: string | null;
 }
 
-export const STARTING: GitSyncStatus = {
+const STARTING: GitSyncStatus = {
   phase: 'starting',
   detail: null,
   hostMessage: null,
@@ -87,7 +87,7 @@ export const STARTING: GitSyncStatus = {
 // app's background run pushes it soon. The app sends each notebook's own push and pull cadence.
 
 /** A failure in the phone's words (A824): where changes wait, and where its settings are. */
-export const ANDROID_FAILURE_WORDS: FailureWords = {
+const ANDROID_FAILURE_WORDS: FailureWords = {
   kept: 'Changes stay on this phone and go once it syncs.',
   signIn: 'Check the personal access token in Settings → Git notebooks',
   email: 'set it as this notebook’s commit email in Settings → Git notebooks',

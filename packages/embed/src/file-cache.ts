@@ -294,15 +294,22 @@ export class FileVectorCache implements VectorCache {
   }
 }
 
-/** Deletes the vectors of every model but `keep` (after a model change, or Delete for good). */
-export async function removeOtherVectors(home: string, keep: string): Promise<string[]> {
+/**
+ * Deletes the vectors of every model but `keep`, and of none in `spare` (`NodeMeaning.removeOthers`,
+ * after a model change).
+ */
+export async function removeOtherVectors(
+  home: string,
+  keep: string,
+  spare: readonly string[] = [],
+): Promise<string[]> {
   const root = join(home, 'vectors');
   const own = vectorsDir(home, keep);
   const names = await readdir(root, { withFileTypes: true }).catch(() => []);
   const removed: string[] = [];
   for (const entry of names) {
     const path = join(root, entry.name);
-    if (!entry.isDirectory() || path === own) continue;
+    if (!entry.isDirectory() || path === own || spare.includes(path)) continue;
     await rm(path, { recursive: true, force: true });
     removed.push(path);
   }

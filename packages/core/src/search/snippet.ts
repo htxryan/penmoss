@@ -9,7 +9,7 @@ import { tokenize } from './tokenize';
 
 export const MATCH_START = '\u0002';
 export const MATCH_END = '\u0003';
-export const ELLIPSIS = '…';
+const ELLIPSIS = '…';
 
 /** `text` without the match markers, for indexing and marking (A118). */
 export function searchText(text: string): string {

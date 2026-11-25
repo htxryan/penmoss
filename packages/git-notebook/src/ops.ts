@@ -41,6 +41,7 @@ import * as Y from '@y/y';
 import type { GitNotebookEngine } from './engine';
 import { notebookSalt } from './layout';
 import { isPurged, markPurged } from './purge';
+import { formatBytes } from '@penmoss/core/words';
 
 /** A git notebook's own settings live under this user id in the WorkspaceDoc (A827). */
 export const NOTEBOOK_SETTINGS = NOTEBOOK_MAP;
@@ -319,7 +320,7 @@ export class NotebookOps {
     if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
       throw new NotebookOpError(
         'file_too_large',
-        `Files in a git notebook are at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB`,
+        `Files in a git notebook are at most ${formatBytes(MAX_ATTACHMENT_BYTES)}`,
         413,
       );
     }

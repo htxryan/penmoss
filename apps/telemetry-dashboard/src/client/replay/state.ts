@@ -23,10 +23,10 @@ export interface ReplayEvent {
   readonly props: Readonly<Record<string, PropValue>>;
 }
 
-export type SizeClass = 'compact' | 'medium' | 'expanded';
-export type SidebarState = 'shown' | 'rail' | 'hidden';
-export type PanelState = 'open' | 'closed' | 'none';
-export type ThemeMode = 'light' | 'dark' | 'system';
+type SizeClass = 'compact' | 'medium' | 'expanded';
+type SidebarState = 'shown' | 'rail' | 'hidden';
+type PanelState = 'open' | 'closed' | 'none';
+type ThemeMode = 'light' | 'dark' | 'system';
 
 /** A window when none was recorded: the size class's (as sizeClassOf divides them at 600, 840). */
 const SIZE_CLASS_WINDOWS: Readonly<Record<SizeClass, { width: number; height: number }>> = {

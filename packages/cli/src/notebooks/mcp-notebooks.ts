@@ -36,12 +36,12 @@ import type { NotebookRegistry, StoredNotebook } from './registry';
 /** How long a detached exit sync waits for the stopping server's lock (A847). */
 const DETACHED_SYNC_WAIT_S = 120;
 /** A notebook used this recently is pulled on the cadence; one idle longer is left alone. */
-export const IN_USE_MS = 15 * 60_000;
+const IN_USE_MS = 15 * 60_000;
 /** How long a call waits for a clone's lock (as `--notebook`'s server). */
 const LOCK_WAIT_MS = 30_000;
 
 /** A served notebook: the name the agent passes, and the agent copy it is reached through. */
-export interface ServedClone {
+interface ServedClone {
   readonly name: string;
   readonly entry: StoredNotebook;
 }
@@ -52,7 +52,7 @@ export interface ServedClone {
  * person's clone is not served: its edits would look like the person's. Names are the notebook's
  * own, as the app shows them; two notebooks of one name are told apart by their clones' names.
  */
-export function servedClones(all: readonly StoredNotebook[]): ServedClone[] {
+function servedClones(all: readonly StoredNotebook[]): ServedClone[] {
   const groups = new Map<string, StoredNotebook[]>();
   for (const each of all) {
     const key = each.notebookId ?? `${each.remote}\u0000${each.branch}\u0000${each.dir}`;

@@ -139,7 +139,7 @@ const NODE_MODEL_FIELDS = [
  * HTML parsing and rendering for attributes core shares, takes defaults and
  * validation from core, and drops attributes core does not model.
  */
-export function alignAttributes(
+function alignAttributes(
   parent: Attributes,
   core: Record<string, AttributeSpec> | undefined,
 ): Attributes {

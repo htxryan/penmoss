@@ -35,7 +35,7 @@ const fail = (message: string): never => {
 };
 
 /** Seeded randomness (mulberry32), so a failing seed replays exactly. */
-export function rngFrom(seed: number) {
+function rngFrom(seed: number) {
   let a = seed >>> 0 || 1;
   const next = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -50,10 +50,10 @@ export function rngFrom(seed: number) {
     chance: (p: number) => next() < p,
   });
 }
-export type Rng = ReturnType<typeof rngFrom>;
+type Rng = ReturnType<typeof rngFrom>;
 
 const ULID = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-export function ulidAt(time: number, rng: Rng): string {
+function ulidAt(time: number, rng: Rng): string {
   let out = '';
   for (let rest = time, i = 0; i < 10; i++) {
     out = ULID[rest % 32] + out;
@@ -80,7 +80,7 @@ function title(rng: Rng): string {
 class Crash extends Error {}
 
 /** One writer: an install of the notebook (its storage, its secret, its clone). */
-export class Clone {
+class Clone {
   engine!: GitNotebookEngine;
   ops!: NotebookOps;
   readonly events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -762,7 +762,7 @@ function sameStateVector(a: Y.Doc, b: Y.Doc): boolean {
 }
 
 /** Every clone: the same head, the same WorkspaceDoc and note docs (content, ids, state vectors). */
-export function checkConverged(clones: readonly Clone[]): void {
+function checkConverged(clones: readonly Clone[]): void {
   const [first, ...rest] = clones as [Clone, ...Clone[]];
   const heads = clones.map((c) => c.replica.state.lastHead);
   if (new Set(heads).size !== 1) fail(`clones end on different heads: ${heads.join(' ')}`);
@@ -794,7 +794,7 @@ export function checkConverged(clones: readonly Clone[]): void {
  * for its title, its folder, or a hand-made file taking the name (never for a concurrent claim:
  * claims ride only in landed commits); a purged note never has logs or a file after its purge.
  */
-export function checkHistory(world: World) {
+function checkHistory(world: World) {
   const commits = world.remote.history(world.branch);
   const root = world.root;
   const renames = { title: 0, folder: 0, foreign: 0 };

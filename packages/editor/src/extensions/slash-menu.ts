@@ -38,7 +38,7 @@ import type { ImageServices } from './image';
 import { SuggestionListbox } from './suggestion-listbox';
 import type { LinkServices } from './wikilink';
 
-export const slashMenuKey = new PluginKey('penmossSlashMenu');
+const slashMenuKey = new PluginKey('penmossSlashMenu');
 
 /** Longest query the menu follows; past it, the slash is taken to be text. */
 const MAX_QUERY = 32;
@@ -48,7 +48,7 @@ const MAX_QUERY = 32;
  * (`/math block`) but not start with one, hold two in a row, or run long:
  * then the slash was text, and the menu closes.
  */
-export function findSlashQuery(trigger: Trigger) {
+function findSlashQuery(trigger: Trigger) {
   const match = findSuggestionMatch({ ...trigger, allowSpaces: true });
   if (!match) return null;
   const { query } = match;
@@ -67,7 +67,7 @@ function inCode(state: EditorState): boolean {
  * Whether the block menu may open at `pos` without a typed `/`: in a textblock that is not code,
  * outside tables, and not in a link or inline code.
  */
-export function blockMenuAllowedAt(state: EditorState, pos: number): boolean {
+function blockMenuAllowedAt(state: EditorState, pos: number): boolean {
   const $pos = state.doc.resolve(pos);
   if (!$pos.parent.isTextblock || $pos.parent.type.spec.code) return false;
   for (let depth = $pos.depth; depth > 0; depth -= 1) {

@@ -9,7 +9,7 @@ import { useSourcesState } from './hooks';
 import type { Source } from './registry';
 
 /** Each source's notes, in order. */
-export function openLists(all: readonly Pick<Source, 'notes'>[]): readonly NoteListEntry[] {
+function openLists(all: readonly Pick<Source, 'notes'>[]): readonly NoteListEntry[] {
   return all.flatMap((source) => source.notes.list());
 }
 

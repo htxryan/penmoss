@@ -8,6 +8,7 @@ import { UsageError } from '../args';
 import type { Command, Context } from '../command';
 import { CliError, EXIT } from '../errors';
 import type { NotebookIo, NotebookSyncSummary } from '../io';
+import { formatBytes } from '@penmoss/core/words';
 
 function notebooks(context: Context): NotebookIo {
   if (!context.io.notebooks) {
@@ -315,7 +316,7 @@ export const notebook: Command = {
           `  writer      ${status.writerId ?? '(none yet)'} (${status.writer.kind} “${status.writer.label}”)`,
           `  notes       ${status.notes}${status.unsynced > 0 ? `, ${status.unsynced} changed here and not pushed yet` : ''}`,
           `  last sync   ${status.lastHead ? status.lastHead.slice(0, 7) : 'never'}`,
-          `  on disk     ${Math.ceil(status.cloneBytes / 1024)} KB clone, ${Math.ceil(status.stateBytes / 1024)} KB notes`,
+          `  on disk     ${formatBytes(status.cloneBytes)} clone, ${formatBytes(status.stateBytes)} notes`,
           `  token       ${status.token === 'saved' ? 'saved' : status.token === 'environment' ? 'from PENMOSS_GIT_TOKEN' : 'none (git’s own credentials)'}`,
           `  signing     ${status.signing}`,
           `  commits as  ${status.author.name} <${status.author.email}>${status.author.own ? ' (this notebook’s own)' : ' (git’s user.name and user.email)'}`,

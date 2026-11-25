@@ -66,6 +66,7 @@ import app.penmoss.engine.bridge.CommentTarget
 import app.penmoss.engine.bridge.CommentThread
 import app.penmoss.engine.bridge.DeliveryState
 import app.penmoss.engine.bridge.ThreadStatus
+import app.penmoss.ui.common.roles
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -196,7 +197,7 @@ internal fun CommentsSheet(
                     Text(
                         "Comments",
                         Modifier.weight(1f).padding(vertical = 8.dp).semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.roles.sectionHead,
                     )
                     if (draft == null) {
                         TextButton(onClick = trackedClick("comments.new", onNewComment), enabled = editable, modifier = Modifier.testTag("commentNew")) {
@@ -262,7 +263,7 @@ internal fun CommentsSheet(
                             else -> "No resolved comments."
                         },
                         Modifier.padding(horizontal = 24.dp, vertical = 12.dp).testTag("commentsEmpty"),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.roles.help,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -330,7 +331,7 @@ private fun Quote(text: String, orphaned: Boolean, range: Boolean, note: Boolean
             Text(
                 "Its text was deleted",
                 Modifier.testTag("commentOrphaned"),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.roles.meta,
                 color = MaterialTheme.colorScheme.error,
             )
         }
@@ -345,7 +346,7 @@ private fun Quote(text: String, orphaned: Boolean, range: Boolean, note: Boolean
             Text(
                 if (!range && !note && text.isNotBlank()) "At: $shown" else shown,
                 Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.help,
                 fontStyle = FontStyle.Italic,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 4,
@@ -437,7 +438,7 @@ private fun ThreadCard(
                 Text(
                     it,
                     Modifier.testTag("commentDelivery-${thread.id}"),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.roles.meta,
                     color = if (failed) colors.error else colors.primary,
                 )
             }
@@ -468,7 +469,7 @@ private fun ThreadCard(
         if (thread.status == ThreadStatus.RESOLVED) {
             Text(
                 "Resolved${thread.resolvedBy?.let { " by ${NoteComments.authorLabel(it)}" }.orEmpty()}${thread.resolvedAt?.let { " · ${shortWhen(it, now)}" }.orEmpty()}",
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.roles.meta,
                 color = colors.onSurfaceVariant,
             )
         }
@@ -518,12 +519,12 @@ private fun CommentItem(
             Text(
                 NoteComments.authorLabel(comment.author),
                 Modifier.semantics { if (comment.author.agent) contentDescription = "Agent ${comment.author.label}" },
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.roles.item,
                 fontWeight = FontWeight.Medium,
             )
             Text(
                 " · ${shortWhen(comment.at, now)}${if (comment.edited != null) " · edited" else ""}",
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.roles.meta,
                 color = colors.onSurfaceVariant,
             )
         }
@@ -550,12 +551,12 @@ private fun CommentItem(
             Text(
                 "Comment removed",
                 Modifier.testTag("commentRemoved-${comment.id}"),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.help,
                 fontStyle = FontStyle.Italic,
                 color = colors.onSurfaceVariant,
             )
         } else {
-            Text(comment.body, style = MaterialTheme.typography.bodyMedium)
+            Text(comment.body, style = MaterialTheme.roles.body)
             if (actions) {
                 Row {
                     if (NoteComments.canEdit(comment)) {
@@ -599,7 +600,7 @@ internal fun SendToDialog(
                 ui.problem?.let { problem ->
                     item {
                         Column {
-                            Text(problem, style = MaterialTheme.typography.bodyMedium)
+                            Text(problem, style = MaterialTheme.roles.body)
                             TextButton(onClick = trackedClick("comments.send-to.retry", onRetry)) { Text("Try Again") }
                         }
                     }
@@ -619,7 +620,7 @@ internal fun SendToDialog(
                         Text(
                             NO_SESSIONS_HINT,
                             Modifier.padding(top = 8.dp).testTag("sendToEmpty"),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.roles.body,
                         )
                     }
                 }
@@ -643,7 +644,7 @@ private fun TargetRow(title: String, selected: Boolean, dimmed: Boolean, tag: St
         Text(
             title,
             Modifier.padding(start = 8.dp),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.roles.rowLabel,
             color = if (dimmed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
         )
     }

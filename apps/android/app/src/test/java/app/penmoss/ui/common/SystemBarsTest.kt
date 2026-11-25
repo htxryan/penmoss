@@ -8,7 +8,6 @@ import androidx.core.view.WindowCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.NotebookGraph
 import app.penmoss.PenmossApp
 import app.penmoss.TestGraphs
 import app.penmoss.capture.CaptureActivity

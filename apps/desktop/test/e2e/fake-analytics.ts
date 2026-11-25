@@ -25,7 +25,7 @@ export interface WireEvent {
   readonly props: Readonly<Record<string, unknown>>;
 }
 
-export interface Batch {
+interface Batch {
   readonly v: number;
   readonly install: string;
   readonly events: readonly WireEvent[];
@@ -206,7 +206,7 @@ export function canaryHits(text: string, also: readonly string[] = []): string[]
 }
 
 /** Every file under `dir` (none for a folder that isn't there). */
-export function filesUnder(dir: string): string[] {
+function filesUnder(dir: string): string[] {
   let names: string[];
   try {
     names = readdirSync(dir);

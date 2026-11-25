@@ -1,14 +1,10 @@
 package app.penmoss.git.firstrun
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
-import app.penmoss.ui.common.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,14 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.analytics.trackedClick
 import app.penmoss.feedback.SignInState
 import app.penmoss.ui.common.roles
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 
 /** Where GitHub Access is: asking GitHub with the phone's sign-in, none yet, or refused. */
 private sealed interface Check {
@@ -193,7 +186,7 @@ internal fun GitHubAccess(
                                 .align(Alignment.Center)
                                 .testTag("github-signin-code")
                                 .semantics { contentDescription = "Code ${state.userCode}" },
-                            style = MaterialTheme.roles.pageTitle,
+                            style = MaterialTheme.roles.display,
                         )
                         app.penmoss.ui.common.IconButton(
                             onClick = trackedClick("settings.github.sign-in.copy-code") { deps.copy(state.userCode) },

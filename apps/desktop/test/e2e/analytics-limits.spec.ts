@@ -73,7 +73,7 @@ test('Advanced opens in place; a limit out of range is refused, a lowering that 
   await expect(most.getByTestId('privacy-limit-range')).toHaveText('500–2,000,000 events');
   // How much each group may take, and Reset to Defaults at the foot.
   await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-    'About 95 MB of events at most on this Mac',
+    'About 100 MB of events at most on this Mac',
   );
   await expect(advanced.getByTestId('privacy-space-logs')).toHaveText(
     'Up to 2 MB of logs on this Mac (at most 400 MB)',
@@ -150,7 +150,7 @@ test('Advanced opens in place; a limit out of range is refused, a lowering that 
   await expect.poll(() => recordTotal(page)).toBeLessThanOrEqual(520);
   // 500 events of about 500 bytes each (core's EVENT_BYTES).
   await expect(advanced.getByTestId('privacy-space-usage')).toHaveText(
-    'About 244 KB of events at most on this Mac',
+    'About 250 KB of events at most on this Mac',
   );
   await most.scrollIntoViewIfNeeded();
   await holdForProof(page);

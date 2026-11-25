@@ -36,9 +36,9 @@ export interface TextMatch {
 }
 
 /** A fuzzy span must be at least this close to the quote. */
-export const MIN_QUOTE_SIMILARITY = 0.6;
+const MIN_QUOTE_SIMILARITY = 0.6;
 /** Surroundings at least this close place a rewritten passage, or a point. */
-export const MIN_CONTEXT_SIMILARITY = 0.7;
+const MIN_CONTEXT_SIMILARITY = 0.7;
 /** Characters of each string compared: its first and last halves of this, for long ones. */
 const COMPARED_CHARS = 120;
 /** The length of the pieces looked up exactly to find candidates. */

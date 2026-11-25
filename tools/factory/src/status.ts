@@ -29,7 +29,7 @@ export interface DaemonStatus {
   readonly code?: { readonly dir: string; readonly commit?: Commit };
 }
 
-export function statusPath(config: FactoryConfig): string {
+function statusPath(config: FactoryConfig): string {
   return join(expandHome(config.stateDir), 'status.json');
 }
 

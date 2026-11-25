@@ -96,8 +96,8 @@ class FeedbackFormTest {
         assertEquals(4, FeedbackImages.sampleSize(12_000, 9_000))
         assertEquals(FeedbackImages.Encoding.PNG, FeedbackImages.encodingFor("image/png"))
         for (mime in listOf("image/jpeg", "image/webp", "image/gif")) assertEquals(FeedbackImages.Encoding.JPEG, FeedbackImages.encodingFor(mime))
-        assertNull(FeedbackImages.refusal("image/webp", 10L * 1024 * 1024, 5))
-        assertEquals("That image is over 10 MB", FeedbackImages.refusal("image/png", 10L * 1024 * 1024 + 1, 0))
+        assertNull(FeedbackImages.refusal("image/webp", 10_000_000L, 5))
+        assertEquals("That image is over 10 MB", FeedbackImages.refusal("image/png", 10_000_001L, 0))
         assertEquals("Screenshots must be PNG, JPEG, WebP or GIF images", FeedbackImages.refusal("image/heic", 10, 0))
         assertEquals("At most 6 screenshots", FeedbackImages.refusal("image/png", 10, 6))
     }

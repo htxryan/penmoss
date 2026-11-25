@@ -13,7 +13,7 @@
  */
 import * as Y from '@y/y';
 
-export const NOTE_TITLE = 'title';
+const NOTE_TITLE = 'title';
 export const NOTE_META = 'meta';
 
 export type NoteKind = 'note' | 'daily' | 'weekly';

@@ -108,7 +108,7 @@ export function fromVm(path: string, out: string): string {
 }
 
 /** The newest proof report under the web app's test results (its folder is named by port). */
-export function newestReport(results: string): string | undefined {
+function newestReport(results: string): string | undefined {
   if (!existsSync(results)) return undefined;
   return readdirSync(results)
     .filter((d) => d.startsWith('proof-'))

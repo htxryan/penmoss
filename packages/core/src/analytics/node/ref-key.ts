@@ -24,7 +24,7 @@ import { consentPath, penmossHome, updateConsentFile } from './consent-file';
 export const REF_KEY_PATTERN = /^[0-9a-f]{64}$/;
 
 /** Where the key lives: `PENMOSS_HOME` (tests) or `~/.penmoss`. */
-export function refKeyPath(env?: Readonly<Record<string, string | undefined>>): string {
+function refKeyPath(env?: Readonly<Record<string, string | undefined>>): string {
   return join(penmossHome(env), 'analytics-key');
 }
 
@@ -34,7 +34,7 @@ export function refKeyPathFor(consentFile: string): string {
 }
 
 /** A new key: 32 random bytes as hex. */
-export function newRefKey(): string {
+function newRefKey(): string {
   return randomBytes(32).toString('hex');
 }
 

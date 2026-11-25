@@ -1,5 +1,5 @@
 /**
- * Building the page's elements, shared by main.ts and timeline.ts (PEN-173), so the dashboard
+ * Building the page's elements, shared by the views and timeline.ts (PEN-173), so the dashboard
  * makes its elements one way.
  */
 

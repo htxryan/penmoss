@@ -211,7 +211,7 @@ export type PlanningAction =
   | { readonly kind: 'stuck'; readonly why: string };
 
 /** How long an idle session may go without writing its state before the factory asks Ryan. */
-export const STUCK_MINUTES = 10;
+const STUCK_MINUTES = 10;
 
 /** The dispatcher's next step for a card in Planning. */
 export function planningAction(v: PlanningView): PlanningAction {

@@ -16,7 +16,7 @@ export interface TagDone {
 }
 
 /** How long the toast shows while neither pointed at nor focused. */
-export const TAG_DONE_MS = 8000;
+const TAG_DONE_MS = 8000;
 
 /**
  * A tag change's toast, on the Tags page and the sidebar's Tags (finding 8 of Ryan's review of

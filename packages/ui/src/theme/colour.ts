@@ -16,7 +16,7 @@ export function isHexColour(value: unknown): value is string {
   return typeof value === 'string' && HEX.test(value);
 }
 
-export function parseHex(hex: string): Rgb {
+function parseHex(hex: string): Rgb {
   if (!isHexColour(hex)) throw new Error(`Not a #rrggbb colour: ${String(hex)}`);
   return [
     Number.parseInt(hex.slice(1, 3), 16),
@@ -27,7 +27,7 @@ export function parseHex(hex: string): Rgb {
 
 const clampByte = (value: number) => Math.min(255, Math.max(0, Math.round(value)));
 
-export function toHex([r, g, b]: Rgb): string {
+function toHex([r, g, b]: Rgb): string {
   return `#${[r, g, b].map((channel) => clampByte(channel).toString(16).padStart(2, '0')).join('')}`;
 }
 
@@ -40,7 +40,7 @@ const fromLinear = (c: number) =>
   255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.max(0, c) ** (1 / 2.4) - 0.055);
 
 /** WCAG 2 relative luminance (0 black … 1 white). */
-export function luminance(colour: string | Rgb): number {
+function luminance(colour: string | Rgb): number {
   const [r, g, b] = (typeof colour === 'string' ? parseHex(colour) : colour).map(toLinear) as [
     number,
     number,
@@ -55,9 +55,9 @@ export function contrast(a: string | Rgb, b: string | Rgb): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-export type Oklab = readonly [number, number, number];
+type Oklab = readonly [number, number, number];
 
-export function toOklab(colour: string | Rgb): Oklab {
+function toOklab(colour: string | Rgb): Oklab {
   const [r, g, b] = (typeof colour === 'string' ? parseHex(colour) : colour).map(toLinear) as [
     number,
     number,
@@ -73,7 +73,7 @@ export function toOklab(colour: string | Rgb): Oklab {
   ];
 }
 
-export function fromOklab([L, a, b]: Oklab): Rgb {
+function fromOklab([L, a, b]: Oklab): Rgb {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
   const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;

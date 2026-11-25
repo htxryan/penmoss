@@ -10,10 +10,10 @@ import { readFileSync, statSync } from 'node:fs';
 import { expandHome } from './config.ts';
 import { loadEnvFile } from './secrets.ts';
 
-export const GITHUB_API = 'https://api.github.com';
+const GITHUB_API = 'https://api.github.com';
 
 /** The names `github-app.env` may hold. It is read on the host alone. */
-export const GITHUB_APP_KEYS = {
+const GITHUB_APP_KEYS = {
   GITHUB_APP_ID: "the factory app's ID, from its settings page",
   GITHUB_APP_PRIVATE_KEY: "the path of the app's private key (.pem), mode 600",
 } as const;
@@ -42,7 +42,7 @@ export const READ_ONLY = {
   actions: 'read',
 } as const;
 
-export interface AppIdentity {
+interface AppIdentity {
   /** The app's slug, as its PR comments' author shows it in GraphQL (`penmoss-factory`). */
   readonly slug: string;
   /** The git identity its commits carry. */
@@ -68,7 +68,7 @@ export interface AppOptions {
   readonly now?: () => number;
 }
 
-export class GitHubAppError extends Error {
+class GitHubAppError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'GitHubAppError';

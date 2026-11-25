@@ -35,9 +35,9 @@ const fakeIssue = (host: GitHost, title: string) =>
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Send Feedback' });
 
-/** The size the summary names: the lines joined, in KB to one place. */
+/** The size the summary names: the lines joined, in KB (1,000 bytes) to one place under 10 KB. */
 const size = (lines: readonly string[]) =>
-  `${(new TextEncoder().encode(lines.join('\n')).length / 1024).toFixed(1)} KB`;
+  `${Math.round(new TextEncoder().encode(lines.join('\n')).length / 100) / 10} KB`;
 
 test('a bug report attaches its anonymised logs, exactly as previewed, before the footer', async ({
   page,

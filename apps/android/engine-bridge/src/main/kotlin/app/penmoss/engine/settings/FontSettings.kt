@@ -35,7 +35,7 @@ object FontSettings {
     )
 
     /**
-     * The generic family Android maps each preset to (core `FONT_PRESET_ANDROID`): Compose's
+     * The generic family Android maps each preset to (Android's alone: the Mac uses core's stacks): Compose's
      * `FontFamily` and the editor page's CSS both resolve these to the phone's own faces.
      */
     val ANDROID_FAMILY: Map<String, String> = mapOf(

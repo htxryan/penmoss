@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,6 +51,7 @@ import app.penmoss.analytics.typedLength
 import app.penmoss.editor.FormatState
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.settings.LineSymbol
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.common.symbolColour
 import app.penmoss.ui.open
 
@@ -213,12 +213,12 @@ private fun SymbolButton(state: FormatState, symbols: List<LineSymbol>, onSymbol
                 DropdownMenuItem(
                     text = {
                         if (symbol.kind != null) {
-                            Text("${symbol.glyph}  ${symbol.name}", style = MaterialTheme.typography.titleMedium)
+                            Text("${symbol.glyph}  ${symbol.name}", style = MaterialTheme.roles.rowLabel)
                         } else {
                             Text(
                                 symbol.glyph,
                                 color = symbolColour(symbol.colour),
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.roles.rowLabel,
                             )
                         }
                     },

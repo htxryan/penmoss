@@ -1,5 +1,5 @@
 import { useSyncState } from './hooks';
-import type { AppSyncState } from './service';
+import type { AppSyncState } from './service-types';
 import { syncHint } from './sync-label';
 
 /**

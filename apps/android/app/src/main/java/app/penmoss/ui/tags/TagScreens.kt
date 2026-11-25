@@ -353,7 +353,7 @@ fun TaggedNotesScreen(tag: String, notes: List<NoteItem>, onBack: () -> Unit, on
                 title = {
                     Column {
                         Text("#$tag", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(noteCount(notes.size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(noteCount(notes.size), style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 navigationIcon = { BackButton(onBack) },
@@ -445,13 +445,13 @@ fun RenameTagDialog(
                     modifier = Modifier.fillMaxWidth().testTag("tagRenameField").typedLength("tagRename", "name", value),
                 )
                 if (merge && check is TagRenameCheck.Ready) {
-                    Text("#${check.to} exists: its notes and these will share it.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium)
+                    Text("#${check.to} exists: its notes and these will share it.", Modifier.padding(top = 8.dp), style = MaterialTheme.roles.body)
                 }
                 if (unsent > 0) {
                     Text(
                         "Sync first: this phone has ${if (unsent == 1) "an edit" else "$unsent edits"} not sent yet.",
                         Modifier.padding(top = 8.dp).testTag("tagRenameSyncFirst"),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.roles.body,
                     )
                 }
                 error?.let {
@@ -459,7 +459,7 @@ fun RenameTagDialog(
                         it,
                         Modifier.padding(top = 8.dp).semantics { liveRegion = LiveRegionMode.Polite }.testTag("tagRenameError"),
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.roles.body,
                     )
                 }
             }

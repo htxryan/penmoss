@@ -82,7 +82,7 @@ class LimitsSettingsTest {
                     screen.text(spec.rangeLabel)
                 }
                 for (label in listOf("Keep Events For", "Keep at Most", "Log File Size", "Log Files Kept", "Keep Log Lines For", "Attach Logs from the Last")) screen.text(label)
-                screen.text("About 95 MB of events at most on this phone")
+                screen.text("About 100 MB of events at most on this phone")
                 screen.text("Up to 2 MB of logs on this phone (at most 400 MB)")
                 screen.text("A bug report attaches the last 24 hours, at most 300 lines and 16 KB.")
                 // Reset to Defaults is at the foot, below every field.

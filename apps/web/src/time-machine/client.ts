@@ -35,7 +35,7 @@ const START_MS = 5_000;
 class WorkerBroken extends Error {}
 
 /** A reader on the page, over a transport (tests; the fallback). */
-export function pageTimeline(transport: GitTransport): TimelineClient {
+function pageTimeline(transport: GitTransport): TimelineClient {
   const timeline = new NotebookTimeline(transport, new Layout(transport.root));
   return {
     commits: (refresh) => timeline.commits(refresh),

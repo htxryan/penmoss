@@ -8,7 +8,7 @@
  * that). `--` ends the options; `-` alone is a positional (stdin).
  */
 
-export type FlagType = 'boolean' | 'string' | 'list' | 'integer';
+type FlagType = 'boolean' | 'string' | 'list' | 'integer';
 
 export interface FlagSpec {
   /** The long name, without `--`. */

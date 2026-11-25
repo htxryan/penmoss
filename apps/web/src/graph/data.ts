@@ -13,7 +13,7 @@ import {
 import type { GraphGroup } from '@penmoss/ui/graph/GraphView';
 import type { GraphNoteInput } from '@penmoss/ui/graph/model';
 import { displayTitle } from '../notes/list';
-import type { LocalLinks } from '../notes/service';
+import type { LocalLinks } from '../notes/service-types';
 
 export interface GraphSource {
   readonly folders: readonly FolderRecord[];

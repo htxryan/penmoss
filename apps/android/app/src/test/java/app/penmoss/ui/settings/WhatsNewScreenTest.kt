@@ -10,7 +10,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.ui.settings.WhatsNewScreen
 import app.penmoss.updates.NotesView
 import app.penmoss.updates.notesView
 import app.penmoss.updates.parseNotes

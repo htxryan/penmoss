@@ -155,7 +155,7 @@ export class Channel {
   }
 }
 
-export function describeError(error: unknown): WireError {
+function describeError(error: unknown): WireError {
   if (error instanceof ChannelError) {
     return {
       code: error.code,

@@ -2,6 +2,7 @@ pnpm-lock.yaml
 prototype/
 docs/evidence/
 **/worker-configuration.d.ts
+types/workers-runtime.d.ts
 spikes/
 # Worktrees Claude Code sessions make inside the checkout.
 .claude/worktrees/

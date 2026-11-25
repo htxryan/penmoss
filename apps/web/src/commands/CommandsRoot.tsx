@@ -21,7 +21,7 @@ import { FeedbackToasts } from '../feedback/FeedbackToasts';
 import { captureWindow, openedFromLabel, openingFacts } from '../feedback/open';
 import { useFeedback } from '../feedback/service';
 import { useNoteList, useNotes } from '../notes/hooks';
-import { RESERVED_KEYS } from '../notes/service';
+import { RESERVED_KEYS } from '../notes/service-types';
 import { readOpened, recentNotes } from '../notes/recent';
 import { NoScrollRecording } from '../analytics/scroll';
 import { desktop } from '../desktop/bridge';

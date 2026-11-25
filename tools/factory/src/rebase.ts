@@ -98,7 +98,7 @@ export function unpadRow(line: string): string {
   return `| ${cells.join(' | ')} |`;
 }
 
-export const unpad = (text: string): string => text.split('\n').map(unpadRow).join('\n');
+const unpad = (text: string): string => text.split('\n').map(unpadRow).join('\n');
 
 /**
  * Of `lines` (1-based lines of `text` a branch's diff shows as added), the ones main doesn't
@@ -211,7 +211,7 @@ async function replayNumbering(sandbox: RunSandbox): Promise<string | null> {
 /** A row's key, its first cell: `A1339`, `D66`, `W14` or `A-NEW-1`. */
 const KEY = /^\|\s*([A-Z]+\d+|A-NEW-\d+)\s*\|/;
 
-export const rowKey = (line: string): string | undefined => KEY.exec(line)?.[1];
+const rowKey = (line: string): string | undefined => KEY.exec(line)?.[1];
 
 /** Each keyed row of `lines`, unpadded, by key; null when a key is there twice. */
 function keyedRows(lines: readonly string[]): Map<string, string> | null {

@@ -14,7 +14,7 @@ import {
 } from './events';
 import { eventProblem } from './validate';
 
-export type EventSink = (event: AnalyticsEvent) => void;
+type EventSink = (event: AnalyticsEvent) => void;
 
 export interface RecorderOptions {
   readonly fields: () => ClientFields;

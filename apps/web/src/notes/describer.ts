@@ -150,7 +150,7 @@ export type DescribeStatus =
 
 const IDLE: DescribeStatus = { state: 'idle' };
 /** How many notes Describe Notes Now describes at once. */
-export const BATCH_AT_ONCE = 2;
+const BATCH_AT_ONCE = 2;
 
 export class Describer {
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();

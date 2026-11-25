@@ -307,7 +307,7 @@ test('a note’s shape and typing are recorded by ref, shown in Analytics Data; 
   await expect(most.getByRole('textbox')).toHaveValue('200,000');
   await expect(most.getByTestId('privacy-limit-range')).toHaveText('500–2,000,000 events');
   const space = advanced.getByTestId('privacy-space-usage');
-  await expect(space).toHaveText('About 95 MB of events at most on this Mac');
+  await expect(space).toHaveText('About 100 MB of events at most on this Mac');
   await space.scrollIntoViewIfNeeded();
   await page.mouse.move(0, 0);
   await holdForProof(page);

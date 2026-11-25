@@ -91,6 +91,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import app.penmoss.ui.common.roles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -180,7 +181,7 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
                     it,
                     Modifier.semantics { liveRegion = LiveRegionMode.Assertive }.testTag("feedbackProblems"),
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.body,
                 )
             }
             Label("Type")
@@ -279,13 +280,13 @@ fun FeedbackScreen(ui: FeedbackUi, actions: FeedbackActions) {
 
 @Composable
 private fun Label(text: String) {
-    Text(text, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+    Text(text, Modifier.semantics { heading() }, style = MaterialTheme.roles.listHead, color = MaterialTheme.colorScheme.primary)
 }
 
 @Composable
 private fun FieldError(message: String?, tag: String) {
     if (message == null) return
-    Text(message, Modifier.testTag(tag), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    Text(message, Modifier.testTag(tag), color = MaterialTheme.colorScheme.error, style = MaterialTheme.roles.help)
 }
 
 /** Sending, queued or refused: said at the top and read out (A796). */
@@ -309,7 +310,7 @@ private fun Status(ui: FeedbackUi, actions: FeedbackActions) {
             Text(
                 text,
                 Modifier.weight(1f).padding(vertical = 12.dp).semantics { liveRegion = LiveRegionMode.Polite }.testTag("feedbackStatus"),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.roles.body,
             )
             when (ui.phase) {
                 FeedbackFormModel.Phase.Editing -> TextButton(onClick = trackedClick("feedback.notice.dismiss", actions.dismissNotice)) { Text("OK") }
@@ -448,29 +449,28 @@ internal fun MarkdownPreviewView(markdown: String, modifier: Modifier = Modifier
         }
         for (block in blocks) {
             when (block) {
-                is MarkdownPreview.Block.Paragraph -> Text(text(block.runs), style = MaterialTheme.typography.bodyMedium)
+                is MarkdownPreview.Block.Paragraph -> Text(text(block.runs), style = MaterialTheme.roles.body)
                 is MarkdownPreview.Block.Heading -> Text(
                     text(block.runs),
                     Modifier.semantics { heading() },
                     style = when (block.level) {
-                        1 -> MaterialTheme.typography.titleLarge
-                        2 -> MaterialTheme.typography.titleMedium
-                        else -> MaterialTheme.typography.titleSmall
+                        1 -> MaterialTheme.roles.sectionHead
+                        2 -> MaterialTheme.roles.groupHead
+                        else -> MaterialTheme.roles.listHead
                     },
                 )
                 is MarkdownPreview.Block.Item -> Row(Modifier.padding(start = (16 * block.depth).dp)) {
-                    Text(block.marker, Modifier.width(24.dp), style = MaterialTheme.typography.bodyMedium)
-                    Text(text(block.runs), style = MaterialTheme.typography.bodyMedium)
+                    Text(block.marker, Modifier.width(24.dp), style = MaterialTheme.roles.body)
+                    Text(text(block.runs), style = MaterialTheme.roles.body)
                 }
                 is MarkdownPreview.Block.Quote -> Row {
                     Box(Modifier.width(3.dp).heightIn(min = 20.dp).background(outline))
-                    Text(text(block.runs), Modifier.padding(start = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text(block.runs), Modifier.padding(start = 8.dp), style = MaterialTheme.roles.help, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 is MarkdownPreview.Block.Code -> Text(
                     block.text,
                     Modifier.fillMaxWidth().background(codeBackground, RectangleShape).padding(8.dp),
-                    fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.roles.code,
                 )
             }
         }
@@ -489,7 +489,7 @@ private fun Screenshots(ui: FeedbackUi, actions: FeedbackActions, editing: Boole
     Label("Screenshots (${shots.size} of ${FeedbackLimits.SCREENSHOTS})")
     Text(
         "PNG, JPEG, WebP or GIF, up to 10 MB each. They're made smaller before they're sent.",
-        style = MaterialTheme.typography.bodySmall,
+        style = MaterialTheme.roles.help,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     if (ui.capture != null || ui.capturing) {
@@ -552,12 +552,12 @@ private fun CapturedContext(ui: FeedbackUi, actions: FeedbackActions, editing: B
             .testTag("contextToggle"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(app.penmoss.analytics.AnalyticsCopy.text("feedback.context.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        Text(app.penmoss.analytics.AnalyticsCopy.text("feedback.context.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.roles.listHead, color = MaterialTheme.colorScheme.primary)
         Icon(if (open) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
     }
     Text(
         "Where you are and the note's details, never its text. This is exactly what's sent; untick a group to leave it out.",
-        style = MaterialTheme.typography.bodySmall,
+        style = MaterialTheme.roles.help,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     if (!open) return
@@ -580,8 +580,7 @@ private fun CapturedContext(ui: FeedbackUi, actions: FeedbackActions, editing: B
         Text(
             markdown.ifEmpty { "Nothing: every group is left out." },
             Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape).padding(8.dp).testTag("contextMarkdown"),
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.code,
         )
     }
 }
@@ -616,13 +615,13 @@ private fun AnonymisedLogs(ui: FeedbackUi, actions: FeedbackActions, editing: Bo
             } else {
                 copy.text("feedback.logs.summary", "lines" to ui.logs.size, "size" to FeedbackLogs.formatReportSize(FeedbackLogs.textBytes(ui.logs)))
             }
-            Text(summary, Modifier.testTag("feedbackLogsSummary"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(summary, Modifier.testTag("feedbackLogsSummary"), style = MaterialTheme.roles.meta, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     Text(
         copy.text("feedback.logs.hint", "hours" to limits.reportHours, "maxLines" to limits.reportLines, "kb" to limits.reportKb),
         Modifier.testTag("feedbackLogsHint"),
-        style = MaterialTheme.typography.bodySmall,
+        style = MaterialTheme.roles.help,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     if (ui.logs.isEmpty()) return
@@ -636,7 +635,7 @@ private fun AnonymisedLogs(ui: FeedbackUi, actions: FeedbackActions, editing: Bo
             .testTag("feedbackLogsToggle"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(copy.text("feedback.logs.block.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        Text(copy.text("feedback.logs.block.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.roles.listHead, color = MaterialTheme.colorScheme.primary)
         Icon(if (open) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
     }
     if (!open) return
@@ -644,8 +643,7 @@ private fun AnonymisedLogs(ui: FeedbackUi, actions: FeedbackActions, editing: Bo
         Text(
             ui.logs.joinToString("\n"),
             Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape).padding(8.dp).testTag("feedbackLogsText"),
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.code,
         )
     }
 }

@@ -53,7 +53,7 @@ export interface GitNotebookEntry {
 }
 
 /** One note the owner confirmed deleting for good, and when (epoch ms). */
-export interface PurgeConfirmation {
+interface PurgeConfirmation {
   readonly id: string;
   readonly at: number;
 }

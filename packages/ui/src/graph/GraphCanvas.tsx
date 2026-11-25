@@ -34,7 +34,7 @@ export interface GraphCanvasProps {
 }
 
 /** What tests and the perf harness read from the canvas element (`penmossGraph`). */
-export interface GraphInspector {
+interface GraphInspector {
   /** A node's centre in CSS pixels from the canvas's top left, or null. */
   positionOf(id: string): { x: number; y: number } | null;
   /** Whether the layout has stopped moving. */
@@ -428,11 +428,11 @@ export function GraphCanvas({ data, groups, centre, groupName, onOpen, label }: 
           }
         }}
       />
-      <p id="pm-graph-help" className="pm-visually-hidden">
+      <p id="pm-graph-help" className="sr-only">
         Arrow keys move between notes, Enter opens the note, plus and minus zoom, 0 fits the graph,
         and typing jumps to a title.
       </p>
-      <p className="pm-visually-hidden" aria-live="polite" data-testid="graph-announcement">
+      <p className="sr-only" aria-live="polite" data-testid="graph-announcement">
         {announcement}
       </p>
     </div>

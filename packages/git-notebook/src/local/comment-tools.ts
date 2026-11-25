@@ -64,7 +64,7 @@ function agentPlace(thread: ThreadView, full: boolean): Record<string, unknown> 
 const kindOf = (thread: ThreadView) => (thread.scope === 'note' ? 'note' : thread.kind);
 
 /** A thread as an agent reads it: its quote, its place, its state and every comment, attributed. */
-export function agentThread(thread: ThreadView): Record<string, unknown> {
+function agentThread(thread: ThreadView): Record<string, unknown> {
   return {
     threadId: thread.id,
     status: thread.status,
@@ -94,7 +94,7 @@ export function agentThread(thread: ThreadView): Record<string, unknown> {
  * A thread as list_comment_threads gives it: what it is on and where it stands, how many
  * comments, and who wrote the last; read_comment_thread gives the comments themselves.
  */
-export function agentThreadSummary(thread: ThreadView): Record<string, unknown> {
+function agentThreadSummary(thread: ThreadView): Record<string, unknown> {
   const last = thread.comments.at(-1);
   return {
     threadId: thread.id,
