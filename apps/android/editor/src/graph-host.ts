@@ -48,9 +48,9 @@ export interface GraphHostOptions {
 }
 
 /** How far a finger may move and still tap (CSS pixels): wider than a mouse's 4. */
-export const TAP_SLOP = 10;
+const TAP_SLOP = 10;
 /** How far outside a node's circle a tap still hits it, on screen (a fingertip). */
-export const TOUCH_REACH = 14;
+const TOUCH_REACH = 14;
 
 interface Point {
   x: number;

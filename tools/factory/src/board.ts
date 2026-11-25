@@ -10,7 +10,7 @@ import type { Board, BoardItem } from './tracker/port.ts';
 
 export type { Board, BoardItem } from './tracker/port.ts';
 
-export interface SingleSelectField {
+interface SingleSelectField {
   readonly id: string;
   readonly options: Readonly<Record<string, string>>;
 }

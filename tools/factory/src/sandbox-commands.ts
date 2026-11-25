@@ -82,7 +82,7 @@ export function sandboxTakeCommand(branch: string, from: string, to: string): st
  * its `refs/remotes/origin/main`, and one can lose the ref's lock ("cannot lock ref"): PEN-79 and
  * PEN-80 were picked in the same second. A start that lost it goes again (A1267).
  */
-export const REF_LOCK = /cannot lock ref|unable to update local ref|\.lock': File exists/;
+const REF_LOCK = /cannot lock ref|unable to update local ref|\.lock': File exists/;
 
 export async function execPastRefLocks(
   handle: Pick<RunSandbox, 'exec'>,

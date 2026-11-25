@@ -32,7 +32,7 @@ export interface HistoryList {
   readonly versions: HistoryVersion[];
   readonly unversioned: { readonly authors: HistoryAuthor[]; readonly since: number } | null;
 }
-export interface DiffOp {
+interface DiffOp {
   readonly op: 'same' | 'add' | 'del';
   readonly line: string;
 }

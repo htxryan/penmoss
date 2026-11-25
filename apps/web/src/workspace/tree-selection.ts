@@ -16,13 +16,13 @@ import {
 } from './selection';
 
 /** The open context menu (A570): where, on what, and the row focus goes back to. */
-export type ContextTarget =
+type ContextTarget =
   | { readonly kind: 'notes'; readonly ids: readonly string[] }
   | { readonly kind: 'folder'; readonly id: string }
   /** Folders and notes picked together (T68, #230): what goes to another notebook at once. */
   | { readonly kind: 'items'; readonly items: readonly ItemRef[] };
 
-export interface MenuState {
+interface MenuState {
   readonly x: number;
   readonly y: number;
   readonly target: ContextTarget;

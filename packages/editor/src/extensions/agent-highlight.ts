@@ -27,7 +27,7 @@ interface HighlightState {
 
 type Meta = { readonly arm: string } | { readonly disarm: true } | { readonly clear: number };
 
-export const agentHighlightKey = new PluginKey<HighlightState>('penmossAgentHighlight');
+const agentHighlightKey = new PluginKey<HighlightState>('penmossAgentHighlight');
 
 let nextId = 1;
 

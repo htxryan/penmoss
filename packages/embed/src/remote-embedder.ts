@@ -13,13 +13,13 @@ export interface EmbedPort {
   on(event: 'message', listener: (message: unknown) => void): unknown;
 }
 
-export interface EmbedRequest {
+interface EmbedRequest {
   readonly id: number;
   readonly op: 'query' | 'documents';
   readonly texts: readonly string[];
 }
 
-export type EmbedReply =
+type EmbedReply =
   | { readonly id: number; readonly vectors: Float32Array[] }
   | { readonly id: number; readonly error: string };
 

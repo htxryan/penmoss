@@ -23,7 +23,7 @@ import { isEmptyUpdate } from './yjs14';
 type AnyDelta = ReturnType<Y.Node['toDeltaDeep']>;
 
 /** The change that turns the body `from` into the body `to` (empty when they are equal). */
-export function bodyDiff(from: Y.Node, to: AnyDelta): AnyDelta {
+function bodyDiff(from: Y.Node, to: AnyDelta): AnyDelta {
   return delta.diff(from.toDeltaDeep(), to);
 }
 

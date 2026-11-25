@@ -78,7 +78,7 @@ export type DeliveryState = 'waiting' | 'sent' | 'seen' | 'replied' | 'failed';
  * Why a delivery failed: the session has not been seen for GONE_MS (`gone`, A1062). `scope` and
  * `revoked` were the server's (a token's folder scope, a revoked token) and are only read.
  */
-export type DeliveryFailure = 'gone' | 'scope' | 'revoked';
+type DeliveryFailure = 'gone' | 'scope' | 'revoked';
 
 export interface CommentDelivery {
   readonly state: DeliveryState;
@@ -123,7 +123,7 @@ export interface AnchorContext {
  * at the note's start, so apps from before T52 show it as before; those apps list it among the
  * others, and these first.
  */
-export type ThreadScope = 'note';
+type ThreadScope = 'note';
 
 export interface ThreadData {
   readonly id: string;
@@ -1109,7 +1109,7 @@ export function anchoredText(doc: Y.Doc, resolved: ResolvedAnchor): string {
 // --- where a thread is, for agents (T52 item 5) ---
 
 /** Characters of text kept before and after a thread's place, and of its block. */
-export const CONTEXT_CHARS = 60;
+const CONTEXT_CHARS = 60;
 const BLOCK_CHARS = 280;
 /** The most of a block's text an agent is given with a thread's place now. */
 const PARAGRAPH_CHARS = 1_000;

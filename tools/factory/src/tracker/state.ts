@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { expandHome, type FactoryConfig } from '../config.ts';
 
 /** What is kept by card number. */
-export const BY_NUMBER = ['plans', 'runs.jsonl', 'runs', 'status.json'] as const;
+const BY_NUMBER = ['plans', 'runs.jsonl', 'runs', 'status.json'] as const;
 
 export function ensureTrackerState(
   config: FactoryConfig,

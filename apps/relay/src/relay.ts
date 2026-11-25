@@ -27,7 +27,7 @@ import { BlobSecrets, BlobStorage, type Blobs } from './storage';
 
 export const PULL_AFTER_MS = 15_000;
 export const PUSH_AFTER_MS = 5_000;
-export const RETRY_AFTER_MS = 60_000;
+const RETRY_AFTER_MS = 60_000;
 /**
  * The repository no longer holds the copy's notebook: its history was replaced (an import that
  * starts the branch again) or another notebook is there. The copy is a cache (A821), so the relay

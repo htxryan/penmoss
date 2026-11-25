@@ -81,14 +81,14 @@ export function validationDeps(
 /** The factory's own scripts the sandbox gets (sandbox/). */
 const SANDBOX_DIR = fileURLToPath(new URL('../sandbox/', import.meta.url));
 /** The UI audit and the Title Case rule it requires, staged in the worktree's `.factory/`. */
-export const AUDIT_FILES = ['ui-audit.cjs', 'title-case.cjs'] as const;
+const AUDIT_FILES = ['ui-audit.cjs', 'title-case.cjs'] as const;
 
 /**
  * The proof, as the reviewer sees it (A1650): each recording's last screenshot and stills
  * through its video, in `.factory/validation/` as `proof-<platform>-<n>-last.png` and
  * `-f<k>.png`. Returns the list the reviewer's prompt shows: each proof's title and its files.
  */
-export async function stageProof(
+async function stageProof(
   exec: HostContext['exec'],
   from: string,
   worktree: string,

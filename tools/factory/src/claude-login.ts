@@ -71,13 +71,13 @@ export function parseLogin(text: string): OAuthLogin | undefined {
 }
 
 /** Reads the login from the keychain; never logs it. */
-export async function readLogin(exec: Exec, dir: string): Promise<OAuthLogin | undefined> {
+async function readLogin(exec: Exec, dir: string): Promise<OAuthLogin | undefined> {
   const r = await exec('security', ['find-generic-password', '-s', keychainService(dir), '-w']);
   return r.code === 0 ? parseLogin(r.stdout) : undefined;
 }
 
 /** Claude Code's own refresh: `claude auth login` with the refresh token saves the new login. */
-export async function refreshLogin(
+async function refreshLogin(
   exec: Exec,
   config: FactoryConfig,
   dir: string,
@@ -170,7 +170,7 @@ export function clearStaged(dir: string): void {
 }
 
 /** Warn this long before the login itself (its refresh token) expires: Ryan logs in again. */
-export const LOGIN_WARN_DAYS = 7;
+const LOGIN_WARN_DAYS = 7;
 
 /**
  * The doctor's check of the factory login: there, readable, and not about to expire. Missing is a

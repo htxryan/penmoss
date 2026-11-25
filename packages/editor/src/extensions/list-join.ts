@@ -15,7 +15,7 @@ import { isBindingTransaction } from '../collab/binding';
 
 const LISTS = new Set(['orderedList', 'bulletList', 'taskList']);
 
-export const listJoinKey = new PluginKey('penmossListJoin');
+const listJoinKey = new PluginKey('penmossListJoin');
 
 /** The positions between two lists of one kind next to each other, at or around `pos`. */
 function joinsAround(doc: ProseNode, pos: number, found: Set<number>): void {
@@ -35,7 +35,7 @@ function joinsAround(doc: ProseNode, pos: number, found: Set<number>): void {
   }
 }
 
-export function joinAdjacentLists(transactions: readonly Transaction[], doc: ProseNode) {
+function joinAdjacentLists(transactions: readonly Transaction[], doc: ProseNode) {
   const found = new Set<number>();
   for (const tr of transactions) {
     if (!tr.docChanged || isBindingTransaction(tr)) continue;

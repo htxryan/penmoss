@@ -20,14 +20,14 @@ export interface DrawingStore {
 }
 
 /** Where the bundle keeps Excalidraw's fonts (vite.config.ts, `excalidrawAssets`). */
-export const EXCALIDRAW_ASSETS = '/excalidraw/';
+const EXCALIDRAW_ASSETS = '/excalidraw/';
 
 type DrawingEditorModule = typeof import('./editor');
 
 let loading: Promise<DrawingEditorModule> | null = null;
 
 /** The drawing editor's chunk, loaded once; a failed load (offline before cached) may be retried. */
-export function loadDrawingEditor(): Promise<DrawingEditorModule> {
+function loadDrawingEditor(): Promise<DrawingEditorModule> {
   if (!loading) {
     const target = window as Window & {
       EXCALIDRAW_ASSET_PATH?: string;

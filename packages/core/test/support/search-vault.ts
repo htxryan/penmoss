@@ -17,23 +17,22 @@ export interface VaultNote {
   readonly body: string;
 }
 
-export const VAULT_FOLDERS = [
-  'Home Lab',
-  'Garden',
-  'Kitchen',
-  'Health',
-  'Money',
-  'Travel',
-  'Work',
-  'Reading',
-  'Home',
-  'Journal',
-] as const;
+type VaultFolder =
+  | 'Home Lab'
+  | 'Garden'
+  | 'Kitchen'
+  | 'Health'
+  | 'Money'
+  | 'Travel'
+  | 'Work'
+  | 'Reading'
+  | 'Home'
+  | 'Journal';
 
 const note = (
   id: string,
   title: string,
-  folder: (typeof VAULT_FOLDERS)[number],
+  folder: VaultFolder,
   tags: string[],
   updated: string,
   body: string,

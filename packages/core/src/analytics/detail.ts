@@ -45,7 +45,7 @@ export const BLOCK_PATTERN =
   /^(?:(?:p|h[1-6]|li\.[bnt]\.[1-9]|quote|code|callout|math|raw|table\.\d{1,3}x\d{1,3}):\d{1,7}|image|embed|hr|file|drawing|other)$/;
 
 /** The kinds of a block, as a token starts. */
-export type BlockKind =
+type BlockKind =
   | 'p'
   | 'h'
   | 'li'

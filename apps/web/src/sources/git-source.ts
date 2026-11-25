@@ -33,7 +33,7 @@ import { localSettings } from '../workspace/local-settings';
 /** The notes store of a git notebook (A860). */
 export const gitStoreName = (notebookId: string) => `penmoss-git-${notebookId}`;
 /** Held by the window that runs a notebook's engine (A822). */
-export const engineLockName = (notebookId: string) => `penmoss-git-engine:${notebookId}`;
+const engineLockName = (notebookId: string) => `penmoss-git-engine:${notebookId}`;
 /** Where the engine's window tells the others how it stands, and hears "Sync now". */
 export const GIT_STATUS_CHANNEL = 'penmoss:git-status';
 

@@ -20,7 +20,7 @@ export function branchName(config: FactoryConfig, item: BoardItem): string {
 export const TITLE_MAX = 72;
 
 /** The longest title the agent may give in `result.json` (A1345). */
-export const AGENT_TITLE_MAX = 60;
+const AGENT_TITLE_MAX = 60;
 
 /**
  * Where a long title can end: before a clause that explains or adds to the change (", so …",

@@ -133,7 +133,7 @@ export function imageFiles(data: DataTransfer | null, from: 'paste' | 'drop'): F
 }
 
 /** Whether clipboard HTML is just one or more pictures: `<img>` and no text once tags are gone. */
-export function isLoneImage(html: string): boolean {
+function isLoneImage(html: string): boolean {
   if (!/<img[\s>]/i.test(html)) return false;
   const text = html
     .replace(/<!--[\s\S]*?-->/g, '')

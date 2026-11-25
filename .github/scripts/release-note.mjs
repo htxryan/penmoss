@@ -15,10 +15,10 @@ import { pathToFileURL } from 'node:url';
 /** @typedef {{ kind: Kind, platform: Platform | null, text: string }} Note */
 /** @typedef {{ ok: boolean, none: boolean, notes: Note[], errors: string[] }} ReleaseNote */
 
-export const KINDS = /** @type {const} */ (['new', 'improved', 'fixed']);
-export const PLATFORMS = /** @type {const} */ (['mac', 'android']);
+const KINDS = /** @type {const} */ (['new', 'improved', 'fixed']);
+const PLATFORMS = /** @type {const} */ (['mac', 'android']);
 /** Longer than this and it is a paragraph, not a note. */
-export const MAX_NOTE = 200;
+const MAX_NOTE = 200;
 
 const HEADING = /^#{2,3}[ \t]+release[ \t]+notes?[ \t]*$/im;
 const NEXT_HEADING = /^#{1,6}[ \t]/m;

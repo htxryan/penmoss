@@ -39,7 +39,7 @@ export async function opencodeAgent(
   return { ...withoutSkipPermissions(base), captureSessions: false };
 }
 
-export function withoutSkipPermissions(base: AgentProvider): AgentProvider {
+function withoutSkipPermissions(base: AgentProvider): AgentProvider {
   return {
     ...base,
     parseStreamLine: (line) => base.parseStreamLine(line),

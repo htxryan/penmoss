@@ -59,7 +59,7 @@ function fence(text: string): string {
   return '`'.repeat(longest + 1);
 }
 
-export const LOG_BLOCK_TITLE = 'Anonymised Logs';
+const LOG_BLOCK_TITLE = 'Anonymised Logs';
 
 /** The issue's collapsed block for `lines`, or '' when there are none. */
 export function logBlock(lines: readonly string[]): string {

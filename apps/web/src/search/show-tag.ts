@@ -13,7 +13,7 @@ export interface TagSearch {
   readonly notebookId: string | null;
 }
 
-export class TagSearchRequest {
+class TagSearchRequest {
   private current: TagSearch | null = null;
   private readonly listeners = new Set<() => void>();
 

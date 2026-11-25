@@ -8,7 +8,7 @@ import { mergeAttributes, Node, type AnyExtension, type JSONContent } from '@tip
 import { TableKit } from '@tiptap/extension-table';
 import { StarterKit } from '@tiptap/starter-kit';
 
-export const Callout = Node.create({
+const Callout = Node.create({
   name: 'callout',
   group: 'block',
   content: 'block+',

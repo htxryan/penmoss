@@ -21,7 +21,7 @@ import { TEST_NOTEBOOK } from './local-sources';
 import { memoryNotes } from './memory-notes';
 
 /** A git notebook as main lists it. */
-export function notebookInfo(overrides: Partial<GitNotebookInfo> = {}): GitNotebookInfo {
+function notebookInfo(overrides: Partial<GitNotebookInfo> = {}): GitNotebookInfo {
   return {
     localId: `local-${overrides.notebookId ?? TEST_NOTEBOOK}`,
     notebookId: TEST_NOTEBOOK,

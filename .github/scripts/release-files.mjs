@@ -30,7 +30,7 @@ export const SUMS = 'SHA256SUMS.txt';
 /** @typedef {{ dir(): string, remove(): void }} Scratch */
 
 /** The temporary directories one command makes, each removed by `remove()`. @returns {Scratch} */
-export function scratchDirs() {
+function scratchDirs() {
   /** @type {string[]} */
   const dirs = [];
   return {

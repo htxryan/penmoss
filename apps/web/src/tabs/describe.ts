@@ -8,9 +8,9 @@ import { parseRoute } from '../router';
 import { useSourcesRegistry } from '../sources/hooks';
 import { useEveryOpenNoteList } from '../sources/lists';
 import type { Source } from '../sources/registry';
-import { currentEntry, isBareHome, noteIdOfPath, type Tab, type TabsState } from './state';
+import { currentEntry, isBareHome, noteIdOfPath, type TabsState } from './state';
 
-export type PageKind =
+type PageKind =
   'note' | 'home' | 'graph' | 'trash' | 'tags' | 'time-machine' | 'settings' | 'other';
 
 export interface TabFace {
@@ -163,5 +163,3 @@ export function useTabFaces(state: TabsState | null, look: BadgeLook): TabFace[]
     });
   }, [state, list, registry, look]);
 }
-
-export type { Tab };

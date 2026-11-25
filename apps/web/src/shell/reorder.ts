@@ -11,7 +11,7 @@ import { useState, type DragEvent, type KeyboardEvent } from 'react';
 const TYPED =
   'input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable="true"], [role="dialog"]';
 
-export interface ReorderRowProps {
+interface ReorderRowProps {
   readonly 'data-reorder-id': string;
   readonly 'data-dragging'?: '';
   readonly 'data-drop'?: 'before' | 'after';
@@ -21,7 +21,7 @@ export interface ReorderRowProps {
   readonly onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
 }
 
-export interface ReorderHandleProps {
+interface ReorderHandleProps {
   readonly draggable: true;
   readonly 'data-reorder-handle': '';
   readonly 'aria-keyshortcuts': string;

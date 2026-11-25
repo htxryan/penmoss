@@ -17,7 +17,7 @@ import { REVEAL_EVENT } from './hidden-content';
 import { MermaidPreview, isMermaid } from './mermaid';
 
 /** One indent step inside code. */
-export const CODE_INDENT = '  ';
+const CODE_INDENT = '  ';
 
 /** ``` or ~~~, an optional language (`c++`, `objective-c`, `c#` included), then space or Enter. */
 const BACKTICK_FENCE = /^```([\w+#.-]*)[\s\n]$/;
@@ -95,7 +95,7 @@ function pickerValue(language: string | null): string {
  * `<pre><code>`, plus the diagram for Mermaid blocks (T12). Rendering never
  * writes to the document; only the picker does, when the user changes it.
  */
-export class CodeBlockView implements NodeView {
+class CodeBlockView implements NodeView {
   readonly dom: HTMLElement;
   readonly contentDOM: HTMLElement;
   private readonly select: HTMLSelectElement;

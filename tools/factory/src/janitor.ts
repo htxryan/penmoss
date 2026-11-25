@@ -25,9 +25,9 @@ import type { Exec } from './exec.ts';
 import { repoDir } from './clone.ts';
 
 /** Run folders are kept this long: the PR has its own copies of the proof. */
-export const KEEP_RUN_DAYS = 14;
+const KEEP_RUN_DAYS = 14;
 /** A worktree untouched this long, of no running issue, is an orphan. */
-export const ORPHAN_HOURS = 12;
+const ORPHAN_HOURS = 12;
 
 export interface Worktree {
   /** Its folder's name in the worktrees folder: Sandcastle's, the branch with `-` for `/`. */

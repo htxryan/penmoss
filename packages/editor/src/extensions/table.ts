@@ -24,7 +24,7 @@ import { changedNodes } from './changes';
 const TABLE_ROW = /^\s*\|((?:[^|\n]*\|)+)\s*\n$/;
 
 /** The cells of a typed `| a | b |` row (escaped pipes are not split). */
-export function splitRow(cells: string): string[] {
+function splitRow(cells: string): string[] {
   return cells
     .split(/(?<!\\)\|/)
     .slice(0, -1)
@@ -132,7 +132,7 @@ function tableIcon(path: string): SVGSVGElement {
  * The table's DOM: a toolbar (shown while the selection is in the table) and
  * a scrolling `<table>`. The buttons act on the cell holding the selection.
  */
-export class TableView implements NodeView {
+class TableView implements NodeView {
   readonly dom: HTMLElement;
   readonly contentDOM: HTMLElement;
   private node: PMNode;
@@ -243,7 +243,7 @@ const isCell = (node: PMNode) => {
  * holding paragraphs; GFM cells hold inline content directly (core schema),
  * and the browser's own vertical movement can land the caret between cells.
  */
-export function moveVertically(dir: 1 | -1): Command {
+function moveVertically(dir: 1 | -1): Command {
   return (state, dispatch, view) => {
     const { selection } = state;
     if (!(selection instanceof TextSelection) || !selection.empty) return false;

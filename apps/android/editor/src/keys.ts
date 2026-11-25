@@ -54,7 +54,7 @@ export interface KeyHost {
  * Whether an Alt press typed (review B1): its layout gave it a letter other than its key's, a
  * combining accent, or a dead key, as AltGr does on Android and Alt on its generic layout.
  */
-export function typesCharacter(event: KeyboardEvent): boolean {
+function typesCharacter(event: KeyboardEvent): boolean {
   if (!event.altKey || event.ctrlKey || event.metaKey) return false;
   if (event.key === 'Dead') return true;
   if ([...event.key].length !== 1) return false;

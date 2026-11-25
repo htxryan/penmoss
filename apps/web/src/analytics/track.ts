@@ -18,7 +18,7 @@ import { record } from './record';
 
 /** How a command came to run, as the catalogue names it. */
 const COMMAND_SOURCES = ['key', 'palette', 'button', 'menu', 'tray', 'hotkey', 'editor'] as const;
-export type CommandSource = (typeof COMMAND_SOURCES)[number];
+type CommandSource = (typeof COMMAND_SOURCES)[number];
 const SOURCES: ReadonlySet<string> = new Set<CommandSource>(COMMAND_SOURCES);
 
 /** The editor's key names where the event format spells them out ("Up" → "ArrowUp"). */

@@ -697,7 +697,7 @@ export function buildTokens() {
  * @param {ReturnType<typeof buildTokens>} tokens
  * @returns {Token[]}
  */
-export function familyTokens(tokens) {
+function familyTokens(tokens) {
   return Object.entries(tokens).flatMap(([key, value]) => {
     if (key === 'type' || key === 'meta') return [];
     const family = /** @type {Family} */ (value);
@@ -844,7 +844,7 @@ export function buildBundleCss(tokens) {
 // writes it again whenever someone saves an edit there)
 
 /** @param {ReturnType<typeof buildTokens>} tokens */
-export function buildTokensCss(tokens) {
+function buildTokensCss(tokens) {
   const [first, ...others] = tokens.color.themes.map((t) => t.id);
   /** @param {string} value */
   const css = (value) => (/^\{([\w.-]+)\}$/.test(value) ? `var(--${value.slice(1, -1)})` : value);
@@ -929,7 +929,7 @@ export function buildThemesMd() {
 // ---------------------------------------------------------------------------------------------
 
 /** @param {string} outDir */
-export function build(outDir) {
+function build(outDir) {
   const tokens = buildTokens();
   const files = {
     'project/tokens.json': `${JSON.stringify(tokens, null, 2)}\n`,

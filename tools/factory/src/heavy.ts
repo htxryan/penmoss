@@ -19,7 +19,7 @@ export interface HeavyOptions {
   readonly onWait?: (holders: string[]) => void;
 }
 
-export const heavyDir = (env: NodeJS.ProcessEnv = process.env) =>
+const heavyDir = (env: NodeJS.ProcessEnv = process.env) =>
   env['PENMOSS_HEAVY_DIR'] ?? join(homedir(), '.cache', 'penmoss', 'heavy');
 
 const heavySlots = (env: NodeJS.ProcessEnv = process.env) =>

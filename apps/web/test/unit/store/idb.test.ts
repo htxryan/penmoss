@@ -20,7 +20,7 @@ import { setDeleted } from '@penmoss/model/note';
 import { NOTE_ROOT } from '@penmoss/model/replica';
 import { setFrontmatterTag } from '@penmoss/model/tags';
 import { createFolder, renameFolder, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
-import { appendParagraph, createReplica } from './support/editing';
+import { appendParagraph, createReplica } from '../../../../../packages/model/test/support/editing';
 import { seedRecords } from './support/seed';
 import { MemoryStorage } from './support/storage';
 

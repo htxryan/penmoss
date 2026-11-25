@@ -24,7 +24,7 @@ export type IssueSpecResult =
   { readonly ok: true; readonly spec: IssueSpec } | { readonly ok: false; readonly error: string };
 
 /** Unlabelled issues are picked up as P3. */
-export const DEFAULT_PRIORITY: Priority = 3;
+const DEFAULT_PRIORITY: Priority = 3;
 
 const AGENTS: readonly AgentName[] = ['claude', 'opencode'];
 

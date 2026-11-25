@@ -10,7 +10,7 @@ import { expandHome, type FactoryConfig } from './config.ts';
 import { maxDecision, reserveDecisionNumbers } from './decisions.ts';
 import type { Exec } from './exec.ts';
 
-export const DECISIONS = 'docs/decisions.md';
+const DECISIONS = 'docs/decisions.md';
 
 export interface DecisionNumberDeps {
   readonly exec: Exec;

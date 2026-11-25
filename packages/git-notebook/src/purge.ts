@@ -93,7 +93,7 @@ export function unmarkPurged(workspace: Y.Doc, noteId: string, origin: unknown =
  * adds one unless the person confirmed it. Once a copy is on the branch the link stays, and a
  * later purge of the original leaves it.
  */
-export const WORKSPACE_RECOVERED_FROM = 'recoveredFrom';
+const WORKSPACE_RECOVERED_FROM = 'recoveredFrom';
 
 /** Every copy's original, by copy id. */
 export function recoveredFromOf(workspace: Y.Doc): Map<string, string> {

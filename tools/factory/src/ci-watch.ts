@@ -93,7 +93,7 @@ export type CiOutcome =
   | { readonly kind: 'blocked'; readonly reason: string; readonly body: string };
 
 /** How often a run rebases a PR that GitHub says conflicts with main before Ryan hears (A1311). */
-export const MAX_CONFLICT_REFRESHES = 2;
+const MAX_CONFLICT_REFRESHES = 2;
 
 export async function watchCi(
   deps: RunDeps,

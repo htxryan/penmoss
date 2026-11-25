@@ -70,7 +70,7 @@ export type RunOn = (
 ) => Promise<Outcome>;
 
 /** How long a read across every notebook waits for one notebook before leaving it out. */
-export const SPAN_WAIT_MS = 5_000;
+const SPAN_WAIT_MS = 5_000;
 
 /** Tools whose `id` names a note: they run on its notebook. */
 const NOTE_TOOLS: ReadonlySet<string> = new Set([
@@ -116,7 +116,7 @@ const SAME_NOTEBOOK_FOLDERS: Readonly<Record<string, readonly string[]>> = {
 };
 
 /** Reads that cover every notebook when they name no note, folder or notebook. */
-export const SPANS: ReadonlySet<string> = new Set([
+const SPANS: ReadonlySet<string> = new Set([
   'search_notes',
   'list_recent',
   'list_tags',
@@ -163,10 +163,7 @@ function listing(served: readonly ServedNotebook[]): string {
 }
 
 /** The notebook `asked` names: its name exactly, then ignoring case, or its tag. */
-export function pickNotebook(
-  asked: string,
-  served: readonly ServedNotebook[],
-): ServedNotebook | null {
+function pickNotebook(asked: string, served: readonly ServedNotebook[]): ServedNotebook | null {
   const wanted = asked.trim();
   return (
     served.find((each) => each.name === wanted) ??

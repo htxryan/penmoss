@@ -30,7 +30,7 @@ export interface TagDescriberNotes {
 /** How many tags Generate All describes at once (the Mac's `BATCH_AT_ONCE`). */
 const AT_ONCE = 2;
 
-export const NO_PROVIDER: AiAnswer = {
+const NO_PROVIDER: AiAnswer = {
   ok: false,
   code: 'no-provider',
   message: 'Choose an AI provider in Settings → AI Descriptions.',

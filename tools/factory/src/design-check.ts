@@ -47,8 +47,6 @@ export const REVIEW_CHECKS = {
     'every new control, screen, dialog, setting, CLI command and MCP tool is recorded by name on each client',
 } as const;
 
-export type ReviewCheck = keyof typeof REVIEW_CHECKS;
-
 /** At most this many label findings are listed; the rest are counted. */
 const MAX_LABELS = 20;
 

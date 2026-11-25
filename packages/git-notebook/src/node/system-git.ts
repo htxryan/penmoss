@@ -6,9 +6,4 @@
 export * from './git';
 export * from './transport';
 export * from './remote';
-export {
-  GitTransportError,
-  type CommitInfo,
-  type GitErrorCode,
-  type PushOutcome,
-} from '../transport';
+export { GitTransportError } from '../transport';

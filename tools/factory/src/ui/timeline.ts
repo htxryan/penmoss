@@ -5,7 +5,7 @@ import type { Tone, TimelineBar, Outcome, FactoryView, ViewInput } from './view.
 import { str, num } from './fields.ts';
 import { runsOf, stopOf, runView } from './card-runs.ts';
 
-export function keyOf(input: ViewInput, issue: number): string {
+function keyOf(input: ViewInput, issue: number): string {
   return (
     input.board.items.find((i) => i.number === issue)?.key ??
     (input.config.tracker === 'linear' ? `${input.config.linear.team}-${issue}` : `#${issue}`)

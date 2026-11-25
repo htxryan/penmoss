@@ -38,41 +38,41 @@ export interface ToolOptions {
 
 // --- argument schemas ---
 
-export const ID: Schema = {
+const ID: Schema = {
   type: 'string',
   maxLength: 80,
   description:
     'The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder.',
 };
-export const FOLDER_ID: Schema = {
+const FOLDER_ID: Schema = {
   type: 'string',
   maxLength: 80,
   description: 'The folder id, from list_folder.',
 };
-export const VERSION_ID: Schema = {
+const VERSION_ID: Schema = {
   type: 'integer',
   minimum: 1,
   description: 'A version id from get_history.',
 };
-export const BASE_VERSION: Schema = {
+const BASE_VERSION: Schema = {
   type: 'integer',
   minimum: 1,
   description:
     'The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on.',
 };
-export const MARKDOWN: Schema = {
+const MARKDOWN: Schema = {
   type: 'string',
   description:
     'Markdown (CommonMark plus GFM tables and task lists). [[Note title]] links to another note.',
 };
-export const TAGS: Schema = {
+const TAGS: Schema = {
   type: 'array',
   maxItems: 100,
   items: { type: 'string', maxLength: 200 },
   description: 'Tag names without #, e.g. ["homelab", "projects/garden"] (nested with /).',
 };
 
-export const object = (
+const object = (
   properties: Record<string, Schema>,
   required: readonly string[] = [],
 ): ObjectSchema => ({
@@ -82,10 +82,10 @@ export const object = (
   additionalProperties: false,
 });
 
-export const READ = { readOnlyHint: true, openWorldHint: false } as const;
-export const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
+const READ = { readOnlyHint: true, openWorldHint: false } as const;
+const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 
-export const BASE_HINT =
+const BASE_HINT =
   'Call read_note first and pass the baseVersion it returns (or the baseVersion your previous edit of this note returned).';
 
 // --- advice ---
@@ -150,7 +150,7 @@ export function adviceFor(code: string, options: ToolOptions): string | undefine
  * knows (A176): another device or agent, the agent's own later edit, or
  * neither ("This part changed…"). Never "someone else" for the agent's own edit.
  */
-export function conflictAdvice(details: Record<string, unknown>): string {
+function conflictAdvice(details: Record<string, unknown>): string {
   const others = Array.isArray(details['changedBy'])
     ? (details['changedBy'] as unknown[]).filter((each): each is string => typeof each === 'string')
     : [];

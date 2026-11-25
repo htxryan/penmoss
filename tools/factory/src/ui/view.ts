@@ -54,7 +54,7 @@ export interface Point {
   readonly options: readonly PointOption[];
 }
 
-export interface PointOption {
+interface PointOption {
   /** What the answer posts, as the planner wrote it. */
   readonly value: string;
   /** What the button says: the value without its "(proposed)". */
@@ -128,7 +128,7 @@ export interface CardView {
   readonly links: readonly Link[];
 }
 
-export type HealthState = 'running' | 'paused' | 'stale' | 'dead' | 'missing';
+type HealthState = 'running' | 'paused' | 'stale' | 'dead' | 'missing';
 
 export interface Health {
   readonly state: HealthState;
@@ -153,7 +153,7 @@ export interface Health {
   readonly doctor: string | null;
 }
 
-export interface SlotView {
+interface SlotView {
   readonly slot: number;
   readonly issue: number | null;
   readonly key: string | null;

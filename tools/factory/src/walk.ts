@@ -13,11 +13,9 @@ export type WalkPlatform = Exclude<Platform, 'web'>;
 
 /** The Mac walkthrough, in `apps/desktop`, where the VM runs Playwright. */
 export const MAC_WALK_SPEC = 'test/e2e/factory-walk.spec.ts';
-/** Where the Mac walkthrough saves its screenshots, relative to `apps/desktop`. */
-export const MAC_WALK_SHOTS = 'test-results/walk';
 /** The Android walkthrough's class and file. */
 export const ANDROID_WALK_CLASS = 'app.penmoss.walk.FactoryWalkInstrumentedTest';
-export const ANDROID_WALK_FILE =
+const ANDROID_WALK_FILE =
   'apps/android/app/src/androidTest/java/app/penmoss/walk/FactoryWalkInstrumentedTest.kt';
 
 /** A walkthrough's file, from the worktree's root. */

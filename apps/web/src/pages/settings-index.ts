@@ -65,7 +65,7 @@ export const SETTINGS_PAGES: ReadonlyArray<{
 /** Analytics Data's icon, its entry set in under Privacy (PEN-137, PrivacyNavEntry). */
 export const PRIVACY_DATA_ICON: IconName = 'checklist';
 
-export const pageLabel = (section: SettingsSection): string =>
+const pageLabel = (section: SettingsSection): string =>
   SETTINGS_PAGES.find((page) => page.id === section)?.label ?? section;
 
 export interface SettingEntry {

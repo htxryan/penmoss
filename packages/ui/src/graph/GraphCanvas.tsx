@@ -34,7 +34,7 @@ export interface GraphCanvasProps {
 }
 
 /** What tests and the perf harness read from the canvas element (`penmossGraph`). */
-export interface GraphInspector {
+interface GraphInspector {
   /** A node's centre in CSS pixels from the canvas's top left, or null. */
   positionOf(id: string): { x: number; y: number } | null;
   /** Whether the layout has stopped moving. */

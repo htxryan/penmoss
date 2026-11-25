@@ -35,8 +35,6 @@ export interface FrameMessage {
   readonly seq?: number;
 }
 
-export { NARROW_PX };
-
 // ---------------------------------------------------------------------------------------------
 // The whole window.
 

@@ -19,7 +19,7 @@ export const COPIED_AGENT_REFERENCE = 'Copied Agent Reference';
  * its short reference, which finds its notebook on the one MCP server (PEN-155); any other by
  * its id.
  */
-export function agentReferenceInput(
+function agentReferenceInput(
   snapshot: WorkspaceSnapshot,
   id: string,
   git: { readonly id: string } | null = null,

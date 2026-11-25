@@ -64,7 +64,7 @@ function draftOfPayload(entry: OutboxEntry): FeedbackDraftText {
 }
 
 /** When sync last finished and what last stopped it, as the app showed them. */
-export class SyncTracker {
+class SyncTracker {
   lastSynced: number | null = null;
   lastError: string | null = null;
 

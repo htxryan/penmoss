@@ -16,7 +16,7 @@ const {
 
 export const ruleName = 'penmoss/type-tokens';
 
-export const messages = ruleMessages(ruleName, {
+const messages = ruleMessages(ruleName, {
   raw: (/** @type {string} */ property, /** @type {string} */ value) =>
     `"${property}: ${value}" writes a value out: use a type role or step from apps/web/src/shell/type.css, such as var(--pm-text-help) (A1561)`,
   shorthand: (/** @type {string} */ value) =>
@@ -33,7 +33,7 @@ const KEYWORDS = /** @type {const} */ ({
 });
 
 /** The value without its `var(…)`s, fallbacks and all. */
-export function withoutVars(/** @type {string} */ value) {
+function withoutVars(/** @type {string} */ value) {
   let out = '';
   let index = 0;
   while (index < value.length) {

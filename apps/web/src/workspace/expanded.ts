@@ -6,9 +6,9 @@
 import { useCallback, useState } from 'react';
 import { deviceStorage } from '../shell/device-pref';
 
-export const EXPANDED_KEY = 'penmoss.sidebar.expanded';
+const EXPANDED_KEY = 'penmoss.sidebar.expanded';
 
-export function readExpanded(storage: Pick<Storage, 'getItem'> | null): Set<string> {
+function readExpanded(storage: Pick<Storage, 'getItem'> | null): Set<string> {
   try {
     const parsed: unknown = JSON.parse(storage?.getItem(EXPANDED_KEY) ?? '[]');
     return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []);
@@ -17,7 +17,7 @@ export function readExpanded(storage: Pick<Storage, 'getItem'> | null): Set<stri
   }
 }
 
-export function writeExpanded(storage: Pick<Storage, 'setItem'> | null, ids: ReadonlySet<string>) {
+function writeExpanded(storage: Pick<Storage, 'setItem'> | null, ids: ReadonlySet<string>) {
   try {
     storage?.setItem(EXPANDED_KEY, JSON.stringify([...ids]));
   } catch {

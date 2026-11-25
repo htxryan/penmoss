@@ -3,7 +3,7 @@
  * by `Σ 1 / (k + rank)`. Scores never mix, so bm25 and cosine scales need no
  * calibration; k = 60 is the constant of Cormack et al. (2009).
  */
-export const RRF_K = 60;
+const RRF_K = 60;
 
 export interface Fused {
   readonly id: string;

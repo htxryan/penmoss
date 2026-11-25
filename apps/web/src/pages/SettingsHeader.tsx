@@ -168,7 +168,7 @@ export function SettingsHomeProvider({ children }: { readonly children: ReactNod
  * be reached; a click keeps it open until Escape, a click elsewhere or focus leaving it. Its
  * words are also the button's description.
  */
-export function SettingsInfo() {
+function SettingsInfo() {
   const home = useContext(SettingsHomeContext);
   const delay = home ? home.delay : 1000;
   const { open, setOpen, button, panel, close, onPanelKeyDown } = usePopover();

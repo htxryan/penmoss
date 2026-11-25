@@ -6,27 +6,7 @@
  */
 export {
   MeaningService,
-  type MeaningServiceOptions,
   type MeaningSource,
   type ServiceNote,
-  type ServiceState,
   type ServiceStatus,
 } from './meaning-service';
-export {
-  serveService,
-  serviceCalls,
-  serviceClient,
-  type ServiceCalls,
-  type ServiceClient,
-  type ServiceMessage,
-  type ServiceMethod,
-  type ServiceRequest,
-} from './service-rpc';
-export {
-  remoteEmbedder,
-  serveEmbedder,
-  type EmbedPort,
-  type EmbedReply,
-  type EmbedRequest,
-  type EmbedderInfo,
-} from './remote-embedder';

@@ -61,7 +61,7 @@ const ALIASES: Record<string, (typeof CALLOUT_TYPES)[number]> = {
 };
 
 /** The style a callout type uses (`faq` looks like `question`; unknown types look like `note`). */
-export function calloutStyle(type: string): string {
+function calloutStyle(type: string): string {
   const lower = type.toLowerCase();
   if ((CALLOUT_TYPES as readonly string[]).includes(lower)) return lower;
   return ALIASES[lower] ?? 'note';
@@ -73,7 +73,7 @@ const label = (type: string) => type.charAt(0).toUpperCase() + type.slice(1);
  * A key for a toggle that survives reloads without a block ID (D2): its type,
  * title and how many callouts with the same type and title come before it.
  */
-export function calloutKey(doc: PMNode, pos: number, node: PMNode): string {
+function calloutKey(doc: PMNode, pos: number, node: PMNode): string {
   const type = node.attrs['type'] as string;
   const title = node.attrs['title'] as string;
   let index = 0;
@@ -96,7 +96,7 @@ export function calloutKey(doc: PMNode, pos: number, node: PMNode): string {
  * field) above the body. Rendering writes nothing; the picker and the title
  * field change the node's attributes when the user edits them.
  */
-export class CalloutView implements NodeView {
+class CalloutView implements NodeView {
   readonly dom: HTMLElement;
   readonly contentDOM: HTMLElement;
   private readonly fold: HTMLButtonElement;

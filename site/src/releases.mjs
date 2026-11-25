@@ -3,7 +3,7 @@
 // tests (node --test) and the Astro page share it.
 
 /** The kinds, in the order the page lists them. */
-export const KINDS = /** @type {const} */ ([
+const KINDS = /** @type {const} */ ([
   ['new', 'New'],
   ['improved', 'Improved'],
   ['fixed', 'Fixed'],

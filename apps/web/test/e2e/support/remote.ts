@@ -95,7 +95,7 @@ export function remoteFiles(host: GitHost, remote: string): string[] {
 }
 
 /** A file's text on the branch, or null when it has none there. */
-export function remoteFile(host: GitHost, remote: string, path: string): string | null {
+function remoteFile(host: GitHost, remote: string, path: string): string | null {
   const bare = remote.replace(/^file:\/\//, '');
   try {
     return host.git(bare, ['show', `main:${path}`]);

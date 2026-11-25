@@ -156,7 +156,7 @@ async function ifMissing<T, F>(read: Promise<T>, fallback: F): Promise<T | F> {
 }
 
 /** Writes a sibling file (0600) and renames it over `path`. */
-export async function atomicWrite(path: string, bytes: Uint8Array): Promise<void> {
+async function atomicWrite(path: string, bytes: Uint8Array): Promise<void> {
   const temporary = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   const handle = await open(temporary, 'wx', 0o600);
   try {

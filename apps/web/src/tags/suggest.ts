@@ -7,7 +7,7 @@
  */
 
 /** How many suggestions the list shows. */
-export const SUGGESTION_LIMIT = 8;
+const SUGGESTION_LIMIT = 8;
 
 export function tagSuggestions(
   /** Every note's tags (one array per note), as the note list has them. */

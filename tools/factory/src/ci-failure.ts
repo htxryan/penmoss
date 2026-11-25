@@ -243,7 +243,7 @@ export function ciHistory(ledger: string, issue: number, pr: string): CiHistory 
 }
 
 /** How long a re-run waits for its Actions run to finish before asking anyway. */
-export const RERUN_WAIT_MS = 45 * 60_000;
+const RERUN_WAIT_MS = 45 * 60_000;
 
 /**
  * Re-runs an Actions run's failed jobs once the run has finished. CI counts as red as soon as

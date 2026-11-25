@@ -106,7 +106,7 @@ function BareWindow({ children }: { children: ReactNode }) {
 type Way = 'create' | 'existing' | 'url';
 
 /** The first run, or, outside the Mac app's bridge, where to find it. */
-export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
+function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
   const git = desktop()?.git ?? null;
   if (!git) {
     return (

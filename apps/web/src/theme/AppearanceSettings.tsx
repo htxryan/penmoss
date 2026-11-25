@@ -208,7 +208,7 @@ export function AppearanceSettings() {
 }
 
 /** A miniature of the theme's light and dark variants: sidebar, text, accent and code. */
-export function ThemeSwatch({ theme }: { theme: Theme }) {
+function ThemeSwatch({ theme }: { theme: Theme }) {
   return (
     <span className="theme-swatch" aria-hidden="true">
       {(['light', 'dark'] as const).map((variant) => {

@@ -9,7 +9,7 @@ import type { CommandArea, CommandDefinition } from '../commands/definitions';
 import type { DesktopMenu, DesktopMenuItem } from './bridge';
 
 /** The menus in order. `Penmoss` is the application menu on a Mac. */
-export const MENU_ORDER = [
+const MENU_ORDER = [
   'Penmoss',
   'File',
   'Edit',
@@ -98,7 +98,7 @@ const isTabCommand = (id: string) => id.startsWith('tab.') && id !== 'tab.new';
  * in other tabbed Mac apps, so the File menu's Tabs group is left with Close Tab and Close
  * Other Tabs, which the Mac app ends with Close Window.
  */
-export const FOLLOWS: Readonly<Record<string, string>> = {
+const FOLLOWS: Readonly<Record<string, string>> = {
   'tab.new': 'note.new',
   'tab.reopenClosed': 'note.openInNewWindow',
 };

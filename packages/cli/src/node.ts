@@ -6,6 +6,6 @@
 export { killGitOnSignals } from '@penmoss/git-notebook/node';
 export { run } from './main';
 export { nodeIo } from './node-io';
-export { nodeNotebooks, type NodeNotebooksOptions } from './node-notebooks';
+export { nodeNotebooks } from './node-notebooks';
 export type { NotebookEntry, NotebookIo } from './io';
 export { CliError } from './errors';

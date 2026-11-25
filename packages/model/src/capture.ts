@@ -24,7 +24,7 @@ import { pmnodeToDelta, ynodeToPmnode } from '@y/prosemirror';
 import type * as Y from '@y/y';
 import type { Node as PMNode } from 'prosemirror-model';
 
-export const CAPTURES_HEADING = 'Captures';
+const CAPTURES_HEADING = 'Captures';
 /** Headings above this level would end the Captures section (`##`). */
 const LOWEST_CAPTURE_HEADING = 3;
 

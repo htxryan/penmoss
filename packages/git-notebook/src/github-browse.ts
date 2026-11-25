@@ -24,7 +24,7 @@ export type BrowseFetch = (
   json(): Promise<unknown>;
 }>;
 
-export type RepoVisibility = 'private' | 'public' | 'internal';
+type RepoVisibility = 'private' | 'public' | 'internal';
 
 /** A repository the credential reaches. */
 export interface GitHubRepo {
@@ -71,7 +71,7 @@ export interface GitHubOwner {
   readonly kind: 'user' | 'org';
 }
 
-export type BrowseReason =
+type BrowseReason =
   /** No credential for github.com (from git, or Penmoss's own sign-in). */
   | 'no_credential'
   /** Asking git for it took too long. */
@@ -104,7 +104,7 @@ export const MAX_REPOS = 300;
 const PAGE = 100;
 /** The notebook names read from one tree. */
 const MAX_NOTEBOOKS = 20;
-export const GITHUB_API_BASE = 'https://api.github.com';
+const GITHUB_API_BASE = 'https://api.github.com';
 
 /**
  * GitHub's characters for an owner (a user or an organisation). Older accounts may have a

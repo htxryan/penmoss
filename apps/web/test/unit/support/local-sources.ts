@@ -16,7 +16,7 @@ import { Workspace, type WorkspaceOptions } from '../../../src/workspace/service
 export const TEST_NOTEBOOK = 'nb-test';
 
 /** A sync backend that stays where a test puts it. */
-export function staticBackend(initial: Partial<LocalSyncState> = {}): LocalSyncBackend & {
+function staticBackend(initial: Partial<LocalSyncState> = {}): LocalSyncBackend & {
   set(next: Partial<LocalSyncState>): void;
   readonly purged: string[];
 } {

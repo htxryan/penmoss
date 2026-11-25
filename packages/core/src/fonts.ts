@@ -56,18 +56,6 @@ export const FONT_PRESET_STACKS: Readonly<Record<Exclude<FontPreset, 'theme'>, s
   mono: "ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', 'Liberation Mono', monospace",
 };
 
-/**
- * The generic family Android maps each preset to (Compose's `FontFamily` and the editor
- * page's CSS both resolve these to the phone's own faces).
- */
-export const FONT_PRESET_ANDROID: Readonly<Record<Exclude<FontPreset, 'theme'>, string>> = {
-  system: 'sans-serif',
-  serif: 'serif',
-  rounded: 'sans-serif',
-  humanist: 'sans-serif',
-  mono: 'monospace',
-};
-
 /** Longest custom family name. */
 export const MAX_FONT_FAMILY_CHARS = 64;
 

@@ -1,5 +1,5 @@
 /** `text` with every regular-expression character escaped, to match as written. */
-export const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * `name` as a whole word in any case: no letter, digit or `_` just before or after it. The

@@ -10,7 +10,7 @@ import { readOpened, recentNotes } from './recent';
 import { SectionHead } from '../shell/SectionHead';
 
 /** Whether Recent Notes is collapsed on this device (T53 item 8). */
-export const RECENT_COLLAPSED_KEY = 'penmoss.sidebar.recent';
+const RECENT_COLLAPSED_KEY = 'penmoss.sidebar.recent';
 
 /**
  * Recent Notes in the sidebar (T53 item 8, A983): the notes opened here or changed anywhere last,

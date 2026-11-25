@@ -109,7 +109,7 @@ function blockers(card: RawCard): string[] {
     .map((r) => r.issue!.identifier);
 }
 
-export function toItem(card: RawCard, config: FactoryConfig, position: number): BoardItem {
+function toItem(card: RawCard, config: FactoryConfig, position: number): BoardItem {
   const blockedBy = blockers(card);
   const set = card.labels.nodes.some((l) => l.name === config.linear.blockedLabel);
   return {

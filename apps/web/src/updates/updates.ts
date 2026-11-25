@@ -15,18 +15,18 @@ import {
 export const RELEASES_URL = 'https://github.com/htxryan/penmoss/releases';
 
 /** `0.1.436` as people read it: build 436. */
-export function buildOf(version: string): string {
+function buildOf(version: string): string {
   return /^0\.1\.(\d+)$/.exec(version)?.[1] ?? version;
 }
 
 /** A version as people read it: `build 436` from before P5, else `version 0.2.0`. */
-export function nameOf(version: string): string {
+function nameOf(version: string): string {
   const build = buildOf(version);
   return build === version ? `version ${version}` : `build ${build}`;
 }
 
 /** A build from main (`0.2.1-alpha.12`), not a stable release (A1196). */
-export function isAlphaBuild(version: string): boolean {
+function isAlphaBuild(version: string): boolean {
   return /^\d+\.\d+\.\d+-/.test(version);
 }
 

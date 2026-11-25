@@ -30,7 +30,7 @@ export interface MeaningStatus {
   readonly license: { readonly name: string; readonly url: string };
 }
 
-export interface MeaningLease {
+interface MeaningLease {
   held(): Promise<boolean>;
   release(): Promise<void>;
 }

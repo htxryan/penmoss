@@ -24,8 +24,6 @@ import { penmossHome } from '@penmoss/core/node/home';
 import { manifestBytes, type ModelFile, type ModelManifest } from './manifest';
 
 /** Where Penmoss keeps notebooks, models and vectors (the CLI's PENMOSS_HOME). */
-export { penmossHome };
-
 export type ModelErrorCode = 'absent' | 'corrupt' | 'hash_mismatch' | 'download_failed' | 'aborted';
 
 export class ModelError extends Error {

@@ -86,7 +86,7 @@ export function useMacWindowState(): MacWindowState {
 }
 
 /** Whether the layout leaves room for the lights now: a compact window out of full screen. */
-export function compactNow(titleBar: MacWindow['titleBar'], state: MacWindowState): boolean {
+function compactNow(titleBar: MacWindow['titleBar'], state: MacWindowState): boolean {
   return titleBar === 'compact' && !state.fullScreen;
 }
 

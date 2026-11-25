@@ -78,7 +78,7 @@ export interface FileInfo {
 }
 
 /** The image cannot be added (wrong type or too large); the message says why. */
-export class AttachmentRejected extends Error {
+class AttachmentRejected extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'AttachmentRejected';
@@ -289,7 +289,7 @@ export class Attachments {
 }
 
 /** An SVG's bytes as a `data:` URL an `<img>` shows (PEN-28). */
-export function svgDataUrl(bytes: Uint8Array): string {
+function svgDataUrl(bytes: Uint8Array): string {
   let binary = '';
   const CHUNK = 0x8000;
   for (let at = 0; at < bytes.length; at += CHUNK) {

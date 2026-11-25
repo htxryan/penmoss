@@ -31,7 +31,7 @@ export interface LocalMeaning {
 }
 
 /** One search result, as `GET /api/search` gives it. */
-export interface LocalSearchResult {
+interface LocalSearchResult {
   readonly id: string;
   readonly title: string;
   readonly titleHighlighted: string;
@@ -67,7 +67,7 @@ export interface LocalSearchInput {
 }
 
 /** One note linking to another, by heading and embed, as `backlinks` lists it. */
-export interface LocalBacklink {
+interface LocalBacklink {
   id: string;
   title: string;
   description?: string;
@@ -78,7 +78,7 @@ export interface LocalBacklink {
 }
 
 /** What hybrid says without meaning (A843), and what meaning says while it is indexing. */
-export const WORDS_ONLY_NOTICE = 'A git notebook searches words only: these are keyword results.';
+const WORDS_ONLY_NOTICE = 'A git notebook searches words only: these are keyword results.';
 export { coverageNotice };
 
 /** `{ description }` when there is one, so results without one stay as they were. */

@@ -25,10 +25,10 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { readDOMSelection } from './line-symbols';
 
-export const focusSelectionKey = new PluginKey('penmossFocusSelection');
+const focusSelectionKey = new PluginKey('penmossFocusSelection');
 
 /** ProseMirror's delay before it restores the selection on focus (prosemirror-view `focus`). */
-export const FOCUS_RESTORE_DELAY_MS = 20;
+const FOCUS_RESTORE_DELAY_MS = 20;
 
 interface Range {
   readonly anchorNode: Node | null;
@@ -73,7 +73,7 @@ interface ViewInternals {
   };
 }
 
-export function focusSelectionPlugin(): Plugin {
+function focusSelectionPlugin(): Plugin {
   /** Set from the focus until the timer runs: whether a key came meanwhile. */
   let pending: { keyed: boolean } | null = null;
   return new Plugin({

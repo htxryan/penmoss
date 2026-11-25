@@ -11,7 +11,7 @@ import { commitPurges, commitWriter } from '@penmoss/git-notebook/purge-check';
  * A Delete for good confirmed with Touch ID counts this long for a first commit to carry it; a
  * commit main let through keeps it until that push lands (in this run of the app).
  */
-export const PURGE_TTL_MS = 10 * 60_000;
+const PURGE_TTL_MS = 10 * 60_000;
 
 /** A refusal from main's own checks inside a transport call (not git's). */
 export class Refused extends Error {

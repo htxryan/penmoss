@@ -26,7 +26,7 @@ export function codeDir(config: FactoryConfig): string {
   return join(expandHome(config.stateDir), 'code');
 }
 
-export function codeCli(dir: string): string {
+function codeCli(dir: string): string {
   return join(dir, 'tools/factory/src/cli.ts');
 }
 
@@ -57,7 +57,7 @@ async function must(
 }
 
 /** The factory's dependencies only: it runs under Node directly, and nothing else is built here. */
-export const PNPM_INSTALL = [
+const PNPM_INSTALL = [
   'pnpm',
   'install',
   '--frozen-lockfile',
@@ -213,7 +213,7 @@ async function stopAgents(deps: AgentDeps): Promise<void> {
       deps.log(`launchd still has ${label} 10 s after stopping it; starting it again anyway.`);
 }
 
-export const BOOTSTRAP_TRIES = 4;
+const BOOTSTRAP_TRIES = 4;
 
 /**
  * Loads one LaunchAgent (it starts now). `launchctl bootstrap` fails with "5: Input/output error"

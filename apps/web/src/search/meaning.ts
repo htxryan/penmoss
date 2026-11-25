@@ -11,7 +11,7 @@ import { bodyJson, createYjs14Replica } from '@penmoss/model/yjs14';
 import type { DesktopMeaning, DesktopMeaningHit, DesktopMeaningStatus } from '../desktop/bridge';
 
 /** Notes changed: the service hears of it this long after they settle. */
-export const MEANING_SYNC_DELAY_MS = 1_000;
+const MEANING_SYNC_DELAY_MS = 1_000;
 /** Sections built between turns given back to the page. */
 const SECTIONS_SLICE = 20;
 

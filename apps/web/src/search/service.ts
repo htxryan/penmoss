@@ -30,7 +30,7 @@ import type { RegistryEntry } from '@penmoss/model/workspace';
 import type { NoteListEntry } from '../notes/list';
 import { MEANING_ELSEWHERE, sectionsOfRecord, type NotebookMeaning } from './meaning';
 
-export { SEARCH_MODES, type SearchMode } from '@penmoss/core/search';
+export { type SearchMode } from '@penmoss/core/search';
 
 /**
  * The app always searches Hybrid (T42, #104 item 2, A571), with no picker: by meaning too in the
@@ -57,7 +57,7 @@ export const NO_FILTERS: SearchFilters = {
 };
 
 /** A search with no words: it lists the notes its filters pass (`browsable`), or nothing. */
-export function isBlank(input: string): boolean {
+function isBlank(input: string): boolean {
   return input.trim() === '';
 }
 
@@ -140,7 +140,7 @@ export interface SearchDeps {
 }
 
 /** Where the offline index's snapshot is saved (the notes store's state, A119). */
-export const SEARCH_INDEX_KEY = 'searchIndex';
+const SEARCH_INDEX_KEY = 'searchIndex';
 const SAVE_DELAY_MS = 5_000;
 
 const DEFAULT_LIMIT = 30;

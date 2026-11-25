@@ -9,7 +9,7 @@ import { readTitle, setTitle } from './note';
 import type * as Y from '@y/y';
 import { bodyMarkdown, mergedBodyDelta } from './markdown';
 
-export interface RevertConflict extends MergeConflict {
+interface RevertConflict extends MergeConflict {
   /** `body` (lines of markdown) or `title`. */
   readonly part: 'body' | 'title';
 }

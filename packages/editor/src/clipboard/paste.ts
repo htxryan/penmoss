@@ -51,7 +51,7 @@ interface PendingPaste {
   to: number;
 }
 
-export const clipboardKey = new PluginKey<Set<PendingPaste>>('penmossClipboard');
+const clipboardKey = new PluginKey<Set<PendingPaste>>('penmossClipboard');
 
 const LOCAL_IMAGE = /<img\b[^>]*\bsrc\s*=\s*["']?\s*(?:data:image\/|blob:)/i;
 const SINGLE_URL = /^https?:\/\/[^\s<>"]+$/i;
@@ -87,7 +87,7 @@ function isTableSlice(slice: Slice): boolean {
  * inline content): blocks are joined by line breaks, a code block's lines
  * become text, and a block formula becomes an inline one.
  */
-export function inlineSlice(slice: Slice, schema: Schema): Slice {
+function inlineSlice(slice: Slice, schema: Schema): Slice {
   const nodes: PMNode[] = [];
   const hardBreak = schema.nodes['hardBreak']!;
   const lineBreak = () => {
@@ -124,7 +124,7 @@ export function inlineSlice(slice: Slice, schema: Schema): Slice {
  * slice, for a paste into a table cell: prosemirror-tables fills the cells from
  * there, adding rows and columns as needed. Null when no line has a tab.
  */
-export function tsvTable(text: string, schema: Schema): Slice | null {
+function tsvTable(text: string, schema: Schema): Slice | null {
   const lines = text.replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n');
   if (!lines.some((line) => line.includes('\t'))) return null;
   const { table, tableRow, tableCell } = schema.nodes;
@@ -138,7 +138,7 @@ export function tsvTable(text: string, schema: Schema): Slice | null {
 }
 
 /** Fits a pasted slice to where it goes: blocks in a table cell become inline content. */
-export function fitSlice(slice: Slice, $from: ResolvedPos, schema: Schema): Slice {
+function fitSlice(slice: Slice, $from: ResolvedPos, schema: Schema): Slice {
   return inCell($from) && !isTableSlice(slice) ? inlineSlice(slice, schema) : slice;
 }
 
@@ -153,7 +153,7 @@ function plainSlice(text: string, $context: ResolvedPos, schema: Schema): Slice 
 }
 
 /** Inserts a slice as ProseMirror's paste does, optionally at a mapped earlier position. */
-export function insertSlice(
+function insertSlice(
   view: EditorView,
   slice: Slice,
   options: { plain?: boolean; at?: PendingPaste } = {},

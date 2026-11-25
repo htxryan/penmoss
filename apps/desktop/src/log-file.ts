@@ -50,9 +50,9 @@ export type LogLimits = Pick<Limits, 'logs.fileKb' | 'logs.files' | 'logs.days'>
 
 const LOG_FILE = 'penmoss.log';
 /** Bytes read at a time, backwards or forwards. */
-export const CHUNK = 64 * 1024;
+const CHUNK = 64 * 1024;
 /** The longest message a line keeps (characters). */
-export const MAX_MESSAGE = 4000;
+const MAX_MESSAGE = 4000;
 /** A scrubber numbers repositories and ids; a fresh one after this many lines keeps it small. */
 const SCRUBBER_LINES = 500;
 

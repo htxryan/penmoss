@@ -53,7 +53,7 @@ const inlinePiece = fc.oneof(
 );
 
 /** One line of inline markdown (never starting with a block marker on its own). */
-export const inlineLine = fc
+const inlineLine = fc
   .array(inlinePiece, { minLength: 1, maxLength: 7 })
   .map((pieces) => pieces.join(' '));
 

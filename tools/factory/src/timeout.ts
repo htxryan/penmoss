@@ -1,7 +1,7 @@
 /** A step's time bound (F13): a hung step stops the run, not the Mac. */
 
 /** How long a timed-out step gets to stop what it started before the run goes on without it. */
-export const SETTLE_MS = 120_000;
+const SETTLE_MS = 120_000;
 
 /**
  * Rejects when `work` takes longer than `minutes` (F13): a hung step stops the run, not the Mac.

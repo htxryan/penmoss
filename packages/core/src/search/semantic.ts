@@ -82,7 +82,7 @@ export function dot(a: Float32Array, b: Float32Array): number {
   return sum;
 }
 
-export const FAKE_DIMENSIONS = 1024;
+const FAKE_DIMENSIONS = 1024;
 /**
  * The fake embedder's floor (A571's, kept): made-up words score at most about 0.10 against the
  * sample vault and its labelled notes' median is about 0.30.

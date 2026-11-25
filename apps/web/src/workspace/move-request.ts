@@ -2,7 +2,7 @@
  * Notes waiting for the folder picker (T42, A570): the tree's context menu asks for "Move to
  * folder…" on its selection, and the command overlays, which own the picker, open it.
  */
-export class MoveRequest {
+class MoveRequest {
   private current: readonly string[] | null = null;
   private readonly listeners = new Set<() => void>();
 

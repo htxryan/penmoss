@@ -21,7 +21,7 @@ export class GhError extends Error {
   }
 }
 
-export type GraphQLValue = string | number | boolean;
+type GraphQLValue = string | number | boolean;
 
 export interface Gh {
   /** Runs `gh <args>` and returns its stdout; a non-zero exit throws `GhError`. */

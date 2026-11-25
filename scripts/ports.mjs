@@ -34,7 +34,7 @@ export const BASE_PORTS = Object.freeze({
  * vite's (4173 and 5173 share 73). Nothing lands on 41–45: cloudflared serves its metrics on
  * 20241–20245, which block 2 would hit.
  */
-export const OFFSETS = Object.freeze({
+const OFFSETS = Object.freeze({
   vite: 73,
   preview: 74,
   worker: 87,

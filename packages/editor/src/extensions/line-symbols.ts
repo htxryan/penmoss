@@ -444,7 +444,7 @@ function atTextStart(state: EditorState): { $head: ResolvedPos; run: SymbolRun }
 }
 
 /** The textblocks a toggle acts on: every line in the selection that may carry symbols. */
-export function symbolLines(state: EditorState): Array<{ pos: number; node: PMNode }> {
+function symbolLines(state: EditorState): Array<{ pos: number; node: PMNode }> {
   const { selection, doc } = state;
   const lines: Array<{ pos: number; node: PMNode }> = [];
   const take = (node: PMNode, pos: number) => {
@@ -575,7 +575,7 @@ function applyEdits(tr: Transaction, start: number, edits: readonly TextEdit[]):
  * other item changes. A plain line becomes a GFM checklist item, and a checklist item's box is
  * the item's own (ticked in place, or the item made a plain line again).
  */
-export function toggleCheckbox(editor: Editor): boolean {
+function toggleCheckbox(editor: Editor): boolean {
   const { state } = editor;
   const symbols = lineSymbolsOf(state);
   const index = symbols.findIndex((symbol) => symbol.kind === 'checkbox');
@@ -649,7 +649,7 @@ export function toggleCheckbox(editor: Editor): boolean {
  * that kind of item, or plain lines when they already are. Checkbox steps through ☐, ☑ and no
  * box, stacked with the lines' symbols (`toggleCheckbox`, A1678). False when no line may be one.
  */
-export function toggleListItem(editor: Editor, kind: SymbolKind): boolean {
+function toggleListItem(editor: Editor, kind: SymbolKind): boolean {
   const { state } = editor;
   const lines = symbolLines(state);
   if (lines.length === 0) return false;
@@ -669,7 +669,7 @@ export const canHaveSymbols = (state: EditorState): boolean => symbolLines(state
  * symbols are untouched. One transaction, so one undo step. False when the slot is empty or
  * the selection holds no line that may carry a symbol.
  */
-export function toggleLineSymbol(index: number) {
+function toggleLineSymbol(index: number) {
   return (state: EditorState, dispatch?: (tr: Transaction) => void): boolean => {
     const symbols = lineSymbolsOf(state);
     // A list item slot, and the Checkbox, need the editor's list commands: `toggleSymbolIn`

@@ -14,14 +14,6 @@ const encoder = new TextEncoder();
 /** The most of a note's headings (one per line) the phone stores: 64 KB. */
 export const MAX_NOTE_HEADINGS_BYTES = 64 * 1024;
 
-/**
- * What a note's text hash covers (T40 P6, FD4, S6): its capped text and its capped headings,
- * apart, hashed with SHA-256 (Android's `textHash` in Kotlin builds the same key).
- */
-export function noteTextKey(text: string, headings: string): string {
-  return `${text}\u0000${headings}`;
-}
-
 /** `text` cut to at most `maxBytes` of UTF-8, never inside a character. */
 export function capNoteText(text: string, maxBytes: number = MAX_NOTE_TEXT_BYTES): string {
   // Each UTF-16 unit is at most 3 bytes: short text needs no encoding.

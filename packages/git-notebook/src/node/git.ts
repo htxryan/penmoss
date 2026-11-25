@@ -313,7 +313,7 @@ const SSH_KEY =
   /Permission denied \(publickey|passphrase|sign_and_send_pubkey|agent refused|no mutual signature/i;
 
 /** A URL's credentials (`https://user:secret@host`) never reach a message or a log. */
-export function redact(text: string): string {
+function redact(text: string): string {
   return text.replace(/\b(https?:\/\/)[^\s/@:]*(:[^\s/@]*)?@/gi, '$1***@');
 }
 

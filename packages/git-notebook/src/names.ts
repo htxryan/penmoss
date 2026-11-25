@@ -33,15 +33,15 @@ import { ATTACHMENTS_DIR, PENMOSS_DIR } from './layout';
 /** A note's stored file name: `{ base, name }`, one value so a claim is atomic. */
 export const NOTE_NAME_ATTR = 'fileName';
 /** A folder's stored directory name (A212's `FolderName`), one value. */
-export const FOLDER_NAME_ATTR = 'dirName';
+const FOLDER_NAME_ATTR = 'dirName';
 /**
  * Where Penmoss last rendered a note, relative to `<dir>` (null: no file, as in Trash). Stored
  * with the names, so it lands with the commit that wrote the file: a `.md` carrying the note's id
  * anywhere else is a copy someone made, which Penmoss reports and leaves alone (A823).
  */
-export const NOTE_PATH_ATTR = 'filePath';
+const NOTE_PATH_ATTR = 'filePath';
 
-export interface NoteName {
+interface NoteName {
   /** `noteName(title)` when it was named: another base means the title changed. */
   readonly base: string;
   readonly name: string;
@@ -130,7 +130,7 @@ const MAX_CLAIM_CHARS = 160;
  * writer, so one that would leave its directory (`sub/README`, `..`) or that the mirror's rules
  * would change is ignored, and the note or folder is named afresh.
  */
-export function validName(name: unknown): name is string {
+function validName(name: unknown): name is string {
   return (
     typeof name === 'string' &&
     name.length > 0 &&
@@ -144,14 +144,14 @@ export function validName(name: unknown): name is string {
 }
 
 /** A note's stored name, when it is a valid one. */
-export function storedNoteName(node: unknown): NoteName | null {
+function storedNoteName(node: unknown): NoteName | null {
   const value = stored(node, NOTE_NAME_ATTR);
   if (!value || typeof value['base'] !== 'string' || !validName(value['name'])) return null;
   return { base: value['base'], name: value['name'] };
 }
 
 /** A folder's stored directory name, when it is a valid one. */
-export function storedFolderName(node: unknown): FolderName | null {
+function storedFolderName(node: unknown): FolderName | null {
   const value = stored(node, FOLDER_NAME_ATTR);
   if (
     !value ||

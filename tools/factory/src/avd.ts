@@ -7,10 +7,10 @@ import { join } from 'node:path';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 
-export const SYSTEM_IMAGE = 'system-images;android-37.0;google_apis;arm64-v8a';
+const SYSTEM_IMAGE = 'system-images;android-37.0;google_apis;arm64-v8a';
 
 /** The phone the proof recordings show: a Pixel-sized screen, enough RAM for software rendering. */
-export const AVD_SETTINGS: Readonly<Record<string, string>> = {
+const AVD_SETTINGS: Readonly<Record<string, string>> = {
   'hw.lcd.width': '1080',
   'hw.lcd.height': '2400',
   'hw.lcd.density': '420',
@@ -21,7 +21,7 @@ export const AVD_SETTINGS: Readonly<Record<string, string>> = {
   'hw.gps': 'no',
 };
 
-export function avdDir(config: FactoryConfig): string {
+function avdDir(config: FactoryConfig): string {
   return join(expandHome(config.stateDir), 'avd');
 }
 

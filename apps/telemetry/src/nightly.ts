@@ -177,10 +177,7 @@ async function pruneTable(
 }
 
 /** Deletes events older than 13 months and rollups older than 25. */
-export async function prune(
-  db: D1Database,
-  today: string,
-): Promise<{ events: number; rollups: number }> {
+async function prune(db: D1Database, today: string): Promise<{ events: number; rollups: number }> {
   const events = await pruneTable(db, 'events', monthsBefore(today, EVENT_MONTHS));
   const rollupCutoff = monthsBefore(today, ROLLUP_MONTHS);
   let rollups = 0;

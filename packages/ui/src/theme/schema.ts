@@ -52,7 +52,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const isCustomThemeId = (id: unknown): id is string =>
   typeof id === 'string' && CUSTOM_ID.test(id);
 
-export function isSafeFontStack(value: unknown): value is string {
+function isSafeFontStack(value: unknown): value is string {
   if (typeof value !== 'string' || !FONT_STACK.test(value)) return false;
   // Quotes must pair up, or the stack would swallow what follows it.
   return (value.match(/'/g) ?? []).length % 2 === 0 && (value.match(/"/g) ?? []).length % 2 === 0;

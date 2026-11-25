@@ -209,11 +209,7 @@ export function agreedArtifacts(
 }
 
 /** The agreed plan's text for validation (F19); none when planning was skipped or trivial. */
-export function agreedPlanText(
-  config: FactoryConfig,
-  issue: number,
-  spec: IssueSpec,
-): string | undefined {
+function agreedPlanText(config: FactoryConfig, issue: number, spec: IssueSpec): string | undefined {
   if (spec.planSkip) return undefined;
   const files = planFiles(config, issue);
   const agreed = readMeta(files).agreed;
@@ -418,7 +414,7 @@ export function roundsUsed(ledger: string, issue: number): number {
 }
 
 /** `roundsUsed` from the factory's ledger (`runs.jsonl`); 0 when there is none yet. */
-export function roundsUsedFrom(config: FactoryConfig, issue: number): number {
+function roundsUsedFrom(config: FactoryConfig, issue: number): number {
   const ledger = join(expandHome(config.stateDir), 'runs.jsonl');
   return existsSync(ledger) ? roundsUsed(readFileSync(ledger, 'utf8'), issue) : 0;
 }

@@ -46,7 +46,7 @@ export interface GraphNode {
   degree: number;
 }
 
-export interface GraphEdge {
+interface GraphEdge {
   readonly source: string;
   readonly target: string;
   readonly tag: boolean;

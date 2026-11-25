@@ -24,7 +24,7 @@ import { runQuery, type QueryName, type QueryParams } from '@penmoss/telemetry/q
 import shortcutsContract from '../../android/contract/shortcuts-v1.json';
 
 /** Each command's default combinations, from the shortcut map every client shares. */
-export const DEFAULT_KEYS: ReadonlyMap<string, readonly string[]> = new Map(
+const DEFAULT_KEYS: ReadonlyMap<string, readonly string[]> = new Map(
   shortcutsContract.commands.map((command) => [command.id, command.keys]),
 );
 

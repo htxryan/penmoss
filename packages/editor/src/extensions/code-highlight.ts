@@ -28,7 +28,7 @@ interface HighlightState {
 
 type HighlightMeta = { loaded: string } | { refresh: true };
 
-export const codeHighlightKey = new PluginKey<HighlightState>('penmossCodeHighlight');
+const codeHighlightKey = new PluginKey<HighlightState>('penmossCodeHighlight');
 
 const isCode = (node: PMNode) => node.type.name === 'codeBlock';
 

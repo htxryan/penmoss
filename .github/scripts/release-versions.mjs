@@ -1,6 +1,6 @@
 // Tags and app versions (P3, P5): pure, no `gh`. Used by releases.mjs and release-tag.mjs.
 
-export const BUILD = /^build-(\d+)$/;
+const BUILD = /^build-(\d+)$/;
 /** A stable tag (P3, P5): vX.Y.Z, no suffix. */
 const STABLE_TAG = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 /** A release tag (P3, R5): vX.Y.Z, or vX.Y.Z-rc.N for a rehearsal. */

@@ -16,7 +16,7 @@
 import { mergeAttributes, Node } from '@tiptap/core';
 
 /** Shown before a raw block and as its tooltip. */
-export const RAW_LABEL = 'Markdown kept as written';
+const RAW_LABEL = 'Markdown kept as written';
 
 const markdownOf = (attrs: Record<string, unknown>): string =>
   typeof attrs['markdown'] === 'string' ? attrs['markdown'] : '';

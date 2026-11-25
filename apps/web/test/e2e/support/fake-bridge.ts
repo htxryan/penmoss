@@ -43,7 +43,7 @@ export const SIGN_IN_CHANGED = '__penmossSignInChanged';
 export const MEANING_CHANGED = '__penmossMeaningChanged';
 
 /** What the page's fake keeps for specs to look at. */
-export interface FakeBridgeState {
+interface FakeBridgeState {
   menus: unknown;
   theme: unknown;
 }
@@ -68,7 +68,7 @@ export interface FakeAnalyticsConfig {
 }
 
 /** The fake's state, as `window.__penmossFakeAnalytics` shows it (and localStorage keeps it). */
-export interface FakeAnalyticsState {
+interface FakeAnalyticsState {
   consent: 'yes' | 'no' | null;
   ask: boolean;
   install: string;

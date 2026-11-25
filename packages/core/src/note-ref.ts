@@ -19,9 +19,9 @@ const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const ULID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 
 /** How many of a note id's last characters a short reference keeps. */
-export const NOTE_REF_LENGTH = 8;
+const NOTE_REF_LENGTH = 8;
 /** How many characters name the notebook. */
-export const NOTEBOOK_TAG_LENGTH = 4;
+const NOTEBOOK_TAG_LENGTH = 4;
 
 /** `<notebook>-<note>`: an 8-character note part, or the whole ULID after a clash. */
 const SHORT = /^([0-9A-Z]{4})-([0-9A-Z]{8}|[0-9A-Z]{26})$/;

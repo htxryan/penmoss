@@ -24,8 +24,7 @@ export interface TimelineClient {
 export type Method = 'commits' | 'tree' | 'note' | 'changes' | 'diff';
 
 /** The git reads the worker may ask for: the timeline only reads. */
-export const WORKER_GIT_OPS = ['list', 'read', 'log'] as const;
-export type WorkerGitOp = (typeof WORKER_GIT_OPS)[number];
+export type WorkerGitOp = 'list' | 'read' | 'log';
 
 /** Page → worker. */
 export type ToWorker =

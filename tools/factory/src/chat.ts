@@ -4,7 +4,7 @@
  */
 import type { Tracker } from './tracker/port.ts';
 
-export function chatComment(url: string): string {
+function chatComment(url: string): string {
   return `The agent's session has a chat in the Claude app, to watch it or steer it while it works: ${url}\n\nThe chat ends with the session's turn; the next session in this run gets a new one.`;
 }
 

@@ -78,7 +78,7 @@ function nodeStdio(): StdioIo {
  * reads before anyone iterates is otherwise lost: a client that writes its first requests straight
  * away (a pipe) would get no reply (#165).
  */
-export function bufferedLines(source: {
+function bufferedLines(source: {
   on(event: 'line', listener: (line: string) => void): unknown;
   on(event: 'close', listener: () => void): unknown;
   close(): void;

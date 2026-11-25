@@ -32,7 +32,7 @@ const LEFT_OUT = 'docs/decisions.md';
  * same only when each such file is byte for byte the same before and after, whatever main did to
  * files the branch doesn't touch.
  */
-export const DIFF_PRINT = `git diff --raw --no-abbrev --no-renames --no-ext-diff --no-textconv origin/main...HEAD -- . ':(exclude)${LEFT_OUT}'`;
+const DIFF_PRINT = `git diff --raw --no-abbrev --no-renames --no-ext-diff --no-textconv origin/main...HEAD -- . ':(exclude)${LEFT_OUT}'`;
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
 
@@ -137,7 +137,7 @@ export function parseProven(text: string): Proven | undefined {
 }
 
 /** Every file a record's proof and fidelity rows name, which must still be in its run folder. */
-export function provenFiles(proven: Proven): string[] {
+function provenFiles(proven: Proven): string[] {
   return [
     ...proven.proof.flatMap((p) => [p.image, p.video]),
     ...(proven.validation?.rows ?? []).flatMap((r) => [r.mockup, r.screenshot]),

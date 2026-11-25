@@ -5,19 +5,19 @@
  */
 import { loadEnvFile } from '../secrets.ts';
 
-export const LINEAR_API = 'https://api.linear.app/graphql';
-export const LINEAR_TOKEN_URL = 'https://api.linear.app/oauth/token';
+const LINEAR_API = 'https://api.linear.app/graphql';
+const LINEAR_TOKEN_URL = 'https://api.linear.app/oauth/token';
 
 /** The names `linear.env` may hold. It is read on the host alone, never passed to a sandbox. */
-export const LINEAR_KEYS = {
+const LINEAR_KEYS = {
   LINEAR_CLIENT_ID: "the factory app's OAuth client ID",
   LINEAR_CLIENT_SECRET: "the factory app's OAuth client secret",
   LINEAR_APP_TOKEN: "an access token for the factory app, instead of the client's ID and secret",
 } as const;
 
-export type LinearKey = keyof typeof LINEAR_KEYS;
+type LinearKey = keyof typeof LINEAR_KEYS;
 
-export class LinearError extends Error {
+class LinearError extends Error {
   /** Linear's error code, such as `RATELIMITED` or `AUTHENTICATION_ERROR`. */
   readonly code: string | undefined;
   constructor(message: string, code?: string) {
@@ -54,7 +54,7 @@ export interface LinearClient {
 }
 
 /** Where Linear keeps the files and images attached to issues and comments. */
-export const LINEAR_UPLOADS = 'uploads.linear.app';
+const LINEAR_UPLOADS = 'uploads.linear.app';
 
 const isUpload = (url: URL) => url.protocol === 'https:' && url.hostname === LINEAR_UPLOADS;
 

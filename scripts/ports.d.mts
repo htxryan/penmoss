@@ -3,7 +3,6 @@ export type PortName =
   'vite' | 'preview' | 'worker' | 'fakeGithub' | 'inspector' | 'dashboard' | 'site' | 'telemetry';
 export type Ports = Readonly<Record<PortName, number>>;
 export declare const BASE_PORTS: Ports;
-export declare const OFFSETS: Ports;
 export declare const MAX_BLOCK: number;
 export declare function parseBlock(value: string | undefined): number;
 export declare function portsFor(block: number): Ports;

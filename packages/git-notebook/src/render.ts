@@ -29,7 +29,7 @@ export function changedAtOf(doc: Y.Doc): number {
 }
 
 /** The notes a body links to or embeds, by id. */
-export function linkTargets(doc: Y.Doc): Set<string> {
+function linkTargets(doc: Y.Doc): Set<string> {
   const out = new Set<string>();
   const walk = (node: Y.Node) => {
     for (const child of node.toArray()) {

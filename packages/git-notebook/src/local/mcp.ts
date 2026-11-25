@@ -47,8 +47,8 @@ import {
 } from './notebook';
 import { formatBytes } from '@penmoss/core/words';
 
-export const LOCAL_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
-export const LOCAL_SERVER_VERSION = '1.0.0';
+const LOCAL_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+const LOCAL_SERVER_VERSION = '1.0.0';
 
 const NO_VERSION = 'Call get_history without versionId to list the note’s versions.';
 
@@ -177,7 +177,7 @@ export type LocalToolOutcome =
   | { readonly error: string; readonly result?: Exclude<ToolResult, 'ok'> };
 
 /** How an outcome ended. */
-export function toolResultOf(outcome: LocalToolOutcome): ToolResult {
+function toolResultOf(outcome: LocalToolOutcome): ToolResult {
   return 'error' in outcome ? (outcome.result ?? 'failed') : 'ok';
 }
 

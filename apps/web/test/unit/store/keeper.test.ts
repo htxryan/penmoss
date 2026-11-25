@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { NoteStore } from '../../../src/store/idb';
 import { ReplicaKeeper } from '../../../src/store/keeper';
 import { recordFromDoc } from '@penmoss/model/records';
-import { appendParagraph, createReplica } from './support/editing';
+import { appendParagraph, createReplica } from '../../../../../packages/model/test/support/editing';
 
 let dbCount = 0;
 const openStore = () => NoteStore.open(`penmoss-keeper-${++dbCount}`);

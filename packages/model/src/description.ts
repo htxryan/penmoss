@@ -22,10 +22,10 @@ import { frontmatterTags } from './tags';
 import { noteBodyForDisplay } from './markdown';
 import { serializeMarkdown } from '@penmoss/core';
 
-export const META_DESCRIPTION = 'description';
-export const META_AI_DESCRIPTION = 'aiDescription';
-export const META_DESCRIPTION_OF = 'descriptionOf';
-export const META_DESCRIPTION_ASK = 'descriptionAsk';
+const META_DESCRIPTION = 'description';
+const META_AI_DESCRIPTION = 'aiDescription';
+const META_DESCRIPTION_OF = 'descriptionOf';
+const META_DESCRIPTION_ASK = 'descriptionAsk';
 
 /** The description, or null when the note has none. */
 export function readDescription(doc: Y.Doc): string | null {

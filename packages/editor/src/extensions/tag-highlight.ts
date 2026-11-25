@@ -16,7 +16,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { changedNodes } from './changes';
 
-export const tagHighlightKey = new PluginKey<DecorationSet>('penmossTagHighlight');
+const tagHighlightKey = new PluginKey<DecorationSet>('penmossTagHighlight');
 
 const isProse = (node: PMNode) => node.isTextblock && node.type.name !== 'codeBlock';
 

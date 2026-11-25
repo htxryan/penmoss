@@ -70,7 +70,7 @@ const tree = (id: string, title: string, keys: readonly string[]): CommandDefini
   hidden: true,
 });
 
-export const APP_COMMANDS: readonly CommandDefinition[] = [
+const APP_COMMANDS: readonly CommandDefinition[] = [
   global('app.palette', 'Command Palette', 'General', ['Mod+K'], { hidden: true }),
   global('app.quickOpen', 'Quick Open Note…', 'Navigation', ['Mod+P']),
   // New Tab's picker (A1594), which tab.new opens in a window with tabs.

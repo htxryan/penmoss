@@ -49,7 +49,7 @@ function wordScore(
 }
 
 /** An item's score for a query (0: not found). `query` is already normalised. */
-export function glyphScore(item: Findable, query: string, raw = query): number {
+function glyphScore(item: Findable, query: string, raw = query): number {
   if (item.glyph && raw.trim() !== '') {
     const pasted = raw.trim().replace(VARIATION_SELECTORS, '');
     if (pasted === item.glyph.replace(VARIATION_SELECTORS, '')) return 1000;

@@ -9,7 +9,8 @@
 #
 # Changed means staged, unstaged or untracked against HEAD; with nothing uncommitted, the files of
 # HEAD's own commit. What runs:
-#   - ESLint, stylelint and Prettier on the changed files only, and detekt's dead-code rules
+#   - ESLint, stylelint and Prettier on the changed files only; knip's unused exports (the whole
+#     repo, a few seconds) when a script changed, and detekt's dead-code rules
 #     (`task lint:kotlin`) when a Kotlin file changed;
 #   - typecheck and unit tests of every package with a changed file, and of every package that
 #     depends on one (pnpm's `...[<ref>]` filter);
@@ -78,6 +79,9 @@ if [ -n "$scripts" ]; then
   echo "[check:changed] eslint: $(echo "$scripts" | wc -l | tr -d ' ') files"
   echo "$scripts" | tr '\n' '\0' |
     NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" xargs -0 pnpm exec eslint --no-warn-ignored
+fi
+if [ -n "$scripts" ]; then
+  pnpm exec knip
 fi
 if [ -n "$styles" ]; then
   echo "$styles" | tr '\n' '\0' | xargs -0 pnpm exec stylelint --allow-empty-input

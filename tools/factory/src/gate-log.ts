@@ -38,7 +38,7 @@ function plain(line: string): string {
  * same failure again and is left out, as is a heading seen before. `span` is the lines the
  * failures take, from the first heading up to the summary.
  */
-export function playwrightFailures(text: string): {
+function playwrightFailures(text: string): {
   blocks: string[];
   span?: { from: number; to: number };
 } {

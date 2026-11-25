@@ -28,7 +28,7 @@ function tokenColour(probe: HTMLElement, token: string, fallback: string): strin
 }
 
 /** Mermaid's `base` theme variables, from the theme tokens in effect at `element`. */
-export function mermaidThemeVariables(element: Element): Record<string, string | boolean> {
+function mermaidThemeVariables(element: Element): Record<string, string | boolean> {
   const probe = document.createElement('span');
   probe.hidden = true;
   (element.isConnected ? element : document.body).append(probe);
@@ -95,12 +95,12 @@ function luminance(rgb: string): number {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
-export type DiagramRender = { svg: string } | { error: string };
+type DiagramRender = { svg: string } | { error: string };
 
 let renders = 0;
 
 /** Renders `source` with the theme in effect at `element`, or explains why it cannot. */
-export async function renderMermaid(source: string, element: Element): Promise<DiagramRender> {
+async function renderMermaid(source: string, element: Element): Promise<DiagramRender> {
   const instance = await loadMermaid();
   instance.initialize({
     startOnLoad: false,
@@ -126,7 +126,7 @@ export async function renderMermaid(source: string, element: Element): Promise<D
 }
 
 /** How long typing must pause before an edited diagram is drawn again. */
-export const DIAGRAM_DEBOUNCE_MS = 300;
+const DIAGRAM_DEBOUNCE_MS = 300;
 /** How long theme changes must settle before diagrams are drawn again (T28). */
 const THEME_REDRAW_MS = 150;
 

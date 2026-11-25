@@ -6,7 +6,7 @@
  */
 import type { LocalSyncState } from './service-types';
 
-export type SaveState =
+type SaveState =
   /** A change is not in this device's storage yet. */
   | 'saving'
   /** On this device, not pushed to git yet: a yellow dot and Sync Now beside it (A1629). */

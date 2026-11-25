@@ -44,16 +44,16 @@ import type { CommitInfo, GitTransport } from './transport';
 import { contentIds, grownBy } from './yjs';
 
 /** How long an entry is listed (A561). */
-export const ACTIVITY_DAYS = 30;
-export const ACTIVITY_LIST_MAX = 500;
+const ACTIVITY_DAYS = 30;
+const ACTIVITY_LIST_MAX = 500;
 /** The most workspace commits read back for the list. */
 const LOG_LIMIT = 1000;
 /** The WorkspaceDoc root that marks entries undone: commit → `{ at, by }`. */
-export const WORKSPACE_AGENT_UNDONE = 'agentUndone';
+const WORKSPACE_AGENT_UNDONE = 'agentUndone';
 /** The notebook's own settings (A827), as `NotebookOps` keeps them. */
 const SETTINGS_USER = 'notebook';
 
-export type ActivityKind =
+type ActivityKind =
   | 'folder.create'
   | 'folder.rename'
   | 'folder.move'
@@ -137,7 +137,7 @@ function shownValue(value: unknown): string {
 }
 
 /** An entry's id: the commit's first 13 hex digits, a whole number below 2^53. */
-export const activityId = (commit: string): number => Number.parseInt(commit.slice(0, 13), 16);
+const activityId = (commit: string): number => Number.parseInt(commit.slice(0, 13), 16);
 
 /**
  * Who undid which commit's change, and when (`agentUndone`), as marked: believed only when

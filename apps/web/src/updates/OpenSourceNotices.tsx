@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { SettingRow } from '../theme/look-rows';
 
 /** Where the page serves the notices from (`apps/web/public/`). */
-export const NOTICES_URL = '/third-party-notices.txt';
+const NOTICES_URL = '/third-party-notices.txt';
 
 type Loaded = { readonly text: string } | { readonly failed: true } | null;
 

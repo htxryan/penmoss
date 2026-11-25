@@ -72,7 +72,7 @@ export interface ThreadView {
   readonly comments: readonly CommentData[];
 }
 
-export function threadView(placed: PlacedThread, place: ThreadPlace): ThreadView {
+function threadView(placed: PlacedThread, place: ThreadPlace): ThreadView {
   const { thread, anchor } = placed;
   const note = isNoteThread(thread);
   return {
@@ -172,7 +172,7 @@ const failure = (
   details?: Readonly<Record<string, number | string>>,
 ): CommentFailure => ({ ok: false, status, code, message, ...(details ? { details } : {}) });
 
-export const COMMENT_ID = /^[0-9A-Za-z_-]{1,40}$/;
+const COMMENT_ID = /^[0-9A-Za-z_-]{1,40}$/;
 
 function bodyProblem(body: string): CommentFailure | null {
   if (body.trim().length === 0) return failure(400, 'invalid_request', 'The comment is empty');

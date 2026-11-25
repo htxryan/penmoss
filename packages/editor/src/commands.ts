@@ -263,7 +263,7 @@ export function symbolCommandTitle(id: string, symbols: readonly LineSymbol[]): 
   return symbol.kind ? `Toggle ${symbol.name}` : `Toggle Symbol ${symbol.glyph}`;
 }
 
-export const SYMBOL_COMMANDS: readonly EditorCommand[] = [
+const SYMBOL_COMMANDS: readonly EditorCommand[] = [
   ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((slot): EditorCommand => ({
     id: `editor.symbol${slot}`,
     // The slot's own title; in use its glyph names it (symbolCommandTitle, A940).
@@ -285,7 +285,7 @@ export const SYMBOL_COMMANDS: readonly EditorCommand[] = [
 ];
 
 /** The id of the palette command that inserts a slash-menu block. */
-export const insertCommandId = (item: Pick<BlockItem, 'id'>) => `editor.insert.${item.id}`;
+const insertCommandId = (item: Pick<BlockItem, 'id'>) => `editor.insert.${item.id}`;
 
 /** One "Insert …" command per slash-menu block (callout types included). */
 const INSERTS: readonly EditorCommand[] = BLOCK_ITEMS.map((item) => ({

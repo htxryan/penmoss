@@ -278,7 +278,7 @@ function inlineChange(
 }
 
 /** What the editor records; the host adds `note` and `folder` refs and sends it. */
-export type NoteUsageRecord = (
+type NoteUsageRecord = (
   name: 'open' | 'typing' | 'blocks' | 'cursor' | 'select',
   props: Props,
 ) => void;

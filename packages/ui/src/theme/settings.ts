@@ -33,7 +33,7 @@ export function parseMode(value: unknown): ThemeMode {
 }
 
 /** The custom themes stored in `settings`, valid ones only. */
-export function customThemes(settings: Readonly<Record<string, unknown>>): Theme[] {
+function customThemes(settings: Readonly<Record<string, unknown>>): Theme[] {
   const themes: Theme[] = [];
   for (const [key, value] of Object.entries(settings)) {
     if (!key.startsWith(CUSTOM_THEME_PREFIX)) continue;

@@ -9,7 +9,7 @@ import { BADGE_SETTINGS } from './badge';
  * copied: its pins are the primary notebook's own notes. Nor is the badge (PEN-140): it names
  * the notebook it belongs to.
  */
-export const NOT_COPIED: ReadonlySet<string> = new Set([QUICK_ACCESS_SETTING, ...BADGE_SETTINGS]);
+const NOT_COPIED: ReadonlySet<string> = new Set([QUICK_ACCESS_SETTING, ...BADGE_SETTINGS]);
 
 /** Not copied: Quick Access, the badge, and the look and layout, which stay on each device (A1626). */
 const notCopied = (key: string): boolean => NOT_COPIED.has(key) || isLocalSetting(key);

@@ -70,12 +70,7 @@ export function usePopover<Panel extends HTMLElement = HTMLDivElement>(
  * `index`; null for any other key. Left and right run on across rows; up and down stop at
  * the edges.
  */
-export function gridMove(
-  key: string,
-  index: number,
-  count: number,
-  columns: number,
-): number | null {
+function gridMove(key: string, index: number, count: number, columns: number): number | null {
   if (count === 0) return null;
   switch (key) {
     case 'ArrowRight':

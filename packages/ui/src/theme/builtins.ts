@@ -121,7 +121,7 @@ export const PENMOSS: Theme = {
 };
 
 /** Paper: ink on newsprint, notes set in a book serif at a shorter measure. */
-export const PAPER: Theme = {
+const PAPER: Theme = {
   id: 'paper',
   name: 'Paper',
   description: 'Ink on newsprint, set like a book',
@@ -439,7 +439,7 @@ export const NORD: Theme = {
 };
 
 /** Solarized (Ethan Schoonover): base03–base3 with the eight accents. Light reads in base02 (Solarized's own base00 body text is 4.1:1); accents are deepened in light and lifted in dark. */
-export const SOLARIZED: Theme = {
+const SOLARIZED: Theme = {
   id: 'solarized',
   name: 'Solarized',
   description: 'Precision colours (ethanschoonover.com)',
@@ -651,7 +651,7 @@ export const GRUVBOX: Theme = {
 };
 
 /** Rosé Pine (rosepinetheme.com): Dawn in light and Main in dark; the light accent is Pine, since Rose is too pale for text. */
-export const ROSE_PINE: Theme = {
+const ROSE_PINE: Theme = {
   id: 'rose-pine',
   name: 'Rosé Pine',
   description: 'Soho vibes: Dawn by day, Main by night (rosepinetheme.com)',
@@ -757,7 +757,7 @@ export const ROSE_PINE: Theme = {
 };
 
 /** High Contrast: black and white with saturated accents; text reaches 7:1 (WCAG AAA), not just 4.5:1. */
-export const HIGH_CONTRAST: Theme = {
+const HIGH_CONTRAST: Theme = {
   id: 'high-contrast',
   name: 'High Contrast',
   description: 'Maximum legibility: 7:1 text (WCAG AAA)',

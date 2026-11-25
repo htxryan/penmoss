@@ -45,7 +45,7 @@ import { recordSetting } from '../analytics/track';
 import type { MovePlan } from './model';
 
 /** The web and the Mac app share the Macs' copy of the look and layout (PEN-156, A1605). */
-export const SETTINGS_PLATFORM: SettingsPlatform = 'desktop';
+const SETTINGS_PLATFORM: SettingsPlatform = 'desktop';
 
 /** Where captures filed as new notes go (T30). */
 export { INBOX } from '@penmoss/model/workspace';

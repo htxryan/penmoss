@@ -45,7 +45,7 @@ export function alphaState(body) {
 }
 
 /** @param {AlphaState} state */
-export function alphaNotes(state) {
+function alphaNotes(state) {
   const { android, mac } = state;
   const at = (/** @type {AlphaPart} */ part) =>
     `version \`${part.version}\`, build ${part.build} from main at ${part.sha.slice(0, 7)}`;

@@ -23,18 +23,18 @@ import type {
 import { counted } from '@penmoss/core/words';
 
 /** The `release-notes.json` schema this app reads; a newer file shows a link instead. */
-export const NOTES_SCHEMA = 1;
+const NOTES_SCHEMA = 1;
 
-export const KIND_ORDER = ['new', 'improved', 'fixed'] as const;
-export type NoteKind = (typeof KIND_ORDER)[number];
+const KIND_ORDER = ['new', 'improved', 'fixed'] as const;
+type NoteKind = (typeof KIND_ORDER)[number];
 
-export const KIND_LABELS: Readonly<Record<NoteKind, string>> = {
+const KIND_LABELS: Readonly<Record<NoteKind, string>> = {
   new: 'New',
   improved: 'Improved',
   fixed: 'Fixed',
 };
 
-export interface NoteGroup {
+interface NoteGroup {
   readonly kind: NoteKind;
   readonly label: string;
   readonly notes: readonly DesktopReleaseNote[];
@@ -105,7 +105,7 @@ function range(
   );
 }
 
-export function groupNotes(notes: readonly DesktopReleaseNote[]): NoteGroup[] {
+function groupNotes(notes: readonly DesktopReleaseNote[]): NoteGroup[] {
   return KIND_ORDER.map((kind) => ({
     kind,
     label: KIND_LABELS[kind],

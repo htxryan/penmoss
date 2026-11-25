@@ -43,9 +43,9 @@ export type Exec = (
   options?: ExecOptions,
 ) => Promise<ExecResult>;
 
-export const KILL_GRACE_MS = 30_000;
+const KILL_GRACE_MS = 30_000;
 /** How long a command with `timeoutMs` gets after it exits for its pipes to close. */
-export const DRAIN_MS = 100;
+const DRAIN_MS = 100;
 
 /**
  * Stops the group `$1` if its reader goes away without saying "done": this process died (even by

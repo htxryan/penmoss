@@ -298,7 +298,7 @@ async function publish(
  * its number (in the summary, decisions, risks and the fidelity table's criteria and notes), and
  * the risks are settled against what the factory has since done (risks.ts).
  */
-export function forTheBody(
+function forTheBody(
   result: AgentResult,
   fidelity: readonly FidelityRow[] | undefined,
   numbering: Readonly<Record<string, string>>,

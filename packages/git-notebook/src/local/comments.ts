@@ -23,10 +23,10 @@ import {
 import { LocalError, type NoteCatalog } from './catalog';
 
 /** The most threads one list across the notebook returns. */
-export const MAX_LISTED_THREADS = 200;
+const MAX_LISTED_THREADS = 200;
 
 /** One thread as a list across the notebook gives it. */
-export interface ListedThread {
+interface ListedThread {
   noteId: string;
   title: string;
   threadId: string;

@@ -32,7 +32,7 @@ export const PANE_LIMITS: Readonly<Record<PaneKind, PaneLimits>> = {
   historyPreview: { initial: 20, min: 8, max: 48 },
 };
 
-export const PANE_KEYS: Readonly<Record<PaneKind, string>> = {
+const PANE_KEYS: Readonly<Record<PaneKind, string>> = {
   sidebar: 'penmoss.sidebarWidth',
   panel: 'penmoss.notePanelWidth',
   historyPreview: 'penmoss.historyPreviewHeight',
@@ -49,7 +49,7 @@ export function clampPane(kind: PaneKind, rem: number): number {
 }
 
 /** A stored width, read: its kind's initial width for anything that is not a number. */
-export function readPaneWidth(kind: PaneKind, value: string | null): number {
+function readPaneWidth(kind: PaneKind, value: string | null): number {
   if (value === null || value.trim() === '') return PANE_LIMITS[kind].initial;
   return clampPane(kind, Number(value));
 }

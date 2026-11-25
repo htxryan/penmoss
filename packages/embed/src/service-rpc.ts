@@ -24,7 +24,7 @@ export interface ServiceCalls {
   removeIndex(): Promise<ServiceStatus>;
 }
 
-export type ServiceMethod = keyof ServiceCalls;
+type ServiceMethod = keyof ServiceCalls;
 const METHODS: ReadonlySet<string> = new Set<ServiceMethod>([
   'status',
   'update',
@@ -35,13 +35,13 @@ const METHODS: ReadonlySet<string> = new Set<ServiceMethod>([
   'removeIndex',
 ]);
 
-export interface ServiceRequest {
+interface ServiceRequest {
   readonly id: number;
   readonly method: ServiceMethod;
   readonly args: readonly unknown[];
 }
 
-export type ServiceMessage =
+type ServiceMessage =
   | { readonly id: number; readonly result: unknown }
   | { readonly id: number; readonly error: string }
   | { readonly status: ServiceStatus };

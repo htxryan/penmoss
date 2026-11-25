@@ -98,7 +98,7 @@ export type SyncReach = 'nothing' | 'fetch' | 'push';
 const REACH: Readonly<Record<SyncReach, number>> = { nothing: 0, fetch: 1, push: 2 };
 
 /** Whether `reached` is further than `than`. */
-export const further = (reached: SyncReach | undefined, than: SyncReach): boolean =>
+const further = (reached: SyncReach | undefined, than: SyncReach): boolean =>
   REACH[reached ?? 'nothing'] > REACH[than];
 
 /**
@@ -138,9 +138,9 @@ export const STARTING: GitSyncStatus = {
 /** Kept when a push could not finish before the app quit: the next start pushes first. */
 const OWED_KEY = 'pushOwed';
 /** After a Send to (A1065, A1072): the notebook is pulled this often… */
-export const REPLY_PULL_MS = 10_000;
+const REPLY_PULL_MS = 10_000;
 /** …for this long, or until the thread's delivery is replied. */
-export const REPLY_WATCH_MS = 10 * 60_000;
+const REPLY_WATCH_MS = 10 * 60_000;
 
 export interface EngineHostOptions {
   readonly notebookId: string;
@@ -177,7 +177,7 @@ export interface EngineHostOptions {
 }
 
 /** A failure in the Mac's words (A824): where changes wait, and where its settings are. */
-export const MAC_FAILURE_WORDS: FailureWords = {
+const MAC_FAILURE_WORDS: FailureWords = {
   kept: 'Changes stay on this device and go once it syncs.',
   signIn: "Check git's credentials for it, or use a personal access token in Settings → Notebooks",
   email: 'set it as this notebook’s commit email in Settings → Notebooks, or as git’s user.email',

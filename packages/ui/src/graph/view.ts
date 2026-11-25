@@ -11,7 +11,7 @@ export const MAX_ZOOM = 6;
 export const clampZoom = (k: number): number => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k));
 
 /** Whether the person asked for less motion (the system's Reduce Motion). */
-export const reducedMotion = (): boolean =>
+const reducedMotion = (): boolean =>
   typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Graphs this small open settled; larger ones settle a little, then move into place. */

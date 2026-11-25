@@ -26,7 +26,7 @@ export const FEEDBACK_GROUP_TITLES: Readonly<Record<FeedbackGroupId, string>> = 
 };
 
 /** A group of named values: two columns, one row per value. */
-export const FIELD_COLUMNS: readonly string[] = ['Field', 'Value'];
+const FIELD_COLUMNS: readonly string[] = ['Field', 'Value'];
 /** The recent-edits table's columns (group 5). */
 export const EDIT_COLUMNS: readonly string[] = ['Time', 'Actor', 'Kind', 'Change'];
 /** The recent-errors table's columns (group 6). */
@@ -61,11 +61,10 @@ export const FEEDBACK_PRIORITY_LABELS: Readonly<Record<FeedbackPriority, string>
   4: 'P4 Lowest',
 };
 
-export const FEEDBACK_CLIENTS = ['web', 'mac', 'android'] as const;
-export type FeedbackClient = (typeof FEEDBACK_CLIENTS)[number];
+export type FeedbackClient = 'web' | 'mac' | 'android';
 
 /** How the footer names each client. */
-export const FEEDBACK_CLIENT_NAMES: Readonly<Record<FeedbackClient, string>> = {
+const FEEDBACK_CLIENT_NAMES: Readonly<Record<FeedbackClient, string>> = {
   web: 'web',
   mac: 'Mac',
   android: 'Android',
@@ -380,7 +379,7 @@ export function contextWithoutSecrets(context: FeedbackContext): FeedbackContext
 }
 
 /** How many characters of a note's text in a row count as quoting it. */
-export const QUOTE_WINDOW = 24;
+const QUOTE_WINDOW = 24;
 
 /**
  * Whether `text` quotes the note's text (A791: an error that does is dropped, not redacted): any

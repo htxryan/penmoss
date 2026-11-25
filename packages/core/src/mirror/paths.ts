@@ -23,7 +23,7 @@ import { fnv1a } from '../fnv';
 import { stripInvisible } from '../invisible';
 
 /** Longest name, in UTF-8 bytes, before a suffix and `.md` (filesystems allow 255). */
-export const MAX_NAME_BYTES = 150;
+const MAX_NAME_BYTES = 150;
 /**
  * Longest path in the repository, in UTF-16 units as Windows counts them:
  * Windows' 260 less room for the clone's own folder
@@ -31,17 +31,17 @@ export const MAX_NAME_BYTES = 150;
  */
 export const MAX_PATH_CHARS = 200;
 /** Longest note name before a suffix (the suffix adds at most 29, `.md` 3). */
-export const MAX_NOTE_NAME_CHARS = 80;
+const MAX_NOTE_NAME_CHARS = 80;
 /** Longest folder name, room left for an id suffix (at most 29). */
-export const MAX_FOLDER_NAME_CHARS = 56;
+const MAX_FOLDER_NAME_CHARS = 56;
 /** Longest suffix `uniqueName` adds: ` (` + a 26-character id + `)`. */
 const MAX_SUFFIX_CHARS = 29;
 /** Longest folder path: whatever a note with the longest name leaves. */
-export const MAX_DIR_CHARS = MAX_PATH_CHARS - 1 - (MAX_NOTE_NAME_CHARS + MAX_SUFFIX_CHARS + 3);
+const MAX_DIR_CHARS = MAX_PATH_CHARS - 1 - (MAX_NOTE_NAME_CHARS + MAX_SUFFIX_CHARS + 3);
 /** A cut folder name ends in `~` and 6 characters of a hash of its id. */
 const CUT_MARK_CHARS = 7;
 /** Where attachments go, at the top of the repository. */
-export const ATTACHMENTS_DIR = 'attachments';
+const ATTACHMENTS_DIR = 'attachments';
 
 /**
  * Characters no name may hold: Windows forbids `\ / : * ? " < > |`; wikilinks

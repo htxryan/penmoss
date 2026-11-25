@@ -18,13 +18,6 @@ export * from './sessions';
 export * from './transport';
 export * from './identity';
 export * from './writer';
-export {
-  ENGINE_ORIGIN,
-  GIT_ORIGIN,
-  isUpdate,
-  LOCAL_STORE_ORIGIN,
-  mergeUpdates,
-  ownFile,
-} from './yjs';
+export { isUpdate } from './yjs';
 export * from './ops';
 export * from './timeline';

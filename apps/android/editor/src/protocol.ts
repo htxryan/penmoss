@@ -38,12 +38,10 @@ import {
 export const BRIDGE_VERSION = 1;
 
 /** Daily and weekly notes (T40 P5): the period kinds, as `@penmoss/core` names them. */
-export const PERIOD_KINDS = ['daily', 'weekly'] as const;
-
-export type PeriodKind = (typeof PERIOD_KINDS)[number];
+type PeriodKind = 'daily' | 'weekly';
 
 /** A calendar date (`2026-10-21`), as the page's day cells and labels use it. */
-export const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** One stored update for a note, by the app's own id for it (a Room row). */
 export interface StoredUpdate {
@@ -105,29 +103,29 @@ export interface DirectoryEntry {
 }
 
 /** Copy as Markdown or as rich text (T15; T40 P8, ED9). */
-export const COPY_FORMATS = ['markdown', 'rich'] as const;
+const COPY_FORMATS = ['markdown', 'rich'] as const;
 export type CopyFormat = (typeof COPY_FORMATS)[number];
 
 /** What a copy takes: the whole note (the ⋮ menu) or the selection (the selection's menu). */
-export const COPY_SCOPES = ['note', 'selection'] as const;
+const COPY_SCOPES = ['note', 'selection'] as const;
 export type CopyScope = (typeof COPY_SCOPES)[number];
 
 /** The Block menu's actions (T40 P8, ED5): the shared editor commands of the same names. */
-export const BLOCK_ACTIONS = ['moveUp', 'moveDown', 'duplicate', 'delete'] as const;
+const BLOCK_ACTIONS = ['moveUp', 'moveDown', 'duplicate', 'delete'] as const;
 export type BlockAction = (typeof BLOCK_ACTIONS)[number];
 
 /** What the app asks the block catalogue for: the + sheet's inserts, or Turn into's kinds. */
-export const BLOCK_PURPOSES = ['insert', 'turnInto'] as const;
+const BLOCK_PURPOSES = ['insert', 'turnInto'] as const;
 export type BlockPurpose = (typeof BLOCK_PURPOSES)[number];
 
 /** A block catalogue id (the slash menu's, `@penmoss/editor`'s BLOCK_ITEMS). */
-export const BLOCK_ID = /^[A-Za-z0-9-]{1,40}$/;
+const BLOCK_ID = /^[A-Za-z0-9-]{1,40}$/;
 
 /** The longest search the + sheet sends. */
-export const MAX_BLOCK_QUERY = 100;
+const MAX_BLOCK_QUERY = 100;
 
 /** The most text a paste as plain text carries (a clipboard can hold more; the rest is not pasted). */
-export const MAX_PLAIN_CHARS = 1_000_000;
+const MAX_PLAIN_CHARS = 1_000_000;
 
 /** Toggles remembered per note (T40 P8, ED8), as the web keeps them (`MAX_FOLDS_PER_NOTE`). */
 export const MAX_FOLDS = 200;
@@ -139,23 +137,22 @@ export const MAX_FOLD_KEY = 2000;
  * A file the note names (T40 P8, ED12): `attachments/<sha256>.<ext>`, any
  * extension core's `filePath` writes, pictures and PDFs included.
  */
-export const FILE_PATH = /^attachments\/[0-9a-f]{64}\.[a-z0-9]{1,10}$/;
+const FILE_PATH = /^attachments\/[0-9a-f]{64}\.[a-z0-9]{1,10}$/;
 
 /** The longest file name carried (a chip's name; most file systems stop at 255). */
 export const MAX_FILE_NAME = 255;
 
 /** Files the document picker inserts at once (as the photo picker's 10, with room). */
-export const MAX_INSERT_FILES = 20;
+const MAX_INSERT_FILES = 20;
 
 /** What a chip's buttons ask of the app: open the file, or save a copy (ED12). */
-export const FILE_ACTIONS = ['open', 'save'] as const;
-export type FileAction = (typeof FILE_ACTIONS)[number];
+export type FileAction = 'open' | 'save';
 
 /**
  * How pictures from web addresses show (T40 P8, ED13): through the app, held
  * for a tap (Wi-Fi only, on mobile data), or not at all.
  */
-export const WEB_PICTURE_MODES = ['on', 'wait', 'off'] as const;
+const WEB_PICTURE_MODES = ['on', 'wait', 'off'] as const;
 export type WebPictureMode = (typeof WEB_PICTURE_MODES)[number];
 
 /** A stored file's type, as the app reports it: `application/pdf`, `image/png`. */
@@ -496,9 +493,9 @@ export type ToEditor =
   | CommentAuthorMessage;
 
 /** What the app has of another note the page asked for (T40 P7, A470). */
-export const CONTENT_STATES = ['ok', 'missing', 'tooLarge'] as const;
+const CONTENT_STATES = ['ok', 'missing', 'tooLarge'] as const;
 
-export type ContentState = (typeof CONTENT_STATES)[number];
+type ContentState = (typeof CONTENT_STATES)[number];
 
 /** Longer than any heading a link names (the server keeps titles to 300 characters too). */
 export const MAX_HEADING_CHARS = 300;
@@ -897,10 +894,10 @@ const ATTACHMENT_PATH = /^attachments\/[0-9a-f]{64}\.(png|jpg|gif|webp|avif)$/;
  */
 export const MAX_TAG_CHARS = 1000;
 /** The longest description the app may send (core's `DESCRIPTION_MAX_CHARS`). */
-export const MAX_DESCRIPTION_CHARS = 600;
+const MAX_DESCRIPTION_CHARS = 600;
 
 /** A note's remembered toggles, or null when malformed or too many (T40 P8, ED8). */
-export function foldsOf(value: unknown): Record<string, boolean> | null {
+function foldsOf(value: unknown): Record<string, boolean> | null {
   if (!isRecord(value)) return null;
   const entries = Object.entries(value);
   if (entries.length > MAX_FOLDS) return null;

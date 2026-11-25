@@ -18,7 +18,7 @@ import { MENU_FLOATING_UI } from './slash-menu';
 import { SuggestionListbox } from './suggestion-listbox';
 import type { LinkServices } from './wikilink';
 
-export const linkMenuKey = new PluginKey('penmossLinkMenu');
+const linkMenuKey = new PluginKey('penmossLinkMenu');
 
 const MAX_QUERY = 120;
 const MAX_NOTES = 8;
@@ -310,7 +310,7 @@ function hint(doc: Document, text: string): HTMLElement {
  * An embed is a block: it takes the place of an otherwise empty paragraph, or
  * goes after the caret's block.
  */
-export function insertLink(
+function insertLink(
   editor: Editor,
   range: Range,
   link: {

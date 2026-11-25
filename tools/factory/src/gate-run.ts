@@ -405,7 +405,7 @@ function verdictCounts(rows: readonly FidelityRow[]): Record<string, number> {
 }
 
 /** The Mac proof, once the test VM can take it (whenVmFree). */
-export async function recordMacProof(
+async function recordMacProof(
   deps: RunDeps,
   gate: RunSandbox,
   branch: string,
@@ -430,7 +430,7 @@ export async function recordMacProof(
  * What the agent's next sandbox has from the proof (`stageLastProof` in host-proof.ts, and
  * proof/evidence.ts for what a failing test leaves), named as the files are.
  */
-export const LAST_PROOF_NOTE =
+const LAST_PROOF_NOTE =
   "The harness's files from this proof are in `.factory/last-proof/`: each test's last screenshot (`<platform>-<n>-screenshot.png`, or `.jpg` when it is the Mac window's last screencast frame), and for each failing test `<platform>-failures.md`, which gives its error and lists its files there: Playwright's `<platform>-<n>-error-context.md`, its text attachments and logs (`<platform>-<n>-<attachment>.txt` or `.log`, each cut to its last 200 KB; on Android its instrumentation output and logcat) and its PNG attachments. Read them before you change anything, to see where and why the spec stopped.";
 
 /** What each missing platform's proof printed, for the agent: the harness's run, not its own. */

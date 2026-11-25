@@ -26,10 +26,7 @@ export class FakeDataTransfer {
 }
 
 /** A clipboard event carrying `data` (as a browser's paste, copy or cut event does). */
-export function clipboardEvent(
-  type: 'paste' | 'copy' | 'cut',
-  data: FakeDataTransfer,
-): ClipboardEvent {
+function clipboardEvent(type: 'paste' | 'copy' | 'cut', data: FakeDataTransfer): ClipboardEvent {
   const event = new Event(type, { bubbles: true, cancelable: true }) as ClipboardEvent;
   Object.defineProperty(event, 'clipboardData', { value: data });
   return event;

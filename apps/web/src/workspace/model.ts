@@ -113,7 +113,7 @@ export type Child =
  * A folder's children in the order shown: its subfolders, then its notes; or, sorted Manual and
  * `together` (T62 item 6), the two kinds in one order by their keys, a folder first on a tie.
  */
-export function orderedChildren(
+function orderedChildren(
   folders: readonly FolderNode[],
   notes: readonly NoteEntry[],
   together: boolean,
@@ -135,7 +135,7 @@ export function orderedChildren(
 }
 
 /** Whether a folder's (null: the top level's) children share one Manual order (T62 item 6). */
-export function isTogether(tree: WorkspaceTree, folderId: string | null): boolean {
+function isTogether(tree: WorkspaceTree, folderId: string | null): boolean {
   if (sortModeOf(tree, folderId) !== 'manual') return false;
   return folderId === null
     ? tree.rootTogether === true
@@ -232,7 +232,7 @@ export function revealFolders(
 }
 
 /** The folder an item shows in (null: top level, or unknown). */
-export function parentOf(tree: WorkspaceTree, item: ItemRef): string | null {
+function parentOf(tree: WorkspaceTree, item: ItemRef): string | null {
   if (item.kind === 'folder') return tree.byId.get(item.id)?.effectiveParentId ?? null;
   const inRoot = tree.notes.some((note) => note.id === item.id);
   if (inRoot) return null;
@@ -261,7 +261,7 @@ export type DropTarget =
   | { readonly kind: 'root' }
   | { readonly kind: ItemKind; readonly id: string; readonly zone: DropZone };
 
-export interface Placement {
+interface Placement {
   /** A sibling of the item's own kind unless the order holds both (T62 item 6). */
   readonly kind: ItemKind;
   readonly id: string;

@@ -121,8 +121,6 @@ export const blockEntry = (item: BlockItem): BlockEntry => ({
 });
 
 /** The note's frontmatter fields, as the web writes them (shared, so the two cannot drift). */
-export { noteFields } from '@penmoss/model/note-fields';
-
 /**
  * The Info sheet's details are read at most this often while the note changes (T40 P7, NT23):
  * as the web's Info panel reads them, never per keystroke.

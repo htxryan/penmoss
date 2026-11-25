@@ -49,7 +49,7 @@ export interface FactoryPr {
 }
 
 /** Whether main has moved past the PR so it can't merge as it is: it needs a rebase (F6). */
-export function mainMovedPast(pr: FactoryPr): boolean {
+function mainMovedPast(pr: FactoryPr): boolean {
   return (
     pr.mergeable === 'CONFLICTING' ||
     pr.mergeStateStatus === 'DIRTY' ||

@@ -19,7 +19,7 @@ export interface GrowingField {
 }
 
 /** Whether the browser sizes a field to its content by itself (`field-sizing`). */
-export function sizesItself(): boolean {
+function sizesItself(): boolean {
   return typeof CSS !== 'undefined' && CSS.supports?.('field-sizing', 'content') === true;
 }
 
@@ -37,7 +37,7 @@ export function fitHeight(field: GrowingField, native = sizesItself()): void {
  * clipboard chip can insert a line break as plain input. The caret stays on
  * the same characters.
  */
-export function keepOneLine(field: GrowingField): void {
+function keepOneLine(field: GrowingField): void {
   const typed = field.value;
   const clean = oneLineTitle(typed);
   if (clean === typed) return;

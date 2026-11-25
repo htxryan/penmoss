@@ -65,7 +65,7 @@ import {
 } from './state';
 
 /** How long after a change the tabs are saved (and at once as the page goes, A228). */
-export const SAVE_MS = 300;
+const SAVE_MS = 300;
 
 export interface TabsOptions {
   readonly storage: KeyValueStore | null;

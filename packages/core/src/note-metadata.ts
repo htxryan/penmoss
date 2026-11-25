@@ -53,7 +53,7 @@ export const UNDER_TITLE_SETTING = 'metadata.underTitle';
 export const STATUS_BAR_SETTING = 'metadata.statusBar';
 
 /** The status bar unset: the counts it has always shown. */
-export const STATUS_BAR_DEFAULT: readonly MetadataField[] = ['words', 'characters', 'reading'];
+const STATUS_BAR_DEFAULT: readonly MetadataField[] = ['words', 'characters', 'reading'];
 
 /** Why `value` cannot be stored as the metadata setting `key`, or null when it can. */
 export function noteMetadataProblem(key: string, value: unknown): string | null {

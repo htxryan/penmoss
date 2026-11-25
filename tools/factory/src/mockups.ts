@@ -9,9 +9,9 @@ import { readFileSync } from 'node:fs';
 import type { RunSandbox } from './run-deps.ts';
 
 /** Where the host stages the agreed mockups in the worktree (stageMockups). */
-export const MOCKUPS_DIR = '.factory/mockups';
+const MOCKUPS_DIR = '.factory/mockups';
 /** Where validation's captures go, the mockups' PNGs among them. */
-export const VALIDATION_DIR = '.factory/validation';
+const VALIDATION_DIR = '.factory/validation';
 
 const SCRIPT = readFileSync(new URL('../sandbox/render-mockups.cjs', import.meta.url), 'utf8');
 const EOF = 'FACTORY_MOCKUPS';

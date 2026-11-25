@@ -17,7 +17,7 @@ import { PLATFORMS, type Platform } from './config.ts';
  *   factory, the site, the root `scripts/`, and tests alone.
  * - `docs-only`: lint only, no proof.
  */
-export type ScopeKind = 'product' | 'ci-only' | 'docs-only';
+type ScopeKind = 'product' | 'ci-only' | 'docs-only';
 
 export interface Scope {
   readonly kind: ScopeKind;

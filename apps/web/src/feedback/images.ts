@@ -17,7 +17,7 @@ export interface Screenshot {
   readonly source?: 'window' | 'tab';
 }
 
-export class ScreenshotRefused extends Error {}
+class ScreenshotRefused extends Error {}
 
 /** Whether a picked, pasted or dropped file may be a screenshot, and why not. */
 export function checkImage(file: { readonly type: string; readonly size: number }): string | null {

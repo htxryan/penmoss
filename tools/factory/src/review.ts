@@ -6,14 +6,14 @@
  */
 import type { Gh } from './github.ts';
 
-export interface ThreadComment {
+interface ThreadComment {
   readonly id: string;
   readonly author: string;
   readonly body: string;
   readonly createdAt: string;
 }
 
-export interface ReviewThread {
+interface ReviewThread {
   readonly id: string;
   readonly isResolved: boolean;
   readonly path: string | null;
@@ -21,7 +21,7 @@ export interface ReviewThread {
   readonly comments: readonly ThreadComment[];
 }
 
-export interface Review {
+interface Review {
   readonly author: string;
   readonly state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING';
   readonly body: string;

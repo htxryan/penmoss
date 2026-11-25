@@ -6,7 +6,7 @@
  */
 import { devicePref, useDevicePref } from './device-pref';
 
-export const SIDEBAR_KEY = 'penmoss.sidebar';
+const SIDEBAR_KEY = 'penmoss.sidebar';
 
 const collapsed = devicePref(SIDEBAR_KEY, {
   parse: (stored) => stored === 'collapsed',

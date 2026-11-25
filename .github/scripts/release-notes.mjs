@@ -13,13 +13,13 @@ import path from 'node:path';
 import { formatNote, parseReleaseNote } from './release-note.mjs';
 
 export const NOTES_FILE = 'release-notes.json';
-export const SCHEMA = 1;
+const SCHEMA = 1;
 const ALPHA = 'alpha';
 const START = '<!-- penmoss-notes -->';
 const END = '<!-- /penmoss-notes -->';
 const STABLE = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 /** The alpha release lists at most this many unreleased notes; the file holds them all. */
-export const ALPHA_LIST = 40;
+const ALPHA_LIST = 40;
 
 /**
  * @typedef {import('./release-note.mjs').Kind} Kind
@@ -75,7 +75,7 @@ export function readNotesFile(text) {
  * whose Release note doesn't parse (it counts as none: the check should have caught it).
  * @param {PullRequest[]} prs @param {number} build
  */
-export function notesOf(prs, build) {
+function notesOf(prs, build) {
   /** @type {NoteEntry[]} */
   const notes = [];
   /** @type {string[]} */
@@ -96,7 +96,7 @@ export function notesOf(prs, build) {
  * @param {NotesFile} file @param {number[]} prs @param {NoteEntry[]} notes @param {number} build
  * @returns {NotesFile}
  */
-export function withNotes(file, prs, notes, build) {
+function withNotes(file, prs, notes, build) {
   const replaced = new Set(prs);
   return {
     ...file,
@@ -158,7 +158,7 @@ const section = (markdown) => `${START}\n${markdown}\n${END}`;
 
 /** Build `build`'s section: its notes, or that it changes nothing people see. */
 /** @param {NotesFile} file @param {number} build */
-export function buildSection(file, build) {
+function buildSection(file, build) {
   const notes = file.notes.filter((note) => note.build === build);
   return section(
     `### What's new\n\n${notes.length ? renderNotes(notes) : 'Nothing that people using Penmoss would notice.'}`,
@@ -219,7 +219,7 @@ async function withPublished(gh, releases, file, dir) {
 }
 
 /** Writes and uploads the file to `tag`. @param {NotesGh} gh @param {string} tag @param {NotesFile} file @param {string} dir */
-export async function uploadNotes(gh, tag, file, dir) {
+async function uploadNotes(gh, tag, file, dir) {
   const out = path.join(dir, NOTES_FILE);
   writeFileSync(out, `${JSON.stringify(file, null, 2)}\n`);
   await gh.upload(tag, out);

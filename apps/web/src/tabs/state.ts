@@ -87,7 +87,7 @@ export function noteIdOfPath(path: string): string | null {
 }
 
 /** Whether a path is one of Settings' pages: Back reaches them, a pinned tab never rests on one. */
-export const isSettingsPath = (path: string): boolean =>
+const isSettingsPath = (path: string): boolean =>
   path === '/settings' || path.startsWith('/settings/') || path.startsWith('/settings?');
 
 const entry = (path: string): Entry => ({ path, scrollTop: 0 });
@@ -157,7 +157,7 @@ export const shownTabCount = (state: TabsState): number =>
 export const activePath = (state: TabsState): string => currentEntry(activeTab(state)).path;
 
 /** The tab of that id, or undefined. */
-export const tabById = (state: TabsState, id: string): Tab | undefined =>
+const tabById = (state: TabsState, id: string): Tab | undefined =>
   state.tabs.find((tab) => tab.id === id);
 
 const pinnedCount = (tabs: readonly Tab[]) => tabs.filter((tab) => tab.pinned).length;

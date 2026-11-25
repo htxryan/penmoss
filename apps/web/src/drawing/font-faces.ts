@@ -27,7 +27,7 @@ const recorded = new Map<string, RecordedFace>();
 const SOURCE = /url\(\s*(["']?)([^"')]+)\1\s*\)(?:\s*format\([^)]*\))?/g;
 
 /** The `src` entries of `source` the page may load: its own origin's and `data:`; others go. */
-export function localSources(source: string, origin: string): { kept: string; urls: string[] } {
+function localSources(source: string, origin: string): { kept: string; urls: string[] } {
   const kept: string[] = [];
   const urls: string[] = [];
   for (const match of source.matchAll(SOURCE)) {
@@ -80,7 +80,7 @@ export function keepFontFacesLocal(win: Window & typeof globalThis = window): vo
 const local = new WeakSet<object>();
 
 /** The ranges a CSS `unicode-range` covers: `U+0-FF, U+131, U+4??` as [first, last] pairs. */
-export function unicodeRanges(range: string): Array<readonly [number, number]> {
+function unicodeRanges(range: string): Array<readonly [number, number]> {
   const out: Array<readonly [number, number]> = [];
   for (const part of range.split(',')) {
     const text = part.trim().replace(/^u\+/i, '');

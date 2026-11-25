@@ -26,7 +26,7 @@ import type { TokenLocation, TokenStore } from './io';
  * unlock prompt at login, 10 s.
  */
 export const LOOKUP_TIMEOUT_MS = 2_000;
-export const SAVE_TIMEOUT_MS = 10_000;
+const SAVE_TIMEOUT_MS = 10_000;
 /** After a tool exits, how long its output may still take: a grandchild may hold the pipe. */
 const DRAIN_MS = 100;
 
@@ -38,7 +38,7 @@ export interface ExecResult {
   readonly timedOut?: boolean;
 }
 
-export type Exec = (
+type Exec = (
   command: string,
   args: readonly string[],
   input: string | null,

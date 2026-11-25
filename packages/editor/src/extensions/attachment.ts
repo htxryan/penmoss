@@ -159,7 +159,7 @@ export const FILE_URL_HOLD_MS = 60_000;
 const OPEN_FILE_TIMEOUT_MS = 30_000;
 
 /** Saves a file under its name from its URL (a chip's Download). */
-export function downloadUrl(doc: Document, url: string, name: string): void {
+function downloadUrl(doc: Document, url: string, name: string): void {
   const link = doc.createElement('a');
   link.href = url;
   link.download = name;

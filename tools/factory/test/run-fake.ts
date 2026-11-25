@@ -20,7 +20,7 @@ export const spec = (() => {
   if (!r.ok) throw new Error(r.error);
   return r.spec;
 })();
-export const board: Board = {
+const board: Board = {
   items: [card],
 };
 

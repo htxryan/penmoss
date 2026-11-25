@@ -36,44 +36,40 @@
 import { MAX_COMMENT_CHARS } from '@penmoss/model/comments';
 import { isRecord, isString } from './guards';
 
-export { MAX_COMMENT_CHARS };
-
 /** A thread's or comment's id, as the server checks them (`COMMENT_ID`). */
 export const COMMENT_ID = /^[0-9A-Za-z_-]{1,40}$/;
 /** An agent clone's writer id (T54; a ULID), as a thread's target names it (A1060). */
-export const WRITER_ID = /^[A-Za-z0-9_-]{1,80}$/;
+const WRITER_ID = /^[A-Za-z0-9_-]{1,80}$/;
 /** A channel session's key: 24 hex digits of `sessionKey(writer, name)` (A1060). */
-export const SESSION_KEY = /^[0-9a-f]{24}$/;
+const SESSION_KEY = /^[0-9a-f]{24}$/;
 /** The longest target label kept: what Send to… showed for the session. */
-export const MAX_TARGET_LABEL = 300;
+const MAX_TARGET_LABEL = 300;
 /** At most this many sessions in one `commentSessions`. */
-export const MAX_SESSIONS = 500;
+const MAX_SESSIONS = 500;
 /** A device's actor id, as the server makes it: `device:` and the device's id. */
-export const DEVICE_ACTOR_ID = /^device:[A-Za-z0-9_-]{1,80}$/;
+const DEVICE_ACTOR_ID = /^device:[A-Za-z0-9_-]{1,80}$/;
 /** The longest device name kept for the phone's own comments. */
-export const MAX_AUTHOR_LABEL = 300;
+const MAX_AUTHOR_LABEL = 300;
 
-export const DRAFT_SOURCES = ['selection', 'caret', 'note'] as const;
+const DRAFT_SOURCES = ['selection', 'caret', 'note'] as const;
 export type DraftSource = (typeof DRAFT_SOURCES)[number];
 
 /** Where a thread is: on a passage, at a point, or on the note as a whole (T52 item 5). */
-export type ThreadKind = 'range' | 'point' | 'note';
+type ThreadKind = 'range' | 'point' | 'note';
 
-export const THREAD_STATUSES = ['open', 'resolved'] as const;
-export type ThreadStatusWire = (typeof THREAD_STATUSES)[number];
+const THREAD_STATUSES = ['open', 'resolved'] as const;
+type ThreadStatusWire = (typeof THREAD_STATUSES)[number];
 
-export const DELIVERY_STATES = ['waiting', 'sent', 'seen', 'replied', 'failed'] as const;
-export type DeliveryStateWire = (typeof DELIVERY_STATES)[number];
+type DeliveryStateWire = 'waiting' | 'sent' | 'seen' | 'replied' | 'failed';
 
 /**
  * Why a delivery failed: the session has not been seen for a week (`gone`, A1062). `scope` and
  * `revoked` were the server's (a token's folder, a revoked token) and are only read.
  */
-export const DELIVERY_FAILURES = ['gone', 'scope', 'revoked'] as const;
-export type DeliveryFailureWire = (typeof DELIVERY_FAILURES)[number];
+type DeliveryFailureWire = 'gone' | 'scope' | 'revoked';
 
 /** The agent session a thread is sent to (A1060): the agent's writer, the session, its label. */
-export interface TargetWire {
+interface TargetWire {
   readonly writer: string;
   readonly session: string;
   readonly label: string;
@@ -133,7 +129,7 @@ export interface CommentAuthorMessage {
 }
 
 /** A session the WorkspaceDoc lists, as the gone check needs it (A1062, A1077). */
-export interface SessionSeenWire {
+interface SessionSeenWire {
   readonly key: string;
   /** Epoch ms. */
   readonly lastSeen: number;

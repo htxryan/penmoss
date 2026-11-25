@@ -528,7 +528,7 @@ export class LocalAgents {
 }
 
 /** The lines that give an agent the MCP server `server`, run as `words` (the app's binary first). */
-export function serverLines(server: string, words: readonly string[]): AgentServerLines {
+function serverLines(server: string, words: readonly string[]): AgentServerLines {
   const [command = '', ...args] = words;
   const claude = (extra: readonly string[]) =>
     ['claude', 'mcp', 'add', server, '--', ...words, ...extra].map(shellWord).join(' ');

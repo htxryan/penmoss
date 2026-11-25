@@ -44,24 +44,15 @@ import { compact } from './host-support';
 import { HostNoteActions } from './host-note-actions';
 
 export {
-  PREVIEW_NOTE_ID,
-  PREVIEW_TITLE,
-  PREVIEW_HTML,
-  FROM_APP,
   EDIT_IDLE_MS,
   EDIT_MAX_WAIT_MS,
   TEXT_IDLE_MS,
-  CARET_MARGIN,
   ATTACHMENT_URL_PREFIX,
   REMOTE_PICTURE_PATH,
-  MAX_REMOTE_URL,
-  FILE_INFO_MS,
   HOLD_MAX_MS,
-  STORE_PICTURE_MS,
   COUNT_DELAY_MS,
   SELECTION_COUNT_MS,
   SOURCE_DELAY_MS,
-  COPY_REFUSED,
   INFO_EVERY_MS,
   HEADING_MARK_MS,
   INVALID_TAG,
@@ -70,8 +61,6 @@ export {
   EDITED_SINCE,
   WAIT_FOR_SYNC,
   type HostElements,
-  type HostOptions,
-  noteFields,
 } from './host-support';
 
 export class EditorHost extends HostNoteActions {

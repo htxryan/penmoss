@@ -9,7 +9,7 @@ import { expandHome, type FactoryConfig } from './config.ts';
 import { LABEL, UI_LABEL } from './launchd.ts';
 
 /** Runs a command with the terminal's own stdin, stdout and stderr; resolves to its exit code. */
-export type Interactive = (cmd: string, args: readonly string[]) => number;
+type Interactive = (cmd: string, args: readonly string[]) => number;
 
 export interface ControlDeps {
   readonly run: Interactive;

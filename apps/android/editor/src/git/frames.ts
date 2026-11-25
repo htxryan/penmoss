@@ -9,16 +9,10 @@
  */
 
 /** The longest header (JSON) a frame may carry. */
-export const MAX_HEADER_BYTES = 16 * 1024 * 1024;
+const MAX_HEADER_BYTES = 16 * 1024 * 1024;
 
 /** The most bytes one frame may carry in all (the app refuses larger ones). */
-export const MAX_FRAME_BYTES = 96 * 1024 * 1024;
-
-export interface Frame {
-  /** Plain JSON, with each blob as `{ $b: index }`. */
-  readonly header: Record<string, unknown>;
-  readonly blobs: readonly Uint8Array[];
-}
+const MAX_FRAME_BYTES = 96 * 1024 * 1024;
 
 export class FrameError extends Error {
   constructor(message: string) {

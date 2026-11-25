@@ -16,7 +16,7 @@ import {
   type PushOutcome,
 } from './transport';
 
-export interface GitHubAuthor {
+interface GitHubAuthor {
   readonly name: string;
   readonly email: string;
 }
@@ -43,7 +43,7 @@ export interface GitHubTransportOptions {
 /** GitHub's compare lists at most this many files; at it, the list may be cut short. */
 export const COMPARE_FILE_LIMIT = 300;
 /** Commits one `log` call reads at most when it is given no limit. */
-export const LOG_MAX_COMMITS = 1000;
+const LOG_MAX_COMMITS = 1000;
 const PAGE = 100;
 
 interface TreeEntry {

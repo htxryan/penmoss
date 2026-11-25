@@ -43,7 +43,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export const RELEASES_URL = 'https://github.com/htxryan/penmoss/releases';
+const RELEASES_URL = 'https://github.com/htxryan/penmoss/releases';
 export const CHECK_EVERY_MS = 60 * 60 * 1000;
 
 export type UpdateMode = 'development' | 'unsigned' | 'enabled';

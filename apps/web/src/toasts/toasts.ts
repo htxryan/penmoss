@@ -18,7 +18,7 @@ export const TOAST_MS = 6000;
 /** How long a text toast takes to fade out (the stylesheet's `--pm-fast`). */
 export const LEAVE_MS = 120;
 
-export interface TextToast {
+interface TextToast {
   readonly kind: 'text';
   readonly id: number;
   readonly text: string;
@@ -29,7 +29,7 @@ export interface TextToast {
 }
 
 /** A place in the stack held by a component that renders its own toast. */
-export interface SlotToast {
+interface SlotToast {
   readonly kind: 'slot';
   readonly id: number;
 }

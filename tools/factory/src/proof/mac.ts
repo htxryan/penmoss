@@ -11,7 +11,7 @@ import type { FactoryConfig } from '../config.ts';
 import type { Exec, ExecResult } from '../exec.ts';
 
 /** The VM script's exit for "the VM can't take a run now" (EX_TEMPFAIL). */
-export const VM_TEMPFAIL = 75;
+const VM_TEMPFAIL = 75;
 
 /**
  * How long a stopped Mac proof gets to clean up: the script's trap stops the VM (`tart stop`
@@ -33,7 +33,7 @@ export type VmCheck = { readonly ok: true } | { readonly ok: false; readonly rea
  * The VM script the host runs: the factory's own (its code checkout, A1226), never the run's
  * worktree's, which the agent can edit (A1230). The worktree is only what it copies into the VM.
  */
-export function vmScript(checkout: string = ownCheckout()): string {
+function vmScript(checkout: string = ownCheckout()): string {
   return join(checkout, 'scripts', 'vm', 'desktop-test.sh');
 }
 
@@ -41,11 +41,7 @@ export function vmScript(checkout: string = ownCheckout()): string {
  * The script's environment: nothing of the run's sandbox, the configured VM, and the worktree to
  * test (`PENMOSS_VM_ROOT`).
  */
-export function vmEnv(
-  config: FactoryConfig,
-  worktree: string,
-  proof = false,
-): Record<string, string> {
+function vmEnv(config: FactoryConfig, worktree: string, proof = false): Record<string, string> {
   return {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',

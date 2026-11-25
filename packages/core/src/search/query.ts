@@ -12,7 +12,7 @@
 import type { FtsColumn } from './fields';
 import { stemTerm, tokenize } from './tokenize';
 
-export interface QueryTerm {
+interface QueryTerm {
   readonly kind: 'term';
   /** Folded, not stemmed. */
   readonly text: string;
@@ -31,7 +31,7 @@ export interface QueryTerm {
   readonly completions?: readonly string[];
 }
 
-export interface QueryPhrase {
+interface QueryPhrase {
   readonly kind: 'phrase';
   /** Folded, not stemmed: consecutive tokens in one field. */
   readonly texts: readonly string[];
@@ -46,9 +46,9 @@ export interface SearchQuery {
 }
 
 /** Clauses kept from one query; the rest are dropped (each costs a posting-list read). */
-export const MAX_CLAUSES = 12;
+const MAX_CLAUSES = 12;
 /** Shorter prefixes match too many terms to be worth a scan; they stay whole words. */
-export const MIN_PREFIX_LENGTH = 2;
+const MIN_PREFIX_LENGTH = 2;
 
 export interface ParseOptions {
   /**

@@ -67,7 +67,7 @@ export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
  * Sections that were renamed (PEN-146): an old link, bookmark or command still lands. Display
  * became Sidebar (its note rows moved to Note), and Status became GitHub.
  */
-export const SETTINGS_REDIRECTS: ReadonlyMap<string, SettingsSection> = new Map([
+const SETTINGS_REDIRECTS: ReadonlyMap<string, SettingsSection> = new Map([
   ['display', 'sidebar'],
   ['status', 'github'],
 ]);
@@ -276,7 +276,7 @@ const asRecord = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 
 /** Tells the location's followers it may have changed (a tab switch keeps the address at times). */
-export function notifyNavigated(): void {
+function notifyNavigated(): void {
   for (const listener of [...navigated]) {
     try {
       listener();

@@ -14,7 +14,7 @@ import { loadTokenCounter } from './tokens';
 type Editor = CollabEditor['editor'];
 
 /** How long typing must pause before the counts are taken again. */
-export const COUNT_DELAY_MS = 400;
+const COUNT_DELAY_MS = 400;
 const SELECTION_DELAY_MS = 150;
 
 export interface NoteCounts {

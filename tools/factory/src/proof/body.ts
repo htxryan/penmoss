@@ -37,10 +37,7 @@ export interface PrBodyInput {
 }
 
 /** The line that says the proof wasn't recorded again, and why. */
-export function carriedText(carried: {
-  readonly run: string;
-  readonly validated: boolean;
-}): string {
+function carriedText(carried: { readonly run: string; readonly validated: boolean }): string {
   const what = carried.validated ? 'proof and validation' : 'proof';
   return `Carried over from run \`${carried.run}\`: the branch's own changes outside \`docs/decisions.md\` are byte for byte the ones that run's ${what} passed on, so the factory didn't record ${carried.validated ? 'or validate them ' : 'them '}again.`;
 }

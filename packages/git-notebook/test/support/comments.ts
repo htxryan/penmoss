@@ -12,7 +12,7 @@ import type { GitNotebookEngine, NotebookOps } from '../../src';
 import { testNotebook } from './notebooks';
 
 /** A `tools/call` result, as the MCP server answers it. */
-export interface ToolResult {
+interface ToolResult {
   isError?: boolean;
   content: { type: string; text: string }[];
   structuredContent: Record<string, unknown>;
