@@ -16,6 +16,7 @@
 import { effectiveParents } from '@penmoss/core/workspace';
 import {
   assignFolders,
+  couldBeUniqueName,
   folderDirs,
   nameKey,
   noteName,
@@ -194,8 +195,9 @@ export interface Named {
 }
 
 /**
- * Names and paths for every folder and live note. A note keeps its stored claim while its title's
- * base is unchanged and no older note (or a foreign file) holds the name; every other note is
+ * Names and paths for every folder and live note. A note keeps its stored claim (with none, its
+ * file's name at head, A1694) while its title's base is unchanged and no older note (or a foreign
+ * file) holds the name; every other note is
  * named afresh, in id order, so the older id wins a clash between concurrent claims.
  */
 export function assignNames(input: {
@@ -230,12 +232,25 @@ export function assignNames(input: {
     .filter((entry) => notes.has(entry.id) && !purged.has(entry.id))
     .sort((a, b) => (a.id < b.id ? -1 : 1));
   const taken = new Set(foreign.noteKeys);
+  // Each note's file names at head. Two devices registering the same note offline (a daily
+  // note) each make its registry entry, and one wins whole, so a claim stored in the other is
+  // lost; the file it named is still at head, and keeps the note's name.
+  const committed = new Map<string, string[]>();
+  for (const [path, id] of foreign.penmoss) {
+    const file = path.slice(path.lastIndexOf('/') + 1, -'.md'.length);
+    committed.set(id, [...(committed.get(id) ?? []), file]);
+  }
   const names = new Map<string, NoteName & { title: string }>();
   const later: Array<[string, string, string]> = [];
   for (const entry of live) {
     const title = readTitle(notes.get(entry.id)!);
     const base = noteName(title);
-    const claim = storedNoteName(registry.getAttr(entry.id));
+    const kept = (committed.get(entry.id) ?? []).find((file) =>
+      couldBeUniqueName(file, base, entry.id),
+    );
+    const claim =
+      storedNoteName(registry.getAttr(entry.id)) ??
+      (kept === undefined ? null : { base, name: kept });
     const key = claim ? nameKey(claim.name) : null;
     if (claim && claim.base === base && key !== null && !taken.has(key)) {
       taken.add(key);
