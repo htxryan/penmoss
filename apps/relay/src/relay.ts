@@ -103,6 +103,9 @@ class Copy {
   private queue: Promise<unknown> = Promise.resolve();
   private lastSync = 0;
   private first: Promise<void> | null = null;
+  private failedAt = -Infinity;
+  /** Why its last first sync failed. */
+  private failure: unknown = null;
   /** When its push is due, or null for none. */
   due: number | null = null;
   readonly blobs: PrefixedBlobs;
@@ -216,19 +219,26 @@ class Copy {
     return Object.keys(meta.dirty).length > 0 || meta.workspaceDirty;
   }
 
-  /** Opened, and synced once if it never was: its name and short ids come from the repository. */
+  /**
+   * Opened, and synced once if it never was: its name and short ids come from the repository. A
+   * first sync that failed is tried again once a pull's interval has passed, not on every call.
+   */
   ready(): Promise<void> {
-    this.first ??= this.exclusive(async () => {
-      const { engine } = await this.opened();
-      if (engine.info) return;
-      try {
-        await this.synced();
-      } catch (error) {
-        this.log(`the first sync failed: ${message(error)}`);
-        this.first = null;
-      }
-    });
-    return this.first;
+    if (this.first === null && this.relay.clock() - this.failedAt >= PULL_AFTER_MS) {
+      this.first = this.exclusive(async () => {
+        const { engine } = await this.opened();
+        if (engine.info) return;
+        try {
+          await this.synced();
+        } catch (error) {
+          this.log(`the first sync failed: ${message(error)}`);
+          this.failedAt = this.relay.clock();
+          this.failure = error;
+          this.first = null;
+        }
+      });
+    }
+    return this.first ?? Promise.resolve();
   }
 
   use<T>(
@@ -237,12 +247,21 @@ class Copy {
     busy?: { readonly waitMs: number; readonly name: string },
   ): Promise<T> {
     return this.exclusive(async () => {
-      if (this.relay.clock() - this.lastSync >= PULL_AFTER_MS) {
+      const now = this.relay.clock();
+      if (!(await this.opened()).engine.info && now - this.failedAt < PULL_AFTER_MS) {
+        // It never synced, and its last try failed moments ago: say so again without asking GitHub.
+        throw this.failure;
+      }
+      if (now - this.lastSync >= PULL_AFTER_MS) {
         try {
           await this.synced();
         } catch (error) {
           // A copy that never synced has nothing to serve; otherwise serve what is here.
-          if (!(await this.opened()).engine.info) throw error;
+          if (!(await this.opened()).engine.info) {
+            this.failedAt = this.relay.clock();
+            this.failure = error;
+            throw error;
+          }
           this.log(`sync failed, serving the copy: ${message(error)}`);
         }
       }

@@ -581,6 +581,29 @@ describe('several notebooks in one relay (PEN-192)', () => {
     expect(quantaRemote.branches.get('dev')).not.toBe(quantaHead);
   });
 
+  it('serves the other notebook when one never synced, and names that one by its repository', async () => {
+    const { tool, down, calls, tick } = await two();
+    down.add(WORK_REPO);
+    const recent = await tool('list_recent', {});
+    expect(recent.isError).toBeFalsy();
+    expect(notebooksOf(recent.structuredContent!['notes'])).toEqual(['Personal']);
+    expect(recent.structuredContent!['skipped']).toEqual([
+      { notebook: WORK_REPO, reason: expect.stringMatching(/500/) as string },
+    ]);
+    // Its first sync is tried again once a pull's interval has passed, not on every call.
+    const tried = calls.filter((each) => each.includes(WORK_REPO)).length;
+    const soon = await tool('list_recent', {});
+    expect(soon.structuredContent!['skipped']).toEqual([
+      { notebook: WORK_REPO, reason: expect.stringMatching(/500/) as string },
+    ]);
+    expect(calls.filter((each) => each.includes(WORK_REPO)).length).toBe(tried);
+    tick(PULL_AFTER_MS);
+    down.delete(WORK_REPO);
+    const again = await tool('list_recent', {});
+    expect(notebooksOf(again.structuredContent!['notes'])).toEqual(['Personal', 'Quanta']);
+    expect(calls.filter((each) => each.includes(WORK_REPO)).length).toBeGreaterThan(tried);
+  });
+
   it('starts one notebook again when its repository was replaced, leaving the other', async () => {
     const { tool, blobs, quantaRemote, tick, logs } = await two();
     await tool('list_recent', {});
