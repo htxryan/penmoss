@@ -1,31 +1,53 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  // The relay (T55, D48): claude.ai's custom connector for Penmoss git notebooks.
-  "name": "penmoss-relay",
+  // The relay (T55, D48): claude.ai's custom connector for Penmoss git notebooks. The top level
+  // is the relay anyone deploys: `pnpm run template` builds htxryan/penmoss-relay from it, with no
+  // ids, routes or owner, and names the Worker penmoss-relay (A1700). Ryan's relay is the `penmoss`
+  // environment, deployed with `task relay:deploy`. The name here is another Worker's, so a plain
+  // `wrangler deploy` in this folder can't overwrite his.
+  "name": "penmoss-relay-dev",
   "main": "src/index.ts",
   // Latest date supported by the workerd bundled with the pinned Wrangler.
   "compatibility_date": "2026-10-19",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
-  "workers_dev": false,
+  // Someone else's relay answers on its workers.dev address until they give it a domain.
+  "workers_dev": true,
   "preview_urls": false,
-  "routes": [{ "pattern": "mcp.penmoss.app", "custom_domain": true }],
   "durable_objects": {
     "bindings": [{ "name": "NOTEBOOK", "class_name": "RelayNotebook" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RelayNotebook"] }],
-  // OAuth grants and clients (workers-oauth-provider), and sign-ins in progress.
-  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "2b8ea1718e3c4cd5ba7e83f25da4c2d5" }],
+  // OAuth grants and clients (workers-oauth-provider), sessions and sign-ins in progress. No id:
+  // Wrangler, or the Deploy to Cloudflare button, makes the namespace on the first deploy.
+  "kv_namespaces": [{ "binding": "OAUTH_KV" }],
+  // OWNER_GITHUB_LOGIN, the one GitHub account that may set the relay up, sign in and connect, is
+  // a secret here (.dev.vars.example), so the button's form asks for it. The relay's public origin
+  // is the address it was reached at, unless RELAY_ORIGIN names one.
   "vars": {
-    // The relay's public origin: its OAuth resource is <origin>/mcp.
-    "RELAY_ORIGIN": "https://mcp.penmoss.app",
-    // The relay's owner: the one GitHub account that may set it up, sign in and connect.
-    "OWNER_GITHUB_LOGIN": "htxryan",
     // The writer's name in History and agent activity.
     "AGENT_LABEL": "claude.ai",
     // Hosts a grant may be sent to: claude.ai's connectors.
     "ALLOWED_REDIRECT_HOSTS": "claude.ai,claude.com",
-    // The GitHub App (made at /setup) and the notebooks (added on /notebooks) are kept in the
-    // Durable Object's storage (PEN-193, PEN-194).
+  },
+  "env": {
+    // Ryan's relay at mcp.penmoss.app. Same Worker name, so the same Durable Object and its data.
+    "penmoss": {
+      "name": "penmoss-relay",
+      "workers_dev": false,
+      "routes": [{ "pattern": "mcp.penmoss.app", "custom_domain": true }],
+      "durable_objects": {
+        "bindings": [{ "name": "NOTEBOOK", "class_name": "RelayNotebook" }],
+      },
+      "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "2b8ea1718e3c4cd5ba7e83f25da4c2d5" }],
+      "vars": {
+        "RELAY_ORIGIN": "https://mcp.penmoss.app",
+        "OWNER_GITHUB_LOGIN": "htxryan",
+        "AGENT_LABEL": "claude.ai",
+        "ALLOWED_REDIRECT_HOSTS": "claude.ai,claude.com",
+      },
+      // The GitHub App (made at /setup) and the notebooks (added on /notebooks) are kept in the
+      // Durable Object's storage (PEN-193, PEN-194).
+    },
   },
 }

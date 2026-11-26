@@ -12,7 +12,9 @@
     "typecheck": "pnpm run types:check && tsc --noEmit -p .",
     "css": "node scripts/app-css.mjs",
     "test": "vitest run && vitest run --config vitest.workers.config.ts",
-    "deploy": "sh ../../scripts/no-factory-deploy.sh && wrangler deploy"
+    "deploy": "sh ../../scripts/no-factory-deploy.sh && node scripts/build.mjs deploy",
+    "template": "node scripts/build.mjs template",
+    "template:check": "node scripts/build.mjs check"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
@@ -24,6 +26,7 @@
     "@cloudflare/vitest-plugin": "1.4.6",
     "@penmoss/model": "workspace:*",
     "@types/node": "24.19.2",
+    "jsonc-parser": "3.3.1",
     "vitest": "5.0.5",
     "wrangler": "4.151.3"
   }

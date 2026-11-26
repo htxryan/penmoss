@@ -9,7 +9,7 @@ The relay lets Claude on the web, desktop and mobile apps use [git notebooks](ht
 | Sign-in       | OAuth: GitHub, as the owner, through the relay's own App (A1697)      |
 | Tools         | The local MCP server's (A830), without the comment tools (D50, A1064) |
 | Search        | By words (#192 adds search by meaning)                                |
-| Code          | `apps/relay`; decisions A996–A1001, A1695, A1696                      |
+| Code          | `apps/relay`; decisions A996–A1001, A1695–A1700                       |
 
 ## How it behaves
 
@@ -22,24 +22,21 @@ The relay lets Claude on the web, desktop and mobile apps use [git notebooks](ht
 
 ## Set it up
 
-You need the notebooks' repositories (each a GitHub repository holding a git notebook), a Cloudflare account with `penmoss.app`, and Wrangler (`pnpm --filter @penmoss/relay exec wrangler login`).
+Anyone runs a relay of their own from the template, with the **Deploy to Cloudflare** button on [htxryan/penmoss-relay](https://github.com/htxryan/penmoss-relay). The user docs walk through it: [Use Penmoss in Claude](https://penmoss.app/docs/agents/claude-ai/). Ryan's relay at `mcp.penmoss.app` is deployed from this repository instead, as below. Steps 2 to 4 are the same for both.
 
-### 1. Configure and deploy the Worker
+### 1. Deploy the Worker
 
-```bash
-cd apps/relay
-pnpm exec wrangler kv namespace create OAUTH_KV
-```
-
-Put the namespace id into `wrangler.jsonc` (`kv_namespaces[0].id`), and set `OWNER_GITHUB_LOGIN` in its `vars`: the one GitHub account that may set the relay up, sign in and connect. Everything else is set on the relay's own pages.
+`apps/relay/wrangler.jsonc`'s top level is the generic relay the template is built from: no KV id, no route, no owner (A1700). Ryan's relay is its `penmoss` environment, which keeps the Worker's name (`penmoss-relay`, and so its Durable Object), the `mcp.penmoss.app` custom domain, its KV namespace and `OWNER_GITHUB_LOGIN`. With Wrangler signed in (`pnpm --filter @penmoss/relay exec wrangler login`):
 
 ```bash
-pnpm exec wrangler deploy
+task relay:deploy
 ```
+
+It runs `wrangler deploy --env penmoss` with the relay's version built in: the source commit and its date, and `+ changes` when the relay or a package it bundles has uncommitted edits. Every page shows it on its last line. A plain `wrangler deploy` in `apps/relay` deploys the generic config as another Worker, `penmoss-relay-dev`, never Ryan's.
 
 ### 2. Make the relay's GitHub App
 
-Open `https://mcp.penmoss.app/setup`, signed in to GitHub as the owner, and choose **Create GitHub App…**. GitHub opens with the App filled in: read and write access to contents, metadata read, no webhook, only on your account. Create it there; GitHub sends you back, and the relay keeps the App's id, key and secrets in its own storage (A1697). An App made by any other account is refused and nothing is kept. A relay makes its App once.
+Open the relay's `/setup` (`https://mcp.penmoss.app/setup` for Ryan's), signed in to GitHub as the owner, and choose **Create GitHub App…**. GitHub opens with the App filled in: read and write access to contents, metadata read, no webhook, only on your account. Create it there; GitHub sends you back, and the relay keeps the App's id, key and secrets in its own storage (A1697). An App made by any other account is refused and nothing is kept. A relay makes its App once.
 
 Then choose **Install on GitHub…**, pick **Only select repositories**, and choose the notebooks' repositories. The relay finds the installation for each repository itself.
 
@@ -67,3 +64,19 @@ Then choose **Install on GitHub…**, pick **Only select repositories**, and cho
 - A 503 from `/mcp`: `OWNER_GITHUB_LOGIN` is missing or wrong; the message says so.
 - **The relay's GitHub App is not installed on owner/name**, beside a notebook on the Notebooks page: install the App on that repository, or remove the notebook and add it again with a token. A notebook that fails is left out of searches and lists (`skipped`, with the reason) while the others serve.
 - Logs: `pnpm exec wrangler tail` in `apps/relay`.
+
+## The template
+
+The Deploy to Cloudflare button builds one public folder by itself, and the relay bundles `packages/core`, `git-notebook`, `model` and `ui` from this monorepo. So the button points at [htxryan/penmoss-relay](https://github.com/htxryan/penmoss-relay), which holds a self-contained build (A1700):
+
+- `index.js`: the bundled Worker, with its version in it (`no_bundle` in its config).
+- `wrangler.jsonc`: the top level of `apps/relay/wrangler.jsonc`, named `penmoss-relay`. Its KV namespace has no id, so Cloudflare makes one on the first deploy.
+- `package.json`: Wrangler, and `cloudflare.bindings`, the deploy form's words for each setting.
+- `.dev.vars.example`: `OWNER_GITHUB_LOGIN`, a secret there so the form asks for it.
+- `README.md` with the button, `LICENSE` and `.gitignore`.
+
+`task relay:template -- <dir>` builds it into a folder, then runs `wrangler deploy --dry-run` on a copy in an empty folder, as the button would. CI's Check job runs that on every pull request. On main, the **Relay template** workflow (`.github/workflows/relay-template.yml`) builds it again whenever the relay or a package it bundles changes, and commits it to htxryan/penmoss-relay, naming the source commit and the build. Nothing is pushed when the template is unchanged.
+
+The workflow pushes with a deploy key: `RELAY_TEMPLATE_DEPLOY_KEY`, an SSH private key in the `relay-template` environment (limited to main), whose public half is a deploy key with write access on htxryan/penmoss-relay alone.
+
+Someone's copy of the template is a repository of their own and doesn't follow this one. They update by uploading the new `index.js` to it; Workers Builds deploys it. A change to the template's `wrangler.jsonc` (a new binding, a Durable Object migration) needs them to edit theirs too, so the user docs and the template's README must say so when it happens.

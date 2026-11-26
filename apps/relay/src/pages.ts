@@ -7,6 +7,7 @@
 import { PENMOSS } from '@penmoss/ui/theme/builtins';
 import { themeVariables } from '@penmoss/ui/theme/css';
 import { APP_CSS } from './app-css.gen';
+import { relayVersion, UPDATE_DOCS } from './version';
 
 export const escape = (text: string) =>
   text.replace(
@@ -47,6 +48,7 @@ const PAGE_CSS = `:root{${vars('light')};color-scheme:light}
 .relay-actions{display:flex;flex-wrap:wrap;gap:.5rem}
 .relay-choices{display:flex;flex-wrap:wrap;gap:.75rem;font-size:var(--pm-text-row-label)}
 .relay-choice{display:inline-flex;align-items:center;gap:.35rem;cursor:pointer}
+.relay-foot{color:var(--pm-muted);font-size:var(--pm-text-help);padding-top:1rem}
 .relay-problem{border:1px solid var(--pm-border);border-left:3px solid var(--pm-danger);background:var(--pm-raised);padding:.75rem 1rem;display:grid;gap:.35rem}`;
 
 export interface PageOptions {
@@ -59,12 +61,15 @@ export interface PageOptions {
   readonly scriptHash?: string;
 }
 
+/** Every page's last line: which relay this is, and how to bring it up to date. */
+const FOOT = `<p class="relay-foot">Penmoss Relay ${escape(relayVersion)} · <a href="${UPDATE_DOCS}">How to Update</a></p>`;
+
 /** A page: `body` is HTML whose text the caller has escaped. */
 export function page(status: number, title: string, body: string, options: PageOptions = {}) {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>${escape(title)}</title>
 <style>${APP_CSS}
 ${PAGE_CSS}</style>
-</head><body><main class="relay"><div class="relay-head"><h1 class="t-page-title">${escape(title)}</h1>${options.aside ? `<span class="relay-who">${options.aside}</span>` : ''}</div>${body}</main></body></html>`;
+</head><body><main class="relay"><div class="relay-head"><h1 class="t-page-title">${escape(title)}</h1>${options.aside ? `<span class="relay-who">${options.aside}</span>` : ''}</div>${body}${FOOT}</main></body></html>`;
   const formAction = ["'self'", ...(options.formAction ?? [])].join(' ');
   return new Response(html, {
     status,

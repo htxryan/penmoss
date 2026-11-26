@@ -28,7 +28,7 @@ import { prefixOf, Relay } from './relay';
 import { PrefixedBlobs, SqlBlobs } from './storage';
 
 export interface Env extends LoginEnv, RelaySettings {
-  /** The relay's public origin (default https://mcp.penmoss.app): its OAuth resource. */
+  /** The relay's public origin, its OAuth resource; unset, the origin it was reached at. */
   readonly RELAY_ORIGIN?: string;
 }
 
@@ -250,28 +250,32 @@ const mcpHandler = {
   },
 };
 
-/** The OAuth server, made on the first request: its resource is the relay's own URL. */
-let provider: OAuthProvider<Env> | null = null;
+/** The OAuth servers, one per origin the relay answers on: each one's resource is its own URL. */
+const providers = new Map<string, OAuthProvider<Env>>();
 
-function oauth(env: Env): OAuthProvider<Env> {
-  const origin = (env.RELAY_ORIGIN?.trim() || 'https://mcp.penmoss.app').replace(/\/+$/, '');
-  provider ??= new OAuthProvider<Env>({
-    apiRoute: '/mcp',
-    apiHandler: mcpHandler as unknown as ExportedHandler<Env> & {
-      fetch: NonNullable<ExportedHandler<Env>['fetch']>;
-    },
-    defaultHandler: loginHandler,
-    authorizeEndpoint: '/authorize',
-    tokenEndpoint: '/token',
-    clientRegistrationEndpoint: '/register',
-    scopesSupported: ['notes'],
-    resourceMetadata: { resource: `${origin}/mcp`, resource_name: 'Penmoss' },
-  });
+function oauth(env: Env, request: Request): OAuthProvider<Env> {
+  const origin = (env.RELAY_ORIGIN?.trim() || new URL(request.url).origin).replace(/\/+$/, '');
+  let provider = providers.get(origin);
+  if (!provider) {
+    provider = new OAuthProvider<Env>({
+      apiRoute: '/mcp',
+      apiHandler: mcpHandler as unknown as ExportedHandler<Env> & {
+        fetch: NonNullable<ExportedHandler<Env>['fetch']>;
+      },
+      defaultHandler: loginHandler,
+      authorizeEndpoint: '/authorize',
+      tokenEndpoint: '/token',
+      clientRegistrationEndpoint: '/register',
+      scopesSupported: ['notes'],
+      resourceMetadata: { resource: `${origin}/mcp`, resource_name: 'Penmoss' },
+    });
+    providers.set(origin, provider);
+  }
   return provider;
 }
 
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    return oauth(env).fetch(request, env, ctx);
+    return oauth(env, request).fetch(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;

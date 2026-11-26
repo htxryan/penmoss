@@ -208,6 +208,20 @@ tasks:
       - task: site:build
       - pnpm exec wrangler deploy {{.CLI_ARGS}}
 
+  relay:deploy:
+    desc: "Ryan's relay on mcp.penmoss.app (PEN-195, A1700): wrangler deploy --env penmoss, with its version on its pages (refused inside a factory run, FD24). Needs wrangler signed in"
+    dir: apps/relay
+    cmds:
+      - sh ../../scripts/no-factory-deploy.sh
+      - node scripts/build.mjs deploy {{.CLI_ARGS}}
+
+  relay:template:
+    desc: 'The relay anyone deploys (PEN-195, A1700): build the template htxryan/penmoss-relay holds into a folder, then dry-run wrangler deploy there alone: `task relay:template -- /tmp/relay-template`'
+    dir: apps/relay
+    cmds:
+      - node scripts/build.mjs template {{.CLI_ARGS}}
+      - node scripts/build.mjs check {{.CLI_ARGS}}
+
   telemetry:query:
     desc: "Usage analytics (PEN-137): run a named query, apps/telemetry/queries/<name>.sql, against the production D1 and print a table: `task telemetry:query -- active --days 90 --client mac` (`--start command:app.palette` for next, `--json`, `--local` for wrangler dev's database). Needs wrangler signed in"
     dir: apps/telemetry

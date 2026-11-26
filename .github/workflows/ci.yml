@@ -152,6 +152,11 @@ jobs:
       - name: Lint, typecheck and unit tests
         run: task check
 
+      # PEN-195: the relay's template (what htxryan/penmoss-relay holds) builds, and deploys from
+      # a folder holding only its own files, as the Deploy to Cloudflare button does (a dry run).
+      - name: The relay's template deploys alone (dry run)
+        run: task relay:template -- "$RUNNER_TEMP/relay-template"
+
   site:
     name: Site (penmoss.app and its docs)
     if: needs.pick.outputs.site == 'true'
