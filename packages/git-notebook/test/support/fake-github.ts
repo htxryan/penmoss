@@ -16,12 +16,16 @@ interface Options {
   private?: boolean;
   /** Cap compare's file list (GitHub's is 300). */
   compareLimit?: number;
+  /** The repository it answers for (default `FAKE_REPO`). */
+  repository?: string;
+  /** The token it accepts (default `FAKE_TOKEN`). */
+  token?: string;
 }
 
 export function fakeGitHub(remote: MemoryRemote, options: Options = {}) {
   const trees = new Map<string, ReadonlyMap<string, string>>();
   const calls: string[] = [];
-  const settings = { private: options.private ?? true, token: FAKE_TOKEN };
+  const settings = { private: options.private ?? true, token: options.token ?? FAKE_TOKEN };
 
   async function treeId(tree: ReadonlyMap<string, string>): Promise<string> {
     const text = JSON.stringify([...tree].sort());
@@ -66,7 +70,7 @@ export function fakeGitHub(remote: MemoryRemote, options: Options = {}) {
     calls.push(`${method} ${url.pathname}${url.search}`);
     const auth = new Headers(init.headers).get('authorization');
     if (auth !== `Bearer ${settings.token}`) return problem(401, 'Bad credentials');
-    const prefix = `/repos/${FAKE_REPO}`;
+    const prefix = `/repos/${options.repository ?? FAKE_REPO}`;
     if (!url.pathname.startsWith(prefix)) return problem(404, 'Not Found');
     const path = url.pathname.slice(prefix.length);
     const body = init.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : {};

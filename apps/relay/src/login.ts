@@ -103,7 +103,7 @@ export const loginHandler = {
       return page(
         200,
         `Connect ${name} to your notes?`,
-        `<p><b>${escape(name)}</b> (${escape(new URL(auth.redirectUri).hostname)}) will be able to read, create and edit notes in <code>${escape(config.repository)}</code>. Its edits are committed as the agent “${escape(config.agentLabel)}”.</p>
+        `<p><b>${escape(name)}</b> (${escape(new URL(auth.redirectUri).hostname)}) will be able to read, create and edit notes in ${config.notebooks.map((place) => `<code>${escape(place.repository)}</code>`).join(', ')}. Its edits are committed as the agent “${escape(config.agentLabel)}”.</p>
 <form method="post" action="/authorize"><input type="hidden" name="pending" value="${id}"><button type="submit">Continue with GitHub</button></form>`,
         {
           'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; form-action ${formAction}`,

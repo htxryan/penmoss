@@ -1,9 +1,10 @@
 /**
- * How the relay authenticates to GitHub (T55): a fine-grained token, or a GitHub App's
- * installation token, made from the App's private key (RS256 JWT) and limited to the notes
- * repository. Installation tokens last an hour; one is kept until five minutes before it ends.
+ * How the relay authenticates to GitHub (T55, PEN-192): a notebook's fine-grained token, or the
+ * GitHub App's installation token, made from the App's private key (RS256 JWT) and limited to
+ * that notebook's repository. Installation tokens last an hour; one is kept until five minutes
+ * before it ends.
  */
-import type { GitHubAccess } from './config';
+import type { AppCredentials, GitHubAccess } from './config';
 
 const REFRESH_BEFORE_MS = 5 * 60_000;
 
@@ -69,58 +70,117 @@ export async function appJwt(appId: string, key: CryptoKey, nowMs: number): Prom
   return `${head}.${body}.${base64url(new Uint8Array(signature))}`;
 }
 
-export interface TokenSourceOptions {
-  readonly access: GitHubAccess;
-  readonly repository: string;
+const headers = (jwt: string) => ({
+  authorization: `Bearer ${jwt}`,
+  accept: 'application/vnd.github+json',
+  'x-github-api-version': '2022-11-28',
+  'user-agent': 'penmoss-relay',
+  'content-type': 'application/json',
+});
+
+export interface AppTokensOptions {
+  readonly app: AppCredentials;
   readonly api: string;
   readonly fetch: typeof fetch;
   readonly clock?: () => number;
 }
 
-/** Asked before every GitHub call: a token that can write the notes repository's contents. */
-export function tokenSource(options: TokenSourceOptions): () => Promise<string> {
-  const { access } = options;
-  if (access.kind === 'token') return () => Promise.resolve(access.token);
-  const clock = options.clock ?? Date.now;
-  let key: Promise<CryptoKey> | null = null;
-  let held: { token: string; until: number } | null = null;
-  let pending: Promise<string> | null = null;
-  const mint = async (): Promise<string> => {
-    key ??= importPrivateKey(access.privateKey);
-    const jwt = await appJwt(access.appId, await key, clock());
-    const response = await options.fetch(
-      `${options.api}/app/installations/${encodeURIComponent(access.installationId)}/access_tokens`,
+/**
+ * The relay's GitHub App, for every notebook it reaches (PEN-192): the App's installation on
+ * each repository, found by asking GitHub, and a token limited to that repository, kept until five
+ * minutes before it ends.
+ */
+export class AppTokens {
+  private key: Promise<CryptoKey> | null = null;
+  private readonly installations = new Map<string, string>();
+  private readonly held = new Map<string, { token: string; until: number }>();
+  private readonly pending = new Map<string, Promise<string>>();
+  private readonly clock: () => number;
+
+  constructor(private readonly options: AppTokensOptions) {
+    this.clock = options.clock ?? Date.now;
+  }
+
+  private async jwt(): Promise<string> {
+    this.key ??= importPrivateKey(this.options.app.privateKey);
+    return appJwt(this.options.app.appId, await this.key, this.clock());
+  }
+
+  /** The App's installation that holds `repository`. */
+  private async installation(repository: string): Promise<string> {
+    const known = this.installations.get(repository);
+    if (known) return known;
+    const response = await this.options.fetch(
+      `${this.options.api}/repos/${repository}/installation`,
+      { headers: headers(await this.jwt()) },
+    );
+    if (response.status === 404) {
+      throw new Error(
+        `The relay's GitHub App is not installed on ${repository}. Install it there, or give the notebook a token of its own.`,
+      );
+    }
+    if (response.status !== 200) {
+      const text = await response.text().catch(() => '');
+      throw new Error(
+        `GitHub would not say where the App is installed on ${repository} (${response.status}): ${text.slice(0, 300)}`,
+      );
+    }
+    const id = String((await response.json<{ id: number | string }>()).id);
+    this.installations.set(repository, id);
+    return id;
+  }
+
+  private async mint(repository: string): Promise<string> {
+    const installation = await this.installation(repository);
+    const response = await this.options.fetch(
+      `${this.options.api}/app/installations/${encodeURIComponent(installation)}/access_tokens`,
       {
         method: 'POST',
-        headers: {
-          authorization: `Bearer ${jwt}`,
-          accept: 'application/vnd.github+json',
-          'x-github-api-version': '2022-11-28',
-          'user-agent': 'penmoss-relay',
-          'content-type': 'application/json',
-        },
-        // Only the notes repository, and only what the notebook needs.
+        headers: headers(await this.jwt()),
+        // Only this repository, and only what the notebook needs.
         body: JSON.stringify({
-          repositories: [options.repository.split('/')[1]],
+          repositories: [repository.split('/')[1]],
           permissions: { contents: 'write', metadata: 'read' },
         }),
       },
     );
     if (response.status !== 201) {
+      // The App may have been moved to another installation: ask again next time.
+      this.installations.delete(repository);
       const text = await response.text().catch(() => '');
       throw new Error(
-        `GitHub refused the App's installation token (${response.status}): ${text.slice(0, 300)}`,
+        `GitHub refused the App's installation token for ${repository} (${response.status}): ${text.slice(0, 300)}`,
       );
     }
     const data = await response.json<{ token: string; expires_at: string }>();
-    held = { token: data.token, until: Date.parse(data.expires_at) - REFRESH_BEFORE_MS };
-    return data.token;
-  };
-  return () => {
-    if (held && clock() < held.until) return Promise.resolve(held.token);
-    pending ??= mint().finally(() => {
-      pending = null;
+    this.held.set(repository, {
+      token: data.token,
+      until: Date.parse(data.expires_at) - REFRESH_BEFORE_MS,
     });
+    return data.token;
+  }
+
+  /** A token that can write `repository`'s contents. */
+  token(repository: string): Promise<string> {
+    const held = this.held.get(repository);
+    if (held && this.clock() < held.until) return Promise.resolve(held.token);
+    let pending = this.pending.get(repository);
+    if (!pending) {
+      pending = this.mint(repository).finally(() => this.pending.delete(repository));
+      this.pending.set(repository, pending);
+    }
     return pending;
-  };
+  }
+}
+
+/** Asked before every GitHub call for one notebook: its own token, or the App's for its repository. */
+export function tokenSource(
+  access: GitHubAccess,
+  repository: string,
+  app: AppTokens | null,
+): () => Promise<string> {
+  if (access.kind === 'token') return () => Promise.resolve(access.token);
+  if (!app)
+    throw new Error(`${repository} is reached through the GitHub App, which is not set up.`);
+  return () => app.token(repository);
 }

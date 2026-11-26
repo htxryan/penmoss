@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  // The relay (T55, D48): claude.ai's custom connector for a Penmoss git notebook.
+  // The relay (T55, D48): claude.ai's custom connector for Penmoss git notebooks.
   "name": "penmoss-relay",
   "main": "src/index.ts",
   // Latest date supported by the workerd bundled with the pinned Wrangler.
@@ -19,21 +19,19 @@
   "vars": {
     // The relay's public origin: its OAuth resource is <origin>/mcp.
     "RELAY_ORIGIN": "https://mcp.penmoss.app",
-    // owner/name of the notes repository, its branch and the notebook's directory ('' for the top).
-    "NOTES_REPOSITORY": "htxryan/penmoss-notes",
-    "NOTES_BRANCH": "main",
-    "NOTES_DIR": "",
+    // The notebooks it serves (PEN-192): each a repository (owner/name), branch and folder ('' for the top).
+    "NOTEBOOKS": "[{\"repository\": \"htxryan/penmoss-notes\", \"branch\": \"main\", \"folder\": \"\"}]",
     // The one GitHub account that may sign in.
     "ALLOWED_GITHUB_LOGIN": "htxryan",
     // The writer's name in History and agent activity.
     "AGENT_LABEL": "claude.ai",
     // Hosts a grant may be sent to: claude.ai's connectors.
     "ALLOWED_REDIRECT_HOSTS": "claude.ai,claude.com",
-    // The GitHub App: its id, its installation on the notes repository, and its client id (sign-in).
+    // The GitHub App: its id (its installation on each notebook's repository is looked up), and
+    // its client id (sign-in).
     "GITHUB_APP_ID": "5605232",
-    "GITHUB_APP_INSTALLATION_ID": "178410398",
     "GITHUB_CLIENT_ID": "Iv23liW1KcPuAWXdNO53",
-    // Secrets (wrangler secret put): GITHUB_APP_PRIVATE_KEY and GITHUB_CLIENT_SECRET,
-    // or GITHUB_TOKEN (a fine-grained token limited to the notes repository) instead of the App's key.
+    // Secrets (wrangler secret put): GITHUB_APP_PRIVATE_KEY and GITHUB_CLIENT_SECRET, and
+    // NOTEBOOK_TOKENS ({"owner/name": "github_pat_…"}) for a notebook reached by a token of its own.
   },
 }
