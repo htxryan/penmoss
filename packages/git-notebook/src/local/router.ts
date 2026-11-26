@@ -553,7 +553,7 @@ export function notebooksInstructions(served: readonly ServedNotebook[], meaning
         .map((each) => (each.tag ? `${each.name} (short ids ${each.tag}-…)` : each.name))
         .join(', ')
     : 'none yet';
-  return `These are Ryan's git notebooks, served together: ${names}. Notes sync only through each notebook's git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
+  return `These are Ryan's git notebooks, served together: ${names}. Each notebook's notes are kept in its own git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - A note's id or short id finds its notebook, so tools that take one need no notebook argument. A folder id finds its notebook too.
 - search_notes, list_recent, list_folder, list_tags, describe_tags, list_comment_threads and get_settings cover every notebook unless you pass notebook; each result names its notebook.
 - With more than one notebook, pass notebook (its name) to create_note without a folderId, get_daily_note, create_folder without a parentId, set_settings, rename_tag, and set_folder_sort for the top level.
