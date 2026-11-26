@@ -39,11 +39,9 @@ export function TabMark({ face }: { readonly face: TabFace }) {
         ? 'trash'
         : face.kind === 'tags'
           ? 'hash'
-          : face.kind === 'time-machine'
-            ? 'history'
-            : face.kind === 'settings'
-              ? 'gear'
-              : 'warning';
+          : face.kind === 'settings'
+            ? 'gear'
+            : 'warning';
   return <Icon name={icon} size={16} />;
 }
 

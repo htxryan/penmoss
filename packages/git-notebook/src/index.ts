@@ -20,4 +20,3 @@ export * from './identity';
 export * from './writer';
 export { isUpdate } from './yjs';
 export * from './ops';
-export * from './timeline';

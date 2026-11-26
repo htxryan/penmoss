@@ -193,7 +193,7 @@
  * Mac app, its words are not selectable and the pointer stays the arrow over them. What someone
  * reads or copies opts back in, selectable with the text cursor: every field, a note's text (a
  * read-only one's too) and its Markdown, code and paths, a comment's words and its quote, History's
- * and the Time Machine's text, release notes, a notebook's facts, error messages, and anything
+ * text, release notes, a notebook's facts, error messages, and anything
  * marked `.selectable`. `:where`, so a control's own cursor still wins.
  */
 body {

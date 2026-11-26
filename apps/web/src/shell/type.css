@@ -33,7 +33,7 @@
    * The roles, largest first. Each has a size, a weight and a line height (`normal` where the
    * text sits in a row whose height is set elsewhere), and a colour where the role has one.
    */
-  /* A page's title: Settings, Trash, Tags, the Time Machine, the welcome. */
+  /* A page's title: Settings, Trash, Tags, the welcome. */
   --pm-text-page-title: var(--pm-text-5xl);
   --pm-weight-page-title: var(--pm-weight-bold);
   --pm-leading-page-title: var(--pm-leading-tight);

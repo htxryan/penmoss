@@ -550,7 +550,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                 </div>
                 <div className="history-diff" data-testid="history-diff">
                   {shown ? (
-                    <DiffLines diff={shown.diff} numbered />
+                    <DiffLines diff={shown.diff} />
                   ) : (
                     <p className="muted history-diff-loading">Reading the changes…</p>
                   )}

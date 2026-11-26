@@ -33,7 +33,6 @@ import { tagSearch, type TagSearch } from '../search/show-tag';
 import { SourceSearches, SourcesSearch } from '../search/sources';
 import { SourceScopeOr } from '../sources/context';
 import { useNoteSource, useSourcesRegistry, useSourcesState } from '../sources/hooks';
-import { timeMachinePath } from '../time-machine/path';
 import type { Source } from '../sources/registry';
 import { JournalScope } from '../sources/JournalScope';
 import { useGitNotebookCommands } from '../sources/git-commands';
@@ -371,16 +370,6 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
   useCommand('app.tags', () => {
     if (overlay) close(false);
     navigate('/tags');
-  });
-  const timeMachineRegistry = useSourcesRegistry();
-  const timeMachineSources = useSourcesState();
-  useCommand('app.timeMachine', () => {
-    if (overlay) close(false);
-    // The open note's notebook; else the one in use (the Journal's).
-    const source =
-      (currentNoteId ? timeMachineRegistry.sourceOfNote(currentNoteId) : null) ??
-      timeMachineSources.journal;
-    navigate(timeMachinePath(source.id));
   });
   useCommand('journal.settings', () => {
     if (overlay) close(false);

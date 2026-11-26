@@ -60,6 +60,7 @@ export const COMMAND_NAMES: readonly string[] = [
   'note.localGraph',
   'app.trash',
   'app.tags',
+  // The Time Machine's, removed (PEN-190); kept, as the catalogue only grows.
   'app.timeMachine',
   'note.openInNewWindow',
   'note.pinQuickAccess',
@@ -255,6 +256,7 @@ export const SCREEN_NAMES: readonly string[] = [
   'graph',
   'trash',
   'tags',
+  // The Time Machine's page, removed (PEN-190); kept, as the catalogue only grows.
   'time-machine',
   'history',
   'search',
@@ -1317,11 +1319,13 @@ export const SCROLL_NAMES: readonly string[] = [
 ];
 
 /**
- * Click ids that said nothing about which control was used (PEN-175): a shared fallback that
- * many controls recorded under. No control writes one any more, and the catalogue tests fail if
- * a source does; they stay in CLICK_NAMES because the catalogue only grows (events already
- * recorded under them stay valid). `firstrun.continue`, `firstrun.back` and `firstrun.cancel`
- * are not here: each first-run step's own event already says which step it was.
+ * Click ids no control writes any more, and the catalogue tests fail if a source does; they stay
+ * in CLICK_NAMES because the catalogue only grows (events already recorded under them stay
+ * valid, and older builds still send them).
+ * - A shared fallback that many controls recorded under, which said nothing about which control
+ *   was used (PEN-175). `firstrun.continue`, `firstrun.back` and `firstrun.cancel` are not here:
+ *   each first-run step's own event already says which step it was.
+ * - The Time Machine's controls, removed with it (PEN-190).
  */
 export const RETIRED_CLICK_NAMES: readonly string[] = [
   'menu.item',
@@ -1332,6 +1336,24 @@ export const RETIRED_CLICK_NAMES: readonly string[] = [
   'firstrun.action',
   'firstrun.link',
   'firstrun.option',
+  'time-machine.change.hide',
+  'time-machine.change.open-note',
+  'time-machine.change.show',
+  'time-machine.earlier',
+  'time-machine.later',
+  'time-machine.note',
+  'time-machine.open-note',
+  'time-machine.restore-note',
+  'time-machine.restore-version',
+  'time-machine.tab.changes',
+  'time-machine.tab.then',
+  'time-machine.week-link',
+  'time-machine.week.next',
+  'time-machine.week.previous',
+  'time-machine.week.this',
+  'tree.more.time-machine',
+  'time-machine.notebook',
+  'time-machine.scrub',
 ];
 const SYNC_NAMES: readonly string[] = ['pass'];
 

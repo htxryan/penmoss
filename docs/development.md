@@ -54,7 +54,7 @@ Text takes its size, weight and line height from the role it plays, never from a
 
 | Role                         | Size, weight, line height    | For                                                            |
 | ---------------------------- | ---------------------------- | -------------------------------------------------------------- |
-| `page-title`                 | 32 px bold, 1.25 (24 narrow) | A page's title: Settings, Trash, Tags, the Time Machine        |
+| `page-title`                 | 32 px bold, 1.25 (24 narrow) | A page's title: Settings, Trash, Tags                          |
 | `bar-title`                  | 18 px bold, 1.25             | The page's title in a bar pinned over it once it scrolls       |
 | `section-head`               | 18 px bold, 1.25             | A section of a page (a Settings page's own title)              |
 | `group-head`, `dialog-title` | 16 px semibold, 1.25         | A group of rows, a card's title; a dialog's or a sheet's title |

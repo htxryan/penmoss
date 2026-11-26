@@ -57,7 +57,7 @@ describe('History’s diff numbers its lines (R2-13)', () => {
   });
 
   it('draws the numbers from data-n, out of the text that is selected and copied', () => {
-    const container = mount(<DiffLines diff={diff} numbered />);
+    const container = mount(<DiffLines diff={diff} />);
     const pre = container.querySelector('pre')!;
     expect(pre.hasAttribute('data-numbered')).toBe(true);
     expect(pre.style.getPropertyValue('--diff-digits')).toBe('2');
@@ -83,12 +83,6 @@ describe('History’s diff numbers its lines (R2-13)', () => {
     // The text is the lines and their marks only.
     expect(pre.textContent).not.toMatch(/\b(9|19|21)\b/);
     expect(pre.querySelector('.diff-del')!.textContent).toBe('−old 11\n');
-  });
-
-  it('leaves the Time Machine’s diff unnumbered', () => {
-    const container = mount(<DiffLines diff={diff} />);
-    expect(container.querySelector('pre')!.hasAttribute('data-numbered')).toBe(false);
-    expect(container.querySelector('.diff-num, .diff-fold-lines')).toBeNull();
   });
 });
 

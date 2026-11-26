@@ -10,8 +10,7 @@ import { useEveryOpenNoteList } from '../sources/lists';
 import type { Source } from '../sources/registry';
 import { currentEntry, isBareHome, noteIdOfPath, type TabsState } from './state';
 
-type PageKind =
-  'note' | 'home' | 'graph' | 'trash' | 'tags' | 'time-machine' | 'settings' | 'other';
+type PageKind = 'note' | 'home' | 'graph' | 'trash' | 'tags' | 'settings' | 'other';
 
 export interface TabFace {
   readonly id: string;
@@ -35,7 +34,6 @@ const PAGE_TITLES: Readonly<Record<Exclude<PageKind, 'note'>, string>> = {
   graph: 'Graph',
   trash: 'Trash',
   tags: 'Tags',
-  'time-machine': 'Time Machine',
   settings: 'Settings',
   other: 'Not Found',
 };
@@ -54,8 +52,6 @@ function kindOf(path: string): PageKind {
       return 'trash';
     case 'tags':
       return 'tags';
-    case 'time-machine':
-      return 'time-machine';
     case 'settings':
       return 'settings';
     default:
