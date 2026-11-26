@@ -165,8 +165,14 @@ test('View shows a version beside the note as it is now, and restores it', async
     await page.emulateMedia({ colorScheme: scheme });
     await expect(page.locator('html')).toHaveAttribute('data-mode', scheme);
     await page.mouse.move(0, 0);
-    // The colours' transitions end before they are measured.
-    await page.evaluate(() => Promise.all(document.getAnimations().map((each) => each.finished)));
+    // The colours' transitions end before they are measured. A transition cancelled by the next
+    // (the scheme or the hover changing mid-way) rejects its `finished` with an AbortError: it is
+    // over, so wait for whatever replaced it until none run.
+    await page.evaluate(async () => {
+      const running = () => document.getAnimations().filter((each) => each.playState !== 'finished');
+      for (let now = running(); now.length; now = running())
+        await Promise.allSettled(now.map((each) => each.finished));
+    });
     const contrast = await sidesContrast(page);
     expect(contrast.failed).toEqual([]);
     expect(contrast.unsure).toEqual([]);
