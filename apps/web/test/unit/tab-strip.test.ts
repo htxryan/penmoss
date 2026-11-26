@@ -66,14 +66,15 @@ describe('a tab’s face', () => {
     expect(pageTitle('/trash', titleOf)).toBe('Trash');
   });
 
-  it('names the Tags page and the Time Machine', () => {
+  it('names the Tags page, and a page that is no longer there as Not Found', () => {
     const ids = counter();
     let state = initialState(ids, '/tags');
+    // A tab kept from before the Time Machine was removed (PEN-190).
     state = openTab(state, '/time-machine?source=nb-1', { ids });
     const named = describeTabs(state, { sourceOf, titleOf: (id) => titles[id], look: (s) => s.id });
     expect(named.map((face) => [face.kind, face.title])).toEqual([
       ['tags', 'Tags'],
-      ['time-machine', 'Time Machine'],
+      ['other', 'Not Found'],
     ]);
   });
 

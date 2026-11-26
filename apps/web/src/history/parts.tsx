@@ -1,6 +1,6 @@
 /**
- * Pieces of History (T21) the Time Machine shows too (PEN-21): who made a change, as a chip per
- * writer (✦ for an agent), and a line diff with the added and removed lines marked.
+ * Pieces of History (T21): who made a change, and a line diff with the added and removed lines
+ * marked.
  */
 import type { DiffOp } from '@penmoss/core/diff';
 import { Icon } from '@penmoss/ui/icons';
@@ -11,29 +11,6 @@ import type { HistoryAuthor } from './source';
 import { pluralise } from '@penmoss/core/words';
 
 type Author = HistoryAuthor;
-
-export function Authors({ authors }: { authors: readonly Author[] }) {
-  return (
-    <span className="history-authors">
-      {authors.map((author) => (
-        <span key={author.id} className="history-author" data-kind={author.kind}>
-          <span className="sr-only">{author.kind === 'agent' ? 'Agent' : 'Device'}: </span>
-          {author.kind === 'agent' ? (
-            <svg viewBox="0 0 16 16" aria-hidden="true" className="history-kind">
-              <path d="M8 1.5 9.6 6.4 14.5 8 9.6 9.6 8 14.5 6.4 9.6 1.5 8 6.4 6.4Z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 16 16" aria-hidden="true" className="history-kind">
-              <rect x="2" y="3" width="12" height="8" rx="1.2" fill="none" stroke="currentColor" />
-              <path d="M5.5 13.5h5" stroke="currentColor" />
-            </svg>
-          )}
-          {author.label}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 /** The icon for a writer: ✦ for an agent, a phone for an Android device, else a laptop. */
 const authorIcon = (author: Author | undefined) =>
@@ -83,50 +60,33 @@ function Line({ row }: { row: DiffOp }) {
 
 /**
  * A line diff as History shows it: `+` and `−` on the added and removed lines. Long unchanged runs
- * are folded. `numbered` adds a gutter of line numbers (History's docked preview, R2-13), drawn by
- * CSS from `data-n`: never selected or copied with the text, and not read out.
+ * are folded. A gutter of line numbers (History's docked preview, R2-13) is drawn by CSS from
+ * `data-n`: never selected or copied with the text, and not read out.
  */
-export function DiffLines({
-  diff,
-  numbered = false,
-}: {
-  diff: readonly DiffOp[];
-  numbered?: boolean;
-}) {
+export function DiffLines({ diff }: { diff: readonly DiffOp[] }) {
   const rows = diffRows(diff);
   // The gutter is as wide as the longest number, in either version.
   const digits = String(Math.max(1, diff.length)).length;
   return (
-    <pre
-      data-numbered={numbered ? '' : undefined}
-      style={numbered ? ({ '--diff-digits': digits } as CSSProperties) : undefined}
-    >
+    <pre data-numbered="" style={{ '--diff-digits': digits } as CSSProperties}>
       {rows.map((row, i) =>
         row.op === 'fold' ? (
           <span key={i} className="diff-fold">
             ⋯ {row.count} unchanged {pluralise(row.count, 'line')}
-            {numbered ? (
-              <span
-                className="diff-fold-lines"
-                aria-hidden="true"
-                data-n={row.from === row.to ? `${row.from}` : `${row.from}–${row.to}`}
-              />
-            ) : null}
+            <span
+              className="diff-fold-lines"
+              aria-hidden="true"
+              data-n={row.from === row.to ? `${row.from}` : `${row.from}–${row.to}`}
+            />
             {'\n'}
           </span>
         ) : (
           <span key={i} className={`diff-${row.op}`} data-op={row.op}>
-            {numbered ? (
-              <>
-                <span className="diff-num" aria-hidden="true" data-n={row.n} />
-                {/* The mark and the text in one cell, so a selection copies them as one line. */}
-                <span className="diff-line">
-                  <Line row={row} />
-                </span>
-              </>
-            ) : (
+            <span className="diff-num" aria-hidden="true" data-n={row.n} />
+            {/* The mark and the text in one cell, so a selection copies them as one line. */}
+            <span className="diff-line">
               <Line row={row} />
-            )}
+            </span>
             {'\n'}
           </span>
         ),

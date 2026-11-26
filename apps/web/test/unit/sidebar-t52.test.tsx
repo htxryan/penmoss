@@ -96,7 +96,7 @@ describe('the notebook’s actions (T52, T53)', () => {
     expect(host.querySelector('select')).toBeNull();
   });
 
-  it('has Sort Order…, Time Machine and Trash in ⋯, whatever the width, each with its icon (R2-20, R2-21)', () => {
+  it('has Sort Order… and Trash in ⋯, whatever the width, each with its icon (R2-20, R2-21)', () => {
     expect(more().getAttribute('aria-haspopup')).toBe('menu');
     expect(more().dataset['tip']).toBe('More Notebook Actions');
     act(() => more().click());

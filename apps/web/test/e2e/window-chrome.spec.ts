@@ -230,7 +230,7 @@ test.describe('with a notebook', () => {
   /** The notebook's row in the sidebar (its section's head). */
   const notebookRow = (page: Page) => page.locator('.sb-source > .sb-section-head').first();
 
-  test('19: a notebook’s row is New Note, New Folder and ⋯ at any width; ⋯ is the right-click menu with Rename…, Sort Order…, Time Machine and Trash', async ({
+  test('19: a notebook’s row is New Note, New Folder and ⋯ at any width; ⋯ is the right-click menu with Rename…, Sort Order… and Trash', async ({
     page,
   }) => {
     const errors = collectErrors(page);
@@ -280,12 +280,12 @@ test.describe('with a notebook', () => {
     await more.click();
     const menu = page.getByRole('menu', { name: 'More Notebook Actions' });
     const items = menu.getByRole('menuitem');
-    await expect(items).toHaveText(['Rename…', 'Sort Order…', 'Time Machine', 'Trash']);
+    await expect(items).toHaveText(['Rename…', 'Sort Order…', 'Trash']);
     expect(
       await items.evaluateAll((all) =>
         all.map((each) => each.querySelector('[data-icon]')?.getAttribute('data-icon')),
       ),
-    ).toEqual(['pencil', 'sort', 'history', 'trash']);
+    ).toEqual(['pencil', 'sort', 'trash']);
     // The sidebar's right-click menu's look: its surface, its items, and their hover.
     const look = async (target: typeof menu) => {
       const item = target.getByRole('menuitem').first();

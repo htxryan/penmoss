@@ -12,7 +12,7 @@
  * - **A notebook's page** (`/settings/git-notebooks/<id>`, each notebook also an entry in the
  *   nav, NotebookNavEntries.tsx): a header with its name, the Primary chip, the sync dot and
  *   time, and Sync Now; a stopped sync's words under it on every tab; then three tabs, kept in
- *   the URL (`?tab=sync`, `?tab=git`) as the Time Machine keeps its own:
+ *   the URL (`?tab=sync`, `?tab=git`):
  *   - **Overview**: Name (Rename writes `notebook.json`, so every device follows), Repository
  *     (Open on GitHub), how many notes, Copy Settings…, and Remove from This Mac… at the foot
  *     (Touch ID first; with changes not pushed, it says how many and offers to push first).

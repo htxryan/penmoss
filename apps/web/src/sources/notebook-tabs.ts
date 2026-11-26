@@ -1,6 +1,6 @@
 /**
  * A notebook's page in Settings has three tabs (PEN-146): Overview, Sync and Git, kept in the
- * URL as `?tab=sync` or `?tab=git` (Overview has none), as the Time Machine keeps its own.
+ * URL as `?tab=sync` or `?tab=git` (Overview has none).
  */
 import { gitNotebookPath } from '../router';
 import type { GitControl } from './git-commands';

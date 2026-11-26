@@ -81,8 +81,6 @@ object AndroidCommands {
         // PEN-68: the Mac's Tags page, where tags are described; the phone keeps the descriptions as it syncs.
         // Tags: each tag, its description, Generate AI Description and Generate All (A1677).
         "app.tags" to Coverage.Native(ANYWHERE),
-        // PEN-21: the Mac app's first version; a note's History is on the phone.
-        "app.timeMachine" to Coverage.NotHere("The Time Machine reads a notebook's whole git history, which the Mac app has; the phone has each note's History (PEN-21)."),
         // T45 (D37, A710): note windows are the Mac app's and the web's; a phone has one screen.
         "note.openInNewWindow" to Coverage.NotHere("A phone shows one screen at a time (PL7): Android's split screen and Recents already put Penmoss beside another app, and a note opened from a link opens on its own screen with Back (T45, D37)."),
         "window.back" to Coverage.NotHere("A note window's (T45): the phone's own Back goes back from a note to the one before it."),

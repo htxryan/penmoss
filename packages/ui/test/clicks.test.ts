@@ -27,7 +27,7 @@ describe('installClickListener', () => {
       <input type="checkbox" data-event="editor.task.toggle" id="box" />
       <button role="switch" aria-checked="true" data-event="settings.menu-bar-icon" id="switch"></button>
       <select data-event="editor.code.language" id="select"><option>ts</option><option>kt</option></select>
-      <input type="range" data-event="time-machine.scrub" id="range" />`;
+      <input type="range" data-event="settings.font.size" id="range" />`;
     document.getElementById('inner')!.click();
     document.getElementById('box')!.click();
     document.getElementById('switch')!.click();
@@ -40,7 +40,7 @@ describe('installClickListener', () => {
       ['editor.task.toggle', 'on'],
       ['settings.menu-bar-icon', 'off'],
       ['editor.code.language', undefined],
-      ['time-machine.scrub', undefined],
+      ['settings.font.size', undefined],
     ]);
   });
 

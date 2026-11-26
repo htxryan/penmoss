@@ -67,7 +67,7 @@ export interface GitVersionDetail {
 export { commitWriter } from './writer';
 
 /** Who made a commit: its `Penmoss-Writer` trailer (A825), else the commit's git identity. */
-export function commitAuthor(commit: CommitInfo): HistoryAuthor {
+function commitAuthor(commit: CommitInfo): HistoryAuthor {
   const named = commitWriter(commit.message);
   if (named) return named;
   // A commit from before the trailer: the device's git identity.
@@ -117,7 +117,7 @@ function markdownOf(state: Uint8Array | null): string {
  * kept for the reader's life, and a History opened again reads only the versions made since.
  */
 export class NotebookHistory {
-  /** Merged note states by note and commit (Restore, Revert, the Time Machine's restore). */
+  /** Merged note states by note and commit (Restore, Revert). */
   private readonly states = new Lru<string, Uint8Array | null>(32);
   /** Each version's markdown as History compares them, by note and commit. */
   private readonly texts = new Lru<string, string>(512);

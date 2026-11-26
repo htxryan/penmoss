@@ -61,7 +61,7 @@ tester.run('tracked-control', trackedControl, {
     // PEN-175: a select, a slider, every link, and the roles option, treeitem, slider and link,
     // each with its own id.
     '<select data-event="search.filter.tag" onChange={pick} />;',
-    '<input type="range" data-event="time-machine.scrub" onChange={scrub} />;',
+    '<input type="range" data-event="settings.font.size" onChange={scrub} />;',
     '<a href="https://penmoss.app/privacy" data-event="privacy.policy">Privacy Policy</a>;',
     '<div role="option" data-event="icon-picker.icon" onClick={choose} />;',
     '<div role="treeitem" data-event="tree.open" />;',

@@ -1,6 +1,5 @@
 /**
- * The period of an open daily or weekly note (T19): PeriodNav above it, and the Time Machine's
- * link under a weekly note's title (PEN-21).
+ * The period of an open daily or weekly note (T19), for PeriodNav above it.
  */
 import { readIdentity } from '@penmoss/model/note';
 import type { Yjs14Replica } from '@penmoss/model/yjs14';

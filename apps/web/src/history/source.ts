@@ -133,7 +133,7 @@ const SAVE_WAIT_MS = 95_000;
 /** One reader per notebook, so commits read once stay read (they never change). */
 const readers = new WeakMap<GitSource, NotebookHistory>();
 
-export function readerOf(source: GitSource): NotebookHistory {
+function readerOf(source: GitSource): NotebookHistory {
   let reader = readers.get(source);
   if (!reader) {
     const info = source.info;
@@ -288,10 +288,10 @@ async function ownerCheck(source: GitSource, noteId: string, revert: boolean): P
 
 /**
  * Restore (A80, A858) to the note as it was at `commit`: the owner checked, the note as it is
- * now saved as a version first, then the old content applied as an ordinary change. History's
- * Restore This Version and the Time Machine's (PEN-21) both come here.
+ * now saved as a version first, then the old content applied as an ordinary change: History's
+ * Restore This Version.
  */
-export async function restoreToCommit(
+async function restoreToCommit(
   source: GitSource,
   notes: Notes,
   noteId: string,

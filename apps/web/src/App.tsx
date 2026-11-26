@@ -47,7 +47,6 @@ import { JournalCommands } from './journal/PeriodNav';
 import { tagSearch } from './search/show-tag';
 import { TrashView } from './trash/TrashView';
 import { TagsPage, type ShowTag } from './tags/TagsPage';
-import { TimeMachinePage } from './time-machine/TimeMachinePage';
 import { useSidebarLayout } from './shell/sidebar-layout-state';
 import { SidebarBody } from './shell/SidebarBody';
 import { RecoveredNotice } from './workspace/RecoveredNotice';
@@ -585,16 +584,6 @@ function NotesShell({
                   <AppBar title="Tags" />
                   <TagsPage onShowTag={showTag} />
                 </>
-              ) : route.name === 'time-machine' ? (
-                // A git notebook's past (PEN-21): `/time-machine?source=<id>`, the Journal's without.
-                <InSource
-                  source={
-                    sourcesRegistry.sourceById(params.get('source') ?? '') ?? sourcesState.journal
-                  }
-                >
-                  <AppBar title="Time Machine" />
-                  <TimeMachinePage params={params} />
-                </InSource>
               ) : route.name === 'not-found' ? (
                 <>
                   <AppBar title="Penmoss" brand />

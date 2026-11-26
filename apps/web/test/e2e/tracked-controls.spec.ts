@@ -1,7 +1,7 @@
 // PEN-175 ac1: every control on screen says what a click on it records. A fixed tour opens Home
 // with every sidebar section open; a note holding every editor widget, its menus, the selection
 // toolbar, the link form, the lightbox and its side panel; every Settings page; Tags, Trash,
-// Graph, Time Machine, Search and the command palette; and each first-run step. On each screen
+// Graph, Search and the command palette; and each first-run step. On each screen
 // every visible control (a button, a link, a select, a summary, a checkbox, radio or slider, or
 // anything with a control's role) must carry, on itself or on the <label> around a native input,
 // a `data-command`, a `data-event` the catalogue lists and has not retired, or a
@@ -399,8 +399,8 @@ test('every control on screen has its own id or a reason (PEN-175 ac1)', async (
   await expect(page.getByTestId('custom-theme-editor')).toBeVisible();
   await check(page, 'settings/appearance · theme editor');
 
-  // --- Tags, Trash, Graph and Time Machine.
-  for (const path of ['/tags', '/trash', '/graph', '/time-machine']) {
+  // --- Tags, Trash and Graph.
+  for (const path of ['/tags', '/trash', '/graph']) {
     await open(page, path);
     await check(page, path.slice(1));
   }

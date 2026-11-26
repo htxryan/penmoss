@@ -67,7 +67,6 @@ export function screenKindOf(route: Route): string | null {
     case 'graph':
     case 'trash':
     case 'tags':
-    case 'time-machine':
       return route.name;
     case 'window':
       return 'note';

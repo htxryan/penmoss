@@ -79,7 +79,7 @@ describe('the click listener (PEN-137)', () => {
       <select data-event="search.filter.tag" id="select">
         <option value="">Any Tag</option><option value="secret-tag">#secret-tag</option>
       </select>
-      <input type="range" data-event="time-machine.scrub" id="range" min="0" max="9" value="0" />
+      <input type="range" data-event="settings.font.size" id="range" min="0" max="9" value="0" />
       <select data-event="search.filter.date" id="off" disabled><option>Any</option></select>`;
     const select = document.getElementById('select') as HTMLSelectElement;
     const range = document.getElementById('range') as HTMLInputElement;
@@ -99,7 +99,7 @@ describe('the click listener (PEN-137)', () => {
     const events = recorded();
     expect(events).toEqual([
       { kind: 'click', name: 'search.filter.tag', props: {} },
-      { kind: 'click', name: 'time-machine.scrub', props: {} },
+      { kind: 'click', name: 'settings.font.size', props: {} },
     ]);
     expect(JSON.stringify(events)).not.toContain('secret-tag');
     expect(JSON.stringify(events)).not.toContain('7');

@@ -15,8 +15,8 @@ const notebookRow = async (page: Page, scope?: Locator): Promise<Locator> => {
 /**
  * A notebook's button on its name's row (T53 item 4): New Note, New Folder or ⋯ (More Notebook
  * Actions). They show while the pointer is over the row, so this hovers it first. `scope`
- * narrows to one notebook's section when there are several. Sort Order…, Time Machine, Trash
- * and Rename… are in ⋯: `notebookMenuItem`.
+ * narrows to one notebook's section when there are several. Sort Order…, Trash and Rename…
+ * are in ⋯: `notebookMenuItem`.
  */
 export async function notebookAction(
   page: Page,

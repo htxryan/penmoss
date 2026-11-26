@@ -4,7 +4,6 @@ import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
 import { MenuItem } from '../shell/Menu';
 import { devicePref, useDevicePref } from '../shell/device-pref';
-import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
 import { FolderTree } from '../workspace/FolderTree';
 import { TreeActions } from '../workspace/TreeActions';
 import type { GitSyncStatus } from './engine-host';
@@ -122,10 +121,6 @@ export function SourceSection({
   const trashOpen =
     location.pathname === '/trash' &&
     new URLSearchParams(location.search).get('source') === source.id;
-  const timeMachine = timeMachinePath(source.id);
-  const timeMachineOpen =
-    location.pathname === TIME_MACHINE_PATH &&
-    new URLSearchParams(location.search).get('source') === source.id;
   // Its row's menu (Ryan's review of PR #192): Rename Notebook, in place, and its settings.
   const head = useRef<HTMLElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
@@ -210,7 +205,6 @@ export function SourceSection({
           currentFolder={currentFolder}
           onCurrentFolderChange={onCurrentFolderChange}
           trash={{ href: trash, testId: 'section-trash', current: trashOpen }}
-          timeMachine={{ href: timeMachine, current: timeMachineOpen }}
           // Its ⋯ menu renames too, as its right-click does (R2-21).
           onRename={renaming ? undefined : () => setRenaming(true)}
         />

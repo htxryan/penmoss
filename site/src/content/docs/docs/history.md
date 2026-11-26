@@ -26,8 +26,6 @@ On Android, **Version History** is the note panel's **History** tab, as on the M
 
 On the Mac, Restore and Revert first ask for Touch ID or your password. On Android they ask for your fingerprint, face or screen lock.
 
-To see a whole notebook as it was on any day, or what changed this week, use the [Time Machine](/docs/time-machine/).
-
 Your repository's git history keeps every version, so you can also read it with `git log`, or with [`penmoss history`](/docs/reference/cli/#history).
 
 ### View a version beside now

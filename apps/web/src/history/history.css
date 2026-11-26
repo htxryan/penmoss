@@ -188,32 +188,6 @@ button.history-entry:focus-visible {
   color: var(--pm-danger);
 }
 
-.history-authors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.history-author {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0 0.4rem;
-  border-radius: 0;
-  background: var(--pm-hover);
-  font-size: var(--pm-text-meta);
-}
-
-.history-author[data-kind='agent'] {
-  background: color-mix(in oklab, var(--pm-accent) 18%, transparent);
-}
-
-.history-kind {
-  width: 0.8rem;
-  height: 0.8rem;
-  fill: currentColor;
-}
-
 /* A summary still being read (Ryan's review of #192): a short bar where its words will be. */
 .history-summary-pending {
   display: inline-block;

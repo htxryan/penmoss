@@ -19,18 +19,11 @@ export interface TreeTrash {
   readonly current: boolean;
 }
 
-/** A notebook's Time Machine (PEN-21): where it is, and whether it is the page showing. */
-export interface TreeTimeMachine {
-  readonly href: string;
-  readonly current: boolean;
-}
-
 /**
  * A notebook's actions, on its name's row (T53 item 4): New Note at its top level, New Folder,
  * and ⋯ (More Notebook Actions). They show while the pointer is over the row or focus is in it,
  * over the end of the name if it needs the room; the sync dot stays at the far right. ⋯ holds
- * Rename… (where the row can rename its notebook), Sort Order… (its own menu), Time Machine and
- * Trash, whatever the sidebar's width, so the name keeps room to be read (Ryan's review of #193,
+ * Rename… (where the row can rename its notebook), Sort Order… (its own menu) and Trash, whatever the sidebar's width, so the name keeps room to be read (Ryan's review of #193,
  * R2-20 and R2-21; replaces A1392's fold below 16.5rem). It is the sidebar's right-click menu
  * (`ContextMenu`), an icon beside each item. Sort and New Folder act on the folder chosen in the
  * tree, as they did on the bar below (T52). Rendered in the notebook's source scope.
@@ -39,13 +32,11 @@ export function TreeActions({
   currentFolder,
   onCurrentFolderChange,
   trash,
-  timeMachine,
   onRename,
 }: {
   readonly currentFolder: string | null;
   readonly onCurrentFolderChange: (folderId: string | null) => void;
   readonly trash?: TreeTrash | undefined;
-  readonly timeMachine?: TreeTimeMachine | undefined;
   /** Renames the notebook in place on its row (A1383); absent where the row cannot. */
   readonly onRename?: (() => void) | undefined;
 }) {
@@ -167,18 +158,7 @@ export function TreeActions({
           >
             Sort Order…
           </MenuItem>
-          {timeMachine || trash ? <div className="menu-sep" role="separator" /> : null}
-          {timeMachine ? (
-            <MenuItem
-              icon="history"
-              data-testid="section-time-machine"
-              data-event="tree.more.time-machine"
-              aria-current={timeMachine.current ? 'page' : undefined}
-              onClick={() => choose(() => navigate(timeMachine.href))}
-            >
-              Time Machine
-            </MenuItem>
-          ) : null}
+          {trash ? <div className="menu-sep" role="separator" /> : null}
           {trash ? (
             <MenuItem
               icon="trash"

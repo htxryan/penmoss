@@ -1,6 +1,6 @@
 /**
  * A note as the branch had it at a commit: its directory's files, every writer's log merged, and
- * its title. History, the Time Machine and agent activity all read old notes this one way.
+ * its title. History and agent activity read old notes this one way.
  */
 import { readTitle } from '@penmoss/model/note';
 import * as Y from '@y/y';
@@ -71,17 +71,6 @@ export function mergedLogs(files: Iterable<Uint8Array> | undefined): Uint8Array 
 export function docOfState(state: Uint8Array | null): Y.Doc {
   const doc = new Y.Doc();
   if (state) Y.applyUpdate(doc, state);
-  return doc;
-}
-
-/**
- * A doc with each of `logs` applied in turn (one not there, or not a Yjs update, is left out): a
- * note's or the WorkspaceDoc's files at a commit, as the Time Machine reads them. The caller
- * destroys it.
- */
-export function docOfLogs(logs: Iterable<Uint8Array | undefined>): Y.Doc {
-  const doc = new Y.Doc();
-  for (const bytes of logs) if (bytes && isUpdate(bytes)) Y.applyUpdate(doc, bytes);
   return doc;
 }
 
