@@ -17,7 +17,9 @@
     "./graph/theme": "./src/graph/theme.ts",
     "./graph/view": "./src/graph/view.ts",
     "./icons": "./src/icons/Icon.tsx",
-    "./theme": "./src/theme/index.ts"
+    "./theme": "./src/theme/index.ts",
+    "./theme/builtins": "./src/theme/builtins.ts",
+    "./theme/css": "./src/theme/css.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

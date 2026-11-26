@@ -6,7 +6,8 @@
  */
 import { runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { keepTestApp } from './support';
 import {
   GitNotebookEngine,
   MemoryRemote,
@@ -79,6 +80,11 @@ function fakeGitHubLogin(login: string) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+beforeEach(async () => {
+  // The relay as setup leaves it: its GitHub App kept in its storage.
+  await keepTestApp();
 });
 
 async function signIn(login: string) {
@@ -163,7 +169,7 @@ describe('the relay Worker', () => {
   it('refuses another GitHub account', async () => {
     const { back } = await signIn('someone-else');
     expect(back.status).toBe(403);
-    expect(await back.text()).toContain('serves only htxryan');
+    expect(await back.text()).toContain('This relay belongs to htxryan');
   });
 
   it('refuses a connector whose grant would go to another host', async () => {
@@ -244,10 +250,10 @@ describe('two notebooks in one Durable Object (PEN-192)', () => {
       new NotebookOps(mac).createNote({ title: `${place.name} note`, markdown: 'Tomatoes' });
       await mac.sync();
     }
-    const config = readConfig({
-      ...env,
-      NOTEBOOK_TOKENS: JSON.stringify({ 'ryan/notes': 'a', 'quanta/scratch': 'b' }),
-    });
+    const config = readConfig(
+      { ...env, NOTEBOOK_TOKENS: JSON.stringify({ 'ryan/notes': 'a', 'quanta/scratch': 'b' }) },
+      null,
+    );
     if ('problem' in config) throw new Error(config.problem);
     const stub = env.NOTEBOOK.get(env.NOTEBOOK.idFromName('two-notebooks-test'));
     await runInDurableObject(stub, async (_instance, state) => {

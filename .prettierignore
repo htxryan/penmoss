@@ -24,3 +24,5 @@ apps/android/app/schemas/
 docs/brand/source/
 # The Characters, generated one to a line by scripts/characters.mjs (task characters).
 packages/core/data/characters.json
+# The app's stylesheets as the relay carries them (scripts/app-css.mjs).
+apps/relay/src/app-css.gen.ts

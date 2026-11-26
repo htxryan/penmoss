@@ -6,7 +6,7 @@ The relay lets Claude on the web, desktop and mobile apps use [git notebooks](ht
 | ------------- | --------------------------------------------------------------------- |
 | Where it runs | `https://mcp.penmoss.app/mcp`                                         |
 | Notes         | Several git notebooks, each in a GitHub repository (A1695)            |
-| Sign-in       | OAuth: GitHub, as the one allowed account                             |
+| Sign-in       | OAuth: GitHub, as the owner, through the relay's own App (A1697)      |
 | Tools         | The local MCP server's (A830), without the comment tools (D50, A1064) |
 | Search        | By words (#192 adds search by meaning)                                |
 | Code          | `apps/relay`; decisions A996–A1001, A1695, A1696                      |
@@ -24,33 +24,14 @@ The relay lets Claude on the web, desktop and mobile apps use [git notebooks](ht
 
 You need the notebooks' repositories (each a GitHub repository holding a git notebook), a Cloudflare account with `penmoss.app`, and Wrangler (`pnpm --filter @penmoss/relay exec wrangler login`).
 
-### 1. Create the GitHub App
-
-In GitHub, open **Settings → Developer settings → GitHub Apps → New GitHub App**:
-
-- **Name**: for example `Penmoss relay (htxryan)`. **Homepage URL**: `https://mcp.penmoss.app`.
-- **Callback URL**: `https://mcp.penmoss.app/callback`. Leave **Request user authorization during installation** off.
-- **Webhook**: turn **Active** off.
-- **Repository permissions**: **Contents: Read and write**. **Metadata** is read-only by default. Nothing else.
-- **Where can this GitHub App be installed?** **Only on this account**.
-
-Create it, then:
-
-1. Note the **App ID** and the **Client ID**.
-2. **Generate a new client secret** and keep it for step 3.
-3. **Generate a private key**. GitHub downloads a `.pem` file.
-4. **Install App** on your account, choose **Only select repositories**, and pick the notebooks' repositories. The relay finds the installation for each repository itself.
-
-A notebook in a repository the App can't be installed on (an organisation's, say) uses a fine-grained personal access token of its own, limited to that repository, with **Contents: Read and write** (`NOTEBOOK_TOKENS` below). Sign-in still needs the GitHub App for its client id and secret.
-
-### 2. Configure the Worker
+### 1. Configure and deploy the Worker
 
 ```bash
 cd apps/relay
 pnpm exec wrangler kv namespace create OAUTH_KV
 ```
 
-Put the namespace id into `wrangler.jsonc` (`kv_namespaces[0].id`), and fill in its `vars`: `NOTEBOOKS`, `GITHUB_APP_ID` and `GITHUB_CLIENT_ID`. `ALLOWED_GITHUB_LOGIN` is the one account that may sign in. `NOTEBOOKS` lists the notebooks as JSON, each with its repository and, when they aren't `main` and the top, its branch and folder:
+Put the namespace id into `wrangler.jsonc` (`kv_namespaces[0].id`), and fill in its `vars`: `OWNER_GITHUB_LOGIN`, the one GitHub account that may set the relay up, sign in and connect, and `NOTEBOOKS`. `NOTEBOOKS` lists the notebooks as JSON, each with its repository and, when they aren't `main` and the top, its branch and folder:
 
 ```json
 [
@@ -59,42 +40,39 @@ Put the namespace id into `wrangler.jsonc` (`kv_namespaces[0].id`), and fill in 
 ]
 ```
 
-### 3. Add the secrets
-
 ```bash
-pnpm exec wrangler secret put GITHUB_APP_PRIVATE_KEY < ~/Downloads/penmoss-relay.*.private-key.pem
+pnpm exec wrangler deploy
 ```
 
-```bash
-pnpm exec wrangler secret put GITHUB_CLIENT_SECRET
-```
+### 2. Make the relay's GitHub App
 
-For each notebook reached by a token of its own, `NOTEBOOK_TOKENS` holds the tokens as JSON, by repository: `{"quantaservices/ryan-henderson-scratch": "github_pat_…"}`.
+Open `https://mcp.penmoss.app/setup`, signed in to GitHub as the owner, and choose **Create GitHub App…**. GitHub opens with the App filled in: read and write access to contents, metadata read, no webhook, only on your account. Create it there; GitHub sends you back, and the relay keeps the App's id, key and secrets in its own storage (A1697). An App made by any other account is refused and nothing is kept. A relay makes its App once.
+
+Then choose **Install on GitHub…**, pick **Only select repositories**, and choose the notebooks' repositories. The relay finds the installation for each repository itself.
+
+A notebook in a repository the App can't be installed on (an organisation's, say) uses a fine-grained personal access token of its own, limited to that repository, with **Contents: Read and write**. `NOTEBOOK_TOKENS` holds the tokens as JSON, by repository: `{"quantaservices/ryan-henderson-scratch": "github_pat_…"}`.
 
 ```bash
 pnpm exec wrangler secret put NOTEBOOK_TOKENS
 ```
 
-### 4. Deploy
+### 3. Check the notebooks
 
-```bash
-pnpm exec wrangler deploy
-```
+**Sign In with GitHub** on the setup page, or open `https://mcp.penmoss.app/notebooks`, signed in as the owner. The Notebooks page lists what the relay serves and the connector's address (A1698).
 
-`https://mcp.penmoss.app` should say how to connect.
-
-### 5. Connect claude.ai
+### 4. Connect claude.ai
 
 1. In Claude, open **Settings → Connectors → Add custom connector**.
 2. **Name** `Penmoss`, **URL** `https://mcp.penmoss.app/mcp`, then **Add**.
-3. Choose **Connect**. The relay shows what Claude is asking for. Choose **Continue with GitHub** and sign in as the allowed account.
+3. Choose **Connect**. The relay shows what Claude is asking for. Choose **Continue with GitHub** and sign in as the owner.
 4. Turn the connector on in a conversation (**+ → Connectors**). Connectors added on the web are also available in Claude's mobile apps.
 
 ## When something is wrong
 
-- **“This relay is not yours”**: you signed in to GitHub as another account than `ALLOWED_GITHUB_LOGIN`.
-- **“This app cannot connect”**: the connector's redirect is not on `ALLOWED_REDIRECT_HOSTS` (claude.ai and claude.com by default).
-- **“The relay is not set up”** or a 503 from `/mcp`: a setting or secret is missing; the message names it.
+- **“This Relay Isn’t Yours”**: you signed in to GitHub as another account than `OWNER_GITHUB_LOGIN`.
+- **“This App Isn’t the Owner’s”** on setup: the App was made while GitHub was signed in as another account. Delete that App on GitHub, sign in as the owner and start again.
+- **“This Relay Isn’t Set Up”**: it has no GitHub App yet; open `/setup`.
+- **“This App Can’t Connect”**: the connector's redirect is not on `ALLOWED_REDIRECT_HOSTS` (claude.ai and claude.com by default).
+- A 503 from `/mcp`: a setting is missing or wrong; the message names it.
 - **The relay's GitHub App is not installed on owner/name**: install the App on that repository, or give the notebook a token in `NOTEBOOK_TOKENS`. A notebook that fails is left out of searches and lists (`skipped`, with the reason) while the others serve.
-- **GitHub refused the App's installation token**: the key or App id is wrong.
 - Logs: `pnpm exec wrangler tail` in `apps/relay`.

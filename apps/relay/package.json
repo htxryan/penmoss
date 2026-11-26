@@ -10,13 +10,15 @@
     "types": "wrangler types --include-runtime=false --env-file /dev/null && wrangler types --include-env=false ../../types/workers-runtime.d.ts",
     "types:check": "wrangler types --include-runtime=false --env-file /dev/null --check && wrangler types --include-env=false --check ../../types/workers-runtime.d.ts",
     "typecheck": "pnpm run types:check && tsc --noEmit -p .",
+    "css": "node scripts/app-css.mjs",
     "test": "vitest run && vitest run --config vitest.workers.config.ts",
     "deploy": "sh ../../scripts/no-factory-deploy.sh && wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
     "@penmoss/core": "workspace:*",
-    "@penmoss/git-notebook": "workspace:*"
+    "@penmoss/git-notebook": "workspace:*",
+    "@penmoss/ui": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.4.6",

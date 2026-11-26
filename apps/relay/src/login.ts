@@ -1,16 +1,52 @@
 /**
- * Signing in to the relay (T55): the OAuth 2.1 server claude.ai's custom connectors expect is
- * `@cloudflare/workers-oauth-provider`; this handler is its sign-in. A connector's request is
- * granted only when its redirect goes to an allowed host (claude.ai by default) and the person
- * signs in with GitHub as the one allowed account. Anything else is refused with a page saying
- * why. The GitHub sign-in asks for no scopes: only who the person is.
+ * The relay's pages and sign-in (T55, PEN-193). claude.ai's custom connectors expect an OAuth 2.1
+ * server, which is `@cloudflare/workers-oauth-provider`; this handler is everything else it
+ * serves:
+ *
+ * - `/setup` makes the relay's GitHub App (setup.ts); nothing else works before it.
+ * - claude.ai's sign-in (`/authorize`): granted only when the connector's redirect goes to an
+ *   allowed host (claude.ai by default) and the person signs in with GitHub as the owner.
+ * - The owner's own pages (`/sign-in`, `/notebooks`, `/sign-out`), with a session (session.ts).
+ *
+ * Both sign-ins go through the stored App's web flow and come back to `/callback`. They ask for no
+ * scopes: only who the person is. Anything refused gets a page saying why.
  */
 import type { AuthRequest, OAuthHelpers } from '@cloudflare/workers-oauth-provider';
-import { readConfig, redirectAllowed, sameLogin, type RelaySettings } from './config';
+import type { AppSummary, StoredApp } from './app';
+import {
+  readBasics,
+  redirectAllowed,
+  sameLogin,
+  type RelayBasics,
+  type RelaySettings,
+} from './config';
+import { notebooksPage, type NotebooksStore } from './notebooks';
+import { buttonForm, escape, linkButton, page, para } from './pages';
+import {
+  clearSessionCookie,
+  cookie,
+  endSession,
+  formIsOwn,
+  randomId,
+  readSession,
+  sessionCookie,
+  setCookie,
+  startSession,
+} from './session';
+import { setupPage } from './setup';
+
+/** What the Worker asks of the relay's Durable Object. */
+export interface RelayStore extends NotebooksStore {
+  summary(): Promise<AppSummary | null>;
+  /** The App's client id and secret, for a sign-in; null before setup. */
+  signIn(): Promise<{ readonly clientId: string; readonly clientSecret: string } | null>;
+  keepApp(app: StoredApp): Promise<'kept' | 'exists'>;
+}
 
 export interface LoginEnv extends RelaySettings {
   readonly OAUTH_KV: KVNamespace;
   readonly OAUTH_PROVIDER: OAuthHelpers;
+  readonly NOTEBOOK: DurableObjectNamespace;
 }
 
 /** What a grant carries to the MCP endpoint. */
@@ -20,71 +56,105 @@ export interface GrantProps {
 
 const PENDING_TTL_S = 600;
 const STATE_COOKIE = 'penmoss_relay_state';
+const ID = /^[0-9a-f]{48}$/;
 
-const escape = (text: string) =>
-  text.replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+/** The one Durable Object: the notebooks, and the relay's settings. */
+export const storeOf = (env: LoginEnv) =>
+  env.NOTEBOOK.get(env.NOTEBOOK.idFromName('notebook')) as unknown as RelayStore;
+
+/** Where a sign-in started: claude.ai's grant, or the owner's pages. */
+type Started = { readonly kind: 'grant'; readonly auth: AuthRequest } | { readonly kind: 'pages' };
+
+const notSetUp = () =>
+  page(
+    503,
+    'This Relay Isn’t Set Up',
+    para('It needs its GitHub App before anyone can connect.') +
+      linkButton('/setup', 'Set Up This Relay', true),
   );
 
-function page(status: number, title: string, body: string, headers: HeadersInit = {}) {
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title>
-<style>:root{color-scheme:light dark}body{font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:34rem;margin:12vh auto;padding:0 20px}h1{font-size:1.4rem}button{font:inherit;padding:.6em 1.2em;cursor:pointer}code{font-size:.9em}</style>
-</head><body><h1>${escape(title)}</h1>${body}</body></html>`;
-  return new Response(html, {
-    status,
+const notTheOwner = (basics: RelayBasics, login: string | undefined) =>
+  page(
+    403,
+    'This Relay Isn’t Yours',
+    para(
+      `You signed in to GitHub as <b>${escape(login ?? 'unknown')}</b>. This relay belongs to ${escape(basics.owner)}. Sign in as ${escape(basics.owner)}, or deploy a relay of your own.`,
+    ),
+  );
+
+/** Sends the browser to GitHub's sign-in, the state kept in KV and in this browser's cookie. */
+async function toGitHub(
+  env: LoginEnv,
+  basics: RelayBasics,
+  origin: string,
+  clientId: string,
+  started: Started,
+): Promise<Response> {
+  const state = randomId();
+  await env.OAUTH_KV.put(`state:${state}`, JSON.stringify(started), {
+    expirationTtl: PENDING_TTL_S,
+  });
+  const github = new URL(`${basics.web}/login/oauth/authorize`);
+  github.searchParams.set('client_id', clientId);
+  github.searchParams.set('redirect_uri', `${origin}/callback`);
+  github.searchParams.set('state', state);
+  github.searchParams.set('allow_signup', 'false');
+  return new Response(null, {
+    status: 302,
     headers: {
-      'content-type': 'text/html; charset=utf-8',
-      'content-security-policy':
-        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://github.com",
-      'x-frame-options': 'DENY',
-      ...headers,
+      location: github.toString(),
+      // The state is this browser's: a sign-in started elsewhere cannot finish here.
+      'set-cookie': setCookie(STATE_COOKIE, state, '/callback', PENDING_TTL_S),
     },
   });
-}
-
-const randomId = () =>
-  Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) =>
-    b.toString(16).padStart(2, '0'),
-  ).join('');
-
-function cookie(request: Request, name: string): string | null {
-  for (const part of (request.headers.get('cookie') ?? '').split(';')) {
-    const [key, ...value] = part.trim().split('=');
-    if (key === name) return value.join('=');
-  }
-  return null;
 }
 
 export const loginHandler = {
   async fetch(request: Request, env: LoginEnv): Promise<Response> {
     const url = new URL(request.url);
-    const config = readConfig(env);
+    const basics = readBasics(env);
+    if ('problem' in basics) {
+      return page(503, 'This Relay Isn’t Set Up', para(escape(basics.problem)));
+    }
+    const store = storeOf(env);
+
     if (url.pathname === '/') {
+      const app = await store.summary();
       return page(
         200,
-        'Penmoss relay',
-        `<p>This relay serves a Penmoss notebook to claude.ai. Add <code>${escape(url.origin)}/mcp</code> as a custom connector in claude.ai's settings.</p>`,
+        'Penmoss Relay',
+        para(
+          `This relay lets Claude read and write ${escape(basics.owner)}’s Penmoss notebooks. In Claude, add <code>${escape(url.origin)}/mcp</code> as a custom connector.`,
+        ) +
+          (app
+            ? linkButton('/notebooks', 'Notebooks', true)
+            : linkButton('/setup', 'Set Up This Relay', true)),
       );
     }
-    if ('problem' in config)
-      return page(503, 'The relay is not set up', `<p>${escape(config.problem)}</p>`);
+
+    if (url.pathname === '/setup' && request.method === 'GET') {
+      return setupPage(request, basics, store, env.OAUTH_KV);
+    }
 
     if (url.pathname === '/authorize' && request.method === 'GET') {
+      const signIn = await store.signIn();
+      if (!signIn) return notSetUp();
       let auth: AuthRequest;
       try {
         auth = await env.OAUTH_PROVIDER.parseAuthRequest(request);
       } catch (error) {
-        return page(400, 'Not a sign-in request', `<p>${escape(String(error))}</p>`);
+        return page(400, 'Not a Sign-In Request', para(escape(String(error))));
       }
       const client = await env.OAUTH_PROVIDER.lookupClient(auth.clientId);
       if (!client)
-        return page(400, 'Unknown app', '<p>This app is not registered with the relay.</p>');
-      if (!redirectAllowed(auth.redirectUri, config.redirectHosts)) {
+        return page(400, 'Unknown App', para('This app is not registered with the relay.'));
+      if (!redirectAllowed(auth.redirectUri, basics.redirectHosts)) {
         return page(
           403,
-          'This app cannot connect',
-          `<p>The relay connects only to ${escape(config.redirectHosts.join(', '))}. This request would send access to <code>${escape(auth.redirectUri)}</code>.</p>`,
+          'This App Can’t Connect',
+          para(
+            `The relay connects only to ${escape(basics.redirectHosts.join(', '))}. This request would send access to <code>${escape(auth.redirectUri)}</code>.`,
+          ),
         );
       }
       const id = randomId();
@@ -92,60 +162,64 @@ export const loginHandler = {
         expirationTtl: PENDING_TTL_S,
       });
       const name = client.clientName ?? new URL(auth.redirectUri).hostname;
+      const repositories = await store.repositories();
       // A browser applies form-action to every redirect the form leads to. When GitHub has
       // already authorized the app it redirects straight back, so the chain runs form → GitHub →
       // /callback → claude.ai without a new navigation, and the last hop must be allowed too.
       const formAction = [
-        "'self'",
-        config.web,
-        ...config.redirectHosts.flatMap((host) => [`https://${host}`, `https://*.${host}`]),
-      ].join(' ');
+        basics.web,
+        ...basics.redirectHosts.flatMap((host) => [`https://${host}`, `https://*.${host}`]),
+      ];
+      const where = repositories.length
+        ? repositories.map((repository) => `<code>${escape(repository)}</code>`).join(', ')
+        : 'the notebooks this relay serves';
       return page(
         200,
-        `Connect ${name} to your notes?`,
-        `<p><b>${escape(name)}</b> (${escape(new URL(auth.redirectUri).hostname)}) will be able to read, create and edit notes in ${config.notebooks.map((place) => `<code>${escape(place.repository)}</code>`).join(', ')}. Its edits are committed as the agent “${escape(config.agentLabel)}”.</p>
-<form method="post" action="/authorize"><input type="hidden" name="pending" value="${id}"><button type="submit">Continue with GitHub</button></form>`,
-        {
-          'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; form-action ${formAction}`,
-        },
+        `Connect ${name} to Your Notes?`,
+        para(
+          `<b>${escape(name)}</b> (${escape(new URL(auth.redirectUri).hostname)}) will be able to read, create and edit notes in ${where}. Its edits are committed as the agent “${escape(basics.agentLabel)}”.`,
+        ) + buttonForm('/authorize', 'Continue with GitHub', { pending: id }, { primary: true }),
+        { formAction },
       );
     }
 
     if (url.pathname === '/authorize' && request.method === 'POST') {
+      const signIn = await store.signIn();
+      if (!signIn) return notSetUp();
       const form = await request.formData();
       const given = form.get('pending');
       const pending = typeof given === 'string' ? given : '';
-      const auth = /^[0-9a-f]{48}$/.test(pending)
-        ? await env.OAUTH_KV.get(`pending:${pending}`)
-        : null;
-      if (!auth) return page(400, 'This sign-in expired', '<p>Start again from claude.ai.</p>');
+      const auth = ID.test(pending) ? await env.OAUTH_KV.get(`pending:${pending}`) : null;
+      if (!auth) return page(400, 'This Sign-In Expired', para('Start again from Claude.'));
       await env.OAUTH_KV.delete(`pending:${pending}`);
-      const state = randomId();
-      await env.OAUTH_KV.put(`state:${state}`, auth, { expirationTtl: PENDING_TTL_S });
-      const github = new URL(`${config.web}/login/oauth/authorize`);
-      github.searchParams.set('client_id', env.GITHUB_CLIENT_ID ?? '');
-      github.searchParams.set('redirect_uri', `${url.origin}/callback`);
-      github.searchParams.set('state', state);
-      github.searchParams.set('allow_signup', 'false');
-      return new Response(null, {
-        status: 302,
-        headers: {
-          location: github.toString(),
-          // The state is this browser's: a sign-in started elsewhere cannot finish here.
-          'set-cookie': `${STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/callback; Max-Age=${PENDING_TTL_S}`,
-        },
+      return toGitHub(env, basics, url.origin, signIn.clientId, {
+        kind: 'grant',
+        auth: JSON.parse(auth) as AuthRequest,
       });
     }
 
+    if (url.pathname === '/sign-in' && request.method === 'GET') {
+      const signIn = await store.signIn();
+      if (!signIn) return notSetUp();
+      return toGitHub(env, basics, url.origin, signIn.clientId, { kind: 'pages' });
+    }
+
     if (url.pathname === '/callback' && request.method === 'GET') {
+      const signIn = await store.signIn();
+      if (!signIn) return notSetUp();
       const state = url.searchParams.get('state') ?? '';
       const code = url.searchParams.get('code') ?? '';
-      const stored = /^[0-9a-f]{48}$/.test(state) ? await env.OAUTH_KV.get(`state:${state}`) : null;
+      const stored = ID.test(state) ? await env.OAUTH_KV.get(`state:${state}`) : null;
       if (!stored || !code || cookie(request, STATE_COOKIE) !== state) {
-        return page(400, 'This sign-in expired', '<p>Start again from claude.ai.</p>');
+        return page(
+          400,
+          'This Sign-In Expired',
+          para('Start again from Claude, or from this relay’s page.'),
+        );
       }
       await env.OAUTH_KV.delete(`state:${state}`);
-      const exchange = await fetch(`${config.web}/login/oauth/access_token`, {
+      const started = JSON.parse(stored) as Started;
+      const exchange = await fetch(`${basics.web}/login/oauth/access_token`, {
         method: 'POST',
         headers: {
           accept: 'application/json',
@@ -153,17 +227,16 @@ export const loginHandler = {
           'user-agent': 'penmoss-relay',
         },
         body: JSON.stringify({
-          client_id: env.GITHUB_CLIENT_ID,
-          client_secret: env.GITHUB_CLIENT_SECRET,
+          client_id: signIn.clientId,
+          client_secret: signIn.clientSecret,
           code,
           redirect_uri: `${url.origin}/callback`,
         }),
       });
       const token = ((await exchange.json().catch(() => ({}))) as { access_token?: string })
         .access_token;
-      if (!token)
-        return page(502, 'GitHub did not sign you in', '<p>Start again from claude.ai.</p>');
-      const user = await fetch(`${config.api}/user`, {
+      if (!token) return page(502, 'GitHub Didn’t Sign You In', para('Start again in a moment.'));
+      const user = await fetch(`${basics.api}/user`, {
         headers: {
           authorization: `Bearer ${token}`,
           accept: 'application/vnd.github+json',
@@ -171,30 +244,67 @@ export const loginHandler = {
         },
       });
       const login = ((await user.json().catch(() => ({}))) as { login?: string }).login;
-      if (!sameLogin(login, config.allowedLogin)) {
-        return page(
-          403,
-          'This relay is not yours',
-          `<p>You signed in to GitHub as <b>${escape(login ?? 'unknown')}</b>. This relay serves only ${escape(config.allowedLogin)}.</p>`,
-        );
+      const clearState = setCookie(STATE_COOKIE, '', '/callback', 0);
+      if (!sameLogin(login, basics.owner)) return notTheOwner(basics, login);
+      if (started.kind === 'pages') {
+        const session = await startSession(env.OAUTH_KV, login!);
+        const headers = new Headers({ location: '/notebooks' });
+        headers.append('set-cookie', clearState);
+        headers.append('set-cookie', sessionCookie(session));
+        return new Response(null, { status: 302, headers });
       }
-      const auth = JSON.parse(stored) as AuthRequest;
       const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
-        request: auth,
-        userId: config.allowedLogin.toLowerCase(),
+        request: started.auth,
+        userId: basics.owner.toLowerCase(),
         metadata: { login },
-        scope: auth.scope,
+        scope: started.auth.scope,
         props: { login: login! } satisfies GrantProps,
       });
       return new Response(null, {
         status: 302,
-        headers: {
-          location: redirectTo,
-          'set-cookie': `${STATE_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/callback; Max-Age=0`,
-        },
+        headers: { location: redirectTo, 'set-cookie': clearState },
       });
     }
 
-    return page(404, 'Not found', '<p>Nothing here.</p>');
+    if (url.pathname === '/notebooks' || url.pathname === '/sign-out') {
+      if (!(await store.summary())) return notSetUp();
+      const session = await readSession(env.OAUTH_KV, request);
+      if (!session || !sameLogin(session.login, basics.owner)) {
+        if (request.method !== 'GET')
+          return page(
+            403,
+            'Sign In First',
+            para('Your session ended.') + linkButton('/notebooks', 'Notebooks'),
+          );
+        return page(
+          200,
+          'Penmoss Relay',
+          para(`Sign in as ${escape(basics.owner)} to manage the notebooks this relay serves.`) +
+            linkButton('/sign-in', 'Sign In with GitHub', true),
+        );
+      }
+      if (request.method === 'POST') {
+        const form = await request.formData();
+        if (!formIsOwn(request, form, session)) {
+          return page(
+            403,
+            'This Form Isn’t From This Page',
+            para('Open the page again and try once more.') + linkButton('/notebooks', 'Notebooks'),
+          );
+        }
+        if (url.pathname === '/sign-out') {
+          await endSession(env.OAUTH_KV, session);
+          return new Response(null, {
+            status: 303,
+            headers: { location: '/notebooks', 'set-cookie': clearSessionCookie() },
+          });
+        }
+      }
+      if (url.pathname === '/notebooks' && request.method === 'GET') {
+        return notebooksPage(url, session, store);
+      }
+    }
+
+    return page(404, 'Not Found', para('Nothing here.'));
   },
 };

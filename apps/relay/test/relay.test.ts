@@ -59,14 +59,17 @@ async function call(relay: Relay, name: string, args: Record<string, unknown>) {
 }
 
 function config(overrides: Partial<Record<string, string>> = {}): RelayConfig {
-  const read = readConfig({
-    NOTES_REPOSITORY: FAKE_REPO,
-    NOTES_DIR: 'notes',
-    ALLOWED_GITHUB_LOGIN: 'htxryan',
-    GITHUB_TOKEN: FAKE_TOKEN,
-    GITHUB_API: FAKE_API,
-    ...overrides,
-  });
+  const read = readConfig(
+    {
+      NOTES_REPOSITORY: FAKE_REPO,
+      NOTES_DIR: 'notes',
+      OWNER_GITHUB_LOGIN: 'htxryan',
+      NOTEBOOK_TOKENS: JSON.stringify({ [FAKE_REPO]: FAKE_TOKEN }),
+      GITHUB_API: FAKE_API,
+      ...overrides,
+    },
+    null,
+  );
   if ('problem' in read) throw new Error(read.problem);
   return read;
 }
@@ -437,22 +440,23 @@ describe('several notebooks in one relay (PEN-192)', () => {
       return personalGitHub.fetch(input, init);
     }) as typeof fetch;
 
-    const read = readConfig({
-      NOTEBOOKS: JSON.stringify([
-        { repository: FAKE_REPO },
-        { repository: WORK_REPO, branch: 'dev', folder: 'penmoss' },
-      ]),
-      NOTEBOOK_TOKENS: JSON.stringify(
-        options.app === false
-          ? { [FAKE_REPO]: 'ghs_app', [WORK_REPO]: 'github_pat_q' }
-          : { [WORK_REPO]: 'github_pat_q' },
-      ),
-      ALLOWED_GITHUB_LOGIN: 'htxryan',
-      GITHUB_APP_ID: '1',
-      GITHUB_APP_PRIVATE_KEY: APP_KEY,
-      GITHUB_API: FAKE_API,
-      ...options.env,
-    });
+    const read = readConfig(
+      {
+        NOTEBOOKS: JSON.stringify([
+          { repository: FAKE_REPO },
+          { repository: WORK_REPO, branch: 'dev', folder: 'penmoss' },
+        ]),
+        NOTEBOOK_TOKENS: JSON.stringify(
+          options.app === false
+            ? { [FAKE_REPO]: 'ghs_app', [WORK_REPO]: 'github_pat_q' }
+            : { [WORK_REPO]: 'github_pat_q' },
+        ),
+        OWNER_GITHUB_LOGIN: 'htxryan',
+        GITHUB_API: FAKE_API,
+        ...options.env,
+      },
+      { appId: '1', privateKey: APP_KEY },
+    );
     if ('problem' in read) throw new Error(read.problem);
     const blobs = new MemoryBlobs();
     const alarms: number[] = [];
