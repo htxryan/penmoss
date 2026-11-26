@@ -124,7 +124,7 @@ export const rmdir: Command = {
   summary: 'Delete a folder (its notes move up)',
   usage: ['rmdir <folder>'],
   description: [
-    'Deletes the folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. The folder goes to the notebook’s Trash, where Ryan can restore it with its subfolders and notes; for a clone added with --agent the change is also in the notebook’s Agent activity in the Mac and Android apps, with an Undo, and the repository’s history keeps every change. Deleting a folder that is already gone is fine.',
+    'Deletes the folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. The folder goes to the notebook’s Trash, where you can restore it with its subfolders and notes; for a clone added with --agent the change is also in the notebook’s Agent activity in the Mac and Android apps, with an Undo, and the repository’s history keeps every change. Deleting a folder that is already gone is fine.',
     FOLDER_HELP,
   ],
   flags: [],
@@ -135,7 +135,7 @@ export const rmdir: Command = {
     const reply = await context.write((notebook) => notebook.deleteFolder(id));
     context.emit(reply, () =>
       reply.deleted
-        ? `Moved ${ref} to Trash; its notes moved up. Ryan can restore it, with its subfolders and notes, from the notebook’s Trash in the apps.`
+        ? `Moved ${ref} to Trash; its notes moved up. You can restore it, with its subfolders and notes, from the notebook’s Trash in the apps.`
         : `${ref} was already gone.`,
     );
   },

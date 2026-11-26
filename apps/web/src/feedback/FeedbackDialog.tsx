@@ -441,8 +441,8 @@ function FeedbackForm({
           >
             <div className="feedback-body">
               <p className="muted feedback-intro">
-                Files an issue on the Penmoss board for Ryan. It says where you are in the app and
-                what is on screen, never what your notes say.
+                Files an issue on Penmoss's GitHub. It says where you are in the app and what is on
+                screen, never what your notes say.
               </p>
               {/* Reports not sent yet wait here, where they were written (PEN-146). */}
               <FeedbackOutbox

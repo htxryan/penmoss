@@ -125,6 +125,14 @@ export function uniqueName(base: string, id: string, taken: (key: string) => boo
   return `${base} (${id}-${Math.random().toString(36).slice(2, 8)})`;
 }
 
+/** Whether `uniqueName(base, id, …)` could have given `name`: base itself or one of its suffixes. */
+export function couldBeUniqueName(name: string, base: string, id: string): boolean {
+  if (name === base) return true;
+  if (!name.startsWith(`${base} (`) || !name.endsWith(')')) return false;
+  const suffix = name.slice(base.length + 2, -1);
+  return suffixes(id).includes(suffix) || /^[0-9A-Z]{26}-[0-9a-z]{1,6}$/.test(suffix);
+}
+
 export interface MirrorFolder {
   readonly id: string;
   readonly name: string;
