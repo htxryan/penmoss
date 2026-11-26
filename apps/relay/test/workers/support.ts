@@ -11,7 +11,8 @@ export const TEST_APP: StoredApp = {
   htmlUrl: 'https://github.test/apps/htxryan-penmoss-relay',
   clientId: 'Iv1.fakeclient',
   clientSecret: 'fake-client-secret-0123456789',
-  pem: '-----BEGIN RSA PRIVATE KEY-----\nFAKEKEY\n-----END RSA PRIVATE KEY-----\n',
+  // Not a key: nothing here signs with it.
+  pem: 'fake-private-key-FAKEKEY',
 };
 
 const relayObject = () => env.NOTEBOOK.get(env.NOTEBOOK.idFromName('notebook'));

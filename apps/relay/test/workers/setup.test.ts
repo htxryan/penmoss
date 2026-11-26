@@ -31,7 +31,7 @@ function fakeConversion(answer: { owner: string } | { status: number }) {
           html_url: 'https://github.test/apps/made-app',
           client_id: 'Iv1.made',
           client_secret: 'made-secret-abcdef',
-          pem: '-----BEGIN RSA PRIVATE KEY-----\nMADE\n-----END RSA PRIVATE KEY-----\n',
+          pem: 'fake-private-key-MADE',
         },
         { status: 201 },
       );
@@ -126,7 +126,7 @@ describe('setting up a relay', () => {
     expect(page).toContain('href="https://github.test/apps/made-app/installations/new"');
     expect(page).not.toContain('Create GitHub App…');
     expect(page).not.toContain('made-secret');
-    expect(page).not.toContain('PRIVATE KEY');
+    expect(page).not.toContain('fake-private-key');
     // The same code again, or a new one, can't make a second App.
     const again = await back(state, cookie, 'another-code');
     expect(again.status).toBe(409);
