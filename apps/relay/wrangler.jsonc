@@ -20,7 +20,7 @@
     // The relay's public origin: its OAuth resource is <origin>/mcp.
     "RELAY_ORIGIN": "https://mcp.penmoss.app",
     // owner/name of the notes repository, its branch and the notebook's directory ('' for the top).
-    "NOTES_REPOSITORY": "htxryan/penmoss-notebook",
+    "NOTES_REPOSITORY": "htxryan/penmoss-notes",
     "NOTES_BRANCH": "main",
     "NOTES_DIR": "",
     // The one GitHub account that may sign in.
