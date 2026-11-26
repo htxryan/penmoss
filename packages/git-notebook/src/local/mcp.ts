@@ -131,7 +131,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = {
     'Renaming to a tag that exists merges the two, so it needs merge: true (else tag_exists). Returns the notes it changed.',
 };
 
-export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
+export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes kept in a git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (words only here), list_recent, list_folder or list_tags; read one with read_note.
 - Many notes have a description: a sentence or two on what the note is about, written by Ryan or by AI Descriptions. search_notes, list_recent, list_folder and get_backlinks give it, and read_note gives the description of each note it links to (links). Read descriptions to choose which notes to open before reading their whole text.
 - Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
@@ -143,7 +143,7 @@ export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes th
 - Ryan comments on passages of notes, often to ask you for something: list_comment_threads (sentToMe: true for the threads he sent to you), read_comment_thread, then do it with the edit tools and say so with reply_to_comment_thread, or resolve_comment_thread. create_comment_thread starts a thread of your own on a quoted passage. Comments are committed and pushed like edits.`;
 
 /** `LOCAL_INSTRUCTIONS` where search by meaning is set up (A1156). */
-export const LOCAL_MEANING_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
+export const LOCAL_MEANING_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes kept in a git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (by their words and their meaning: describe what you are looking for in your own words), list_recent, list_folder or list_tags; read one with read_note.
 - Many notes have a description: a sentence or two on what the note is about, written by Ryan or by AI Descriptions. search_notes, list_recent, list_folder and get_backlinks give it, and read_note gives the description of each note it links to (links). Read descriptions to choose which notes to open before reading their whole text.
 - Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
