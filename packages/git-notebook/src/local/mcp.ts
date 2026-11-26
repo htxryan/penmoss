@@ -37,6 +37,7 @@ import {
   notebooksInstructions,
   withNotebookArgument,
   type NotebookSet,
+  type ServedNotebook,
 } from './router';
 import {
   CREATE_RETRY_WINDOW_MS,
@@ -664,8 +665,11 @@ const rpcError = (id: Id, code: number, message: string) => ({
 export interface LocalServerPresentation {
   /** `serverInfo.title` (default `Penmoss git notebook <name>`). */
   readonly title?: string;
-  /** What `initialize` tells the agent (default `LOCAL_INSTRUCTIONS`). */
-  readonly instructions?: string;
+  /**
+   * What `initialize` tells the agent (default `LOCAL_INSTRUCTIONS`): text, or made from the
+   * notebooks served at that moment (the relay's, PEN-192).
+   */
+  readonly instructions?: string | ((served: readonly ServedNotebook[]) => string);
   /** Tools this host leaves out, and why (the relay's `RELAY_ABSENT_TOOLS`). */
   readonly absent?: ReadonlyMap<string, string>;
   /**
@@ -808,7 +812,9 @@ export class LocalMcpServer {
             version: LOCAL_SERVER_VERSION,
           },
           instructions:
-            this.presentation.instructions ??
+            (typeof this.presentation.instructions === 'function'
+              ? this.presentation.instructions(this.router ? await this.router.notebooks() : [])
+              : this.presentation.instructions) ??
             (this.router
               ? notebooksInstructions(
                   await this.router.notebooks(),

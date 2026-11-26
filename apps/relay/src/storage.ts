@@ -1,6 +1,6 @@
 /**
- * Where the relay keeps its copy of the notebook (T55): the Durable Object's SQLite, as rows of
- * bytes by key. It is a cache of the repository plus this writer's bookkeeping (A821): losing it
+ * Where the relay keeps its copies of the notebooks (T55, PEN-192): the Durable Object's SQLite,
+ * as rows of bytes by key, each notebook under its own prefix. It is a cache of the repository plus this writer's bookkeeping (A821): losing it
  * loses nothing pushed, and a fresh copy is read back from GitHub. A save is one transaction, so
  * it lands whole or not at all.
  */
@@ -122,6 +122,47 @@ export class MemoryBlobs implements Blobs {
   clear() {
     this.map.clear();
   }
+}
+
+/**
+ * One notebook's part of the relay's storage (PEN-192): every key under `prefix`, so each
+ * notebook's copy is apart from the others' and clearing one leaves the rest.
+ */
+export class PrefixedBlobs implements Blobs {
+  constructor(
+    private readonly base: Blobs,
+    readonly prefix: string,
+  ) {}
+  get(key: string) {
+    return this.base.get(this.prefix + key);
+  }
+  put(key: string, bytes: Uint8Array) {
+    this.base.put(this.prefix + key, bytes);
+  }
+  delete(key: string) {
+    this.base.delete(this.prefix + key);
+  }
+  keys(prefix: string) {
+    return this.base.keys(this.prefix + prefix).map((key) => key.slice(this.prefix.length));
+  }
+  transaction(run: () => void) {
+    this.base.transaction(run);
+  }
+  clear() {
+    this.base.transaction(() => {
+      for (const key of this.base.keys(this.prefix)) this.base.delete(key);
+    });
+  }
+}
+
+/** The keys of the one copy the relay kept before it served several notebooks. */
+export function legacyCopyKeys(blobs: Blobs): string[] {
+  if (!blobs.get('config')) return [];
+  return [
+    ...['config', 'meta', 'workspace', 'writer-secret'].filter((key) => blobs.get(key) !== null),
+    ...blobs.keys('note:'),
+    ...blobs.keys('attachment:'),
+  ];
 }
 
 const NOTE = 'note:';

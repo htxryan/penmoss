@@ -3,7 +3,8 @@ import { defineConfig } from 'vitest/config';
 import { sharedTest } from '../../scripts/vitest-shared.mjs';
 
 // The Worker in workerd (T55): OAuth in front of /mcp, the sign-in pages, and the Durable
-// Object's SQLite storage. Never GitHub: no test here reaches the notebook's sync.
+// Object's SQLite storage, with two notebooks in one object (PEN-192). Never GitHub: a test that
+// syncs gives the relay in-memory remotes.
 export default defineConfig({
   plugins: [
     cloudflareTest({
@@ -12,8 +13,10 @@ export default defineConfig({
       miniflare: {
         bindings: {
           RELAY_ORIGIN: 'https://mcp.penmoss.test',
-          NOTES_REPOSITORY: 'ryan/notes',
-          NOTES_DIR: '',
+          NOTEBOOKS: JSON.stringify([
+            { repository: 'ryan/notes' },
+            { repository: 'quanta/scratch', branch: 'dev', folder: 'penmoss' },
+          ]),
           ALLOWED_GITHUB_LOGIN: 'htxryan',
           GITHUB_TOKEN: 'fake-token',
           GITHUB_CLIENT_ID: 'Iv1.fakeclient',

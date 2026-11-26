@@ -7,6 +7,16 @@
 import { runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  GitNotebookEngine,
+  MemoryRemote,
+  MemorySecrets,
+  MemoryStorage,
+  MemoryTransport,
+  NotebookOps,
+} from '@penmoss/git-notebook';
+import { readConfig } from '../../src/config';
+import { Relay } from '../../src/relay';
 import { SqlBlobs } from '../../src/storage';
 
 const ORIGIN = 'https://mcp.penmoss.test';
@@ -85,7 +95,7 @@ async function signIn(login: string) {
   );
   const html = await consent.text();
   expect(html).toContain('Continue with GitHub');
-  expect(html).toContain('ryan/notes');
+  expect(html).toContain('<code>ryan/notes</code>, <code>quanta/scratch</code>');
   const pending = /name="pending" value="([0-9a-f]+)"/.exec(html)![1]!;
   const toGitHub = await call('/authorize', {
     method: 'POST',
@@ -205,6 +215,78 @@ describe('the copy in SQLite', () => {
       expect(blobs.get('note:C')).toBeNull();
       blobs.delete('note:A');
       expect(blobs.keys('note:')).toEqual(['note:B']);
+    });
+  });
+});
+
+describe('two notebooks in one Durable Object (PEN-192)', () => {
+  it('serves both from their own copies in its SQLite, and keeps each apart', async () => {
+    const remotes = new Map([
+      ['ryan/notes', new MemoryRemote()],
+      ['quanta/scratch', new MemoryRemote()],
+    ]);
+    const places = [
+      { repository: 'ryan/notes', branch: 'main', root: '', name: 'Personal' },
+      { repository: 'quanta/scratch', branch: 'dev', root: 'penmoss/', name: 'Quanta' },
+    ];
+    for (const [index, place] of places.entries()) {
+      const mac = await GitNotebookEngine.open({
+        transport: new MemoryTransport({
+          remote: remotes.get(place.repository)!,
+          branch: place.branch,
+          root: place.root,
+        }),
+        storage: new MemoryStorage(),
+        secrets: new MemorySecrets(),
+        writer: { kind: 'device', label: 'Mac' },
+        create: { id: `01JBNOTEBOOK00000000000${index}0${index}`, name: place.name },
+      });
+      new NotebookOps(mac).createNote({ title: `${place.name} note`, markdown: 'Tomatoes' });
+      await mac.sync();
+    }
+    const config = readConfig({
+      ...env,
+      NOTEBOOK_TOKENS: JSON.stringify({ 'ryan/notes': 'a', 'quanta/scratch': 'b' }),
+    });
+    if ('problem' in config) throw new Error(config.problem);
+    const stub = env.NOTEBOOK.get(env.NOTEBOOK.idFromName('two-notebooks-test'));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const blobs = new SqlBlobs(state.storage);
+      const relay = new Relay(
+        config,
+        { blobs, scheduleSync: (at) => state.storage.setAlarm(at), log: () => undefined },
+        {
+          transport: (place) =>
+            new MemoryTransport({
+              remote: remotes.get(place.repository)!,
+              branch: place.branch,
+              root: place.root,
+            }),
+        },
+      );
+      const response = await relay.handle(
+        new Request('https://x/mcp', {
+          method: 'POST',
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'tools/call',
+            params: { name: 'search_notes', arguments: { query: 'Tomatoes' } },
+          }),
+        }),
+      );
+      const { result } = await response.json<{
+        result: { structuredContent: { results: { notebook: string; title: string }[] } };
+      }>();
+      expect(result.structuredContent.results.map((hit) => hit.notebook).sort()).toEqual([
+        'Personal',
+        'Quanta',
+      ]);
+      const personal = blobs.keys('copy:ryan/notes#main:/');
+      const quanta = blobs.keys('copy:quanta/scratch#dev:penmoss//');
+      expect(personal).toContain('copy:ryan/notes#main:/meta');
+      expect(quanta).toContain('copy:quanta/scratch#dev:penmoss//meta');
+      expect(personal.filter((key) => key.startsWith('copy:quanta'))).toEqual([]);
     });
   });
 });

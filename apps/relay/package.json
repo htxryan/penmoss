@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "The relay (T55, D48): a stateless Worker serving a git notebook's MCP tools to claude.ai over HTTP, through GitHub's API",
+  "description": "The relay (T55, D48): a stateless Worker serving git notebooks' MCP tools to claude.ai over HTTP, through GitHub's API",
   "scripts": {
     "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs worker) --inspector-port $(node ../../scripts/ports.mjs inspector)",
     "types": "wrangler types --include-runtime=false --env-file /dev/null && wrangler types --include-env=false ../../types/workers-runtime.d.ts",
@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
+    "@penmoss/core": "workspace:*",
     "@penmoss/git-notebook": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.4.6",
-    "@penmoss/core": "workspace:*",
     "@penmoss/model": "workspace:*",
     "@types/node": "24.19.2",
     "vitest": "5.0.5",

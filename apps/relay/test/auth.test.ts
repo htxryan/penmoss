@@ -6,12 +6,15 @@
 import { createPublicKey, generateKeyPairSync, verify } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { readConfig, redirectAllowed, sameLogin } from '../src/config';
-import { appJwt, importPrivateKey, tokenSource } from '../src/github-auth';
+import { AppTokens, appJwt, importPrivateKey, tokenSource } from '../src/github-auth';
+
+const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const pkcs1 = privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
 
 describe('settings', () => {
   it('needs a repository, an account and GitHub credentials', () => {
     expect(readConfig({})).toMatchObject({
-      problem: expect.stringMatching(/NOTES_REPOSITORY/) as string,
+      problem: expect.stringMatching(/NOTEBOOKS must list/) as string,
     });
     expect(readConfig({ NOTES_REPOSITORY: 'ryan/notes' })).toMatchObject({
       problem: expect.stringMatching(/ALLOWED_GITHUB_LOGIN/) as string,
@@ -37,8 +40,7 @@ describe('settings', () => {
         GITHUB_TOKEN: 't',
       }),
     ).toMatchObject({
-      root: 'docs/notes/',
-      branch: 'main',
+      notebooks: [{ repository: 'ryan/notes', root: 'docs/notes/', branch: 'main' }],
       agentLabel: 'claude.ai',
       redirectHosts: ['claude.ai', 'claude.com'],
     });
@@ -62,8 +64,6 @@ describe('settings', () => {
 });
 
 describe('the GitHub App installation token', () => {
-  const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
-  const pkcs1 = privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
   const pkcs8 = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
 
   it.each([
@@ -87,47 +87,133 @@ describe('the GitHub App installation token', () => {
     });
   });
 
-  it('asks for a token limited to the notes repository, and keeps it until near its end', async () => {
+  it('finds the installation on each repository, and keeps each token until near its end', async () => {
     let time = Date.UTC(2026, 10, 4, 9);
-    const asked: { url: string; body: unknown }[] = [];
-    const fetcher = ((url: string, init: RequestInit) => {
-      asked.push({ url, body: JSON.parse(init.body as string) });
+    const asked: { method: string; url: string; body?: unknown }[] = [];
+    let minted = 0;
+    const fetcher = ((url: string, init: RequestInit = {}) => {
+      const method = init.method ?? 'GET';
+      asked.push({
+        method,
+        url,
+        ...(init.body ? { body: JSON.parse(init.body as string) as unknown } : {}),
+      });
+      if (url.endsWith('/repos/ryan/notes/installation'))
+        return Promise.resolve(Response.json({ id: 99 }));
+      if (url.endsWith('/repos/ryan/work/installation'))
+        return Promise.resolve(Response.json({ id: 7 }));
+      if (url.endsWith('/installation')) {
+        return Promise.resolve(Response.json({ message: 'Not Found' }, { status: 404 }));
+      }
+      minted += 1;
       return Promise.resolve(
         Response.json(
-          { token: `ghs_${asked.length}`, expires_at: new Date(time + 60 * 60_000).toISOString() },
+          { token: `ghs_${minted}`, expires_at: new Date(time + 60 * 60_000).toISOString() },
           { status: 201 },
         ),
       );
     }) as unknown as typeof fetch;
-    const token = tokenSource({
-      access: { kind: 'app', appId: '1', installationId: '99', privateKey: pkcs1 },
-      repository: 'ryan/notes',
+    const app = new AppTokens({
+      app: { appId: '1', privateKey: pkcs1 },
       api: 'https://api.github.test',
       fetch: fetcher,
       clock: () => time,
     });
-    expect(await Promise.all([token(), token()])).toEqual(['ghs_1', 'ghs_1']);
+    const notes = tokenSource({ kind: 'app' }, 'ryan/notes', app);
+    const work = tokenSource({ kind: 'app' }, 'ryan/work', app);
+    expect(await Promise.all([notes(), notes()])).toEqual(['ghs_1', 'ghs_1']);
+    expect(await work()).toBe('ghs_2');
     expect(asked).toEqual([
+      { method: 'GET', url: 'https://api.github.test/repos/ryan/notes/installation' },
       {
+        method: 'POST',
         url: 'https://api.github.test/app/installations/99/access_tokens',
         body: { repositories: ['notes'], permissions: { contents: 'write', metadata: 'read' } },
       },
+      { method: 'GET', url: 'https://api.github.test/repos/ryan/work/installation' },
+      {
+        method: 'POST',
+        url: 'https://api.github.test/app/installations/7/access_tokens',
+        body: { repositories: ['work'], permissions: { contents: 'write', metadata: 'read' } },
+      },
     ]);
     time += 50 * 60_000;
-    expect(await token()).toBe('ghs_1');
+    expect(await notes()).toBe('ghs_1');
     time += 6 * 60_000;
-    expect(await token()).toBe('ghs_2');
+    expect(await notes()).toBe('ghs_3');
+    // The installation is asked for once per repository.
+    expect(asked.filter((each) => each.url.endsWith('/installation'))).toHaveLength(2);
+    await expect(tokenSource({ kind: 'app' }, 'other/repo', app)()).rejects.toThrow(
+      /not installed on other\/repo/,
+    );
   });
 
-  it('uses a fine-grained token as it is', async () => {
-    const token = tokenSource({
-      access: { kind: 'token', token: 'github_pat_x' },
-      repository: 'ryan/notes',
-      api: 'https://api.github.test',
-      fetch: () => {
-        throw new Error('no call');
-      },
-    });
+  it('uses a fine-grained token as it is, never the App', async () => {
+    const token = tokenSource({ kind: 'token', token: 'github_pat_x' }, 'ryan/notes', null);
     expect(await token()).toBe('github_pat_x');
+  });
+});
+
+describe('the notebooks', () => {
+  const base = {
+    ALLOWED_GITHUB_LOGIN: 'htxryan',
+    GITHUB_APP_ID: '1',
+    GITHUB_APP_PRIVATE_KEY: pkcs1,
+  };
+
+  it('reads a list of notebooks, each with its branch, folder and access', () => {
+    const config = readConfig({
+      ...base,
+      NOTEBOOKS: JSON.stringify([
+        { repository: 'htxryan/penmoss-notes' },
+        { repository: 'quantaservices/scratch', branch: 'dev', folder: '/penmoss/' },
+      ]),
+      NOTEBOOK_TOKENS: JSON.stringify({ 'QuantaServices/Scratch': 'github_pat_q' }),
+    });
+    expect(config).toMatchObject({
+      notebooks: [
+        { repository: 'htxryan/penmoss-notes', branch: 'main', root: '', access: { kind: 'app' } },
+        {
+          repository: 'quantaservices/scratch',
+          branch: 'dev',
+          root: 'penmoss/',
+          access: { kind: 'token', token: 'github_pat_q' },
+        },
+      ],
+      app: { appId: '1' },
+    });
+  });
+
+  it('says what is wrong with the list', () => {
+    const problem = (env: Record<string, string>) => {
+      const read = readConfig({ ...base, ...env });
+      return 'problem' in read ? read.problem : null;
+    };
+    expect(problem({ NOTEBOOKS: 'nope' })).toMatch(/JSON list/);
+    expect(problem({ NOTEBOOKS: '[]' })).toMatch(/JSON list/);
+    expect(problem({ NOTEBOOKS: '[{"repository": "x"}]' })).toMatch(/Notebook 1.*owner\/name/);
+    expect(problem({ NOTEBOOKS: '[{"repository": "a/b", "folder": "../up"}]' })).toMatch(
+      /inside the repository/,
+    );
+    expect(problem({ NOTEBOOKS: '[{"repository": "a/b"}, {"repository": "a/b"}]' })).toMatch(
+      /Notebook 2.*twice/,
+    );
+    expect(problem({ NOTEBOOKS: '[{"repository": "a/b"}]', NOTEBOOK_TOKENS: '[1]' })).toMatch(
+      /NOTEBOOK_TOKENS must be JSON/,
+    );
+    expect(
+      readConfig({ ALLOWED_GITHUB_LOGIN: 'htxryan', NOTEBOOKS: '[{"repository": "a/b"}]' }),
+    ).toMatchObject({ problem: expect.stringMatching(/Nothing reaches a\/b/) as string });
+  });
+
+  it('needs no App when every notebook has a token', () => {
+    const config = readConfig({
+      ALLOWED_GITHUB_LOGIN: 'htxryan',
+      NOTEBOOKS: '[{"repository": "a/b"}]',
+      NOTEBOOK_TOKENS: '{"a/b": "t"}',
+      GITHUB_APP_ID: '1',
+      GITHUB_APP_PRIVATE_KEY: pkcs1,
+    });
+    expect(config).toMatchObject({ app: null, notebooks: [{ access: { kind: 'token' } }] });
   });
 });
