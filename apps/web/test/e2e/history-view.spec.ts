@@ -169,7 +169,8 @@ test('View shows a version beside the note as it is now, and restores it', async
     // (the scheme or the hover changing mid-way) rejects its `finished` with an AbortError: it is
     // over, so wait for whatever replaced it until none run.
     await page.evaluate(async () => {
-      const running = () => document.getAnimations().filter((each) => each.playState !== 'finished');
+      const running = () =>
+        document.getAnimations().filter((each) => each.playState !== 'finished');
       for (let now = running(); now.length; now = running())
         await Promise.allSettled(now.map((each) => each.finished));
     });
