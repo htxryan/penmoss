@@ -1,7 +1,9 @@
 /**
- * The relay's settings (T55, PEN-192): the notebooks it serves (each a repository, branch and
- * directory), who may sign in, which redirect hosts may receive a grant, and how the relay reaches
- * GitHub for each notebook (the relay's GitHub App, or a fine-grained token of that notebook's own).
+ * The relay's settings (T55, PEN-192, PEN-193): the notebooks it serves (each a repository,
+ * branch and directory), its owner (the one GitHub account that may sign in), which redirect
+ * hosts may receive a grant, and how the relay reaches GitHub for each notebook (the relay's
+ * GitHub App, made by its setup page and kept in its storage, or a fine-grained token of that
+ * notebook's own).
  */
 
 /** What the relay reads from its environment: plain variables and secrets. */
@@ -16,15 +18,10 @@ export interface RelaySettings {
   readonly NOTES_REPOSITORY?: string;
   readonly NOTES_BRANCH?: string;
   readonly NOTES_DIR?: string;
-  readonly ALLOWED_GITHUB_LOGIN?: string;
+  /** The relay's owner: the one GitHub account that may set it up, sign in and connect. */
+  readonly OWNER_GITHUB_LOGIN?: string;
   readonly AGENT_LABEL?: string;
   readonly ALLOWED_REDIRECT_HOSTS?: string;
-  readonly GITHUB_CLIENT_ID?: string;
-  readonly GITHUB_CLIENT_SECRET?: string;
-  /** A fine-grained token for every notebook without one of its own (instead of the App). */
-  readonly GITHUB_TOKEN?: string;
-  readonly GITHUB_APP_ID?: string;
-  readonly GITHUB_APP_PRIVATE_KEY?: string;
   /** Tests only: a fake GitHub API and web origin. */
   readonly GITHUB_API?: string;
   readonly GITHUB_WEB?: string;
@@ -49,15 +46,20 @@ export interface NotebookPlace {
   readonly access: GitHubAccess;
 }
 
-export interface RelayConfig {
-  readonly notebooks: readonly NotebookPlace[];
-  /** The App, when a notebook is reached through it. */
-  readonly app: AppCredentials | null;
-  readonly allowedLogin: string;
+/** What the relay's pages and its sign-in need, set up or not. */
+export interface RelayBasics {
+  /** The one GitHub account that may set the relay up, sign in and connect. */
+  readonly owner: string;
   readonly agentLabel: string;
   readonly redirectHosts: readonly string[];
   readonly api: string;
   readonly web: string;
+}
+
+export interface RelayConfig extends RelayBasics {
+  readonly notebooks: readonly NotebookPlace[];
+  /** The App, when a notebook is reached through it. */
+  readonly app: AppCredentials | null;
 }
 
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -166,44 +168,58 @@ function readTokens(
   return out;
 }
 
-/** The settings checked: the config, or what is missing or wrong (said to whoever connects). */
-export function readConfig(env: RelaySettings): RelayConfig | { readonly problem: string } {
-  const notebooks = readNotebooks(env);
-  if ('problem' in notebooks) return notebooks;
-  const allowedLogin = env.ALLOWED_GITHUB_LOGIN?.trim() ?? '';
-  if (!allowedLogin) return { problem: 'ALLOWED_GITHUB_LOGIN must name the one GitHub account.' };
-  const tokens = readTokens(env);
-  if ('problem' in tokens) return tokens;
-  const app: AppCredentials | null =
-    env.GITHUB_APP_ID?.trim() && env.GITHUB_APP_PRIVATE_KEY?.trim()
-      ? { appId: env.GITHUB_APP_ID.trim(), privateKey: env.GITHUB_APP_PRIVATE_KEY }
-      : null;
-  const shared = env.GITHUB_TOKEN?.trim();
-  const places: NotebookPlace[] = [];
-  for (const place of notebooks) {
-    const own = tokens.get(place.repository.toLowerCase()) ?? shared;
-    if (own) {
-      places.push({ ...place, access: { kind: 'token', token: own } });
-    } else if (app) {
-      places.push({ ...place, access: { kind: 'app' } });
-    } else {
-      return {
-        problem: `Nothing reaches ${place.repository}: set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY, or give it a token in NOTEBOOK_TOKENS.`,
-      };
-    }
+const LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+
+/** The owner and the hosts: all the relay's pages need, before it is set up. */
+export function readBasics(env: RelaySettings): RelayBasics | { readonly problem: string } {
+  const owner = env.OWNER_GITHUB_LOGIN?.trim() ?? '';
+  if (!LOGIN.test(owner)) {
+    return { problem: "OWNER_GITHUB_LOGIN must be the owner's GitHub login." };
   }
   const redirectHosts = (env.ALLOWED_REDIRECT_HOSTS ?? 'claude.ai,claude.com')
     .split(',')
     .map((host) => host.trim().toLowerCase())
     .filter(Boolean);
   return {
-    notebooks: places,
-    app: places.some((place) => place.access.kind === 'app') ? app : null,
-    allowedLogin,
+    owner,
     agentLabel: env.AGENT_LABEL?.trim() || 'claude.ai',
     redirectHosts,
     api: (env.GITHUB_API?.trim() || 'https://api.github.com').replace(/\/+$/, ''),
     web: (env.GITHUB_WEB?.trim() || 'https://github.com').replace(/\/+$/, ''),
+  };
+}
+
+/**
+ * The settings checked, with the App setup made (`null` before setup): the config, or what is
+ * missing or wrong (said to whoever connects).
+ */
+export function readConfig(
+  env: RelaySettings,
+  app: AppCredentials | null,
+): RelayConfig | { readonly problem: string } {
+  const basics = readBasics(env);
+  if ('problem' in basics) return basics;
+  const notebooks = readNotebooks(env);
+  if ('problem' in notebooks) return notebooks;
+  const tokens = readTokens(env);
+  if ('problem' in tokens) return tokens;
+  const places: NotebookPlace[] = [];
+  for (const place of notebooks) {
+    const own = tokens.get(place.repository.toLowerCase());
+    if (own) {
+      places.push({ ...place, access: { kind: 'token', token: own } });
+    } else if (app) {
+      places.push({ ...place, access: { kind: 'app' } });
+    } else {
+      return {
+        problem: `Nothing reaches ${place.repository} yet: set up the relay's GitHub App at /setup, or give the notebook a token in NOTEBOOK_TOKENS.`,
+      };
+    }
+  }
+  return {
+    ...basics,
+    notebooks: places,
+    app: places.some((place) => place.access.kind === 'app') ? app : null,
   };
 }
 

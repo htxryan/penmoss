@@ -20,7 +20,7 @@ export function themeVariables(theme: Theme, variant: ThemeVariant): Record<stri
 
 /** What the page needs to show a theme: something with a style and attributes (`<html>`). */
 export interface ThemeTarget {
-  readonly style: Pick<CSSStyleDeclaration, 'setProperty'> & { colorScheme: string };
+  readonly style: { setProperty(name: string, value: string): void; colorScheme: string };
   setAttribute(name: string, value: string): void;
 }
 

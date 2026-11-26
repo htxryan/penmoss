@@ -1,60 +1,103 @@
 /**
- * The relay Worker (T55, D48): claude.ai's custom connector for a Penmoss git notebook.
+ * The relay Worker (T55, D48): claude.ai's custom connector for Penmoss git notebooks.
  *
  * `/mcp` is MCP over HTTP, behind OAuth 2.1 (`@cloudflare/workers-oauth-provider`, with the
- * sign-in in login.ts). Every call goes to one Durable Object, which holds the notebook's copy
- * and runs the local MCP server's tools on the git-notebook engine over GitHub's API. The relay
- * stores no notes that GitHub does not: its copy is a cache, rebuilt from the repository.
+ * sign-in and the relay's own pages in login.ts). Every call goes to one Durable Object, which
+ * holds the relay's settings (its GitHub App, made at `/setup`) and each notebook's copy, and runs
+ * the local MCP server's tools on the git-notebook engine over GitHub's API. The relay stores no
+ * notes that GitHub does not: each copy is a cache, rebuilt from its repository.
  */
 import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
 import { DurableObject } from 'cloudflare:workers';
-import { readConfig, sameLogin, type RelaySettings } from './config';
-import { loginHandler, type GrantProps, type LoginEnv } from './login';
+import { credentialsOf, keepApp, readApp, summaryOf, type AppSummary, type StoredApp } from './app';
+import { readBasics, readConfig, sameLogin, type RelaySettings } from './config';
+import { loginHandler, storeOf, type GrantProps, type LoginEnv, type RelayStore } from './login';
+import type { NotebookRow } from './notebooks';
 import { Relay } from './relay';
 import { SqlBlobs } from './storage';
 
 export interface Env extends LoginEnv, RelaySettings {
-  readonly NOTEBOOK: DurableObjectNamespace<RelayNotebook>;
   /** The relay's public origin (default https://mcp.penmoss.app): its OAuth resource. */
   readonly RELAY_ORIGIN?: string;
 }
 
-export class RelayNotebook extends DurableObject<Env> {
-  private readonly relay: Relay | { readonly problem: string };
+export class RelayNotebook extends DurableObject<Env> implements RelayStore {
+  private readonly blobs: SqlBlobs;
+  private built: Relay | { readonly problem: string } | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    const config = readConfig(env);
-    this.relay =
+    this.blobs = new SqlBlobs(ctx.storage);
+  }
+
+  /** The notebooks' relay, made from the settings and the stored App (again after setup). */
+  private relay(): Relay | { readonly problem: string } {
+    if (this.built) return this.built;
+    const app = readApp(this.blobs);
+    const config = readConfig(this.env, app ? credentialsOf(app) : null);
+    this.built =
       'problem' in config
         ? config
         : new Relay(config, {
-            blobs: new SqlBlobs(ctx.storage),
-            scheduleSync: (at) => ctx.storage.setAlarm(at),
+            blobs: this.blobs,
+            scheduleSync: (at) => this.ctx.storage.setAlarm(at),
             log: (text) => console.log(text),
           });
+    return this.built;
   }
 
   override fetch(request: Request): Promise<Response> {
-    if ('problem' in this.relay) {
-      return Promise.resolve(Response.json({ error: this.relay.problem }, { status: 503 }));
+    const relay = this.relay();
+    if ('problem' in relay) {
+      return Promise.resolve(Response.json({ error: relay.problem }, { status: 503 }));
     }
-    return this.relay.handle(request);
+    return relay.handle(request);
   }
 
   override async alarm(): Promise<void> {
-    if (!('problem' in this.relay)) await this.relay.alarm();
+    const relay = this.relay();
+    if (!('problem' in relay)) await relay.alarm();
+  }
+
+  summary(): Promise<AppSummary | null> {
+    const app = readApp(this.blobs);
+    return Promise.resolve(app ? summaryOf(app) : null);
+  }
+
+  signIn(): Promise<{ clientId: string; clientSecret: string } | null> {
+    const app = readApp(this.blobs);
+    return Promise.resolve(app ? { clientId: app.clientId, clientSecret: app.clientSecret } : null);
+  }
+
+  keepApp(app: StoredApp): Promise<'kept' | 'exists'> {
+    const outcome = keepApp(this.blobs, app);
+    if (outcome === 'kept') this.built = null;
+    return Promise.resolve(outcome);
+  }
+
+  repositories(): Promise<readonly string[]> {
+    const relay = this.relay();
+    if ('problem' in relay) return Promise.resolve([]);
+    return Promise.resolve(relay.repositories());
+  }
+
+  notebooks(): Promise<readonly NotebookRow[] | { readonly problem: string }> {
+    const relay = this.relay();
+    if ('problem' in relay) return Promise.resolve(relay);
+    return relay.rows();
   }
 }
 
 const mcpHandler = {
-  fetch(request: Request, env: Env, ctx: ExecutionContext & { props?: GrantProps }) {
-    const config = readConfig(env);
+  async fetch(request: Request, env: Env, ctx: ExecutionContext & { props?: GrantProps }) {
+    const basics = readBasics(env);
     // A grant made for another account (the setting changed since) no longer opens the notes.
-    if ('problem' in config || !sameLogin(ctx.props?.login, config.allowedLogin)) {
+    if ('problem' in basics || !sameLogin(ctx.props?.login, basics.owner)) {
       return Response.json({ error: 'This grant is not for this relay.' }, { status: 403 });
     }
-    return env.NOTEBOOK.get(env.NOTEBOOK.idFromName('notebook')).fetch(request);
+    return (storeOf(env) as unknown as { fetch(request: Request): Promise<Response> }).fetch(
+      request,
+    );
   },
 };
 

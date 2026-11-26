@@ -29,6 +29,7 @@ import {
 import { notebookTag } from '@penmoss/core/note-ref';
 import { placeKey, type NotebookPlace, type RelayConfig } from './config';
 import { AppTokens, tokenSource } from './github-auth';
+import type { NotebookRow } from './notebooks';
 import { BlobSecrets, BlobStorage, legacyCopyKeys, PrefixedBlobs, type Blobs } from './storage';
 
 export const PULL_AFTER_MS = 15_000;
@@ -356,7 +357,7 @@ export class Relay {
     };
     this.server = new LocalMcpServer(set, config.agentLabel, host.log, {
       title: 'Penmoss',
-      instructions: (served) => relayInstructions(config.allowedLogin, config.agentLabel, served),
+      instructions: (served) => relayInstructions(config.owner, config.agentLabel, served),
       // Comments to an agent are the local MCP's only (D50, A1064).
       absent: RELAY_ABSENT_TOOLS,
     });
@@ -407,6 +408,22 @@ export class Relay {
       named.set(`${name} (${where})`, copy);
     }
     return named;
+  }
+
+  /** The repositories of the notebooks served. */
+  repositories(): string[] {
+    return this.copies.map((copy) => copy.place.repository);
+  }
+
+  /** The notebooks, as the owner's Notebooks page lists them. */
+  async rows(): Promise<NotebookRow[]> {
+    return [...(await this.named())].map(([name, copy]) => ({
+      name,
+      repository: copy.place.repository,
+      branch: copy.place.branch,
+      root: copy.place.root,
+      access: copy.place.access.kind,
+    }));
   }
 
   private async served(): Promise<ServedNotebook[]> {

@@ -5,45 +5,59 @@
  */
 import { createPublicKey, generateKeyPairSync, verify } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { readConfig, redirectAllowed, sameLogin } from '../src/config';
+import { readBasics, readConfig, redirectAllowed, sameLogin } from '../src/config';
 import { AppTokens, appJwt, importPrivateKey, tokenSource } from '../src/github-auth';
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const pkcs1 = privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
+const APP = { appId: '1', privateKey: pkcs1 };
 
 describe('settings', () => {
-  it('needs a repository, an account and GitHub credentials', () => {
-    expect(readConfig({})).toMatchObject({
+  it('needs the owner, a notebook, and a way to reach it', () => {
+    expect(readConfig({}, null)).toMatchObject({
+      problem: expect.stringMatching(/OWNER_GITHUB_LOGIN/) as string,
+    });
+    expect(readConfig({ OWNER_GITHUB_LOGIN: 'not a login' }, null)).toMatchObject({
+      problem: expect.stringMatching(/OWNER_GITHUB_LOGIN/) as string,
+    });
+    expect(readConfig({ OWNER_GITHUB_LOGIN: 'htxryan' }, null)).toMatchObject({
       problem: expect.stringMatching(/NOTEBOOKS must list/) as string,
     });
-    expect(readConfig({ NOTES_REPOSITORY: 'ryan/notes' })).toMatchObject({
-      problem: expect.stringMatching(/ALLOWED_GITHUB_LOGIN/) as string,
-    });
     expect(
-      readConfig({ NOTES_REPOSITORY: 'ryan/notes', ALLOWED_GITHUB_LOGIN: 'htxryan' }),
-    ).toMatchObject({
-      problem: expect.stringMatching(/GITHUB_APP_ID/) as string,
-    });
+      readConfig({ NOTES_REPOSITORY: 'ryan/notes', OWNER_GITHUB_LOGIN: 'htxryan' }, null),
+    ).toMatchObject({ problem: expect.stringMatching(/set up the relay's GitHub App/) as string });
     expect(
-      readConfig({
-        NOTES_REPOSITORY: 'ryan/notes',
-        ALLOWED_GITHUB_LOGIN: 'htxryan',
-        NOTES_DIR: '../x',
-        GITHUB_TOKEN: 't',
-      }),
+      readConfig(
+        { NOTES_REPOSITORY: 'ryan/notes', OWNER_GITHUB_LOGIN: 'htxryan', NOTES_DIR: '../x' },
+        APP,
+      ),
     ).toMatchObject({ problem: expect.stringMatching(/NOTES_DIR/) as string });
     expect(
-      readConfig({
-        NOTES_REPOSITORY: 'ryan/notes',
-        ALLOWED_GITHUB_LOGIN: 'htxryan',
-        NOTES_DIR: '/docs/notes/',
-        GITHUB_TOKEN: 't',
-      }),
+      readConfig(
+        {
+          NOTES_REPOSITORY: 'ryan/notes',
+          OWNER_GITHUB_LOGIN: 'htxryan',
+          NOTES_DIR: '/docs/notes/',
+        },
+        APP,
+      ),
     ).toMatchObject({
-      notebooks: [{ repository: 'ryan/notes', root: 'docs/notes/', branch: 'main' }],
+      owner: 'htxryan',
+      notebooks: [
+        { repository: 'ryan/notes', root: 'docs/notes/', branch: 'main', access: { kind: 'app' } },
+      ],
       agentLabel: 'claude.ai',
       redirectHosts: ['claude.ai', 'claude.com'],
     });
+  });
+
+  it('needs only the owner for the pages, set up or not', () => {
+    expect(readBasics({ OWNER_GITHUB_LOGIN: 'htxryan' })).toMatchObject({
+      owner: 'htxryan',
+      web: 'https://github.com',
+      api: 'https://api.github.com',
+    });
+    expect(readBasics({})).toMatchObject({ problem: expect.stringMatching(/OWNER/) as string });
   });
 
   it('grants only to https redirects on an allowed host', () => {
@@ -155,21 +169,20 @@ describe('the GitHub App installation token', () => {
 });
 
 describe('the notebooks', () => {
-  const base = {
-    ALLOWED_GITHUB_LOGIN: 'htxryan',
-    GITHUB_APP_ID: '1',
-    GITHUB_APP_PRIVATE_KEY: pkcs1,
-  };
+  const base = { OWNER_GITHUB_LOGIN: 'htxryan' };
 
   it('reads a list of notebooks, each with its branch, folder and access', () => {
-    const config = readConfig({
-      ...base,
-      NOTEBOOKS: JSON.stringify([
-        { repository: 'htxryan/penmoss-notes' },
-        { repository: 'quantaservices/scratch', branch: 'dev', folder: '/penmoss/' },
-      ]),
-      NOTEBOOK_TOKENS: JSON.stringify({ 'QuantaServices/Scratch': 'github_pat_q' }),
-    });
+    const config = readConfig(
+      {
+        ...base,
+        NOTEBOOKS: JSON.stringify([
+          { repository: 'htxryan/penmoss-notes' },
+          { repository: 'quantaservices/scratch', branch: 'dev', folder: '/penmoss/' },
+        ]),
+        NOTEBOOK_TOKENS: JSON.stringify({ 'QuantaServices/Scratch': 'github_pat_q' }),
+      },
+      APP,
+    );
     expect(config).toMatchObject({
       notebooks: [
         { repository: 'htxryan/penmoss-notes', branch: 'main', root: '', access: { kind: 'app' } },
@@ -186,7 +199,7 @@ describe('the notebooks', () => {
 
   it('says what is wrong with the list', () => {
     const problem = (env: Record<string, string>) => {
-      const read = readConfig({ ...base, ...env });
+      const read = readConfig({ ...base, ...env }, APP);
       return 'problem' in read ? read.problem : null;
     };
     expect(problem({ NOTEBOOKS: 'nope' })).toMatch(/JSON list/);
@@ -202,18 +215,19 @@ describe('the notebooks', () => {
       /NOTEBOOK_TOKENS must be JSON/,
     );
     expect(
-      readConfig({ ALLOWED_GITHUB_LOGIN: 'htxryan', NOTEBOOKS: '[{"repository": "a/b"}]' }),
+      readConfig({ OWNER_GITHUB_LOGIN: 'htxryan', NOTEBOOKS: '[{"repository": "a/b"}]' }, null),
     ).toMatchObject({ problem: expect.stringMatching(/Nothing reaches a\/b/) as string });
   });
 
   it('needs no App when every notebook has a token', () => {
-    const config = readConfig({
-      ALLOWED_GITHUB_LOGIN: 'htxryan',
-      NOTEBOOKS: '[{"repository": "a/b"}]',
-      NOTEBOOK_TOKENS: '{"a/b": "t"}',
-      GITHUB_APP_ID: '1',
-      GITHUB_APP_PRIVATE_KEY: pkcs1,
-    });
+    const config = readConfig(
+      {
+        OWNER_GITHUB_LOGIN: 'htxryan',
+        NOTEBOOKS: '[{"repository": "a/b"}]',
+        NOTEBOOK_TOKENS: '{"a/b": "t"}',
+      },
+      APP,
+    );
     expect(config).toMatchObject({ app: null, notebooks: [{ access: { kind: 'token' } }] });
   });
 });
