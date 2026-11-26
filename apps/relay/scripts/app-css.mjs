@@ -17,6 +17,7 @@ export const SOURCES = [
   'shell/shell.css',
   'shell/controls.css',
   'theme/look-settings.css',
+  'pages/settings.css',
 ];
 export const OUT = join(here, '../src/app-css.gen.ts');
 

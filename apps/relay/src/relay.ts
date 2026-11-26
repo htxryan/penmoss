@@ -27,7 +27,7 @@ import {
   type ServedNotebook,
 } from '@penmoss/git-notebook/local';
 import { notebookTag } from '@penmoss/core/note-ref';
-import { placeKey, type NotebookPlace, type RelayConfig } from './config';
+import { placeKey, type NotebookPlace, type Place, type RelayConfig } from './config';
 import { AppTokens, tokenSource } from './github-auth';
 import type { NotebookRow } from './notebooks';
 import { BlobSecrets, BlobStorage, legacyCopyKeys, PrefixedBlobs, type Blobs } from './storage';
@@ -96,7 +96,7 @@ const json = (status: number, body: unknown, headers: Record<string, string> = {
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /** Where a copy's keys live in the relay's storage. */
-const prefixOf = (place: NotebookPlace) => `copy:${placeKey(place)}/`;
+export const prefixOf = (place: Place) => `copy:${placeKey(place)}/`;
 
 /** One notebook's copy: its engine over its repository, its queue and its sync. */
 class Copy {
@@ -107,6 +107,10 @@ class Copy {
   private failedAt = -Infinity;
   /** Why its last first sync failed. */
   private failure: unknown = null;
+  /** When it last synced, for the Notebooks page; 0 for never. */
+  syncedAt = 0;
+  /** What went wrong with its last sync or push, in a sentence; null when it went through. */
+  problem: string | null = null;
   /** When its push is due, or null for none. */
   due: number | null = null;
   readonly blobs: PrefixedBlobs;
@@ -188,10 +192,17 @@ class Copy {
   }
 
   private async syncNow(engine: GitNotebookEngine) {
-    const report = await engine.sync();
-    await engine.save();
-    this.lastSync = this.relay.clock();
-    return report;
+    try {
+      const report = await engine.sync();
+      await engine.save();
+      this.lastSync = this.relay.clock();
+      this.syncedAt = this.lastSync;
+      this.problem = null;
+      return report;
+    } catch (error) {
+      this.problem = message(error);
+      throw error;
+    }
   }
 
   /** Sync, starting again from the repository when it no longer holds the copy's notebook. */
@@ -288,6 +299,22 @@ class Copy {
       } catch (error) {
         this.log(`push failed, trying again in a minute: ${message(error)}`);
         await this.relay.schedule(this, this.relay.clock() + RETRY_AFTER_MS);
+      }
+    });
+  }
+
+  /**
+   * Pushes what it holds before it goes (Remove… on the Notebooks page): throws when edits
+   * stay unpushed, so the notebook is not dropped with them.
+   */
+  flush(): Promise<void> {
+    return this.exclusive(async () => {
+      if (!this.open && !this.blobs.get('meta')) return;
+      const { engine } = await this.opened();
+      if (!this.dirty(engine)) return;
+      await this.synced();
+      if (this.dirty((await this.opened()).engine)) {
+        throw new Error('Some of its edits are still not pushed.');
       }
     });
   }
@@ -415,15 +442,24 @@ export class Relay {
     return this.copies.map((copy) => copy.place.repository);
   }
 
-  /** The notebooks, as the owner's Notebooks page lists them. */
+  /** The notebooks, as the owner's Notebooks page lists them: nothing secret. */
   async rows(): Promise<NotebookRow[]> {
     return [...(await this.named())].map(([name, copy]) => ({
       name,
+      key: placeKey(copy.place),
       repository: copy.place.repository,
       branch: copy.place.branch,
       root: copy.place.root,
       access: copy.place.access.kind,
+      tokenEnd: copy.place.access.kind === 'token' ? copy.place.access.token.slice(-4) : null,
+      syncedAt: copy.syncedAt || null,
+      problem: copy.problem,
     }));
+  }
+
+  /** Pushes a notebook's edits before it is removed; throws when they stay unpushed. */
+  async flush(key: string): Promise<void> {
+    await this.copies.find((copy) => placeKey(copy.place) === key)?.flush();
   }
 
   private async served(): Promise<ServedNotebook[]> {

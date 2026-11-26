@@ -1,23 +1,13 @@
 /**
- * The relay's settings (T55, PEN-192, PEN-193): the notebooks it serves (each a repository,
- * branch and directory), its owner (the one GitHub account that may sign in), which redirect
- * hosts may receive a grant, and how the relay reaches GitHub for each notebook (the relay's
- * GitHub App, made by its setup page and kept in its storage, or a fine-grained token of that
- * notebook's own).
+ * The relay's settings (T55, PEN-192–PEN-194). Two come from its environment: its owner (the one
+ * GitHub account that may set it up, sign in and connect) and which redirect hosts may receive a
+ * grant. The rest the owner sets on the relay's own pages, and the Durable Object keeps: the
+ * GitHub App setup made, and the notebooks it serves, each a repository, branch and directory
+ * reached through the App or a fine-grained token of its own.
  */
 
-/** What the relay reads from its environment: plain variables and secrets. */
+/** What the relay reads from its environment. */
 export interface RelaySettings {
-  /**
-   * The notebooks, as JSON: `[{"repository": "owner/name", "branch": "main", "folder": ""}]`
-   * (branch and folder optional). Without it, the one notebook of `NOTES_*`.
-   */
-  readonly NOTEBOOKS?: string;
-  /** Secret, as JSON: a fine-grained token for each repository that has one (`{"owner/name": "…"}`). */
-  readonly NOTEBOOK_TOKENS?: string;
-  readonly NOTES_REPOSITORY?: string;
-  readonly NOTES_BRANCH?: string;
-  readonly NOTES_DIR?: string;
   /** The relay's owner: the one GitHub account that may set it up, sign in and connect. */
   readonly OWNER_GITHUB_LOGIN?: string;
   readonly AGENT_LABEL?: string;
@@ -37,12 +27,15 @@ export interface AppCredentials {
 export type GitHubAccess =
   { readonly kind: 'token'; readonly token: string } | { readonly kind: 'app' };
 
-/** One notebook the relay serves: where it is, and how the relay reaches it. */
-export interface NotebookPlace {
+/** Where a notebook is: its repository (`owner/name`), branch and directory ('' or `dir/`). */
+export interface Place {
   readonly repository: string;
   readonly branch: string;
-  /** '' or `dir/`. */
   readonly root: string;
+}
+
+/** One notebook the relay serves: where it is, and how the relay reaches it. */
+export interface NotebookPlace extends Place {
   readonly access: GitHubAccess;
 }
 
@@ -63,112 +56,38 @@ export interface RelayConfig extends RelayBasics {
 }
 
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+const BRANCH = /^[^\s~^:?*[\\]+$/;
+const LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 
 /** A place's key: the same repository, branch and directory are the same notebook. */
-export const placeKey = (place: Omit<NotebookPlace, 'access'>) =>
-  `${place.repository}#${place.branch}:${place.root}`;
+export const placeKey = (place: Place) => `${place.repository}#${place.branch}:${place.root}`;
 
-interface Listed {
-  readonly repository: string;
-  readonly branch: string;
-  readonly root: string;
-}
-
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return undefined;
-  }
-}
-
-/** One listed notebook, checked: the place, or what is wrong with it. */
-function listed(
-  repository: unknown,
-  branch: unknown,
-  folder: unknown,
-  where: string,
-): Listed | { readonly problem: string } {
-  const repo = typeof repository === 'string' ? repository.trim() : '';
+/**
+ * A place as typed on the Notebooks page, checked: the place (the folder as `dir/` or ''), or a
+ * sentence saying what is wrong.
+ */
+export function checkPlace(
+  repository: string,
+  branch: string,
+  folder: string,
+): Place | { readonly problem: string } {
+  const repo = repository
+    .trim()
+    .replace(/^https:\/\/github\.com\//, '')
+    .replace(/\.git$/, '');
   if (!REPOSITORY.test(repo)) {
-    return { problem: `${where} must name its repository as owner/name.` };
+    return { problem: 'Name the repository as owner/name, for example htxryan/penmoss-notes.' };
   }
-  if (branch !== undefined && typeof branch !== 'string') {
-    return { problem: `${where}'s branch must be text.` };
+  const name = branch.trim();
+  if (!BRANCH.test(name) || name.includes('..')) {
+    return { problem: `“${name}” isn’t a branch name.` };
   }
-  if (folder !== undefined && typeof folder !== 'string') {
-    return { problem: `${where}'s folder must be text.` };
+  const dir = folder.trim().replace(/^\/+|\/+$/g, '');
+  if (dir.split('/').some((part) => part === '..' || part === '.')) {
+    return { problem: 'The folder must be a folder inside the repository.' };
   }
-  const dir = (folder ?? '').trim().replace(/^\/+|\/+$/g, '');
-  if (dir.split('/').some((part) => part === '..')) {
-    return { problem: `${where}'s folder must be a directory inside the repository.` };
-  }
-  return { repository: repo, branch: branch?.trim() || 'main', root: dir ? `${dir}/` : '' };
+  return { repository: repo, branch: name, root: dir ? `${dir}/` : '' };
 }
-
-/** The notebooks the settings list, or what is wrong with the list. */
-function readNotebooks(env: RelaySettings): readonly Listed[] | { readonly problem: string } {
-  if (env.NOTEBOOKS?.trim()) {
-    const list = parseJson(env.NOTEBOOKS);
-    if (!Array.isArray(list) || list.length === 0) {
-      return {
-        problem:
-          'NOTEBOOKS must be a JSON list of notebooks: [{"repository": "owner/name", "branch": "main", "folder": ""}].',
-      };
-    }
-    const out: Listed[] = [];
-    for (const [index, each] of list.entries()) {
-      const where = `Notebook ${index + 1} in NOTEBOOKS`;
-      if (typeof each !== 'object' || each === null || Array.isArray(each)) {
-        return { problem: `${where} must be an object with a repository.` };
-      }
-      const item = each as Record<string, unknown>;
-      const place = listed(item['repository'], item['branch'], item['folder'], where);
-      if ('problem' in place) return place;
-      if (out.some((other) => placeKey(other) === placeKey(place))) {
-        return { problem: `${where} is listed twice.` };
-      }
-      out.push(place);
-    }
-    return out;
-  }
-  const one = listed(
-    env.NOTES_REPOSITORY,
-    env.NOTES_BRANCH,
-    env.NOTES_DIR ?? '',
-    'NOTES_REPOSITORY',
-  );
-  if ('problem' in one && !REPOSITORY.test(env.NOTES_REPOSITORY?.trim() ?? '')) {
-    return {
-      problem:
-        'NOTEBOOKS must list the notebooks, or NOTES_REPOSITORY must be set to owner/name of the notes repository.',
-    };
-  }
-  if ('problem' in one)
-    return { problem: one.problem.replace("NOTES_REPOSITORY's folder", 'NOTES_DIR') };
-  return [one];
-}
-
-/** The tokens secret: repository → token. */
-function readTokens(
-  env: RelaySettings,
-): ReadonlyMap<string, string> | { readonly problem: string } {
-  if (!env.NOTEBOOK_TOKENS?.trim()) return new Map();
-  const tokens = parseJson(env.NOTEBOOK_TOKENS);
-  if (typeof tokens !== 'object' || tokens === null || Array.isArray(tokens)) {
-    return { problem: 'NOTEBOOK_TOKENS must be JSON: {"owner/name": "github_pat_…"}.' };
-  }
-  const out = new Map<string, string>();
-  for (const [repository, token] of Object.entries(tokens)) {
-    if (typeof token !== 'string' || !token.trim()) {
-      return { problem: `NOTEBOOK_TOKENS gives ${repository} no token.` };
-    }
-    out.set(repository.toLowerCase(), token.trim());
-  }
-  return out;
-}
-
-const LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 
 /** The owner and the hosts: all the relay's pages need, before it is set up. */
 export function readBasics(env: RelaySettings): RelayBasics | { readonly problem: string } {
@@ -190,36 +109,21 @@ export function readBasics(env: RelaySettings): RelayBasics | { readonly problem
 }
 
 /**
- * The settings checked, with the App setup made (`null` before setup): the config, or what is
- * missing or wrong (said to whoever connects).
+ * The relay's config: its basics, the App setup made (`null` before setup), and the notebooks
+ * the owner added. A notebook reached through the App is left out until the App exists.
  */
 export function readConfig(
   env: RelaySettings,
   app: AppCredentials | null,
+  notebooks: readonly NotebookPlace[],
 ): RelayConfig | { readonly problem: string } {
   const basics = readBasics(env);
   if ('problem' in basics) return basics;
-  const notebooks = readNotebooks(env);
-  if ('problem' in notebooks) return notebooks;
-  const tokens = readTokens(env);
-  if ('problem' in tokens) return tokens;
-  const places: NotebookPlace[] = [];
-  for (const place of notebooks) {
-    const own = tokens.get(place.repository.toLowerCase());
-    if (own) {
-      places.push({ ...place, access: { kind: 'token', token: own } });
-    } else if (app) {
-      places.push({ ...place, access: { kind: 'app' } });
-    } else {
-      return {
-        problem: `Nothing reaches ${place.repository} yet: set up the relay's GitHub App at /setup, or give the notebook a token in NOTEBOOK_TOKENS.`,
-      };
-    }
-  }
+  const served = notebooks.filter((place) => place.access.kind === 'token' || app !== null);
   return {
     ...basics,
-    notebooks: places,
-    app: places.some((place) => place.access.kind === 'app') ? app : null,
+    notebooks: served,
+    app: served.some((place) => place.access.kind === 'app') ? app : null,
   };
 }
 

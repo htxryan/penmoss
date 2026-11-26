@@ -31,14 +31,7 @@ cd apps/relay
 pnpm exec wrangler kv namespace create OAUTH_KV
 ```
 
-Put the namespace id into `wrangler.jsonc` (`kv_namespaces[0].id`), and fill in its `vars`: `OWNER_GITHUB_LOGIN`, the one GitHub account that may set the relay up, sign in and connect, and `NOTEBOOKS`. `NOTEBOOKS` lists the notebooks as JSON, each with its repository and, when they aren't `main` and the top, its branch and folder:
-
-```json
-[
-  { "repository": "htxryan/penmoss-notes" },
-  { "repository": "quantaservices/ryan-henderson-scratch", "branch": "dev", "folder": "penmoss" }
-]
-```
+Put the namespace id into `wrangler.jsonc` (`kv_namespaces[0].id`), and set `OWNER_GITHUB_LOGIN` in its `vars`: the one GitHub account that may set the relay up, sign in and connect. Everything else is set on the relay's own pages.
 
 ```bash
 pnpm exec wrangler deploy
@@ -50,15 +43,13 @@ Open `https://mcp.penmoss.app/setup`, signed in to GitHub as the owner, and choo
 
 Then choose **Install on GitHub…**, pick **Only select repositories**, and choose the notebooks' repositories. The relay finds the installation for each repository itself.
 
-A notebook in a repository the App can't be installed on (an organisation's, say) uses a fine-grained personal access token of its own, limited to that repository, with **Contents: Read and write**. `NOTEBOOK_TOKENS` holds the tokens as JSON, by repository: `{"quantaservices/ryan-henderson-scratch": "github_pat_…"}`.
+### 3. Add the notebooks
 
-```bash
-pnpm exec wrangler secret put NOTEBOOK_TOKENS
-```
+**Sign In with GitHub** on the setup page, or open `https://mcp.penmoss.app/notebooks`, signed in as the owner (A1698). The Notebooks page lists what the relay serves, when each notebook last synced, and the connector's address (A1699).
 
-### 3. Check the notebooks
-
-**Sign In with GitHub** on the setup page, or open `https://mcp.penmoss.app/notebooks`, signed in as the owner. The Notebooks page lists what the relay serves and the connector's address (A1698).
+- **Add Notebook…**: the repository (those the App is installed on are offered), and **GitHub App** or **Token**; then its branch (the default first) and its folder, empty for the top. The relay adds it only when it can read the notebook's `.penmoss/notebook.json` there.
+- A notebook in a repository the App can't be installed on (an organisation's, say) uses **Token**: a fine-grained personal access token limited to that repository, with **Contents: Read and write**. The page shows only its last four characters; **Replace Token…** changes it.
+- **Remove…** asks first. The notes stay in the repository; the relay pushes Claude's unpushed edits, then deletes its copy.
 
 ### 4. Connect claude.ai
 
@@ -73,6 +64,6 @@ pnpm exec wrangler secret put NOTEBOOK_TOKENS
 - **“This App Isn’t the Owner’s”** on setup: the App was made while GitHub was signed in as another account. Delete that App on GitHub, sign in as the owner and start again.
 - **“This Relay Isn’t Set Up”**: it has no GitHub App yet; open `/setup`.
 - **“This App Can’t Connect”**: the connector's redirect is not on `ALLOWED_REDIRECT_HOSTS` (claude.ai and claude.com by default).
-- A 503 from `/mcp`: a setting is missing or wrong; the message names it.
-- **The relay's GitHub App is not installed on owner/name**: install the App on that repository, or give the notebook a token in `NOTEBOOK_TOKENS`. A notebook that fails is left out of searches and lists (`skipped`, with the reason) while the others serve.
+- A 503 from `/mcp`: `OWNER_GITHUB_LOGIN` is missing or wrong; the message says so.
+- **The relay's GitHub App is not installed on owner/name**, beside a notebook on the Notebooks page: install the App on that repository, or remove the notebook and add it again with a token. A notebook that fails is left out of searches and lists (`skipped`, with the reason) while the others serve.
 - Logs: `pnpm exec wrangler tail` in `apps/relay`.

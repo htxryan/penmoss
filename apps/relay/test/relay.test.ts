@@ -58,18 +58,15 @@ async function call(relay: Relay, name: string, args: Record<string, unknown>) {
   ).result;
 }
 
-function config(overrides: Partial<Record<string, string>> = {}): RelayConfig {
-  const read = readConfig(
+function config(): RelayConfig {
+  const read = readConfig({ OWNER_GITHUB_LOGIN: 'htxryan', GITHUB_API: FAKE_API }, null, [
     {
-      NOTES_REPOSITORY: FAKE_REPO,
-      NOTES_DIR: 'notes',
-      OWNER_GITHUB_LOGIN: 'htxryan',
-      NOTEBOOK_TOKENS: JSON.stringify({ [FAKE_REPO]: FAKE_TOKEN }),
-      GITHUB_API: FAKE_API,
-      ...overrides,
+      repository: FAKE_REPO,
+      branch: 'main',
+      root: 'notes/',
+      access: { kind: 'token', token: FAKE_TOKEN },
     },
-    null,
-  );
+  ]);
   if ('problem' in read) throw new Error(read.problem);
   return read;
 }
@@ -441,21 +438,22 @@ describe('several notebooks in one relay (PEN-192)', () => {
     }) as typeof fetch;
 
     const read = readConfig(
-      {
-        NOTEBOOKS: JSON.stringify([
-          { repository: FAKE_REPO },
-          { repository: WORK_REPO, branch: 'dev', folder: 'penmoss' },
-        ]),
-        NOTEBOOK_TOKENS: JSON.stringify(
-          options.app === false
-            ? { [FAKE_REPO]: 'ghs_app', [WORK_REPO]: 'github_pat_q' }
-            : { [WORK_REPO]: 'github_pat_q' },
-        ),
-        OWNER_GITHUB_LOGIN: 'htxryan',
-        GITHUB_API: FAKE_API,
-        ...options.env,
-      },
+      { OWNER_GITHUB_LOGIN: 'htxryan', GITHUB_API: FAKE_API, ...options.env },
       { appId: '1', privateKey: APP_KEY },
+      [
+        {
+          repository: FAKE_REPO,
+          branch: 'main',
+          root: '',
+          access: options.app === false ? { kind: 'token', token: 'ghs_app' } : { kind: 'app' },
+        },
+        {
+          repository: WORK_REPO,
+          branch: 'dev',
+          root: 'penmoss/',
+          access: { kind: 'token', token: 'github_pat_q' },
+        },
+      ],
     );
     if ('problem' in read) throw new Error(read.problem);
     const blobs = new MemoryBlobs();
@@ -636,6 +634,24 @@ describe('several notebooks in one relay (PEN-192)', () => {
       expect(after.get(key)).toEqual(bytes);
     }
     expect(blobs.keys(QUANTA_COPY).length).toBeGreaterThan(0);
+  });
+
+  it('pushes a notebook’s edits before it is removed, and refuses while they can’t be', async () => {
+    const { tool, relay, down, quantaRemote } = await two();
+    const head = quantaRemote.branches.get('dev');
+    await tool('create_note', { title: 'Unpushed', markdown: 'x', notebook: 'Quanta' });
+    down.add(WORK_REPO);
+    await expect(relay.flush(`${WORK_REPO}#dev:penmoss/`)).rejects.toThrow();
+    down.delete(WORK_REPO);
+    await relay.flush(`${WORK_REPO}#dev:penmoss/`);
+    expect(quantaRemote.branches.get('dev')).not.toBe(head);
+    const rows = await relay.rows();
+    expect(rows.find((row) => row.name === 'Quanta')).toMatchObject({
+      access: 'token',
+      tokenEnd: 'at_q'.slice(-4),
+      problem: null,
+    });
+    expect(rows.find((row) => row.name === 'Quanta')!.syncedAt).toBeGreaterThan(0);
   });
 
   it('names each notebook from its notebook.json, adding its repository on a clash', async () => {
