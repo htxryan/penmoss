@@ -19,16 +19,13 @@
   "vars": {
     // The relay's public origin: its OAuth resource is <origin>/mcp.
     "RELAY_ORIGIN": "https://mcp.penmoss.app",
-    // The notebooks it serves (PEN-192): each a repository (owner/name), branch and folder ('' for the top).
-    "NOTEBOOKS": "[{\"repository\": \"htxryan/penmoss-notes\", \"branch\": \"main\", \"folder\": \"\"}]",
     // The relay's owner: the one GitHub account that may set it up, sign in and connect.
     "OWNER_GITHUB_LOGIN": "htxryan",
     // The writer's name in History and agent activity.
     "AGENT_LABEL": "claude.ai",
     // Hosts a grant may be sent to: claude.ai's connectors.
     "ALLOWED_REDIRECT_HOSTS": "claude.ai,claude.com",
-    // The GitHub App is made at /setup and kept in the Durable Object's storage (PEN-193).
-    // Secret (wrangler secret put): NOTEBOOK_TOKENS ({"owner/name": "github_pat_…"}) for a
-    // notebook reached by a token of its own.
+    // The GitHub App (made at /setup) and the notebooks (added on /notebooks) are kept in the
+    // Durable Object's storage (PEN-193, PEN-194).
   },
 }

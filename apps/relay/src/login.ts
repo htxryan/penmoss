@@ -20,7 +20,7 @@ import {
   type RelayBasics,
   type RelaySettings,
 } from './config';
-import { notebooksPage, type NotebooksStore } from './notebooks';
+import { notebooksRoute, type NotebooksStore } from './notebooks';
 import { buttonForm, escape, linkButton, page, para } from './pages';
 import {
   clearSessionCookie,
@@ -266,16 +266,17 @@ export const loginHandler = {
       });
     }
 
-    if (url.pathname === '/notebooks' || url.pathname === '/sign-out') {
+    if (url.pathname === '/sign-out' || url.pathname.startsWith('/notebooks')) {
       if (!(await store.summary())) return notSetUp();
       const session = await readSession(env.OAUTH_KV, request);
       if (!session || !sameLogin(session.login, basics.owner)) {
-        if (request.method !== 'GET')
+        if (request.method !== 'GET') {
           return page(
             403,
             'Sign In First',
             para('Your session ended.') + linkButton('/notebooks', 'Notebooks'),
           );
+        }
         return page(
           200,
           'Penmoss Relay',
@@ -283,7 +284,7 @@ export const loginHandler = {
             linkButton('/sign-in', 'Sign In with GitHub', true),
         );
       }
-      if (request.method === 'POST') {
+      if (url.pathname === '/sign-out' && request.method === 'POST') {
         const form = await request.formData();
         if (!formIsOwn(request, form, session)) {
           return page(
@@ -292,17 +293,14 @@ export const loginHandler = {
             para('Open the page again and try once more.') + linkButton('/notebooks', 'Notebooks'),
           );
         }
-        if (url.pathname === '/sign-out') {
-          await endSession(env.OAUTH_KV, session);
-          return new Response(null, {
-            status: 303,
-            headers: { location: '/notebooks', 'set-cookie': clearSessionCookie() },
-          });
-        }
+        await endSession(env.OAUTH_KV, session);
+        return new Response(null, {
+          status: 303,
+          headers: { location: '/notebooks', 'set-cookie': clearSessionCookie() },
+        });
       }
-      if (url.pathname === '/notebooks' && request.method === 'GET') {
-        return notebooksPage(url, session, store);
-      }
+      const answered = await notebooksRoute(request, session, store, Date.now());
+      if (answered) return answered;
     }
 
     return page(404, 'Not Found', para('Nothing here.'));

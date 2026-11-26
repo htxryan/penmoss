@@ -13,12 +13,7 @@ export default defineConfig({
       miniflare: {
         bindings: {
           RELAY_ORIGIN: 'https://mcp.penmoss.test',
-          NOTEBOOKS: JSON.stringify([
-            { repository: 'ryan/notes' },
-            { repository: 'quanta/scratch', branch: 'dev', folder: 'penmoss' },
-          ]),
           OWNER_GITHUB_LOGIN: 'htxryan',
-          NOTEBOOK_TOKENS: JSON.stringify({ 'ryan/notes': 'fake-token', 'quanta/scratch': 'fake' }),
           GITHUB_API: 'https://api.github.test',
           GITHUB_WEB: 'https://github.test',
         },

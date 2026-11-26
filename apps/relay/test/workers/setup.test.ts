@@ -5,7 +5,7 @@
  */
 import { env, exports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { forgetApp, keepTestApp, TEST_APP } from './support';
+import { forgetApp, keepTestApp, keepTestNotebooks, TEST_APP } from './support';
 
 const ORIGIN = 'https://mcp.penmoss.test';
 
@@ -190,6 +190,7 @@ const sessionOf = (response: Response) =>
 describe("the owner's pages", () => {
   it('signs the owner in with an HttpOnly, Secure, SameSite=Lax session', async () => {
     await keepTestApp();
+    await keepTestNotebooks();
     const signedIn = await signInToPages('htxryan');
     expect(signedIn.status).toBe(302);
     expect(signedIn.headers.get('location')).toBe('/notebooks');
@@ -204,7 +205,7 @@ describe("the owner's pages", () => {
     expect(html).toContain('Signed in as htxryan');
     expect(html).toContain(`${ORIGIN}/mcp`);
     expect(html).toContain('ryan/notes');
-    for (const secret of [TEST_APP.clientSecret, 'FAKEKEY', 'fake-token']) {
+    for (const secret of [TEST_APP.clientSecret, 'FAKEKEY', 'github_pat_quanta']) {
       expect(html).not.toContain(secret);
     }
   });

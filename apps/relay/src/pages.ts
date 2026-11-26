@@ -38,6 +38,15 @@ const PAGE_CSS = `:root{${vars('light')};color-scheme:light}
 .relay-who form{display:inline}
 .relay-link{border:0;padding:0;background:none;color:var(--pm-link);font:inherit;cursor:pointer;text-decoration:underline}
 .relay code{font-family:var(--pm-mono);font-size:var(--pm-text-code);background:var(--pm-code-bg);padding:0 .25em;overflow-wrap:anywhere}
+.relay-state{display:flex;align-items:flex-start;gap:.35rem;color:var(--pm-muted);font-size:var(--pm-text-help);line-height:var(--pm-leading-help)}
+.relay-state::before{content:"";flex:none;width:7px;height:7px;margin-top:.45em;background:var(--pm-success)}
+.relay-state.bad{color:var(--pm-danger)}
+.relay-state.bad::before{background:var(--pm-danger)}
+.relay-form{display:grid;gap:1rem}
+.relay-form .lf-row-control{flex:1 1 16rem}
+.relay-actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.relay-choices{display:flex;flex-wrap:wrap;gap:.75rem;font-size:var(--pm-text-row-label)}
+.relay-choice{display:inline-flex;align-items:center;gap:.35rem;cursor:pointer}
 .relay-problem{border:1px solid var(--pm-border);border-left:3px solid var(--pm-danger);background:var(--pm-raised);padding:.75rem 1rem;display:grid;gap:.35rem}`;
 
 export interface PageOptions {
@@ -46,6 +55,8 @@ export interface PageOptions {
   readonly headers?: Record<string, string>;
   /** Beside the title: who is signed in, or whose relay this is. */
   readonly aside?: string;
+  /** The hash of the page's one inline script, which its policy allows. */
+  readonly scriptHash?: string;
 }
 
 /** A page: `body` is HTML whose text the caller has escaped. */
@@ -59,7 +70,7 @@ ${PAGE_CSS}</style>
     status,
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
+      'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:;${options.scriptHash ? ` script-src ${options.scriptHash};` : ''} form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
       'x-frame-options': 'DENY',
       'cache-control': 'no-store',
       ...options.headers,
@@ -71,8 +82,8 @@ ${PAGE_CSS}</style>
 export const para = (html: string) => `<p class="t-body">${html}</p>`;
 
 /** A Settings Group row: its label, its help, and its control. */
-export function row(label: string, help: string, control = '', tag = 'div') {
-  return `<${tag} class="lf-row"><div class="lf-row-text"><span class="lf-row-label">${escape(label)}</span>${help ? `<span class="lf-row-help">${help}</span>` : ''}</div>${control ? `<div class="lf-row-control">${control}</div>` : ''}</${tag}>`;
+export function row(label: string, help: string, control = '', tag = 'div', extra = '') {
+  return `<${tag} class="lf-row"><div class="lf-row-text"><span class="lf-row-label">${escape(label)}</span>${help ? `<span class="lf-row-help">${help}</span>` : ''}${extra}</div>${control ? `<div class="lf-row-control">${control}</div>` : ''}</${tag}>`;
 }
 
 /** A Settings Group: rows in a bordered list, numbered when they are steps. */

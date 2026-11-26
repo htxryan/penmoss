@@ -7,7 +7,7 @@
 import { runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { keepTestApp } from './support';
+import { keepTestApp, keepTestNotebooks } from './support';
 import {
   GitNotebookEngine,
   MemoryRemote,
@@ -83,8 +83,9 @@ afterEach(() => {
 });
 
 beforeEach(async () => {
-  // The relay as setup leaves it: its GitHub App kept in its storage.
+  // The relay as setup and the Notebooks page leave it: its App and its notebooks kept.
   await keepTestApp();
+  await keepTestNotebooks();
 });
 
 async function signIn(login: string) {
@@ -251,8 +252,14 @@ describe('two notebooks in one Durable Object (PEN-192)', () => {
       await mac.sync();
     }
     const config = readConfig(
-      { ...env, NOTEBOOK_TOKENS: JSON.stringify({ 'ryan/notes': 'a', 'quanta/scratch': 'b' }) },
+      env,
       null,
+      places.map(({ repository, branch, root }) => ({
+        repository,
+        branch,
+        root,
+        access: { kind: 'token', token: 'fake' } as const,
+      })),
     );
     if ('problem' in config) throw new Error(config.problem);
     const stub = env.NOTEBOOK.get(env.NOTEBOOK.idFromName('two-notebooks-test'));

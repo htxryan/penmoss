@@ -160,6 +160,45 @@ export class AppTokens {
     return data.token;
   }
 
+  /** The repositories the App is installed on, for the Notebooks page to offer. */
+  async repositories(): Promise<string[]> {
+    const jwt = await this.jwt();
+    const listed = await this.options.fetch(`${this.options.api}/app/installations?per_page=100`, {
+      headers: headers(jwt),
+    });
+    if (!listed.ok) {
+      await listed.body?.cancel();
+      return [];
+    }
+    const out: string[] = [];
+    for (const installation of await listed.json<{ id: number }[]>()) {
+      const minted = await this.options.fetch(
+        `${this.options.api}/app/installations/${installation.id}/access_tokens`,
+        {
+          method: 'POST',
+          headers: headers(jwt),
+          body: JSON.stringify({ permissions: { metadata: 'read' } }),
+        },
+      );
+      if (minted.status !== 201) {
+        await minted.body?.cancel();
+        continue;
+      }
+      const { token } = await minted.json<{ token: string }>();
+      const repos = await this.options.fetch(
+        `${this.options.api}/installation/repositories?per_page=100`,
+        { headers: headers(token) },
+      );
+      if (!repos.ok) {
+        await repos.body?.cancel();
+        continue;
+      }
+      const { repositories } = await repos.json<{ repositories: { full_name: string }[] }>();
+      out.push(...repositories.map((each) => each.full_name));
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }
+
   /** A token that can write `repository`'s contents. */
   token(repository: string): Promise<string> {
     const held = this.held.get(repository);
