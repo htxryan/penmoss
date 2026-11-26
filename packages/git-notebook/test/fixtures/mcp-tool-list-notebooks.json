@@ -123,7 +123,7 @@
   {
     "name": "list_tags",
     "title": "List tags",
-    "description": "Without tag: every tag with how many notes have it, and its description when Ryan wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).",
+    "description": "Without tag: every tag with how many notes have it, and its description when the user wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -148,7 +148,7 @@
   {
     "name": "describe_tags",
     "title": "Describe tags",
-    "description": "What tags mean, in Ryan's words: each tag with its description (null when he wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.",
+    "description": "What tags mean, in the user's words: each tag with its description (null when they wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -229,7 +229,7 @@
   {
     "name": "get_history",
     "title": "Get note history",
-    "description": "A note’s saved versions, newest first: when, by whom (devices and agents by name) and what changed. With versionId: that version’s markdown and the lines it added (+) and removed (−). Ryan can restore or revert versions in the app.",
+    "description": "A note’s saved versions, newest first: when, by whom (devices and agents by name) and what changed. With versionId: that version’s markdown and the lines it added (+) and removed (−). The user can restore or revert versions in the app.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -266,14 +266,14 @@
   {
     "name": "get_daily_note",
     "title": "Get the daily note",
-    "description": "Get today’s daily note, creating it from Ryan’s template if no device has yet (with a write token), exactly as the apps do: “today” is in Ryan’s time zone setting, and the note is filed under Journal. date (YYYY-MM-DD) picks another day; period \"weekly\" gives the weekly note of the week holding that day. Returns the note like read_note (with its baseVersion and headings); add to it with append_to_note, optionally under one of its headings.",
+    "description": "Get today’s daily note, creating it from the user’s template if no device has yet (with a write token), exactly as the apps do: “today” is in the user’s time zone setting, and the note is filed under Journal. date (YYYY-MM-DD) picks another day; period \"weekly\" gives the weekly note of the week holding that day. Returns the note like read_note (with its baseVersion and headings); add to it with append_to_note, optionally under one of its headings.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "date": {
           "type": "string",
           "maxLength": 10,
-          "description": "A day as YYYY-MM-DD; today (in Ryan’s time zone) if omitted."
+          "description": "A day as YYYY-MM-DD; today (in the user’s time zone) if omitted."
         },
         "period": {
           "type": "string",
@@ -566,7 +566,7 @@
   {
     "name": "trash_note",
     "title": "Move a note to Trash",
-    "description": "Move a note to Trash, as deleting it in the app does. The note keeps its content and leaves the folder tree; Ryan can restore it in the app, or you can with restore_note. Calling it for a note already in Trash changes nothing (alreadyInTrash: true). You cannot delete a note for good: only Ryan can, in the app.",
+    "description": "Move a note to Trash, as deleting it in the app does. The note keeps its content and leaves the folder tree; the user can restore it in the app, or you can with restore_note. Calling it for a note already in Trash changes nothing (alreadyInTrash: true). You cannot delete a note for good: only the user can, in the app.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -776,7 +776,7 @@
   {
     "name": "delete_folder",
     "title": "Delete a folder",
-    "description": "Delete a folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. The folder goes to Trash, where Ryan can restore it with its subfolders and notes. Deleting a folder that is already gone changes nothing (deleted: false).",
+    "description": "Delete a folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. The folder goes to Trash, where the user can restore it with its subfolders and notes. Deleting a folder that is already gone changes nothing (deleted: false).",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1083,7 +1083,7 @@
   {
     "name": "list_comment_threads",
     "title": "List comment threads",
-    "description": "List comment threads: on one note (id), or across the notes. Ryan comments on a passage or a point of a note, often to ask you for something (\"make this tighter\"); you can reply, resolve, and start threads of your own (for example to review passages). status is open by default; resolved threads are kept for good. sentToMe lists the threads Ryan sent to you (to this agent, across notes). On one note threads on the note as a whole (kind \"note\") come first, then the rest in the order of the text, orphans last (their text was deleted; the quote stays). Each says where it is now (position: the text there, whether it still matchesQuote, the headings it is under, its block number; for an orphan, whether it was found again by its text and how). Each thread is a summary (its quote, state, how many comments and who wrote the last): read one with read_comment_thread for its comments.",
+    "description": "List comment threads: on one note (id), or across the notes. The user comments on a passage or a point of a note, often to ask you for something (\"make this tighter\"); you can reply, resolve, and start threads of your own (for example to review passages). status is open by default; resolved threads are kept for good. sentToMe lists the threads the user sent to you (to this agent, across notes). On one note threads on the note as a whole (kind \"note\") come first, then the rest in the order of the text, orphans last (their text was deleted; the quote stays). Each says where it is now (position: the text there, whether it still matchesQuote, the headings it is under, its block number; for an orphan, whether it was found again by its text and how). Each thread is a summary (its quote, state, how many comments and who wrote the last): read one with read_comment_thread for its comments.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1099,7 +1099,7 @@
         },
         "sentToMe": {
           "type": "boolean",
-          "description": "Only threads Ryan sent to you (across notes)."
+          "description": "Only threads the user sent to you (across notes)."
         },
         "notebook": {
           "type": "string",
@@ -1117,7 +1117,7 @@
   {
     "name": "read_comment_thread",
     "title": "Read a comment thread",
-    "description": "Read one thread with all its comments, each naming its author (Ryan, or an agent). The quote is the text the thread is on (kind \"note\": the note as a whole, no quote). position is where it is now: text (a range’s text there now), matchesQuote, headings (outermost first), block (the nth block of text) and paragraph (that block’s text now); found is \"anchor\", or for a thread whose text was deleted \"refound\" (found again by its quote and the text around it; how: exact, exact-context, fuzzy or context, with similarity) or \"lost\". context is where it was when it was made: the text just before and after it, its headings, block and paragraph then. read_note gives the whole note. Reading a thread Ryan sent to you tells him you have seen it.",
+    "description": "Read one thread with all its comments, each naming its author (the user, or an agent). The quote is the text the thread is on (kind \"note\": the note as a whole, no quote). position is where it is now: text (a range’s text there now), matchesQuote, headings (outermost first), block (the nth block of text) and paragraph (that block’s text now); found is \"anchor\", or for a thread whose text was deleted \"refound\" (found again by its quote and the text around it; how: exact, exact-context, fuzzy or context, with similarity) or \"lost\". context is where it was when it was made: the text just before and after it, its headings, block and paragraph then. read_note gives the whole note. Reading a thread the user sent to you tells them you have seen it.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1190,7 +1190,7 @@
   {
     "name": "reply_to_comment_thread",
     "title": "Reply in a comment thread",
-    "description": "Reply in a thread, attributed to you: say what you did, or ask what you need. Ryan sees the reply in the note once it syncs. Change the note itself with the edit tools (replace_text, update_section…), which are attributed and revertible.",
+    "description": "Reply in a thread, attributed to you: say what you did, or ask what you need. The user sees the reply in the note once it syncs. Change the note itself with the edit tools (replace_text, update_section…), which are attributed and revertible.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1227,7 +1227,7 @@
   {
     "name": "resolve_comment_thread",
     "title": "Resolve a comment thread",
-    "description": "Mark a thread resolved once what it asks is done. It is kept, behind the Resolved filter, and Ryan can reopen it.",
+    "description": "Mark a thread resolved once what it asks is done. It is kept, behind the Resolved filter, and the user can reopen it.",
     "inputSchema": {
       "type": "object",
       "properties": {

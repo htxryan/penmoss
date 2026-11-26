@@ -100,7 +100,7 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     base_unknown:
       'That baseVersion is too old or unknown. Call read_note again, check the text, and retry with the new baseVersion.',
     in_trash:
-      'The note is in Trash. Restore it with restore_note (a folder-scoped token: when it was deleted from inside its folder), or Ryan can in the app; it cannot be changed until then.',
+      'The note is in Trash. Restore it with restore_note (a folder-scoped token: when it was deleted from inside its folder), or the user can in the app; it cannot be changed until then.',
     folder_not_found: 'Find folder ids with list_folder.',
     unknown_properties: 'Only title and tags can be set.',
     text_not_found: 'Call read_note to see the exact text; find must match it exactly.',
@@ -119,12 +119,12 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     invalid_setting: 'Call get_settings to see the settings and their current values.',
     version_not_found: 'Call get_history to list the note’s versions.',
     file_too_large: `Send a file of at most ${formatBytes(attachmentMaxBytes)}.`,
-    daily_limit: 'Stop and tell Ryan what is left to do; he can do it in the app.',
+    daily_limit: 'Stop and tell the user what is left to do; they can do it in the app.',
     too_many_renames:
-      'Wait for the running renames to finish, or ask Ryan to rename the tag in the app.',
+      'Wait for the running renames to finish, or ask the user to rename the tag in the app.',
     tag_exists:
-      'Check with list_tags that merging the two tags is what Ryan wants, then call rename_tag again with merge: true.',
-    setting_not_allowed: 'Ask Ryan to change it in the app’s Settings.',
+      'Check with list_tags that merging the two tags is what the user wants, then call rename_tag again with merge: true.',
+    setting_not_allowed: 'Ask the user to change it in the app’s Settings.',
     // The comment tools' (A775, A1064).
     thread_not_found:
       'Call list_comment_threads with the note id (status "all" includes resolved threads).',
@@ -134,7 +134,7 @@ function guidance(attachmentMaxBytes: number): Record<string, string> {
     occurrence_not_found: 'Pass an occurrence from 1 up to the number of times the text occurs.',
     too_many_threads: 'Reply in an existing thread instead.',
     too_many_comments: 'Start a new thread instead.',
-    agent_not_allowed: 'Ryan does this in the app.',
+    agent_not_allowed: 'The user does this in the app.',
     not_your_comment: 'Reply in the thread instead.',
   };
 }
@@ -304,7 +304,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       name: 'list_tags',
       title: 'List tags',
       description:
-        'Without tag: every tag with how many notes have it, and its description when Ryan wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).',
+        'Without tag: every tag with how many notes have it, and its description when the user wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).',
       inputSchema: object({
         tag: { type: 'string', maxLength: 200, description: 'A tag, without #.' },
       }),
@@ -315,7 +315,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       name: 'describe_tags',
       title: 'Describe tags',
       description:
-        "What tags mean, in Ryan's words: each tag with its description (null when he wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. " +
+        "What tags mean, in the user's words: each tag with its description (null when they wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. " +
         'A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. ' +
         'Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.',
       inputSchema: object({
@@ -360,7 +360,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       title: 'Get note history',
       description:
         'A note’s saved versions, newest first: when, by whom (devices and agents by name) and what changed. ' +
-        'With versionId: that version’s markdown and the lines it added (+) and removed (−). Ryan can restore or revert versions in the app.',
+        'With versionId: that version’s markdown and the lines it added (+) and removed (−). The user can restore or revert versions in the app.',
       inputSchema: object(
         {
           id: ID,
@@ -381,15 +381,15 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       name: 'get_daily_note',
       title: 'Get the daily note',
       description:
-        'Get today’s daily note, creating it from Ryan’s template if no device has yet (with a write token), exactly as the apps do: ' +
-        '“today” is in Ryan’s time zone setting, and the note is filed under Journal. ' +
+        'Get today’s daily note, creating it from the user’s template if no device has yet (with a write token), exactly as the apps do: ' +
+        '“today” is in the user’s time zone setting, and the note is filed under Journal. ' +
         'date (YYYY-MM-DD) picks another day; period "weekly" gives the weekly note of the week holding that day. ' +
         'Returns the note like read_note (with its baseVersion and headings); add to it with append_to_note, optionally under one of its headings.',
       inputSchema: object({
         date: {
           type: 'string',
           maxLength: 10,
-          description: 'A day as YYYY-MM-DD; today (in Ryan’s time zone) if omitted.',
+          description: 'A day as YYYY-MM-DD; today (in the user’s time zone) if omitted.',
         },
         period: {
           type: 'string',
@@ -545,9 +545,9 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       title: 'Move a note to Trash',
       description:
         'Move a note to Trash, as deleting it in the app does. The note keeps its content and history and leaves the folder tree; ' +
-        'Ryan can restore it in the app, or you can with restore_note, for 30 days, after which it is deleted for good. ' +
+        'the user can restore it in the app, or you can with restore_note, for 30 days, after which it is deleted for good. ' +
         'History shows the change under your name. Calling it for a note already in Trash changes nothing (alreadyInTrash: true). ' +
-        'An agent moves at most 100 notes to Trash a day. You cannot delete a note for good: only Ryan can, in the app.',
+        'An agent moves at most 100 notes to Trash a day. You cannot delete a note for good: only the user can, in the app.',
       inputSchema: object({ id: ID }, ['id']),
       write: true,
       annotations: {
@@ -667,7 +667,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       title: 'Delete a folder',
       description:
         'Delete a folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. ' +
-        'The folder goes to Trash, where Ryan can restore it with its subfolders and notes for 30 days, and the change is listed under your name in the app’s Agent activity, with an Undo. ' +
+        'The folder goes to Trash, where the user can restore it with its subfolders and notes for 30 days, and the change is listed under your name in the app’s Agent activity, with an Undo. ' +
         'Deleting a folder that is already gone changes nothing (deleted: false). An agent deletes at most 25 folders a day.',
       inputSchema: object({ folderId: FOLDER_ID }, ['folderId']),
       write: true,
@@ -750,7 +750,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       name: 'get_settings',
       title: 'Get settings',
       description:
-        'Ryan’s synced settings: theme.id, theme.mode, timeZone, template.daily, template.weekly, capture.destination, note.fullWidth, and his custom themes (theme.custom.<id>). ' +
+        'The user’s synced settings: theme.id, theme.mode, timeZone, template.daily, template.weekly, capture.destination, note.fullWidth, and their custom themes (theme.custom.<id>). ' +
         'A setting not listed has its default.',
       inputSchema: object({}),
       write: false,
@@ -763,8 +763,8 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
         'Change settings as the apps do: set maps each key to its new value (null brings back the default). ' +
         'Pass base, the values get_settings gave you (null for unset), to be refused with setting_changed if one changed since; without base, the current values are used. ' +
         'Each value is checked with the apps’ rules (invalid_setting names the key). Setting a value it already has changes nothing. ' +
-        'You may change theme.id, theme.mode, timeZone, template.daily, template.weekly, note.fullWidth and custom themes; where quick captures go is Ryan’s (setting_not_allowed). ' +
-        'Ryan can undo each change in the app’s Agent activity.',
+        'You may change theme.id, theme.mode, timeZone, template.daily, template.weekly, note.fullWidth and custom themes; where quick captures go is the user’s (setting_not_allowed). ' +
+        'The user can undo each change in the app’s Agent activity.',
       inputSchema: object(
         {
           set: {
@@ -784,7 +784,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       description:
         'Rename a tag in every note that has it, nested tags included (projects/garden follows projects). ' +
         'Renaming to a tag that exists merges the two, so it needs merge: true (else tag_exists). ' +
-        'Runs in the background, one version per note; Ryan can undo the whole rename in the app’s Agent activity (notes that had both tags keep the new one). ' +
+        'Runs in the background, one version per note; the user can undo the whole rename in the app’s Agent activity (notes that had both tags keep the new one). ' +
         'Limits: at most 2,000 notes per rename, 10 renames a day per agent, 1,000 renamed notes a day for all agents together, and 2 agent renames waiting at a time (too_many_renames). Returns the notes it covers.',
       inputSchema: object(
         {
@@ -865,8 +865,8 @@ export function commentToolDefinitions(): readonly ToolDefinition[] {
       title: 'List comment threads',
       description:
         'List comment threads: on one note (id), or across the notes. ' +
-        'Ryan comments on a passage or a point of a note, often to ask you for something ("make this tighter"); you can reply, resolve, and start threads of your own (for example to review passages). ' +
-        'status is open by default; resolved threads are kept for good. sentToMe lists the threads Ryan sent to you (to this agent, across notes). ' +
+        'The user comments on a passage or a point of a note, often to ask you for something ("make this tighter"); you can reply, resolve, and start threads of your own (for example to review passages). ' +
+        'status is open by default; resolved threads are kept for good. sentToMe lists the threads the user sent to you (to this agent, across notes). ' +
         'On one note threads on the note as a whole (kind "note") come first, then the rest in the order of the text, orphans last (their text was deleted; the quote stays). ' +
         'Each says where it is now (position: the text there, whether it still matchesQuote, the headings it is under, its block number; for an orphan, whether it was found again by its text and how). ' +
         'Each thread is a summary (its quote, state, how many comments and who wrote the last): read one with read_comment_thread for its comments.',
@@ -875,7 +875,7 @@ export function commentToolDefinitions(): readonly ToolDefinition[] {
         status: THREAD_STATUS,
         sentToMe: {
           type: 'boolean',
-          description: 'Only threads Ryan sent to you (across notes).',
+          description: 'Only threads the user sent to you (across notes).',
         },
       }),
       write: false,
@@ -885,12 +885,12 @@ export function commentToolDefinitions(): readonly ToolDefinition[] {
       name: 'read_comment_thread',
       title: 'Read a comment thread',
       description:
-        'Read one thread with all its comments, each naming its author (Ryan, or an agent). ' +
+        'Read one thread with all its comments, each naming its author (the user, or an agent). ' +
         'The quote is the text the thread is on (kind "note": the note as a whole, no quote). ' +
         'position is where it is now: text (a range’s text there now), matchesQuote, headings (outermost first), block (the nth block of text) and paragraph (that block’s text now); ' +
         'found is "anchor", or for a thread whose text was deleted "refound" (found again by its quote and the text around it; how: exact, exact-context, fuzzy or context, with similarity) or "lost". ' +
         'context is where it was when it was made: the text just before and after it, its headings, block and paragraph then. read_note gives the whole note. ' +
-        'Reading a thread Ryan sent to you tells him you have seen it.',
+        'Reading a thread the user sent to you tells them you have seen it.',
       inputSchema: object({ id: THREAD_NOTE, threadId: THREAD }, ['id', 'threadId']),
       write: false,
       annotations: { ...READ, title: 'Read a comment thread' },
@@ -924,7 +924,7 @@ export function commentToolDefinitions(): readonly ToolDefinition[] {
       title: 'Reply in a comment thread',
       description:
         'Reply in a thread, attributed to you: say what you did, or ask what you need. ' +
-        'Ryan sees the reply in the note once it syncs. Change the note itself with the edit tools (replace_text, update_section…), which are attributed and revertible.',
+        'The user sees the reply in the note once it syncs. Change the note itself with the edit tools (replace_text, update_section…), which are attributed and revertible.',
       inputSchema: object({ id: THREAD_NOTE, threadId: THREAD, body: COMMENT_BODY }, [
         'id',
         'threadId',
@@ -937,7 +937,7 @@ export function commentToolDefinitions(): readonly ToolDefinition[] {
       name: 'resolve_comment_thread',
       title: 'Resolve a comment thread',
       description:
-        'Mark a thread resolved once what it asks is done. It is kept, behind the Resolved filter, and Ryan can reopen it.',
+        'Mark a thread resolved once what it asks is done. It is kept, behind the Resolved filter, and the user can reopen it.',
       inputSchema: object({ id: THREAD_NOTE, threadId: THREAD }, ['id', 'threadId']),
       write: true,
       annotations: { ...WRITE, idempotentHint: true, title: 'Resolve a comment thread' },

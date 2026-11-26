@@ -220,7 +220,11 @@ export function planCommentChange(
         return failure(422, 'too_many_threads', `A note holds at most ${MAX_THREADS} threads`);
       }
       if (change.target && !person) {
-        return failure(403, 'agent_not_allowed', 'Only Ryan sends a thread to an agent session');
+        return failure(
+          403,
+          'agent_not_allowed',
+          'Only the user sends a thread to an agent session',
+        );
       }
       let anchor: CommentAnchor | null;
       let quote: string;
@@ -353,7 +357,11 @@ export function planCommentChange(
     }
     case 'target': {
       if (!person) {
-        return failure(403, 'agent_not_allowed', 'Only Ryan sends a thread to an agent session');
+        return failure(
+          403,
+          'agent_not_allowed',
+          'Only the user sends a thread to an agent session',
+        );
       }
       const thread = readThread(doc, change.threadId);
       if (!thread) return failure(404, 'thread_not_found', 'No such thread');

@@ -553,18 +553,18 @@ export function notebooksInstructions(served: readonly ServedNotebook[], meaning
         .map((each) => (each.tag ? `${each.name} (short ids ${each.tag}-…)` : each.name))
         .join(', ')
     : 'none yet';
-  return `These are Ryan's git notebooks, served together: ${names}. Each notebook's notes are kept in its own git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
+  return `These are the user's git notebooks, served together: ${names}. Each notebook's notes are kept in its own git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - A note's id or short id finds its notebook, so tools that take one need no notebook argument. A folder id finds its notebook too.
 - search_notes, list_recent, list_folder, list_tags, describe_tags, list_comment_threads and get_settings cover every notebook unless you pass notebook; each result names its notebook.
 - With more than one notebook, pass notebook (its name) to create_note without a folderId, get_daily_note, create_folder without a parentId, set_settings, rename_tag, and set_folder_sort for the top level.
 - Notes and folders never move between notebooks: to move one, make it in the other notebook and trash it here.
 - Find notes with search_notes (${meaning ? 'by their words and their meaning: describe what you are looking for in your own words' : 'words only here'}), list_recent, list_folder or list_tags; read one with read_note.
-- Many notes have a description: a sentence or two on what the note is about, written by Ryan or by AI Descriptions. search_notes, list_recent, list_folder and get_backlinks give it, and read_note gives the description of each note it links to (links). Read descriptions to choose which notes to open before reading their whole text.
-- Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
+- Many notes have a description: a sentence or two on what the note is about, written by the user or by AI Descriptions. search_notes, list_recent, list_folder and get_backlinks give it, and read_note gives the description of each note it links to (links). Read descriptions to choose which notes to open before reading their whole text.
+- The user describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
 - For today's journal call get_daily_note with the notebook (it creates the day's note from that notebook's template, in its time zone), then append_to_note, optionally under one of its headings.
 - Your edits are committed to each notebook's repository under its agent copy's writer a minute after they settle, and when this server stops.
 - trash_note moves a note to Trash; nothing deletes a note for good.
-- Ryan comments on passages of notes, often to ask you for something: list_comment_threads (sentToMe: true for the threads he sent to you), read_comment_thread, then do it with the edit tools and say so with reply_to_comment_thread, or resolve_comment_thread. create_comment_thread starts a thread of your own on a quoted passage. Comments are committed and pushed like edits.`;
+- The user comments on passages of notes, often to ask you for something: list_comment_threads (sentToMe: true for the threads they sent to you), read_comment_thread, then do it with the edit tools and say so with reply_to_comment_thread, or resolve_comment_thread. create_comment_thread starts a thread of your own on a quoted passage. Comments are committed and pushed like edits.`;
 }

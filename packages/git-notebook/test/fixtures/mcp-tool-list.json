@@ -111,7 +111,7 @@
   {
     "name": "list_tags",
     "title": "List tags",
-    "description": "Without tag: every tag with how many notes have it, and its description when Ryan wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).",
+    "description": "Without tag: every tag with how many notes have it, and its description when the user wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -132,7 +132,7 @@
   {
     "name": "describe_tags",
     "title": "Describe tags",
-    "description": "What tags mean, in Ryan's words: each tag with its description (null when he wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.",
+    "description": "What tags mean, in the user's words: each tag with its description (null when they wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -201,7 +201,7 @@
   {
     "name": "get_history",
     "title": "Get note history",
-    "description": "A note’s saved versions, newest first: when, by whom (devices and agents by name) and what changed. With versionId: that version’s markdown and the lines it added (+) and removed (−). Ryan can restore or revert versions in the app.",
+    "description": "A note’s saved versions, newest first: when, by whom (devices and agents by name) and what changed. With versionId: that version’s markdown and the lines it added (+) and removed (−). The user can restore or revert versions in the app.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -234,14 +234,14 @@
   {
     "name": "get_daily_note",
     "title": "Get the daily note",
-    "description": "Get today’s daily note, creating it from Ryan’s template if no device has yet (with a write token), exactly as the apps do: “today” is in Ryan’s time zone setting, and the note is filed under Journal. date (YYYY-MM-DD) picks another day; period \"weekly\" gives the weekly note of the week holding that day. Returns the note like read_note (with its baseVersion and headings); add to it with append_to_note, optionally under one of its headings.",
+    "description": "Get today’s daily note, creating it from the user’s template if no device has yet (with a write token), exactly as the apps do: “today” is in the user’s time zone setting, and the note is filed under Journal. date (YYYY-MM-DD) picks another day; period \"weekly\" gives the weekly note of the week holding that day. Returns the note like read_note (with its baseVersion and headings); add to it with append_to_note, optionally under one of its headings.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "date": {
           "type": "string",
           "maxLength": 10,
-          "description": "A day as YYYY-MM-DD; today (in Ryan’s time zone) if omitted."
+          "description": "A day as YYYY-MM-DD; today (in the user’s time zone) if omitted."
         },
         "period": {
           "type": "string",
@@ -506,7 +506,7 @@
   {
     "name": "trash_note",
     "title": "Move a note to Trash",
-    "description": "Move a note to Trash, as deleting it in the app does. The note keeps its content and history and leaves the folder tree; Ryan can restore it in the app, or you can with restore_note, for 30 days, after which it is deleted for good. History shows the change under your name. Calling it for a note already in Trash changes nothing (alreadyInTrash: true). An agent moves at most 100 notes to Trash a day. You cannot delete a note for good: only Ryan can, in the app.",
+    "description": "Move a note to Trash, as deleting it in the app does. The note keeps its content and history and leaves the folder tree; the user can restore it in the app, or you can with restore_note, for 30 days, after which it is deleted for good. History shows the change under your name. Calling it for a note already in Trash changes nothing (alreadyInTrash: true). An agent moves at most 100 notes to Trash a day. You cannot delete a note for good: only the user can, in the app.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -692,7 +692,7 @@
   {
     "name": "delete_folder",
     "title": "Delete a folder",
-    "description": "Delete a folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. The folder goes to Trash, where Ryan can restore it with its subfolders and notes for 30 days, and the change is listed under your name in the app’s Agent activity, with an Undo. Deleting a folder that is already gone changes nothing (deleted: false). An agent deletes at most 25 folders a day.",
+    "description": "Delete a folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. The folder goes to Trash, where the user can restore it with its subfolders and notes for 30 days, and the change is listed under your name in the app’s Agent activity, with an Undo. Deleting a folder that is already gone changes nothing (deleted: false). An agent deletes at most 25 folders a day.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -841,7 +841,7 @@
   {
     "name": "get_settings",
     "title": "Get settings",
-    "description": "Ryan’s synced settings: theme.id, theme.mode, timeZone, template.daily, template.weekly, capture.destination, note.fullWidth, and his custom themes (theme.custom.<id>). A setting not listed has its default.",
+    "description": "The user’s synced settings: theme.id, theme.mode, timeZone, template.daily, template.weekly, capture.destination, note.fullWidth, and their custom themes (theme.custom.<id>). A setting not listed has its default.",
     "inputSchema": {
       "type": "object",
       "properties": {},
@@ -856,7 +856,7 @@
   {
     "name": "set_settings",
     "title": "Change settings",
-    "description": "Change settings as the apps do: set maps each key to its new value (null brings back the default). Pass base, the values get_settings gave you (null for unset), to be refused with setting_changed if one changed since; without base, the current values are used. Each value is checked with the apps’ rules (invalid_setting names the key). Setting a value it already has changes nothing. You may change theme.id, theme.mode, timeZone, template.daily, template.weekly, note.fullWidth and custom themes; where quick captures go is Ryan’s (setting_not_allowed). Ryan can undo each change in the app’s Agent activity.",
+    "description": "Change settings as the apps do: set maps each key to its new value (null brings back the default). Pass base, the values get_settings gave you (null for unset), to be refused with setting_changed if one changed since; without base, the current values are used. Each value is checked with the apps’ rules (invalid_setting names the key). Setting a value it already has changes nothing. You may change theme.id, theme.mode, timeZone, template.daily, template.weekly, note.fullWidth and custom themes; where quick captures go is the user’s (setting_not_allowed). The user can undo each change in the app’s Agent activity.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -883,7 +883,7 @@
   {
     "name": "rename_tag",
     "title": "Rename or merge a tag",
-    "description": "Rename a tag in every note that has it, nested tags included (projects/garden follows projects). Renaming to a tag that exists merges the two, so it needs merge: true (else tag_exists). Runs in the background, one version per note; Ryan can undo the whole rename in the app’s Agent activity (notes that had both tags keep the new one). Limits: at most 2,000 notes per rename, 10 renames a day per agent, 1,000 renamed notes a day for all agents together, and 2 agent renames waiting at a time (too_many_renames). Returns the notes it covers.",
+    "description": "Rename a tag in every note that has it, nested tags included (projects/garden follows projects). Renaming to a tag that exists merges the two, so it needs merge: true (else tag_exists). Runs in the background, one version per note; the user can undo the whole rename in the app’s Agent activity (notes that had both tags keep the new one). Limits: at most 2,000 notes per rename, 10 renames a day per agent, 1,000 renamed notes a day for all agents together, and 2 agent renames waiting at a time (too_many_renames). Returns the notes it covers.",
     "inputSchema": {
       "type": "object",
       "properties": {
