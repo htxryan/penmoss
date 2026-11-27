@@ -21,6 +21,8 @@ function fakeGitHub(login = 'htxryan') {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
     );
+    // As workerd: a fetch takes only `follow` or `manual`.
+    if (init?.redirect === 'error') throw new TypeError('Invalid redirect value');
     const auth = new Headers(init?.headers).get('authorization') ?? '';
     const path = url.pathname + url.search;
     asked.push(`${init?.method ?? 'GET'} ${path}`);

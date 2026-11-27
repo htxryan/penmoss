@@ -199,11 +199,7 @@ const repoRows = (repos: readonly RepoChoice[], pending: string | null, empty: s
         row(
           repo.fullName,
           repo.private === null ? 'GitHub App' : repo.private ? 'Private' : 'Public',
-          linkButton(
-            addLink('/notebooks/add/repo', { p: pending, r: repo.fullName }),
-            'Choose',
-            true,
-          ),
+          linkButton(addLink('/notebooks/add/repo', { p: pending, r: repo.fullName }), 'Choose'),
         ),
       )
     : [row(empty[0]!, empty[1]!)];

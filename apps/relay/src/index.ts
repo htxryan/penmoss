@@ -139,7 +139,9 @@ export class RelayNotebook extends DurableObject<Env> implements RelayStore {
   private browse(): GitHubBrowse {
     return new GitHubBrowse({
       api: this.basics().api,
-      fetch: (url, init) => fetch(url, init),
+      // Workers take only `follow` or `manual`: a redirect comes back as an answer GitHubBrowse
+      // refuses, so the token is still never carried to it.
+      fetch: (url, init) => fetch(url, { ...init, redirect: 'manual' }),
     });
   }
 
