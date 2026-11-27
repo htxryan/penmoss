@@ -306,24 +306,64 @@ export class GitHubBrowse {
   }
 
   /** The repositories the token reaches, most recently pushed first, at most [MAX_REPOS]. */
-  async repos(token: string): Promise<BrowseResult<RepoList>> {
+  repos(token: string): Promise<BrowseResult<RepoList>> {
+    return this.list(
+      `${this.api}/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&direction=desc&per_page=${PAGE}`,
+      token,
+      (body) => (Array.isArray(body) ? (body as ApiRepo[]) : null),
+      (repo) => repo,
+    );
+  }
+
+  /**
+   * The repositories a GitHub App installation's token reaches (`/installation/repositories`),
+   * most recently pushed first. The App writes to each (the relay's asks for contents: write,
+   * A1697), whatever the token asking was minted for.
+   */
+  async installed(token: string): Promise<BrowseResult<RepoList>> {
+    const listed = await this.list(
+      `${this.api}/installation/repositories?per_page=${PAGE}`,
+      token,
+      (body) => {
+        const repos = (body as { repositories?: unknown } | null)?.repositories;
+        return Array.isArray(repos) ? (repos as ApiRepo[]) : null;
+      },
+      (repo) => ({ ...repo, canPush: true }),
+    );
+    if (!listed.ok) return listed;
+    const pushed = (repo: GitHubRepo) => repo.pushedAt ?? '';
+    return {
+      ok: true,
+      value: {
+        ...listed.value,
+        repos: [...listed.value.repos].sort((a, b) => pushed(b).localeCompare(pushed(a))),
+      },
+    };
+  }
+
+  /** A paged list of repositories, at most [MAX_REPOS]. */
+  private async list(
+    first: string,
+    token: string,
+    itemsOf: (body: unknown) => ApiRepo[] | null,
+    shape: (repo: GitHubRepo) => GitHubRepo,
+  ): Promise<BrowseResult<RepoList>> {
     const repos: GitHubRepo[] = [];
-    let url: string | null =
-      `${this.api}/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&direction=desc&per_page=${PAGE}`;
+    let url: string | null = first;
     let pages = 0;
     while (url && pages < MAX_REPOS / PAGE) {
       const answer = await this.call(url, token);
       if (!answer.ok) return answer;
-      const body: unknown = await answer.response.json().catch(() => null);
-      if (!Array.isArray(body)) {
+      const items = itemsOf(await answer.response.json().catch(() => null));
+      if (!items) {
         return {
           ok: false,
           error: { reason: 'github', message: 'GitHub sent a list Penmoss cannot read.' },
         };
       }
-      for (const raw of body as ApiRepo[]) {
+      for (const raw of items) {
         const repo = repoOf(raw);
-        if (repo) repos.push(repo);
+        if (repo) repos.push(shape(repo));
       }
       pages += 1;
       url = nextLink(answer.response.headers.get('link'));

@@ -14,6 +14,7 @@ import { accountChoices } from './github-choices';
 import { useDeviceSignIn } from './device-sign-in';
 import { FIRST_RUN_DOCS, readHub, type Hub } from './first-run-flow';
 import { Action, Frame, LinkButton, Problem, Working } from './FirstRunFrame';
+import { hostWords } from './host-words';
 
 type Check =
   { readonly state: 'checking' } | { readonly state: 'failed'; readonly error: BrowseError };
@@ -243,7 +244,7 @@ export function GitHubAccess({
   if (check.state === 'checking') {
     return (
       <Frame name="github" state="checking" step={2} title="Checking GitHub" back={back}>
-        <Working>Looking for this Mac’s GitHub sign-in…</Working>
+        <Working>{hostWords().lookingForSignIn}</Working>
       </Frame>
     );
   }

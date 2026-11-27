@@ -9,6 +9,7 @@ import {
   type Setup,
 } from './first-run-flow';
 import { Action, Frame, MoreOptions, Problem, Working } from './FirstRunFrame';
+import { hostWords } from './host-words';
 
 /** Paste a URL (5.1–5.3): any repository this Mac's git can push to, asked of git itself. */
 export function PasteUrl({
@@ -108,13 +109,11 @@ export function PasteUrl({
               }}
             />
           </label>
-          {busy ? null : (
-            <p className="fr-lead fr-small">SSH or HTTPS, anywhere this Mac’s git can push to.</p>
-          )}
+          {busy ? null : <p className="fr-lead fr-small">{hostWords().urlHint}</p>}
           <MoreOptions branch={branch} dir={dir} onBranch={setBranch} onDir={setDir} />
         </fieldset>
       </form>
-      {busy ? <Working>Asking git about the repository…</Working> : null}
+      {busy ? <Working>{hostWords().urlChecking}</Working> : null}
       {problem ? <Problem testId="first-run-url-problem">{problem}</Problem> : null}
     </Frame>
   );

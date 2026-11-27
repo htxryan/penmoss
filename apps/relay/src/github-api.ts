@@ -62,7 +62,9 @@ export async function branchesOf(
 export async function notebookFileOf(
   call: GitHubCall,
   place: Place,
-): Promise<Answer<{ readonly name: string; readonly id: string }>> {
+): Promise<
+  Answer<{ readonly name: string; readonly id: string }> | { problem: string; missing: true }
+> {
   const path = `${place.root}.penmoss/notebook.json`;
   const where = `${place.repository} on ${place.branch}${place.root ? `, in ${place.root}` : ''}`;
   const file = await get(
@@ -74,6 +76,7 @@ export async function notebookFileOf(
     await file.body?.cancel();
     return {
       problem: `There’s no Penmoss notebook in ${where}: it has no .penmoss/notebook.json.`,
+      missing: true,
     };
   }
   if (!file.ok) {

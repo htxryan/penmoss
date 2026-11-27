@@ -20,9 +20,11 @@ import { Icon } from '@penmoss/ui/icons';
 import { GitHubSignIn } from '../sources/GitHubSignIn';
 import { accountsOf } from './github-accounts';
 import { GroupHead, SettingRow } from '../theme/look-rows';
-import { useFeedback, useOutbox, type FeedbackService } from './service';
+import { useFeedback, useOutbox } from './hooks';
+import type { FeedbackService } from './service';
 import { SettingsHeader } from '../pages/SettingsHeader';
 import { counted } from '@penmoss/core/words';
+import { hostWords } from '../sources/host-words';
 
 const REPO = `${FEEDBACK_REPO.owner}/${FEEDBACK_REPO.repo}`;
 
@@ -134,9 +136,11 @@ function GitHubSection({
                 <>
                   <span data-testid={at === 0 ? 'github-token-saved' : undefined}>
                     {[
-                      account.primary && accounts.length > 1 ? 'Send Feedback uses it' : null,
+                      account.primary && accounts.length > 1 && hostWords().feedback
+                        ? 'Send Feedback uses it'
+                        : null,
                       account.signedIn ? 'Signed In with GitHub' : 'Token Saved',
-                      'kept in this Mac’s Keychain',
+                      hostWords().accountsKept,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
@@ -193,8 +197,10 @@ function GitHubSection({
             help={
               <span data-testid="github-token-none">
                 {keychain
-                  ? 'Sign in to pick notebooks from your repositories and to send feedback.'
-                  : 'This Mac’s Keychain is not available, so no sign-in can be kept.'}
+                  ? hostWords().feedback
+                    ? 'Sign in to pick notebooks from your repositories and to send feedback.'
+                    : 'Sign in to pick notebooks from your repositories.'
+                  : hostWords().accountsCantKeep}
               </span>
             }
           />

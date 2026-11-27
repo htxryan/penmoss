@@ -26,3 +26,4 @@ docs/brand/source/
 packages/core/data/characters.json
 # The app's stylesheets as the relay carries them (scripts/app-css.mjs).
 apps/relay/src/app-css.gen.ts
+apps/relay/src/add-flow.gen.ts

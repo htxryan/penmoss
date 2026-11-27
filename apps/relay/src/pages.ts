@@ -49,7 +49,10 @@ const PAGE_CSS = `:root{${vars('light')};color-scheme:light}
 .relay-choices{display:flex;flex-wrap:wrap;gap:.75rem;font-size:var(--pm-text-row-label)}
 .relay-choice{display:inline-flex;align-items:center;gap:.35rem;cursor:pointer}
 .relay-foot{color:var(--pm-muted);font-size:var(--pm-text-help);padding-top:1rem}
-.relay-problem{border:1px solid var(--pm-border);border-left:3px solid var(--pm-danger);background:var(--pm-raised);padding:.75rem 1rem;display:grid;gap:.35rem}`;
+.relay-problem{border:1px solid var(--pm-border);border-left:3px solid var(--pm-danger);background:var(--pm-raised);padding:.75rem 1rem;display:grid;gap:.35rem}
+.relay-notice{border:1px solid var(--pm-border);border-left:3px solid var(--pm-success);background:var(--pm-raised);padding:.75rem 1rem}
+.relay-app-foot{padding:0 16px 2rem;text-align:center}
+.relay-app-foot .relay-foot{padding-top:0}`;
 
 export interface PageOptions {
   /** Origins a form on the page may post to, besides the relay itself. */
@@ -59,6 +62,11 @@ export interface PageOptions {
   readonly aside?: string;
   /** The hash of the page's one inline script, which its policy allows. */
   readonly scriptHash?: string;
+  /**
+   * The page is the app's Add Notebook (A1701): its body is the screens' root, with no title of
+   * the relay's, and its script (served by the relay itself) may call the relay.
+   */
+  readonly app?: boolean;
 }
 
 /** Every page's last line: which relay this is, and how to bring it up to date. */
@@ -66,16 +74,24 @@ const FOOT = `<p class="relay-foot">Penmoss Relay ${escape(relayVersion)} · <a 
 
 /** A page: `body` is HTML whose text the caller has escaped. */
 export function page(status: number, title: string, body: string, options: PageOptions = {}) {
+  const content = options.app
+    ? `${body}<div class="relay relay-app-foot">${FOOT}</div>`
+    : `<main class="relay"><div class="relay-head"><h1 class="t-page-title">${escape(title)}</h1>${options.aside ? `<span class="relay-who">${options.aside}</span>` : ''}</div>${body}${FOOT}</main>`;
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>${escape(title)}</title>
 <style>${APP_CSS}
 ${PAGE_CSS}</style>
-</head><body><main class="relay"><div class="relay-head"><h1 class="t-page-title">${escape(title)}</h1>${options.aside ? `<span class="relay-who">${options.aside}</span>` : ''}</div>${body}${FOOT}</main></body></html>`;
+</head><body>${content}</body></html>`;
   const formAction = ["'self'", ...(options.formAction ?? [])].join(' ');
+  const scripts = options.app
+    ? " script-src 'self'; connect-src 'self';"
+    : options.scriptHash
+      ? ` script-src ${options.scriptHash};`
+      : '';
   return new Response(html, {
     status,
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:;${options.scriptHash ? ` script-src ${options.scriptHash};` : ''} form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
+      'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:;${scripts} form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
       'x-frame-options': 'DENY',
       'cache-control': 'no-store',
       ...options.headers,

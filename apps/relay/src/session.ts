@@ -75,3 +75,16 @@ export function formIsOwn(request: Request, form: FormData, session: Session): b
     typeof token === 'string' && token.length === session.csrf.length && token === session.csrf
   );
 }
+
+/**
+ * Whether a call from the Add Notebook page's script is this session's own: from the relay's
+ * origin (the browser says so), with the session's form token in its header.
+ */
+export function callIsOwn(request: Request, session: Session): boolean {
+  const site = request.headers.get('sec-fetch-site');
+  if (site !== null && site !== 'same-origin') return false;
+  const origin = request.headers.get('origin');
+  if (origin !== null && origin !== 'null' && origin !== new URL(request.url).origin) return false;
+  const token = request.headers.get('x-penmoss-csrf');
+  return token !== null && token.length === session.csrf.length && token === session.csrf;
+}

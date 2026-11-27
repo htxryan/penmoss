@@ -1,7 +1,7 @@
 /**
  * The app's own stylesheets for the relay's pages (PEN-193, R12): the tokens, the type roles,
  * buttons and Settings Groups, as the Mac and the web show them. A Worker can't import CSS, so
- * this writes them into `src/app-css.gen.ts`; `test/app-css.test.ts` fails when it is stale.
+ * this writes them, and the first run's (Add Notebook), into `src/app-css.gen.ts`; `test/app-css.test.ts` fails when it is stale.
  *
  *   node scripts/app-css.mjs
  */
@@ -13,11 +13,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const web = join(here, '../../web/src');
 export const SOURCES = [
   'shell/base.css',
+  'shell/sr-only.css',
   'shell/type.css',
   'shell/shell.css',
   'shell/controls.css',
   'theme/look-settings.css',
   'pages/settings.css',
+  // Add Notebook's screens are the app's (A1701).
+  'sources/sources.css',
 ];
 export const OUT = join(here, '../src/app-css.gen.ts');
 

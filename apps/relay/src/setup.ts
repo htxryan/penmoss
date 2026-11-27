@@ -34,7 +34,7 @@ function steps(app: AppSummary | null, create: string) {
       )
     : row(
         'Create the GitHub App',
-        'GitHub opens with the App filled in: read and write access to contents, nothing else. Create it there and you come back here.',
+        'GitHub opens with the App filled in: read and write access to contents, and to make repositories for Add Notebook’s Create New Repo. Create it there and you come back here.',
         create,
         'li',
       );

@@ -7,8 +7,11 @@ import type { NotebookPlace, Place } from './config';
 import type { Blobs } from './storage';
 
 export interface StoredNotebook extends Place {
-  /** The notebook's own fine-grained token; absent for the App. */
+  /** The notebook's own token (a pasted one, or its account's); absent for the App. */
   readonly token?: string;
+  /** Its `notebook.json`'s id and name when it was added (A1701); absent before. */
+  readonly id?: string;
+  readonly name?: string;
 }
 
 const KEY = 'settings:notebooks';
