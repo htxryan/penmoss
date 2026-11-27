@@ -355,8 +355,14 @@ function TokenForm({
         </button>
       </span>
       <p id={`${id}-help`} className="muted settings-help">
-        A classic token with the public_repo scope or, as a collaborator, a fine-grained token for{' '}
-        {REPO} with Issues and Contents (read and write). It is never shown again.
+        {hostWords().feedback ? (
+          <>
+            A classic token with the public_repo scope or, as a collaborator, a fine-grained token
+            for {REPO} with Issues and Contents (read and write). It is never shown again.
+          </>
+        ) : (
+          'A fine-grained token with Contents (read and write) on your notebooks’ repositories, or a classic token with the repo scope. It is never shown again.'
+        )}
       </p>
     </form>
   );

@@ -56,7 +56,7 @@ export function relayCall(csrf: string): RelayCall {
 }
 
 /** The relay's notebook as the Mac's list has one. */
-export function notebookInfo(each: RelayNotebook): GitNotebookInfo {
+function notebookInfo(each: RelayNotebook): GitNotebookInfo {
   return {
     localId: each.notebookId,
     notebookId: each.notebookId,

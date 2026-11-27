@@ -106,7 +106,7 @@ const refuse = (code: string, message: string) => ({
 });
 
 /** `https://github.com/owner/name(.git)` or `git@github.com:owner/name(.git)` → `owner/name`. */
-export function githubRepoOf(address: string): string | null {
+function githubRepoOf(address: string): string | null {
   const match =
     /^(?:https:\/\/(?:www\.)?github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+?)(?:\.git)?\/?$/.exec(
       address.trim(),
@@ -114,7 +114,7 @@ export function githubRepoOf(address: string): string | null {
   return match ? match[1]! : null;
 }
 
-export function readOwnerToken(blobs: Blobs): OwnerToken | null {
+function readOwnerToken(blobs: Blobs): OwnerToken | null {
   const bytes = blobs.get(OWNER_TOKEN);
   return bytes ? (JSON.parse(decoder.decode(bytes)) as OwnerToken) : null;
 }

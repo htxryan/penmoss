@@ -265,6 +265,23 @@ describe('the relay’s Add Notebook (A1701)', () => {
     expect(added).toHaveBeenCalledWith('NB-NEW');
   });
 
+  it('takes a token for another account on the app’s GitHub Accounts, in the relay’s words', async () => {
+    const { calls } = await open();
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await settle();
+    await press('first-run-account-switcher');
+    await press('first-run-switch-manage');
+    expect(screen()).toBe('accounts');
+    expect(title()).toBe('GitHub Accounts');
+    expect($('github-token-input')).not.toBeNull();
+    expect($('github-token')?.textContent).toContain(
+      'A fine-grained token with Contents (read and write) on your notebooks’ repositories',
+    );
+    expect($('github-token')?.textContent).not.toContain('penmoss with Issues');
+    expect(calls).toContainEqual(['status']);
+  });
+
   it('cancels back to the Notebooks page', async () => {
     const { closed } = await open();
     await press('first-run-cancel');

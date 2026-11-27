@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const web = join(here, '../../web');
-export const ENTRY = join(web, 'src/relay/main.tsx');
+const ENTRY = join(web, 'src/relay/main.tsx');
 export const OUT = join(here, '../src/add-flow.gen.ts');
 
 /** Vite and React's plugin as apps/web has them, so the screens build as the app's do. */
