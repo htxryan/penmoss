@@ -37,7 +37,11 @@ export async function generate() {
     logLevel: 'error',
     mode: 'production',
     plugins: [react()],
-    define: { 'process.env.NODE_ENV': '"production"' },
+    define: {
+      'process.env.NODE_ENV': '"production"',
+      // One classic script has no import.meta: assets (the brand mark) resolve against the page.
+      'import.meta.url': 'document.baseURI',
+    },
     build: {
       write: false,
       minify: true,
