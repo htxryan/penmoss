@@ -17,7 +17,7 @@ You need:
 
 1. Open [htxryan/penmoss-relay](https://github.com/htxryan/penmoss-relay) and press **Deploy to Cloudflare**.
 2. Sign in to Cloudflare and connect your GitHub account when it asks. Cloudflare copies the relay into a repository of your own and deploys it from there.
-3. Under the settings, type your GitHub login as **OWNER_GITHUB_LOGIN**, such as `octocat`. Only that account can set the relay up, sign in to it and connect Claude. Leave the other settings as they are.
+3. Under the settings, **OWNER_GITHUB_LOGIN** starts as `your-github-login`. Replace all of it with your GitHub login, such as `octocat`. Only that account can set the relay up, sign in to it and connect Claude. Leave the other settings as they are.
 4. Press **Deploy**. When it finishes, open the relay's address, which ends in `workers.dev`.
 
 ## Set it up
@@ -76,6 +76,7 @@ To stop it, delete the Worker in Cloudflare's dashboard, and the App under your 
 ## If something goes wrong
 
 - **"This Relay Isn't Yours":** you signed in to GitHub as another account. Sign out of GitHub, then sign in as the owner you typed when you deployed.
+- **The wrong owner:** the relay's first page shows its owner at the top right. To change it, open the Worker in Cloudflare's dashboard, choose **Settings → Variables and Secrets**, and edit **OWNER_GITHUB_LOGIN**.
 - **"This Relay Isn't Set Up":** setup didn't finish. Open the relay's address and start again from **Create GitHub App…**.
 - **A notebook says it can't reach its repository:** install the App on that repository, or give the notebook a token with **Replace Token…**.
 - **Claude says the connector failed:** remove the connector in Claude and add it again with the address from the **Notebooks** page.

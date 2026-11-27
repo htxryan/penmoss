@@ -56,7 +56,7 @@ const define = () => ['--define', `RELAY_VERSION:${JSON.stringify(version())}`];
 const BINDINGS = {
   OWNER_GITHUB_LOGIN: {
     description:
-      'Your GitHub login, such as `octocat`. Only this account can set the relay up, sign in to it and connect Claude.',
+      'Replace `your-github-login` with your GitHub login, such as `octocat`. Only this account can set the relay up, sign in to it and connect Claude.',
   },
   AGENT_LABEL: {
     description: 'The writer’s name for Claude’s edits in History. Leave it as `claude.ai`.',
@@ -74,7 +74,7 @@ Lets Claude read and write your [Penmoss](https://penmoss.app) notebooks: on cla
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/htxryan/penmoss-relay)
 
-1. Press **Deploy to Cloudflare**, and type your GitHub login as \`OWNER_GITHUB_LOGIN\`.
+1. Press **Deploy to Cloudflare**, and replace \`your-github-login\` in \`OWNER_GITHUB_LOGIN\` with your GitHub login.
 2. Open the relay's address, then **Set Up This Relay**: it makes its GitHub App on your account, and you install it on your notebooks' repositories.
 3. Sign in, and add your notebooks on the **Notebooks** page.
 4. In Claude, add a custom connector with the address the Notebooks page shows.
