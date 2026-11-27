@@ -536,10 +536,10 @@ test.describe('the docs', () => {
     ]);
     await expect(nav.locator('details[open]')).toHaveCount(1);
     await expect(nav.locator('details[open] summary')).toHaveText('Get Started');
-    // 27 pages in all (34 before A1351, 26 before Time Machine, 27 before AI Descriptions, 28
-    // before the Time Machine went, PEN-190), but
+    // 28 pages in all (34 before A1351, 26 before Time Machine, 27 before AI Descriptions, 28
+    // before the Time Machine went, PEN-190, 27 before Use Penmoss in Claude, PEN-195), but
     // what shows is five section rows and Get Started's five pages.
-    await expect(nav.locator('a[href^="/docs/"]')).toHaveCount(27);
+    await expect(nav.locator('a[href^="/docs/"]')).toHaveCount(28);
     await expect(nav.getByRole('link')).toHaveText([
       'Introduction',
       'The Mac App',

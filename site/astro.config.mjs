@@ -83,6 +83,7 @@ export default defineConfig({
           items: [
             { label: 'How Agents Work', slug: 'docs/agents' },
             { label: 'Connect an Agent', slug: 'docs/agents/connect' },
+            { label: 'Use Penmoss in Claude', slug: 'docs/agents/claude-ai' },
             { label: 'Comments to Agents', slug: 'docs/agents/comments' },
             { label: 'Agent Activity', slug: 'docs/agents/activity' },
             { label: 'AI Descriptions', slug: 'docs/ai-descriptions' },

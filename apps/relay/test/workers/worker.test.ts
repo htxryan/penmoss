@@ -17,6 +17,7 @@ import {
   NotebookOps,
 } from '@penmoss/git-notebook';
 import { readConfig } from '../../src/config';
+import worker from '../../src/index';
 import { Relay } from '../../src/relay';
 import { SqlBlobs } from '../../src/storage';
 
@@ -137,6 +138,26 @@ describe('the relay Worker', () => {
       token_endpoint: `${ORIGIN}/token`,
       registration_endpoint: `${ORIGIN}/register`,
     });
+  });
+
+  it('shows which relay this is on every page, with how to update it (PEN-195)', async () => {
+    for (const path of ['/', '/setup', '/nowhere']) {
+      const text = await (await call(path)).text();
+      expect(text).toContain('Penmoss Relay development');
+      expect(text).toContain('href="https://penmoss.app/docs/agents/claude-ai/#update-your-relay"');
+    }
+  });
+
+  it('is its own OAuth resource at the address it was reached at, with no RELAY_ORIGIN (A1700)', async () => {
+    const generic: Partial<typeof env> = { ...env };
+    delete generic.RELAY_ORIGIN;
+    const at = 'https://penmoss-relay.someone.workers.dev';
+    const metadata = await worker.fetch(
+      new Request(`${at}/.well-known/oauth-protected-resource/mcp`),
+      generic as unknown as Parameters<typeof worker.fetch>[1],
+      { waitUntil() {}, passThroughOnException() {}, props: {} } as unknown as ExecutionContext,
+    );
+    expect(await metadata.json()).toMatchObject({ resource: `${at}/mcp` });
   });
 
   it('signs in the allowed account and reaches MCP with the token', async () => {

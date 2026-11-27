@@ -238,7 +238,11 @@ describe("the owner's pages", () => {
     expect((await post({})).status).toBe(403);
     expect((await post({ csrf: 'f'.repeat(48) })).status).toBe(403);
     expect((await post({ csrf }, { origin: 'https://evil.example' })).status).toBe(403);
-    const out = await post({ csrf }, { origin: ORIGIN });
+    expect((await post({ csrf }, { origin: 'null', 'sec-fetch-site': 'cross-site' })).status).toBe(
+      403,
+    );
+    // The pages' no-referrer policy makes a browser send `Origin: null` on their own forms.
+    const out = await post({ csrf }, { origin: 'null', 'sec-fetch-site': 'same-origin' });
     expect(out.status).toBe(303);
     expect(out.headers.get('set-cookie')).toMatch(/^penmoss_relay_session=; .*Max-Age=0/);
     const after = await (await call('/notebooks', { headers: { cookie: session } })).text();

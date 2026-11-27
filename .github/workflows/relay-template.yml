@@ -1,0 +1,84 @@
+# The relay anyone deploys (PEN-195, A1700). Cloudflare's Deploy to Cloudflare button builds one
+# public folder on its own, and the relay bundles packages from the rest of this monorepo, so a
+# push to main that changes the relay, or a package it bundles, builds the self-contained template
+# (apps/relay/scripts/build.mjs) and commits it to htxryan/penmoss-relay, which the button and the
+# user docs point at. The commit names the source commit and this build. Nothing is pushed when
+# the template didn't change.
+name: Relay template
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/relay/**'
+      - 'packages/core/**'
+      - 'packages/git-notebook/**'
+      - 'packages/model/**'
+      - 'packages/ui/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/relay-template.yml'
+      - '.github/actions/setup/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: relay-template
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+
+jobs:
+  publish:
+    name: Publish the relay's template
+    # A1235: a hosted runner. The deploy key is an environment secret limited to main, and this
+    # workflow never runs on a pull request, so no fork's code ever sees it. It can write to
+    # htxryan/penmoss-relay alone.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: relay-template
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Build the template and dry-run it alone
+        run: task relay:template -- "$RUNNER_TEMP/relay-template"
+
+      - name: Commit it to htxryan/penmoss-relay
+        env:
+          DEPLOY_KEY: ${{ secrets.RELAY_TEMPLATE_DEPLOY_KEY }}
+          SHA: ${{ github.sha }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo '::error::RELAY_TEMPLATE_DEPLOY_KEY is not set in the relay-template environment (docs/relay.md, The template).'
+            exit 1
+          fi
+          key="$RUNNER_TEMP/deploy-key"
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          chmod 600 "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          repo="$RUNNER_TEMP/penmoss-relay"
+          git clone --depth 1 git@github.com:htxryan/penmoss-relay.git "$repo" 2>&1 ||
+            { git init -b main "$repo" && git -C "$repo" remote add origin git@github.com:htxryan/penmoss-relay.git; }
+          find "$repo" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "$RUNNER_TEMP/relay-template/." "$repo/"
+          cd "$repo"
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'The template is unchanged: nothing to publish.'
+            exit 0
+          fi
+          version="$(sed -n 's/^This is version \(.*\)\. It is built.*/\1/p' README.md)"
+          git -c user.name='Penmoss CI' -c user.email='penmoss-ci@users.noreply.github.com' \
+            commit -q -m "Penmoss Relay $version" \
+            -m "Built from htxryan/penmoss@$SHA (apps/relay), build $BUILD: $RUN"
+          git push origin HEAD:main
+          rm -f "$key"
