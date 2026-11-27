@@ -8,6 +8,7 @@
  * notes that GitHub does not: each copy is a cache, rebuilt from its repository.
  */
 import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
+import { GitHubBrowse } from '@penmoss/git-notebook/github-browse';
 import { DurableObject } from 'cloudflare:workers';
 import { credentialsOf, keepApp, readApp, summaryOf, type AppSummary, type StoredApp } from './app';
 import {
@@ -23,7 +24,7 @@ import { branchesOf, notebookFileOf, type GitHubCall } from './github-api';
 import { placesOf, readNotebookList, writeNotebookList } from './notebook-list';
 import { randomId } from './session';
 import { loginHandler, storeOf, type GrantProps, type LoginEnv, type RelayStore } from './login';
-import type { NotebookRow } from './notebooks';
+import type { FoundNotebook, NotebookRow, RepoChoice } from './notebooks';
 import { prefixOf, Relay } from './relay';
 import { PrefixedBlobs, SqlBlobs } from './storage';
 
@@ -34,8 +35,12 @@ export interface Env extends LoginEnv, RelaySettings {
 
 type Answer<T> = T | { readonly problem: string };
 
-/** How long step one of Add Notebook… is kept for step two. */
+/** How long a token pasted into Add Notebook… is kept for its next steps, from its last use. */
 const PENDING_ADD_MS = 15 * 60_000;
+const PENDING = 'pending-add:';
+
+/** How many branches Add Notebook… looks on for notebooks, the default first. */
+const SCAN_BRANCHES = 8;
 
 export class RelayNotebook extends DurableObject<Env> implements RelayStore {
   private readonly blobs: SqlBlobs;
@@ -125,57 +130,175 @@ export class RelayNotebook extends DurableObject<Env> implements RelayStore {
     return 'problem' in relay ? [] : relay.rows();
   }
 
-  async reachable(): Promise<readonly string[]> {
+  /** Where the App can be installed on more repositories, or null without an App. */
+  installUrl(): Promise<string | null> {
     const app = readApp(this.blobs);
-    if (!app) return [];
-    const basics = this.basics();
-    const tokens = new AppTokens({
-      app: credentialsOf(app),
-      api: basics.api,
-      fetch: (input, init) => fetch(input, init),
-    });
-    return tokens.repositories().catch(() => []);
+    return Promise.resolve(app ? `${app.htmlUrl.replace(/\/+$/, '')}/installations/new` : null);
   }
 
-  async startAdd(input: {
-    readonly repository: string;
-    readonly token: string | null;
-  }): Promise<Answer<{ pending: string; repository: string; branches: readonly string[] }>> {
-    const place = checkPlace(input.repository, 'main', '');
+  private browse(): GitHubBrowse {
+    return new GitHubBrowse({
+      api: this.basics().api,
+      // Workers take only `follow` or `manual`: a redirect comes back as an answer GitHubBrowse
+      // refuses, so the token is still never carried to it.
+      fetch: (url, init) => fetch(url, { ...init, redirect: 'manual' }),
+    });
+  }
+
+  private appTokens(): AppTokens | null {
+    const app = readApp(this.blobs);
+    if (!app) return null;
+    return new AppTokens({
+      app: credentialsOf(app),
+      api: this.basics().api,
+      fetch: (input, init) => fetch(input, init),
+    });
+  }
+
+  /** The token a pending Add Notebook… holds, kept another while; null for the App. */
+  private tokenOf(pending: string | null): Answer<string | null> {
+    if (pending === null) return null;
+    const key = `${PENDING}${pending}`;
+    const bytes = /^[0-9a-f]{48}$/.test(pending) ? this.blobs.get(key) : null;
+    const held = bytes
+      ? (JSON.parse(new TextDecoder().decode(bytes)) as { token: string; at: number })
+      : null;
+    if (!held || Date.now() - held.at > PENDING_ADD_MS) {
+      if (bytes) this.blobs.delete(key);
+      return { problem: 'This was started too long ago. Paste the token again.' };
+    }
+    this.blobs.put(
+      key,
+      new TextEncoder().encode(JSON.stringify({ token: held.token, at: Date.now() })),
+    );
+    return held.token;
+  }
+
+  /** A token to read `repository` with: the pending one, or the App's for that repository. */
+  private async readToken(pending: string | null, repository: string): Promise<Answer<string>> {
+    const token = this.tokenOf(pending);
+    if (token !== null) return token;
+    const tokens = this.appTokens();
+    if (!tokens) return { problem: 'Set up the relay’s GitHub App first.' };
+    try {
+      return await tokens.token(repository);
+    } catch {
+      return {
+        problem: `The App isn’t installed on ${repository}. Install it there, or use a token.`,
+      };
+    }
+  }
+
+  /** Step one with a token: checked with GitHub, then kept for the next steps, never shown. */
+  async startToken(token: string): Promise<Answer<{ pending: string }>> {
+    const pasted = token.trim();
+    if (!pasted) return { problem: 'Paste a token first.' };
+    const listed = await this.browse().repos(pasted);
+    if (!listed.ok) {
+      return {
+        problem:
+          listed.error.reason === 'unauthorized'
+            ? 'GitHub refused this token. Check that it’s whole and hasn’t expired.'
+            : listed.error.message,
+      };
+    }
+    const now = Date.now();
+    for (const key of this.blobs.keys(PENDING)) {
+      const held = this.blobs.get(key);
+      const at = held ? (JSON.parse(new TextDecoder().decode(held)) as { at: number }).at : 0;
+      if (now - at > PENDING_ADD_MS) this.blobs.delete(key);
+    }
+    const pending = randomId();
+    this.blobs.put(
+      `${PENDING}${pending}`,
+      new TextEncoder().encode(JSON.stringify({ token: pasted, at: now })),
+    );
+    return { pending };
+  }
+
+  /** The repositories Add Notebook… offers: the App's, or the pending token's it can write. */
+  async repoChoices(
+    pending: string | null,
+  ): Promise<Answer<{ repos: readonly RepoChoice[]; more: boolean }>> {
+    const token = this.tokenOf(pending);
+    if (token !== null && typeof token === 'object') return token;
+    if (token === null) {
+      const tokens = this.appTokens();
+      if (!tokens) return { problem: 'Set up the relay’s GitHub App first.' };
+      const names = await tokens.repositories().catch(() => [] as string[]);
+      return {
+        repos: [...names].sort().map((fullName) => ({ fullName, private: null })),
+        more: false,
+      };
+    }
+    const listed = await this.browse().repos(token);
+    if (!listed.ok) return { problem: listed.error.message };
+    return {
+      repos: listed.value.repos
+        .filter((repo) => repo.canPush)
+        .map((repo) => ({ fullName: repo.fullName, private: repo.visibility !== 'public' })),
+      more: listed.value.more,
+    };
+  }
+
+  /**
+   * The notebooks in a repository: on `branch`, or on its first branches, the default first. Each
+   * says whether the relay serves it already.
+   */
+  async notebooksIn(
+    pending: string | null,
+    repository: string,
+    branch: string | null,
+  ): Promise<
+    Answer<{
+      repository: string;
+      branches: readonly string[];
+      looked: readonly string[];
+      found: readonly FoundNotebook[];
+    }>
+  > {
+    const place = checkPlace(repository, branch ?? 'main', '');
     if ('problem' in place) return place;
-    const github = this.github(place.repository, input.token);
+    const token = await this.readToken(pending, place.repository);
+    if (typeof token === 'object') return token;
+    const github = this.github(place.repository, token);
     if ('problem' in github) return github;
     const branches = await branchesOf(github, place.repository);
     if ('problem' in branches) return branches;
-    const pending = randomId();
-    this.blobs.put(
-      `pending-add:${pending}`,
-      new TextEncoder().encode(
-        JSON.stringify({ repository: place.repository, token: input.token, at: Date.now() }),
-      ),
-    );
-    return { pending, repository: place.repository, branches };
+    if (branch !== null && !branches.includes(place.branch)) {
+      return { problem: `${place.repository} has no branch “${place.branch}”.` };
+    }
+    const looked = branch !== null ? [place.branch] : branches.slice(0, SCAN_BRANCHES);
+    const served = new Set(readNotebookList(this.blobs).map((each) => placeKey(each)));
+    const browse = this.browse();
+    const found: FoundNotebook[] = [];
+    for (const each of looked) {
+      const read = await browse.folders(token, place.repository, each);
+      if (!read.ok) return { problem: read.error.message };
+      for (const folder of read.value.folders) {
+        if (!folder.notebook) continue;
+        const root = folder.path ? `${folder.path}/` : '';
+        found.push({
+          name: folder.notebook.name,
+          branch: each,
+          folder: folder.path,
+          served: served.has(placeKey({ repository: place.repository, branch: each, root })),
+        });
+      }
+    }
+    return { repository: place.repository, branches, looked, found };
   }
 
+  /** The last step: the notebook at that place added, by its name. */
   async finishAdd(
-    pending: string,
+    pending: string | null,
+    repository: string,
     branch: string,
     folder: string,
   ): Promise<Answer<{ name: string }>> {
-    const key = `pending-add:${pending}`;
-    const bytes = /^[0-9a-f]{48}$/.test(pending) ? this.blobs.get(key) : null;
-    const started = bytes
-      ? (JSON.parse(new TextDecoder().decode(bytes)) as {
-          repository: string;
-          token: string | null;
-          at: number;
-        })
-      : null;
-    if (!started || Date.now() - started.at > PENDING_ADD_MS) {
-      if (bytes) this.blobs.delete(key);
-      return { problem: 'This was started too long ago. Start again.' };
-    }
-    const place = checkPlace(started.repository, branch, folder);
+    const token = this.tokenOf(pending);
+    if (token !== null && typeof token === 'object') return token;
+    const place = checkPlace(repository, branch, folder);
     if ('problem' in place) return place;
     const list = readNotebookList(this.blobs);
     if (list.some((each) => placeKey(each) === placeKey(place))) {
@@ -183,15 +306,11 @@ export class RelayNotebook extends DurableObject<Env> implements RelayStore {
         problem: `${place.repository} on ${place.branch}${place.root ? `, in ${place.root}` : ''}, is served already.`,
       };
     }
-    const github = this.github(place.repository, started.token);
+    const github = this.github(place.repository, token);
     if ('problem' in github) return github;
     const file = await notebookFileOf(github, place);
     if ('problem' in file) return file;
-    writeNotebookList(this.blobs, [
-      ...list,
-      { ...place, ...(started.token ? { token: started.token } : {}) },
-    ]);
-    this.blobs.delete(key);
+    writeNotebookList(this.blobs, [...list, { ...place, ...(token ? { token } : {}) }]);
     this.built = null;
     return { name: file.name };
   }

@@ -44,8 +44,8 @@ Then choose **Install on GitHub…**, pick **Only select repositories**, and cho
 
 **Sign In with GitHub** on the setup page, or open `https://mcp.penmoss.app/notebooks`, signed in as the owner (A1698). The Notebooks page lists what the relay serves, when each notebook last synced, and the connector's address (A1699).
 
-- **Add Notebook…**: the repository (those the App is installed on are offered), and **GitHub App** or **Token**; then its branch (the default first) and its folder, empty for the top. The relay adds it only when it can read the notebook's `.penmoss/notebook.json` there.
-- A notebook in a repository the App can't be installed on (an organisation's, say) uses **Token**: a fine-grained personal access token limited to that repository, with **Contents: Read and write**. The page shows only its last four characters; **Replace Token…** changes it.
+- **Add Notebook…** is the app's add flow (A1164, A1701): it lists the repositories the App is installed on (with **Install on More Repositories…**), or those a pasted token can write to. Choosing one makes the relay read the trees of its first 8 branches, the default first, with `GitHubBrowse` (`packages/git-notebook`) and list every notebook found, by its branch and folder; **Add** adds it once its `.penmoss/notebook.json` reads. **Look There** looks on another branch. Nothing is typed but a token.
+- A notebook in a repository the App can't be installed on (an organisation's, say) uses a token: a fine-grained personal access token limited to that repository, with **Contents: Read and write**. It is kept for 15 minutes between the steps, then with the notebook; the page shows only its last four characters, and **Replace Token…** changes it.
 - **Remove…** asks first. The notes stay in the repository; the relay pushes Claude's unpushed edits, then deletes its copy.
 
 ### 4. Connect claude.ai
