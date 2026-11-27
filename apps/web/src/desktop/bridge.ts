@@ -305,6 +305,12 @@ export interface DesktopGitHubBrowse {
     branch: string,
     account?: GitHubAccountChoice,
   ): Promise<GitHubAnswer<RepoFolders> | null>;
+  /** A repository's branches for Pick Branch (A1621): the default first, then by name. */
+  branches(
+    fullName: string,
+    defaultBranch: string,
+    account?: GitHubAccountChoice,
+  ): Promise<GitHubAnswer<readonly string[]> | null>;
   owners(account?: GitHubAccountChoice): Promise<GitHubAnswer<readonly GitHubOwner[]> | null>;
   /** Makes an empty private repository; only just after a click. */
   create(

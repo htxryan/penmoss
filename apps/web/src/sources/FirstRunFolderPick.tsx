@@ -12,6 +12,7 @@ export function FolderPick({
   via,
   folders,
   beside = false,
+  branch,
   onName,
   back,
 }: {
@@ -20,6 +21,8 @@ export function FolderPick({
   folders: RepoFolders;
   /** Another notebook beside the ones the repository holds (4.7's Start Another). */
   beside?: boolean;
+  /** The branch these folders are on (Pick Branch, A1621). */
+  branch: string;
   onName: (place: Place) => void;
   back: () => void;
 }) {
@@ -34,7 +37,6 @@ export function FolderPick({
   const [chosen, setChosen] = useState<string>(() => free[0] ?? '');
   const [newName, setNewName] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
-  const branch = repo.defaultBranch || 'main';
 
   const addFolder = () => {
     const words = folderNameProblem(newName);
@@ -62,7 +64,7 @@ export function FolderPick({
           primary
           disabled={free.length === 0}
           testId="first-run-continue"
-          onClick={() => onName(placeIn(repo, via, chosen))}
+          onClick={() => onName(placeIn(repo, via, chosen, branch))}
         >
           Continue
         </Action>

@@ -33,6 +33,7 @@ import {
   asAccount,
   FIRST_RUN_DOCS,
   placeIn,
+  readKey,
   type AddNotebook,
   type Goal,
   type Hub,
@@ -43,6 +44,7 @@ import { Action, Frame, Options } from './FirstRunFrame';
 import { GitHubAccess } from './FirstRunGitHub';
 import { AccountSwitcher } from './FirstRunAccountSwitcher';
 import { CreateRepo } from './FirstRunCreateRepo';
+import { BranchPick } from './FirstRunBranchPick';
 import { FolderPick } from './FirstRunFolderPick';
 import { GitMissing } from './FirstRunGitMissing';
 import { NameNotebook } from './FirstRunNameNotebook';
@@ -314,12 +316,13 @@ function NotebookSteps({
 
   /** One repository's folders, read once (again on Try Again or Refresh). */
   const read = useCallback(
-    (repo: GitHubRepo, again = false) => {
-      if (!again && asked.current.has(repo.fullName)) return;
-      asked.current.add(repo.fullName);
-      setReads((now) => new Map(now).set(repo.fullName, { state: 'loading' }));
+    (repo: GitHubRepo, again = false, branch = repo.defaultBranch || 'main') => {
+      const key = readKey(repo, branch);
+      if (!again && asked.current.has(key)) return;
+      asked.current.add(key);
+      setReads((now) => new Map(now).set(key, { state: 'loading' }));
       void browse
-        .folders(repo.fullName, repo.defaultBranch || 'main')
+        .folders(repo.fullName, branch)
         .catch(() => null)
         .then((answer) => {
           const loaded: RepoRead = !answer
@@ -327,7 +330,7 @@ function NotebookSteps({
             : !answer.ok
               ? { state: 'failed', message: answer.error.message }
               : { state: 'ready', folders: answer.value };
-          setReads((now) => new Map(now).set(repo.fullName, loaded));
+          setReads((now) => new Map(now).set(key, loaded));
         });
     },
     [browse],
@@ -519,7 +522,7 @@ function NotebookSteps({
           added={added}
           reads={reads}
           read={read}
-          onRepo={(repo) => go({ at: 'repo', repo })}
+          onRepo={(repo) => go({ at: 'branch', repo })}
           onOpen={(repo, folder) =>
             go({
               at: 'setup',
@@ -538,24 +541,39 @@ function NotebookSteps({
         />
       ) : null;
       break;
+    case 'branch': {
+      const repo = screen.repo;
+      body = hub ? (
+        <BranchPick
+          repo={repo}
+          browse={browse}
+          // One branch, or none yet: nothing to pick, so straight on to its folders.
+          onOnly={(branch) => replace({ at: 'repo', repo, branch })}
+          onPick={(branch) => go({ at: 'repo', repo, branch })}
+          back={back}
+        />
+      ) : null;
+      break;
+    }
     case 'repo':
       body = hub ? (
         <RepoPicked
           repo={screen.repo}
+          branch={screen.branch}
           via={hub.via}
           added={added}
-          loaded={reads.get(screen.repo.fullName)}
+          loaded={reads.get(readKey(screen.repo, screen.branch))}
           read={read}
           onOpen={(place, name) => go({ at: 'setup', setup: { kind: 'open', place, name } })}
           onName={(place) => go({ at: 'name', place })}
-          onFolder={() => go({ at: 'folder', repo: screen.repo })}
+          onFolder={() => go({ at: 'folder', repo: screen.repo, branch: screen.branch })}
           onUrl={() => go({ at: 'url' })}
           back={back}
         />
       ) : null;
       break;
     case 'folder': {
-      const loaded = reads.get(screen.repo.fullName);
+      const loaded = reads.get(readKey(screen.repo, screen.branch));
       body =
         hub && loaded?.state === 'ready' ? (
           <FolderPick
@@ -563,6 +581,7 @@ function NotebookSteps({
             via={hub.via}
             folders={loaded.folders}
             beside
+            branch={screen.branch}
             onName={(place) => go({ at: 'name', place })}
             back={back}
           />

@@ -26,6 +26,8 @@ export interface FakeBrowseRepo {
    */
   readonly files?:
     Readonly<Record<string, string>> | null | (() => Readonly<Record<string, string>> | null);
+  /** Other branches' files (name → path → text), beside the default branch's `files` (A1621). */
+  readonly branches?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** GitHub's `size`; default 0 for an empty one, else 1. */
   readonly size?: number;
   readonly truncated?: boolean;
@@ -260,13 +262,30 @@ export class FakeGitHubBrowse {
       this.repos.push(repo);
       return json(201, this.apiRepo(repo));
     }
+    const branches = /^\/repos\/([^/]+)\/([^/]+)\/branches$/.exec(path);
+    if (method === 'GET' && branches) {
+      const repo = this.repos.find(
+        (each) => each.owner === branches[1] && each.name === branches[2],
+      );
+      if (!repo) return json(404, { message: 'Not Found' });
+      const names = [
+        ...(this.filesOf(repo) ? [repo.defaultBranch ?? 'main'] : []),
+        ...Object.keys(repo.branches ?? {}),
+      ];
+      return json(
+        200,
+        names.map((name) => ({ name, commit: { sha: sha(`branch:${name}`) } })),
+      );
+    }
     const tree = /^\/repos\/([^/]+)\/([^/]+)\/git\/trees\/(.+)$/.exec(path);
     if (method === 'GET' && tree) {
       const repo = this.repos.find((each) => each.owner === tree[1] && each.name === tree[2]);
       if (!repo) return json(404, { message: 'Not Found' });
-      const files = this.filesOf(repo);
+      const asked = decodeURIComponent(tree[3]!);
+      const other = repo.branches?.[asked];
+      const files = other ?? this.filesOf(repo);
       if (!files) return json(409, { message: 'Git Repository is empty.' });
-      if (decodeURIComponent(tree[3]!) !== (repo.defaultBranch ?? 'main'))
+      if (!other && asked !== (repo.defaultBranch ?? 'main'))
         return json(404, { message: 'Not Found' });
       const entries: Array<{ path: string; type: string; sha: string }> = [];
       const dirs = new Set<string>();

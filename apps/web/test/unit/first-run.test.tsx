@@ -67,7 +67,10 @@ const repo = (name: string, extra: Partial<GitHubRepo> = {}): GitHubRepo => ({
 function github(
   options: {
     repos?: GitHubAnswer<RepoList>;
+    /** By `owner/name`, or `owner/name@branch` for another branch's (A1621). */
     folders?: Record<string, RepoFolders>;
+    /** Each repository's branches (A1621); left out, only its default, so Pick Branch goes on. */
+    branches?: Record<string, readonly string[]>;
   } = {},
 ) {
   const calls: unknown[][] = [];
@@ -83,11 +86,20 @@ function github(
       return Promise.resolve({
         ok: true,
         via: 'git',
-        value: options.folders?.[fullName] ?? {
-          empty: false,
-          truncated: false,
-          folders: [{ path: '', notebook: null }],
-        },
+        value: options.folders?.[`${fullName}@${branch}`] ??
+          options.folders?.[fullName] ?? {
+            empty: false,
+            truncated: false,
+            folders: [{ path: '', notebook: null }],
+          },
+      });
+    },
+    branches: (fullName, defaultBranch) => {
+      calls.push(['branches', fullName, defaultBranch]);
+      return Promise.resolve({
+        ok: true,
+        via: 'git',
+        value: options.branches?.[fullName] ?? [defaultBranch],
       });
     },
     owners: () =>
@@ -798,6 +810,73 @@ describe('the first run (A1030, First Run C)', () => {
     expect($('first-run-open')?.textContent).toBe('Open Personal');
     // At the root, so there is no folder beside it for another.
     expect($('first-run-another')).toBeNull();
+  });
+
+  it('asks Pick Branch for a repository of several branches, with a filter past eight (A1621)', async () => {
+    const many = ['main', ...Array.from({ length: 9 }, (_, i) => `feature-${i + 1}`), 'dev'];
+    const { browse, calls } = github({
+      repos: { ok: true, via: 'git', value: { more: false, repos: [repo('scratch')] } },
+      branches: { 'ryan/scratch': many },
+      folders: {
+        'ryan/scratch@dev': {
+          empty: false,
+          truncated: false,
+          folders: [
+            { path: '', notebook: null },
+            { path: 'penmoss', notebook: { id: '01JBNOTEBOOK00000000000077', name: 'Quanta' } },
+          ],
+        },
+      },
+    });
+    await start(browse);
+    await press('first-run-start');
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await press($$('first-run-repo-pick')[0]!);
+    await vi.waitFor(() => expect(screen()).toBe('branch'));
+    expect(host.querySelector('h2')?.textContent).toBe('Pick Branch');
+    expect($$('first-run-pick-branch')).toHaveLength(11);
+    await type('first-run-branch-filter', 'DE');
+    expect(
+      $$('first-run-pick-branch').map((each) => each.querySelector('strong')?.textContent),
+    ).toEqual(['dev']);
+    act(() => $$('first-run-pick-branch')[0]!.querySelector('input')!.click());
+    await settle();
+    await press('first-run-continue');
+    await vi.waitFor(() =>
+      expect(host.querySelector('h2')?.textContent).toBe('Quanta Is Already Here'),
+    );
+    expect(calls).toContainEqual(['folders', 'ryan/scratch', 'dev']);
+    // Back from the repository goes to Pick Branch, not past it.
+    await press('first-run-back');
+    expect(screen()).toBe('branch');
+  });
+
+  it('goes straight to the folders of a repository with one branch, and offers the default when branches can’t be read', async () => {
+    const { browse, calls } = github({
+      repos: { ok: true, via: 'git', value: { more: false, repos: [repo('kept')] } },
+    });
+    await start(browse);
+    await press('first-run-start');
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await press($$('first-run-repo-pick')[0]!);
+    await vi.waitFor(() => expect(screen()).toBe('folder'));
+    expect(calls).toContainEqual(['branches', 'ryan/kept', 'main']);
+    // One branch: Back goes to the list, since Pick Branch was never shown.
+    await press('first-run-back');
+    expect(screen()).toBe('list');
+
+    browse.branches = () =>
+      Promise.resolve({ ok: false, error: { reason: 'offline', message: 'Can’t reach GitHub.' } });
+    await press($$('first-run-repo-pick')[0]!);
+    await vi.waitFor(() => expect($('first-run-branch-problem')).not.toBeNull());
+    expect($('first-run-branch-problem')?.textContent).toContain('Can’t reach GitHub.');
+    expect($('first-run-branch-default')?.textContent).toBe('Use main');
+    await press('first-run-branch-default');
+    await vi.waitFor(() => expect(screen()).toBe('folder'));
   });
 
   it('with no GitHub sign-in in git, offers Paste a URL Instead', async () => {

@@ -12,6 +12,9 @@ export function registerGitHubIpc(ipc: IpcHandlers): void {
   ipc.handle('gitGithubFolders', (_call, fullName, branch, account) =>
     githubBrowse.folders(fullName, branch, account),
   );
+  ipc.handle('gitGithubBranches', (_call, fullName, defaultBranch, account) =>
+    githubBrowse.branches(fullName, defaultBranch, account),
+  );
   ipc.handle('gitGithubOwners', (_call, account) => githubBrowse.owners(account));
   ipc.handle('gitGithubCreate', (_call, owner, name, account) =>
     githubBrowse.create(owner, name, account),

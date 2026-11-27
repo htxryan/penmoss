@@ -265,6 +265,18 @@ export class AddBridge {
     return read.ok ? { ...read, via: account === undefined ? 'git' : 'penmoss' } : read;
   }
 
+  /** Pick Branch's branches (A1621), read as `folders` reads. */
+  async branches(
+    fullName: string,
+    defaultBranch: string,
+    account?: string | null,
+  ): Promise<GitHubAnswer<readonly string[]>> {
+    const token = await this.readToken(fullName, account);
+    if (typeof token !== 'string') return token;
+    const read = await this.options.browse.branches(token, fullName, defaultBranch);
+    return read.ok ? { ...read, via: account === undefined ? 'git' : 'penmoss' } : read;
+  }
+
   async owners(account?: string | null): Promise<GitHubAnswer<readonly GitHubOwner[]>> {
     if (account !== undefined) {
       const token = this.tokenOf(account);

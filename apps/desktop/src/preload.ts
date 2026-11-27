@@ -112,6 +112,8 @@ const git = {
     repos: (account) => invoke('gitGithubRepos', accountArg(account)),
     folders: (fullName, branch, account) =>
       invoke('gitGithubFolders', String(fullName), String(branch), accountArg(account)),
+    branches: (fullName, defaultBranch, account) =>
+      invoke('gitGithubBranches', String(fullName), String(defaultBranch), accountArg(account)),
     owners: (account) => invoke('gitGithubOwners', accountArg(account)),
     create: (owner, name, account) =>
       invoke(
