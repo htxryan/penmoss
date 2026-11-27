@@ -50,7 +50,6 @@ const PAGE_CSS = `:root{${vars('light')};color-scheme:light}
 .relay-choice{display:inline-flex;align-items:center;gap:.35rem;cursor:pointer}
 .relay-foot{color:var(--pm-muted);font-size:var(--pm-text-help);padding-top:1rem}
 .relay-problem{border:1px solid var(--pm-border);border-left:3px solid var(--pm-danger);background:var(--pm-raised);padding:.75rem 1rem;display:grid;gap:.35rem}
-.relay-notice{border:1px solid var(--pm-border);border-left:3px solid var(--pm-success);background:var(--pm-raised);padding:.75rem 1rem}
 .relay-app-foot{padding:0 16px 2rem;text-align:center}
 .relay-app-foot .relay-foot{padding-top:0}`;
 

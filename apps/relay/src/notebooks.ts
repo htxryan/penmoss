@@ -123,7 +123,7 @@ async function listPage(
     200,
     'Notebooks',
     (added
-      ? `<p class="relay-notice t-body" role="status">Added ${escape(added)}. Claude can use it now.</p>`
+      ? `<div role="status" class="toast-stack"><p class="toast"><span class="toast-text">Added ${escape(added)}. Claude can use it now.</span></p></div>`
       : '') +
       para(
         'Claude reaches these notebooks through this relay. In Claude, add a custom connector with the address below.',

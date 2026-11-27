@@ -3,6 +3,8 @@
  * branches (the default first), and the notebook's own `.penmoss/notebook.json` there. Each answer
  * is a value or a sentence the page shows.
  */
+import { encodeNotebookInfo, RENDER_VERSION } from '@penmoss/git-notebook';
+import { Layout } from '@penmoss/git-notebook/layout';
 import type { Place } from './config';
 
 export interface GitHubCall {
@@ -20,7 +22,13 @@ const headers = (token: string) => ({
   'user-agent': 'penmoss-relay',
 });
 
-async function get(call: GitHubCall, path: string): Promise<Response | { problem: string }> {
+async function send(
+  call: GitHubCall,
+  path: string,
+  init: { readonly method: 'GET' } | { readonly method: 'PUT'; readonly body: unknown } = {
+    method: 'GET',
+  },
+): Promise<Response | { problem: string }> {
   let token: string;
   try {
     token = await call.token();
@@ -28,11 +36,29 @@ async function get(call: GitHubCall, path: string): Promise<Response | { problem
     return { problem: error instanceof Error ? error.message : String(error) };
   }
   try {
-    return await call.fetch(`${call.api}${path}`, { headers: headers(token) });
+    return await call.fetch(
+      `${call.api}${path}`,
+      init.method === 'GET'
+        ? { headers: headers(token) }
+        : {
+            method: init.method,
+            headers: { ...headers(token), 'content-type': 'application/json' },
+            body: JSON.stringify(init.body),
+          },
+    );
   } catch {
     return { problem: 'GitHub could not be reached. Try again in a moment.' };
   }
 }
+
+const get = (call: GitHubCall, path: string) => send(call, path);
+
+/** The contents API's address of `.penmoss/notebook.json` at a place. */
+const notebookPath = (place: Place) =>
+  `/repos/${place.repository}/contents/${new Layout(place.root).notebook
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/')}`;
 
 /** The repository's branches, its default first. */
 export async function branchesOf(
@@ -65,12 +91,8 @@ export async function notebookFileOf(
 ): Promise<
   Answer<{ readonly name: string; readonly id: string }> | { problem: string; missing: true }
 > {
-  const path = `${place.root}.penmoss/notebook.json`;
   const where = `${place.repository} on ${place.branch}${place.root ? `, in ${place.root}` : ''}`;
-  const file = await get(
-    call,
-    `/repos/${place.repository}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(place.branch)}`,
-  );
+  const file = await get(call, `${notebookPath(place)}?ref=${encodeURIComponent(place.branch)}`);
   if ('problem' in file) return file;
   if (file.status === 404) {
     await file.body?.cancel();
@@ -96,4 +118,31 @@ export async function notebookFileOf(
       problem: `The .penmoss/notebook.json in ${where} can’t be read as a Penmoss notebook.`,
     };
   }
+}
+
+/**
+ * Starts a notebook at a place: its `notebook.json`, committed through the contents API, which
+ * writes to an empty repository too. Null when it is made, else what went wrong.
+ */
+export async function makeNotebookFile(
+  call: GitHubCall,
+  place: Place,
+  notebook: { readonly id: string; readonly name: string },
+): Promise<string | null> {
+  const bytes = encodeNotebookInfo({ ...notebook, format: 1, renderVersion: RENDER_VERSION });
+  const made = await send(call, notebookPath(place), {
+    method: 'PUT',
+    body: {
+      message: `Make the notebook “${notebook.name}”`,
+      content: btoa(String.fromCharCode(...bytes)),
+      branch: place.branch,
+    },
+  });
+  if ('problem' in made) return made.problem;
+  if (made.ok) {
+    await made.body?.cancel();
+    return null;
+  }
+  const said = ((await made.json().catch(() => ({}))) as { message?: string }).message;
+  return `GitHub wouldn’t make the notebook (${made.status}${said ? `: ${said}` : ''}).`;
 }

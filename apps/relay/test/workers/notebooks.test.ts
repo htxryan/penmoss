@@ -294,7 +294,7 @@ describe('the Notebooks page', () => {
     const { get, bridge } = await owner();
     const refused = (await bridge('save', ['github_pat_wrong'])).answer;
     expect(refused.ok).toBe(false);
-    expect(refused.message).toContain('GitHub refused this token');
+    expect(refused.message).toContain('GitHub does not accept this token');
     const saved = (await bridge('save', [PAT])).answer;
     expect(saved.status.accounts.map((each) => each.login)).toEqual(['quanta-ryan']);
     const status = (await bridge('status', [])).answer;

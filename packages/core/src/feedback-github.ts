@@ -290,10 +290,18 @@ const REPO_NAME = `${FEEDBACK_REPO.owner}/${FEEDBACK_REPO.repo}`;
 
 /** What the person is told about their token, in plain words (A1012). */
 export const TOKEN_MESSAGES = {
+  shape: 'Paste a GitHub token: one line, no spaces.',
   missing: 'Sign in to GitHub in Settings → GitHub to send it.',
   invalid: 'GitHub does not accept this token: it may have expired or been revoked.',
   cannotFile: `This GitHub token cannot open issues in ${REPO_NAME}. Use a classic token with the public_repo scope or, as a collaborator, a fine-grained token with Issues and Contents (read and write) on ${REPO_NAME}.`,
 } as const;
+
+/** The longest token taken: GitHub's are 40 (classic) to about 93 (fine-grained) characters. */
+const TOKEN_MAX = 255;
+
+/** Whether a pasted token is one (one line, no spaces, not too long); else `TOKEN_MESSAGES.shape`. */
+export const tokenIsWhole = (token: string): boolean =>
+  token !== '' && token.length <= TOKEN_MAX && !/\s/.test(token);
 
 /** The footer line that names a submission (core `feedbackIssueBody`). */
 const footerOf = (submissionId: string) => `· submission ${submissionId}`;

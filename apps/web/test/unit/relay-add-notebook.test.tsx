@@ -8,11 +8,14 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GitNotebookInfo } from '../../src/desktop/bridge';
-import { relayDesktop, type RelayCall, type RelayNotebook } from '../../src/relay/bridge';
+import {
+  relayDesktop,
+  relaySource,
+  type RelayCall,
+  type RelayNotebook,
+} from '../../src/relay/bridge';
 import { SourcesProvider } from '../../src/sources/context';
 import { AddNotebook } from '../../src/sources/FirstRun';
-import type { GitSource } from '../../src/sources/git-source';
 import { MAC_WORDS, RELAY_WORDS, setHostWords } from '../../src/sources/host-words';
 import { Sources } from '../../src/sources/registry';
 
@@ -120,22 +123,6 @@ class SeeingObserver {
   }
 }
 
-/** A notebook as Setting Up watches it: synced at once. */
-const synced = (info: GitNotebookInfo) =>
-  ({
-    kind: 'git',
-    id: info.notebookId,
-    name: info.name,
-    info,
-    feed: { status: { phase: 'synced', detail: null }, subscribe: () => () => undefined },
-    syncNow: () => undefined,
-    notes: { knows: () => false, list: () => [], onStored: () => () => undefined },
-    start: () => undefined,
-    stop: () => undefined,
-    setInfo: () => undefined,
-    storedElsewhere: () => Promise.resolve(),
-  }) as unknown as GitSource;
-
 let host: HTMLDivElement;
 let root: Root;
 
@@ -196,7 +183,7 @@ async function open() {
   const made = relay();
   const bridge = relayDesktop(made.answer);
   Object.assign(window, { penmossDesktop: bridge.desktop });
-  const sources = new Sources({ git: bridge.git, makeGit: synced });
+  const sources = new Sources({ git: bridge.git, makeGit: relaySource(bridge.notebooks) });
   await sources.load();
   const added = vi.fn();
   const closed = vi.fn();

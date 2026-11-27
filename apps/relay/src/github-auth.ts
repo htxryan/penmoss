@@ -78,6 +78,46 @@ const headers = (jwt: string) => ({
   'content-type': 'application/json',
 });
 
+/** The owner's sign-in to the App (a user-to-server token), as the relay keeps it. */
+export interface OwnerToken {
+  readonly token: string;
+  readonly refresh: string | null;
+  /** When `token` stops working (ms); null for never. */
+  readonly until: number | null;
+}
+
+/**
+ * A sign-in to the App from GitHub's token endpoint: a code exchanged at the pages' sign-in, or a
+ * refresh token when the last one ran out. Null when GitHub gave no token.
+ */
+export async function ownerTokenFrom(
+  fetcher: typeof fetch,
+  web: string,
+  params: Readonly<Record<string, string>>,
+  now: number,
+): Promise<OwnerToken | null> {
+  const response = await fetcher(`${web}/login/oauth/access_token`, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'user-agent': 'penmoss-relay',
+    },
+    body: JSON.stringify(params),
+  }).catch(() => null);
+  const answer = (await response?.json().catch(() => null)) as {
+    access_token?: unknown;
+    refresh_token?: unknown;
+    expires_in?: unknown;
+  } | null;
+  if (typeof answer?.access_token !== 'string') return null;
+  return {
+    token: answer.access_token,
+    refresh: typeof answer.refresh_token === 'string' ? answer.refresh_token : null,
+    until: typeof answer.expires_in === 'number' ? now + answer.expires_in * 1000 : null,
+  };
+}
+
 export interface AppTokensOptions {
   readonly app: AppCredentials;
   readonly api: string;

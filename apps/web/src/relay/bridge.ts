@@ -19,6 +19,8 @@ import type {
   RepoFolders,
   RepoList,
 } from '../desktop/bridge';
+import type { GitSyncStatus } from '../sources/engine-host';
+import type { GitSource } from '../sources/git-source';
 
 /** A served notebook as the relay lists it. */
 export interface RelayNotebook {
@@ -184,5 +186,69 @@ export function relayDesktop(call: RelayCall): {
     desktop: { git, githubToken } as unknown as PenmossDesktop,
     git,
     notebooks,
+  };
+}
+
+/** How often Setting Up asks the relay whether the first sync is done. */
+const POLL_MS = 1500;
+
+/**
+ * A notebook as Add Notebook's Setting Up watches it: its first sync is the relay's, asked for
+ * until it lands or fails. Nothing else of the app's notebook is used here.
+ */
+export function relaySource(notebooks: () => Promise<readonly RelayNotebook[]>) {
+  return (info: GitNotebookInfo): GitSource => {
+    const listeners = new Set<() => void>();
+    let status = {
+      phase: 'syncing',
+      detail: null,
+      hostMessage: null,
+      code: null,
+      lastSyncAt: null,
+      nextRetryAt: null,
+      pending: [],
+    } as unknown as GitSyncStatus;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const ask = async () => {
+      const found = (await notebooks()).find((each) => each.notebookId === info.notebookId);
+      const phase: GitSyncStatus['phase'] | null = found?.problem
+        ? 'offline'
+        : found?.syncedAt
+          ? 'synced'
+          : null;
+      if (phase) {
+        status = {
+          ...status,
+          phase,
+          detail: found?.problem ?? null,
+          lastSyncAt: found?.syncedAt ?? null,
+        };
+        for (const listener of listeners) listener();
+      }
+      if (phase !== 'synced') timer = setTimeout(() => void ask(), POLL_MS);
+    };
+    return {
+      kind: 'git',
+      id: info.notebookId,
+      name: info.name,
+      info,
+      feed: {
+        get status() {
+          return status;
+        },
+        subscribe: (listener: () => void) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+      },
+      syncNow: () => undefined,
+      notes: { knows: () => false, list: () => [], onStored: () => () => undefined },
+      start: () => void ask(),
+      stop: () => {
+        if (timer) clearTimeout(timer);
+      },
+      setInfo: () => undefined,
+      storedElsewhere: () => Promise.resolve(),
+    } as unknown as GitSource;
   };
 }

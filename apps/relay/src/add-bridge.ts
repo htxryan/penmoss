@@ -10,8 +10,8 @@
  * the relay, which needs the App's Administration permission) or as an account; a new notebook is
  * its `notebook.json`, committed to the repository before it is added.
  */
+import { TOKEN_MESSAGES, tokenIsWhole } from '@penmoss/core/feedback-github';
 import { ulid } from '@penmoss/core/ids';
-import { encodeNotebookInfo, RENDER_VERSION } from '@penmoss/git-notebook';
 import {
   GitHubBrowse,
   type BrowseError,
@@ -20,9 +20,10 @@ import {
   type RepoFolders,
   type RepoList,
 } from '@penmoss/git-notebook/github-browse';
+import { remoteParts } from '@penmoss/git-notebook/remote';
 import { checkPlace, placeKey, type Place } from './config';
-import { notebookFileOf, type GitHubCall } from './github-api';
-import type { AppTokens } from './github-auth';
+import { makeNotebookFile, notebookFileOf, type GitHubCall } from './github-api';
+import { ownerTokenFrom, type AppTokens, type OwnerToken } from './github-auth';
 import { readNotebookList, writeNotebookList, type StoredNotebook } from './notebook-list';
 import type { NotebookRow } from './notebooks';
 import type { Blobs } from './storage';
@@ -87,14 +88,6 @@ interface Account {
   readonly token: string;
 }
 
-/** The owner's sign-in to the relay, kept for Create New Repo as the owner. */
-export interface OwnerToken {
-  readonly token: string;
-  readonly refresh: string | null;
-  /** When `token` stops working (ms); null for never. */
-  readonly until: number | null;
-}
-
 const ACCOUNTS = 'settings:accounts';
 const OWNER_TOKEN = 'settings:owner-token';
 const encoder = new TextEncoder();
@@ -105,13 +98,24 @@ const refuse = (code: string, message: string) => ({
   error: { code, message },
 });
 
-/** `https://github.com/owner/name(.git)` or `git@github.com:owner/name(.git)` → `owner/name`. */
-function githubRepoOf(address: string): string | null {
-  const match =
-    /^(?:https:\/\/(?:www\.)?github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+?)(?:\.git)?\/?$/.exec(
-      address.trim(),
-    );
-  return match ? match[1]! : null;
+/** `owner/name` of a github.com remote (HTTPS or SSH), as the Mac reads remotes. */
+function githubRepoOf(remote: string): string | null {
+  const parts = remoteParts(remote.trim());
+  return parts?.host === 'github.com' && /^[^/]+\/[^/]+$/.test(parts.path) ? parts.path : null;
+}
+
+/** A notebook at a place, as the bridge lists it. */
+function bridgeNotebook(
+  place: Pick<Place, 'repository' | 'branch' | 'root'>,
+  fields: Pick<BridgeNotebook, 'notebookId' | 'name' | 'hasToken' | 'syncedAt' | 'problem'>,
+): BridgeNotebook {
+  return {
+    ...fields,
+    remote: `https://github.com/${place.repository}.git`,
+    repository: `github.com/${place.repository}`,
+    branch: place.branch,
+    dir: place.root.replace(/\/$/, ''),
+  };
 }
 
 function readOwnerToken(blobs: Blobs): OwnerToken | null {
@@ -182,15 +186,13 @@ export class AddBridge {
     | { readonly ok: false; readonly message: string }
   > {
     const pasted = token.trim();
-    if (!pasted) return { ok: false, message: 'Paste a token first.' };
+    if (!tokenIsWhole(pasted)) return { ok: false, message: TOKEN_MESSAGES.shape };
     const owners = await this.options.browse.owners(pasted);
     if (!owners.ok) {
       return {
         ok: false,
         message:
-          owners.error.reason === 'unauthorized'
-            ? 'GitHub refused this token. Check that it’s whole and hasn’t expired.'
-            : owners.error.message,
+          owners.error.reason === 'unauthorized' ? TOKEN_MESSAGES.invalid : owners.error.message,
       };
     }
     const login = owners.value.find((each) => each.kind === 'user')?.login;
@@ -314,17 +316,13 @@ export class AddBridge {
     const rows = await this.options.rows();
     return rows.map((row) => {
       const entry = stored.find((each) => placeKey(each) === row.key);
-      return {
+      return bridgeNotebook(row, {
         notebookId: row.id ?? entry?.id ?? row.key,
         name: row.name,
-        remote: `https://github.com/${row.repository}.git`,
-        repository: `github.com/${row.repository}`,
-        branch: row.branch,
-        dir: row.root.replace(/\/$/, ''),
         hasToken: row.access === 'token',
         syncedAt: row.syncedAt,
         problem: row.problem,
-      };
+      });
     });
   }
 
@@ -370,7 +368,7 @@ export class AddBridge {
     } else {
       id = ulid(this.clock());
       name = input.name.trim().slice(0, 80) || 'Notebook';
-      const made = await this.makeNotebook(github, place, id, name);
+      const made = await makeNotebookFile(github, place, { id, name });
       if (made) return refuse('git', made);
       created = true;
     }
@@ -389,55 +387,15 @@ export class AddBridge {
       value: {
         kind: 'added',
         created,
-        notebook: {
+        notebook: bridgeNotebook(place, {
           notebookId: id,
           name,
-          remote: `https://github.com/${place.repository}.git`,
-          repository: `github.com/${place.repository}`,
-          branch: place.branch,
-          dir: place.root.replace(/\/$/, ''),
           hasToken: access.kept !== null,
           syncedAt: null,
           problem: null,
-        },
-      },
-    };
-  }
-
-  /** A new notebook: its `notebook.json`, committed through GitHub's contents API. */
-  private async makeNotebook(
-    github: GitHubCall,
-    place: Place,
-    id: string,
-    name: string,
-  ): Promise<string | null> {
-    const bytes = encodeNotebookInfo({ id, name, format: 1, renderVersion: RENDER_VERSION });
-    let binary = '';
-    for (const byte of bytes) binary += String.fromCharCode(byte);
-    const path = `${place.root}.penmoss/notebook.json`;
-    const response = await github.fetch(
-      `${github.api}/repos/${place.repository}/contents/${path.split('/').map(encodeURIComponent).join('/')}`,
-      {
-        method: 'PUT',
-        headers: {
-          authorization: `Bearer ${await github.token()}`,
-          accept: 'application/vnd.github+json',
-          'content-type': 'application/json',
-          'user-agent': 'penmoss-relay',
-        },
-        body: JSON.stringify({
-          message: `Make the notebook “${name}”`,
-          content: btoa(binary),
-          branch: place.branch,
         }),
       },
-    );
-    if (response.status === 201 || response.status === 200) {
-      await response.body?.cancel();
-      return null;
-    }
-    const said = ((await response.json().catch(() => ({}))) as { message?: string }).message;
-    return `GitHub wouldn’t make the notebook (${response.status}${said ? `: ${said}` : ''}).`;
+    };
   }
 
   /**
@@ -502,21 +460,17 @@ export class AddBridge {
     if (held.until === null || this.clock() < held.until - 60_000) return held.token;
     const client = this.options.client;
     if (!held.refresh || !client) return null;
-    const response = await this.options.fetch(`${this.options.web}/login/oauth/access_token`, {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        'user-agent': 'penmoss-relay',
-      },
-      body: JSON.stringify({
+    const fresh = await ownerTokenFrom(
+      this.options.fetch,
+      this.options.web,
+      {
         client_id: client.id,
         client_secret: client.secret,
         grant_type: 'refresh_token',
         refresh_token: held.refresh,
-      }),
-    });
-    const fresh = tokenAnswer(await response.json().catch(() => ({})), this.clock());
+      },
+      this.clock(),
+    );
     if (!fresh) return null;
     keepOwnerToken(this.options.blobs, fresh);
     return fresh.token;
@@ -535,19 +489,4 @@ export class AddBridge {
       error: { reason: 'no_credential', message: 'That GitHub account isn’t kept here any more.' },
     };
   }
-}
-
-/** GitHub's answer to a token exchange, as kept; null when it gave no token. */
-export function tokenAnswer(body: unknown, now: number): OwnerToken | null {
-  const answer = body as {
-    access_token?: unknown;
-    refresh_token?: unknown;
-    expires_in?: unknown;
-  } | null;
-  if (typeof answer?.access_token !== 'string') return null;
-  return {
-    token: answer.access_token,
-    refresh: typeof answer.refresh_token === 'string' ? answer.refresh_token : null,
-    until: typeof answer.expires_in === 'number' ? now + answer.expires_in * 1000 : null,
-  };
 }

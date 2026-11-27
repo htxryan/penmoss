@@ -34,7 +34,7 @@ import {
   startSession,
 } from './session';
 import { setupPage } from './setup';
-import { tokenAnswer, type OwnerToken } from './add-bridge';
+import { ownerTokenFrom, type OwnerToken } from './github-auth';
 
 /** What the Worker asks of the relay's Durable Object. */
 export interface RelayStore extends NotebooksStore {
@@ -221,21 +221,17 @@ export const loginHandler = {
       }
       await env.OAUTH_KV.delete(`state:${state}`);
       const started = JSON.parse(stored) as Started;
-      const exchange = await fetch(`${basics.web}/login/oauth/access_token`, {
-        method: 'POST',
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json',
-          'user-agent': 'penmoss-relay',
-        },
-        body: JSON.stringify({
+      const answer = await ownerTokenFrom(
+        fetch,
+        basics.web,
+        {
           client_id: signIn.clientId,
           client_secret: signIn.clientSecret,
           code,
           redirect_uri: `${url.origin}/callback`,
-        }),
-      });
-      const answer = tokenAnswer(await exchange.json().catch(() => ({})), Date.now());
+        },
+        Date.now(),
+      );
       const token = answer?.token;
       if (!token) return page(502, 'GitHub Didn’t Sign You In', para('Start again in a moment.'));
       const user = await fetch(`${basics.api}/user`, {

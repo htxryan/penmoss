@@ -9,11 +9,11 @@
  */
 import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
 import { GitHubBrowse } from '@penmoss/git-notebook/github-browse';
-import { AddBridge, keepOwnerToken, type OwnerToken } from './add-bridge';
+import { AddBridge, keepOwnerToken } from './add-bridge';
 import { DurableObject } from 'cloudflare:workers';
 import { credentialsOf, keepApp, readApp, summaryOf, type AppSummary, type StoredApp } from './app';
 import { placeKey, readBasics, readConfig, sameLogin, type RelaySettings } from './config';
-import { AppTokens } from './github-auth';
+import { AppTokens, type OwnerToken } from './github-auth';
 import { branchesOf, type GitHubCall } from './github-api';
 import { placesOf, readNotebookList, writeNotebookList } from './notebook-list';
 import { loginHandler, storeOf, type GrantProps, type LoginEnv, type RelayStore } from './login';
