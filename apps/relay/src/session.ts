@@ -60,10 +60,16 @@ export async function endSession(kv: KVNamespace, session: Session): Promise<voi
   await kv.delete(`session:${session.id}`);
 }
 
-/** Whether a posted form is this session's own: from the relay's origin, with its token. */
+/**
+ * Whether a posted form is this session's own: from the relay's origin, with its token. The
+ * pages' `no-referrer` policy makes a browser send `Origin: null` on their own forms, so
+ * `Sec-Fetch-Site` decides when the browser sends it, and an origin only when it names one.
+ */
 export function formIsOwn(request: Request, form: FormData, session: Session): boolean {
+  const site = request.headers.get('sec-fetch-site');
+  if (site !== null && site !== 'same-origin') return false;
   const origin = request.headers.get('origin');
-  if (origin !== null && origin !== new URL(request.url).origin) return false;
+  if (origin !== null && origin !== 'null' && origin !== new URL(request.url).origin) return false;
   const token = form.get('csrf');
   return (
     typeof token === 'string' && token.length === session.csrf.length && token === session.csrf
