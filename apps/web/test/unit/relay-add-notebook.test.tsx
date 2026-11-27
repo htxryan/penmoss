@@ -315,6 +315,38 @@ describe('the relay’s Add Notebook (A1701)', () => {
     expect(added).toHaveBeenCalledWith('NB-Q');
   });
 
+  it('shows the app’s Pick Folder tree, with its filter and Start Another (A1703)', async () => {
+    await open();
+    await press('first-run-continue');
+    await choose('first-run-way-existing');
+    await press('first-run-continue');
+    await settle();
+    const scratch = $$('first-run-repo-pick').find(
+      (each) => each.closest('[data-repo]')?.getAttribute('data-repo') === 'acme/scratch',
+    );
+    await press(scratch!);
+    act(() => $$('first-run-pick-branch')[2]!.querySelector('input')!.click());
+    await settle();
+    await press('first-run-continue');
+    await settle();
+    expect(title()).toBe('Quanta Is Already Here');
+    // Start Another opens the folders, never a typed name (A1623).
+    expect($('first-run-another')).toBeNull();
+    await press('first-run-start-another');
+    expect(screen()).toBe('folder');
+    expect($('first-run-folder-tree')).not.toBeNull();
+    expect($('first-run-folder-filter')).not.toBeNull();
+    expect($('first-run-folder-notebook-chip')?.textContent).toBe('Notebook: Quanta');
+    expect($('first-run-folder-notebooks')?.textContent).toBe('Notebooks (1)');
+    await type('first-run-folder-filter', 'claude');
+    const shown = [
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-testid="first-run-folder-tree"] [data-path]',
+      ),
+    ].map((each) => each.dataset['path']);
+    expect(shown).toEqual(['claude-global']);
+  });
+
   it('takes a token for another account on the app’s GitHub Accounts, in the relay’s words', async () => {
     const { calls } = await open();
     await choose('first-run-existing');

@@ -5,10 +5,9 @@
  * Branches past eight. With one branch (or none yet, an empty repository) there is nothing to
  * pick, so it goes straight on.
  */
-import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import type { DesktopGitHubBrowse, GitHubRepo } from '../desktop/bridge';
-import { Action, Frame, Options, Problem, Working } from './FirstRunFrame';
+import { Action, Filter, Frame, Options, Problem, Working } from './FirstRunFrame';
 
 /** More branches than this and Pick Branch has a filter. */
 const BRANCH_FILTER_AT = 8;
@@ -137,18 +136,13 @@ export function BranchPick({
         notebook syncs the one you pick.
       </p>
       {read.names.length > BRANCH_FILTER_AT ? (
-        <label className="fr-filter">
-          <span className="sr-only">Filter Branches</span>
-          <Icon name="search" size={14} />
-          <input
-            type="search"
-            className="input"
-            placeholder="Filter Branches"
-            value={filter}
-            data-testid="first-run-branch-filter"
-            onChange={(event) => setFilter(event.target.value)}
-          />
-        </label>
+        <Filter
+          label="Filter Branches"
+          placeholder="Filter Branches"
+          value={filter}
+          onChange={setFilter}
+          testId="first-run-branch-filter"
+        />
       ) : null}
       <Options
         label={`Branches of ${repo.fullName}`}

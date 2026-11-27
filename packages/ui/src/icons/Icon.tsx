@@ -46,6 +46,9 @@ const PATHS = {
   chevL: <path d="m15 6-6 6 6 6" />,
   chevR: <path d="m9 6 6 6-6 6" />,
   chevU: <path d="m6 15 6-6 6 6" />,
+  // Expand All and Collapse All (Pick Folder, A1620): two chevrons apart, and together.
+  chevsApart: <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />,
+  chevsTogether: <path d="m7 20 5-5 5 5M7 4l5 5 5-5" />,
   // Back and Forward's halves (T52): narrow, tall chevrons, as a browser's toolbar has them.
   navBack: <path d="m14 6.5-4.5 5.5 4.5 5.5" />,
   navForward: <path d="m10 6.5 4.5 5.5-4.5 5.5" />,
