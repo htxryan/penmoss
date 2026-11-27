@@ -78,6 +78,46 @@ const headers = (jwt: string) => ({
   'content-type': 'application/json',
 });
 
+/** The owner's sign-in to the App (a user-to-server token), as the relay keeps it. */
+export interface OwnerToken {
+  readonly token: string;
+  readonly refresh: string | null;
+  /** When `token` stops working (ms); null for never. */
+  readonly until: number | null;
+}
+
+/**
+ * A sign-in to the App from GitHub's token endpoint: a code exchanged at the pages' sign-in, or a
+ * refresh token when the last one ran out. Null when GitHub gave no token.
+ */
+export async function ownerTokenFrom(
+  fetcher: typeof fetch,
+  web: string,
+  params: Readonly<Record<string, string>>,
+  now: number,
+): Promise<OwnerToken | null> {
+  const response = await fetcher(`${web}/login/oauth/access_token`, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'user-agent': 'penmoss-relay',
+    },
+    body: JSON.stringify(params),
+  }).catch(() => null);
+  const answer = (await response?.json().catch(() => null)) as {
+    access_token?: unknown;
+    refresh_token?: unknown;
+    expires_in?: unknown;
+  } | null;
+  if (typeof answer?.access_token !== 'string') return null;
+  return {
+    token: answer.access_token,
+    refresh: typeof answer.refresh_token === 'string' ? answer.refresh_token : null,
+    until: typeof answer.expires_in === 'number' ? now + answer.expires_in * 1000 : null,
+  };
+}
+
 export interface AppTokensOptions {
   readonly app: AppCredentials;
   readonly api: string;
@@ -160,8 +200,11 @@ export class AppTokens {
     return data.token;
   }
 
-  /** The repositories the App is installed on, for the Notebooks page to offer. */
-  async repositories(): Promise<string[]> {
+  /**
+   * A token for each of the App's installations that only reads metadata: enough to list the
+   * repositories each holds.
+   */
+  async installationTokens(): Promise<string[]> {
     const jwt = await this.jwt();
     const listed = await this.options.fetch(`${this.options.api}/app/installations?per_page=100`, {
       headers: headers(jwt),
@@ -184,19 +227,9 @@ export class AppTokens {
         await minted.body?.cancel();
         continue;
       }
-      const { token } = await minted.json<{ token: string }>();
-      const repos = await this.options.fetch(
-        `${this.options.api}/installation/repositories?per_page=100`,
-        { headers: headers(token) },
-      );
-      if (!repos.ok) {
-        await repos.body?.cancel();
-        continue;
-      }
-      const { repositories } = await repos.json<{ repositories: { full_name: string }[] }>();
-      out.push(...repositories.map((each) => each.full_name));
+      out.push((await minted.json<{ token: string }>()).token);
     }
-    return out.sort((a, b) => a.localeCompare(b));
+    return out;
   }
 
   /** A token that can write `repository`'s contents. */

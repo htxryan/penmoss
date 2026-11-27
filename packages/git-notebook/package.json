@@ -15,7 +15,8 @@
     "./identity": "./src/identity.ts",
     "./layout": "./src/layout.ts",
     "./github": "./src/github.ts",
-    "./github-browse": "./src/github-browse.ts"
+    "./github-browse": "./src/github-browse.ts",
+    "./remote": "./src/node/remote.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

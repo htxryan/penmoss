@@ -17,6 +17,7 @@ import { notebooksIn, type Goal, type Hub, type RepoRead } from './first-run-flo
 import { Action, Frame, LinkButton, Location } from './FirstRunFrame';
 import { pushedWords } from './repo-words';
 import { counted } from '@penmoss/core/words';
+import { hostWords } from './host-words';
 
 /** Text with what the filter matched marked (4.3). */
 function Marked({ text, query }: { text: string; query: string }) {
@@ -208,7 +209,7 @@ export function RepoTree({
       {hub.login
         ? `Signed in as ${hub.login}`
         : hub.via === 'git'
-          ? 'Signed in through this Mac’s git'
+          ? hostWords().signedInThrough
           : 'Signed in to GitHub'}
       {' · '}
       <LinkButton data-event="firstrun.list.refresh" testId="first-run-refresh" onClick={onRefresh}>

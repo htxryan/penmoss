@@ -11,7 +11,8 @@
     "./schema": "./src/schema.ts",
     "./keys": "./src/keys.ts",
     "./commands": "./src/commands.ts",
-    "./feedback": "./src/feedback.ts"
+    "./feedback": "./src/feedback.ts",
+    "./copy": "./src/clipboard/copy.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

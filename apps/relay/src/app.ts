@@ -57,7 +57,10 @@ export const summaryOf = (app: StoredApp): AppSummary => ({
   htmlUrl: app.htmlUrl,
 });
 
-/** The manifest the setup page posts to GitHub (contents write, metadata read, no webhook). */
+/**
+ * The manifest the setup page posts to GitHub: contents write, metadata read, administration write
+ * (Add Notebook's Create New Repo, A1701), no webhook.
+ */
 export function manifest(origin: string, owner: string) {
   return {
     // GitHub's names are unique and at most 34 characters; the owner can change it there.
@@ -71,7 +74,7 @@ export function manifest(origin: string, owner: string) {
     setup_on_update: false,
     request_oauth_on_install: false,
     public: false,
-    default_permissions: { contents: 'write', metadata: 'read' },
+    default_permissions: { contents: 'write', metadata: 'read', administration: 'write' },
     default_events: [],
   };
 }

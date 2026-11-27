@@ -455,6 +455,7 @@ export class Relay {
   async rows(): Promise<NotebookRow[]> {
     return [...(await this.named())].map(([name, copy]) => ({
       name,
+      id: copy.info?.id ?? null,
       key: placeKey(copy.place),
       repository: copy.place.repository,
       branch: copy.place.branch,
@@ -474,6 +475,7 @@ export class Relay {
   private async served(): Promise<ServedNotebook[]> {
     return [...(await this.named())].map(([name, copy]) => ({
       name,
+      id: copy.info?.id ?? null,
       tag: copy.info ? notebookTag(copy.info.id) : null,
     }));
   }

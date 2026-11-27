@@ -24,6 +24,7 @@ import {
   GITHUB_API,
   GITHUB_UPLOADS,
   TOKEN_MESSAGES,
+  tokenIsWhole,
   type FeedbackAnswer,
   type FeedbackLedger,
   type FeedbackLedgerEntry,
@@ -97,8 +98,6 @@ interface GitHubTokenOptions {
 
 /** How many filed or tried submissions the ledger keeps (the outbox holds far fewer). */
 const LEDGER_MAX = 200;
-/** The longest token taken: GitHub's are 40 (classic) to about 93 (fine-grained) characters. */
-const TOKEN_MAX = 255;
 
 export class GitHubToken {
   /** The accounts, the first (Send Feedback's) first; tokens that would not unseal are left out. */
@@ -252,9 +251,7 @@ export class GitHubToken {
   /** Checks `value` with GitHub and keeps it if it can open issues (A1012). */
   async save(value: unknown): Promise<SaveAnswer> {
     const token = typeof value === 'string' ? value.trim() : '';
-    if (!token || token.length > TOKEN_MAX || /\s/.test(token)) {
-      return { ok: false, message: 'Paste a GitHub token: one line, no spaces.' };
-    }
+    if (!tokenIsWhole(token)) return { ok: false, message: TOKEN_MESSAGES.shape };
     const check: TokenCheck = await this.github(token).checkToken();
     if (!check.ok && check.problem !== 'unreachable') return { ok: false, message: check.message };
     const sealed = await this.options.seal(token).catch(() => null);
@@ -279,7 +276,7 @@ export class GitHubToken {
    * repository check a pasted token gets (Send feedback says so itself if it can't file).
    */
   async saveSignedIn(token: string, login: string | null): Promise<boolean> {
-    if (!token || token.length > TOKEN_MAX || /\s/.test(token)) return false;
+    if (!tokenIsWhole(token)) return false;
     const sealed = await this.options.seal(token).catch(() => null);
     if (sealed === null) return false;
     await this.keepAccount(token, { sealed, login, problem: null, signedIn: true });

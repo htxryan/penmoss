@@ -1,11 +1,14 @@
 /**
  * The Notebooks page (PEN-194, R2): the notebooks this relay serves, and the owner's ways to
- * change them. Add Notebook… is the app's flow (A1164): pick a repository the App reaches, or
- * paste a token and pick one it reaches; the relay then finds the notebooks on the repository's
- * branches, and one choice adds it. Nothing is typed but a token. Remove… asks first, and
- * pushes the notebook's unpushed edits before it goes. Replace Token… takes a new token. A token
- * shows only its last four characters. Only the owner, signed in, reaches any of it.
+ * change them. Add Notebook… is the app's own Add Notebook flow, unchanged (A1701): its page runs
+ * `NotebookSteps` from apps/web, bundled into `add-flow.gen.ts`, over a bridge whose calls come
+ * here (`/notebooks/add/call`) and are answered by `AddBridge` in the Mac bridge's shapes.
+ * Remove… asks first, and pushes the notebook's unpushed edits before it goes. Replace Token…
+ * takes a new token. A token shows only its last four characters. Only the owner, signed in,
+ * reaches any of it.
  */
+import { ADD_FLOW_JS } from './add-flow.gen';
+import type { AppSummary } from './app';
 import {
   buttonForm,
   escape,
@@ -17,11 +20,13 @@ import {
   row,
   type PageOptions,
 } from './pages';
-import { formIsOwn, type Session } from './session';
+import { callIsOwn, formIsOwn, type Session } from './session';
 
 /** A served notebook as the page shows it: nothing secret. */
 export interface NotebookRow {
   readonly name: string;
+  /** Its `notebook.json`'s id, once synced. */
+  readonly id: string | null;
   /** Its place's key (`placeKey`), naming it in the page's forms. */
   readonly key: string;
   readonly repository: string;
@@ -39,55 +44,16 @@ export interface NotebookRow {
 
 type Answer<T> = T | { readonly problem: string };
 
-/** A repository Add Notebook… offers. */
-export interface RepoChoice {
-  /** `owner/name`. */
-  readonly fullName: string;
-  /** Null when GitHub didn't say (the App's list). */
-  readonly private: boolean | null;
-}
-
-/** A notebook found in a repository: where it is, and whether the relay serves it already. */
-export interface FoundNotebook {
-  readonly name: string;
-  readonly branch: string;
-  /** '' for the repository's root, else `dir/sub` (no slashes at the ends). */
-  readonly folder: string;
-  readonly served: boolean;
-}
-
 export interface NotebooksStore {
   /** The repositories of the notebooks served, for claude.ai's consent page. */
   repositories(): Promise<readonly string[]>;
   notebooks(): Promise<readonly NotebookRow[]>;
+  /** The relay's GitHub App, or null before setup. */
+  summary(): Promise<AppSummary | null>;
   /** Where the App is installed on more repositories, or null without an App. */
   installUrl(): Promise<string | null>;
-  /** A pasted token, checked and kept for the next steps as `pending`. */
-  startToken(token: string): Promise<Answer<{ readonly pending: string }>>;
-  /** The repositories to pick from: the App's (`pending` null), or the token's. */
-  repoChoices(
-    pending: string | null,
-  ): Promise<Answer<{ readonly repos: readonly RepoChoice[]; readonly more: boolean }>>;
-  /** The notebooks in a repository, on `branch` or on its first branches. */
-  notebooksIn(
-    pending: string | null,
-    repository: string,
-    branch: string | null,
-  ): Promise<
-    Answer<{
-      readonly repository: string;
-      readonly branches: readonly string[];
-      readonly looked: readonly string[];
-      readonly found: readonly FoundNotebook[];
-    }>
-  >;
-  /** The notebook at that place added, by its name. */
-  finishAdd(
-    pending: string | null,
-    repository: string,
-    branch: string,
-    folder: string,
-  ): Promise<Answer<{ readonly name: string }>>;
+  /** One of Add Notebook's bridge calls (A1701), by name: its answer, or null. */
+  addCall(name: string, args: readonly unknown[]): Promise<unknown>;
   remove(key: string): Promise<Answer<{ readonly name: string }>>;
   replaceToken(key: string, token: string): Promise<Answer<{ readonly name: string }>>;
 }
@@ -151,13 +117,17 @@ async function listPage(
       })
     : [row('No Notebooks Yet', 'Add a notebook, and Claude can use it once you connect.')];
   const address = `${url.origin}/mcp`;
+  const added = url.searchParams.get('added');
   return ownPage(
     session,
     200,
     'Notebooks',
-    para(
-      'Claude reaches these notebooks through this relay. In Claude, add a custom connector with the address below.',
-    ) +
+    (added
+      ? `<div role="status" class="toast-stack"><p class="toast"><span class="toast-text">Added ${escape(added)}. Claude can use it now.</span></p></div>`
+      : '') +
+      para(
+        'Claude reaches these notebooks through this relay. In Claude, add a custom connector with the address below.',
+      ) +
       group([
         row(
           'Connector Address',
@@ -174,169 +144,47 @@ async function listPage(
 
 const cancel = () => linkButton('/notebooks', 'Cancel');
 
-/** Where a notebook is in its repository, as the app's cards say it (first-run-flow.ts). */
-const folderWords = (folder: string) => (folder ? `${folder}/` : 'Root');
-
-/** An Add Notebook… address, carrying the pending token when there is one. */
-function addLink(
-  path: string,
-  query: { readonly p?: string | null; readonly r?: string; readonly b?: string },
-) {
-  const params = new URLSearchParams();
-  if (query.p) params.set('p', query.p);
-  if (query.r) params.set('r', query.r);
-  if (query.b) params.set('b', query.b);
-  const search = params.toString();
-  return search ? `${path}?${search}` : path;
-}
-
-const trouble = (title: string, text: string | null) =>
-  text ? problemBox(title, escape(text)) : '';
-
-const repoRows = (repos: readonly RepoChoice[], pending: string | null, empty: string[]) =>
-  repos.length
-    ? repos.map((repo) =>
-        row(
-          repo.fullName,
-          repo.private === null ? 'GitHub App' : repo.private ? 'Private' : 'Public',
-          linkButton(addLink('/notebooks/add/repo', { p: pending, r: repo.fullName }), 'Choose'),
-        ),
-      )
-    : [row(empty[0]!, empty[1]!)];
-
-/** Step one: the App's repositories to pick from, or a token to paste. */
-async function addPage(
-  session: Session,
-  store: NotebooksStore,
-  status = 200,
-  problemText: string | null = null,
-): Promise<Response> {
-  const [choices, install] = await Promise.all([store.repoChoices(null), store.installUrl()]);
-  const repos = 'problem' in choices ? [] : choices.repos;
-  return ownPage(
-    session,
-    status,
-    'Add Notebook',
-    trouble('This Token Can’t Be Used', problemText) +
-      para('Choose the repository that holds the notebook. The relay finds the notebooks in it.') +
-      group(
-        repoRows(repos, null, [
-          'The App Reaches No Repositories',
-          'Install it on the repositories that hold your notebooks.',
-        ]),
-      ) +
-      (install
-        ? `<div class="relay-actions">${linkButton(install, 'Install on More Repositories…')}</div>`
-        : '') +
-      para(
-        'A repository the App can’t be installed on, such as an organisation’s, is reached with a fine-grained token that has Contents: Read and Write on it.',
-      ) +
-      `<form method="post" action="/notebooks/add/token" class="relay-form"><input type="hidden" name="csrf" value="${escape(session.csrf)}">` +
-      group([
-        row(
-          'Token',
-          'Kept by the relay; only its last four characters are shown again.',
-          '<input class="input" type="password" name="token" autocomplete="off" required>',
-        ),
-      ]) +
-      `<div class="relay-actions"><button type="submit" class="btn">Show Its Repositories</button>${cancel()}</div></form>`,
-  );
-}
-
-/** Step one, by a token: the repositories it can write to. */
-async function tokenReposPage(
-  session: Session,
-  store: NotebooksStore,
-  pending: string,
-): Promise<Response> {
-  const choices = await store.repoChoices(pending);
-  if ('problem' in choices) return addPage(session, store, 400, choices.problem);
-  return ownPage(
-    session,
-    200,
-    'Add Notebook',
-    para(
-      'Choose the repository that holds the notebook. These are the ones the token can write to.',
-    ) +
-      group(
-        repoRows(choices.repos, pending, [
-          'This Token Can’t Write to Any Repository',
-          'Give it Contents: Read and Write on the notebook’s repository, then paste it again.',
-        ]),
-      ) +
-      `<div class="relay-actions">${linkButton('/notebooks/add', 'Back')}${cancel()}</div>`,
-  );
-}
-
-/** Step two: the notebooks in the chosen repository, each added with one choice. */
-async function repoPage(
-  session: Session,
-  store: NotebooksStore,
-  pending: string | null,
-  repository: string,
-  branch: string | null,
-  status = 200,
-  problemText: string | null = null,
-): Promise<Response> {
-  const back = pending ? addLink('/notebooks/add/token', { p: pending }) : '/notebooks/add';
-  const read = await store.notebooksIn(pending, repository, branch);
-  if ('problem' in read) {
+/** Add Notebook… (A1701): the app's flow, mounted by its script, with the form token. */
+async function addPage(session: Session, store: NotebooksStore): Promise<Response> {
+  if (!(await store.summary())) {
     return ownPage(
       session,
-      400,
-      'Add Notebook',
-      trouble('This Repository Can’t Be Read', read.problem) +
-        `<div class="relay-actions">${linkButton(back, 'Back', true)}${cancel()}</div>`,
+      409,
+      'This Relay Isn’t Set Up',
+      para('It has no GitHub App yet.') + linkButton('/setup', 'Set Up This Relay', true),
     );
   }
-  const fields = (each: FoundNotebook): Record<string, string> => ({
-    csrf: session.csrf,
-    ...(pending ? { p: pending } : {}),
-    r: read.repository,
-    b: each.branch,
-    f: each.folder,
-  });
-  const rows = read.found.length
-    ? read.found.map((each) =>
-        row(
-          each.name,
-          `${escape(each.branch)} · ${escape(folderWords(each.folder))}`,
-          each.served
-            ? '<span class="relay-state">Added</span>'
-            : buttonForm('/notebooks/add/finish', 'Add', fields(each), { primary: true }),
-        ),
-      )
-    : [
-        row(
-          'No Notebooks Found',
-          `None on ${read.looked.map((each) => `<code>${escape(each)}</code>`).join(', ')}. A notebook made in Penmoss has a <code>.penmoss/notebook.json</code> once it syncs.`,
-        ),
-      ];
-  const others = read.branches.filter((each) => !(branch === null && read.looked.includes(each)));
-  const branchForm =
-    others.length > 0 && read.branches.length > 1
-      ? `<form method="get" action="/notebooks/add/repo" class="relay-form">${pending ? `<input type="hidden" name="p" value="${escape(pending)}">` : ''}<input type="hidden" name="r" value="${escape(read.repository)}">` +
-        group([
-          row(
-            'Another Branch',
-            branch === null
-              ? `Notebooks on ${read.looked.length === read.branches.length ? 'every branch' : `its first ${read.looked.length} branches`} are shown.`
-              : `Notebooks on <code>${escape(branch)}</code> are shown.`,
-            `<select class="pm-select" name="b">${read.branches.map((each) => `<option value="${escape(each)}"${each === branch ? ' selected' : ''}>${escape(each)}</option>`).join('')}</select>`,
-          ),
-        ]) +
-        `<div class="relay-actions"><button type="submit" class="btn">Look There</button></div></form>`
-      : '';
-  return ownPage(
-    session,
-    status,
-    'Add Notebook',
-    trouble('This Notebook Can’t Be Added', problemText) +
-      para(`The notebooks in <code>${escape(read.repository)}</code>.`) +
-      group(rows) +
-      branchForm +
-      `<div class="relay-actions">${linkButton(back, 'Back')}${cancel()}</div>`,
+  const start = JSON.stringify({ csrf: session.csrf, login: session.login }).replace(
+    /</g,
+    '\\u003c',
   );
+  return page(
+    200,
+    'Add Notebook',
+    `<main class="first-run" data-testid="add-notebook" data-flow="add" id="relay-add-root"><p class="fr-status" role="status">Opening Add Notebook…</p></main><script type="application/json" id="relay-add">${start}</script><script src="/notebooks/add/flow.js"></script>`,
+    { app: true },
+  );
+}
+
+/** One of the page's bridge calls: `{ name, args }` in, its answer (JSON) out. */
+async function addCall(
+  request: Request,
+  session: Session,
+  store: NotebooksStore,
+): Promise<Response> {
+  const json = (body: unknown, status = 200) =>
+    Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+  if (!callIsOwn(request, session)) {
+    return json({ refused: 'Open Add Notebook again and try once more.' }, 403);
+  }
+  const body = (await request.json().catch(() => null)) as {
+    name?: unknown;
+    args?: unknown;
+  } | null;
+  if (typeof body?.name !== 'string' || !Array.isArray(body.args)) {
+    return json({ refused: 'That call isn’t one Add Notebook makes.' }, 400);
+  }
+  return json({ answer: await store.addCall(body.name, body.args) });
 }
 
 async function named(store: NotebooksStore, key: string | null): Promise<NotebookRow | null> {
@@ -410,19 +258,20 @@ export async function notebooksRoute(
 ): Promise<Response | null> {
   const url = new URL(request.url);
   const path = url.pathname;
+  if (path === '/notebooks/add/call' && request.method === 'POST') {
+    return addCall(request, session, store);
+  }
   if (request.method === 'GET') {
     if (path === '/notebooks') return listPage(url, session, store, now);
     if (path === '/notebooks/add') return addPage(session, store);
-    const pending = url.searchParams.get('p');
-    if (path === '/notebooks/add/token' && pending) return tokenReposPage(session, store, pending);
-    if (path === '/notebooks/add/repo') {
-      return repoPage(
-        session,
-        store,
-        pending,
-        url.searchParams.get('r') ?? '',
-        url.searchParams.get('b') || null,
-      );
+    if (path === '/notebooks/add/flow.js') {
+      return new Response(ADD_FLOW_JS, {
+        headers: {
+          'content-type': 'text/javascript; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        },
+      });
     }
     if (path === '/notebooks/remove' || path === '/notebooks/token') {
       const notebook = await named(store, url.searchParams.get('n'));
@@ -434,15 +283,7 @@ export async function notebooksRoute(
     return null;
   }
   if (request.method !== 'POST') return null;
-  if (
-    ![
-      '/notebooks/add/token',
-      '/notebooks/add/finish',
-      '/notebooks/remove',
-      '/notebooks/token',
-    ].includes(path)
-  )
-    return null;
+  if (!['/notebooks/remove', '/notebooks/token'].includes(path)) return null;
   const form = await request.formData();
   if (!formIsOwn(request, form, session)) {
     return ownPage(
@@ -453,23 +294,6 @@ export async function notebooksRoute(
     );
   }
   const done = () => new Response(null, { status: 303, headers: { location: '/notebooks' } });
-  if (path === '/notebooks/add/token') {
-    const started = await store.startToken(text(form, 'token'));
-    if ('problem' in started) return addPage(session, store, 400, started.problem);
-    return new Response(null, {
-      status: 303,
-      headers: { location: addLink('/notebooks/add/token', { p: started.pending }) },
-    });
-  }
-  if (path === '/notebooks/add/finish') {
-    const pending = text(form, 'p') || null;
-    const repository = text(form, 'r');
-    const added = await store.finishAdd(pending, repository, text(form, 'b'), text(form, 'f'));
-    if ('problem' in added) {
-      return repoPage(session, store, pending, repository, null, 400, added.problem);
-    }
-    return done();
-  }
   const notebook = await named(store, url.searchParams.get('n'));
   if (!notebook) return missing(session);
   if (path === '/notebooks/remove') {

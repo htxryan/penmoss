@@ -34,9 +34,11 @@ import {
   startSession,
 } from './session';
 import { setupPage } from './setup';
+import { ownerTokenFrom, type OwnerToken } from './github-auth';
 
 /** What the Worker asks of the relay's Durable Object. */
 export interface RelayStore extends NotebooksStore {
+  keepOwnerToken(token: OwnerToken): Promise<void>;
   summary(): Promise<AppSummary | null>;
   /** The App's client id and secret, for a sign-in; null before setup. */
   signIn(): Promise<{ readonly clientId: string; readonly clientSecret: string } | null>;
@@ -219,22 +221,18 @@ export const loginHandler = {
       }
       await env.OAUTH_KV.delete(`state:${state}`);
       const started = JSON.parse(stored) as Started;
-      const exchange = await fetch(`${basics.web}/login/oauth/access_token`, {
-        method: 'POST',
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json',
-          'user-agent': 'penmoss-relay',
-        },
-        body: JSON.stringify({
+      const answer = await ownerTokenFrom(
+        fetch,
+        basics.web,
+        {
           client_id: signIn.clientId,
           client_secret: signIn.clientSecret,
           code,
           redirect_uri: `${url.origin}/callback`,
-        }),
-      });
-      const token = ((await exchange.json().catch(() => ({}))) as { access_token?: string })
-        .access_token;
+        },
+        Date.now(),
+      );
+      const token = answer?.token;
       if (!token) return page(502, 'GitHub Didn’t Sign You In', para('Start again in a moment.'));
       const user = await fetch(`${basics.api}/user`, {
         headers: {
@@ -247,6 +245,8 @@ export const loginHandler = {
       const clearState = setCookie(STATE_COOKIE, '', '/callback', 0);
       if (!sameLogin(login, basics.owner)) return notTheOwner(basics, login);
       if (started.kind === 'pages') {
+        // Kept for Add Notebook's Create New Repo, made as the owner (A1701).
+        await store.keepOwnerToken(answer);
         const session = await startSession(env.OAUTH_KV, login!);
         const headers = new Headers({ location: '/notebooks' });
         headers.append('set-cookie', clearState);

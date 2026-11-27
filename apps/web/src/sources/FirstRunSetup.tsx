@@ -13,6 +13,7 @@ import { Action, Frame } from './FirstRunFrame';
 import type { GitSource } from './git-source';
 import { useSourcesRegistry } from './hooks';
 import { addWelcomeNote } from './welcome-note';
+import { hostWords } from './host-words';
 
 type Phase =
   | { readonly at: 'adding' }
@@ -219,7 +220,7 @@ export function SettingUp({
         ))}
       </ol>
       {phase.at === 'sync-failed' ? (
-        <p className="fr-lead">The notebook is on this Mac. Nothing is lost.</p>
+        <p className="fr-lead">The notebook is on {hostWords().here}. Nothing is lost.</p>
       ) : null}
     </Frame>
   );

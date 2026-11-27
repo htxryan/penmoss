@@ -30,14 +30,13 @@ The relay's first page is **Set Up This Relay**.
 
 ## Add your notebooks
 
-On the relay's **Notebooks** page, choose **Add Notebook…** for each notebook Claude may use. It works like adding a notebook in Penmoss: you pick, the relay finds.
-
-1. Choose the repository that holds the notebook. The page lists every repository your App is installed on; **Install on More Repositories…** adds others.
-2. The relay looks for notebooks on the repository's branches and lists each one it finds, with its branch and folder. Choose **Add** beside the one you want.
+On the relay's **Notebooks** page, choose **Add Notebook…** for each notebook Claude may use. It's the same Add Notebook as in Penmoss, step for step: **Create or Open Notebook**, then **Pick Repository** and the rest, as [adding a notebook](/docs/first-notebook/) describes. The relay lists the repositories your App is installed on, as Penmoss lists your GitHub sign-in's; once the notebook is set up, the Notebooks page opens.
 
 Each notebook on the Notebooks page shows its name, where it is, and when it last synced, or what went wrong.
 
-A repository in an organisation that won't allow your App uses a token of its own. On GitHub, make a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for that repository, with **Contents: Read and write**. Paste it under **Token** on the Add Notebook page and choose **Show Its Repositories**, then pick the repository as above. The relay shows only the token's last four characters from then on, and **Replace Token…** gives a notebook a new one.
+A repository in an organisation that won't allow your App: on GitHub, make a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for it, with **Contents: Read and write**. In Add Notebook, open the account menu above the repositories, choose **Manage GitHub Accounts…**, then **Use a Token Instead…**, and paste it. Its repositories are then one pick away in the same menu. The relay keeps the token; the Notebooks page shows only its last four characters, and **Replace Token…** gives a notebook a new one.
+
+To use **Create New Repo**, your App needs permission to make repositories: on GitHub, open your App's settings, set **Administration** to **Read and write**, save, and accept the change where the App is installed. Relays set up from now on ask for it at the start.
 
 **Remove…** stops Claude reaching a notebook. Its notes stay in the repository, and edits not yet pushed are pushed first.
 

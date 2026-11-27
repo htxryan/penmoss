@@ -14,6 +14,7 @@ import {
 } from './FirstRunFrame';
 import { folderNameProblem } from './repo-words';
 import { FolderPick } from './FirstRunFolderPick';
+import { hostWords } from './host-words';
 
 /**
  * One repository picked (4.5–4.8): empty, it starts at the root; holding a notebook, it opens
@@ -162,7 +163,7 @@ export function RepoPicked({
         />
         {isAdded(only) ? (
           <p className="fr-lead fr-small" data-testid="first-run-already-added">
-            Already Added: it is on this Mac.
+            Already Added: it is on {hostWords().here}.
           </p>
         ) : (
           <Action

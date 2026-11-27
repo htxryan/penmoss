@@ -3,7 +3,6 @@
  * facts the context reports (when sync last finished, its last error), which windows show which
  * note, and the recent-errors ring. One per window, made in main.tsx.
  */
-import { useContext, createContext, useSyncExternalStore } from 'react';
 import type { AppSyncState } from '../notes/service-types';
 import { parseFeedbackContext, type FeedbackContext as IssueContext } from '@penmoss/core/feedback';
 import { isEmptyDescription, loadFeedbackMarkdown } from '@penmoss/editor/feedback';
@@ -186,25 +185,5 @@ export class FeedbackService {
   }
 }
 
-export const FeedbackContext = createContext<FeedbackService | null>(null);
-
-/** The window's feedback service; null where the app runs without one (some tests). */
-export function useFeedback(): FeedbackService | null {
-  return useContext(FeedbackContext);
-}
-
-/** The window's feedback service, for views that only show under it (the Send Feedback form). */
-export function useFeedbackService(): FeedbackService {
-  const feedback = useContext(FeedbackContext);
-  if (!feedback) throw new Error('useFeedbackService outside FeedbackContext');
-  return feedback;
-}
-
-/** The outbox's entries (re-renders when they change). */
-export function useOutbox(service: FeedbackService): readonly OutboxEntry[] {
-  return useSyncExternalStore(
-    service.outbox.subscribe,
-    service.outbox.entries,
-    service.outbox.entries,
-  );
-}
+// The window's service and its outbox, as views read them: in hooks.ts, which needs no editor.
+export { FeedbackContext, useFeedback, useFeedbackService, useOutbox } from './hooks';

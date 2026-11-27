@@ -25,6 +25,25 @@ function setup() {
 const notebookJson = (id: string, name: string) => JSON.stringify({ format: 1, id, name });
 
 describe('the repositories a credential reaches', () => {
+  it('lists an App installation’s repositories newest push first, each one the App writes to', async () => {
+    const { fake, browse } = setup();
+    fake.repos = [
+      { owner: 'ryan', name: 'old', pushedAt: '2026-01-01T00:00:00Z' },
+      { owner: 'ryan', name: 'notes', pushedAt: '2026-11-06T00:00:00Z' },
+      { owner: 'ryan', name: 'never', pushedAt: null },
+    ];
+    const listed = await browse.installed(TOKEN);
+    expect(listed.ok && listed.value.repos.map((repo) => [repo.fullName, repo.canPush])).toEqual([
+      ['ryan/notes', true],
+      ['ryan/old', true],
+      ['ryan/never', true],
+    ]);
+    await expect(browse.installed('ghs_wrong')).resolves.toMatchObject({
+      ok: false,
+      error: { reason: 'unauthorized' },
+    });
+  });
+
   it('lists them newest push first, with visibility, default branch, clone address and push rights', async () => {
     const { fake, browse } = setup();
     fake.repos = [

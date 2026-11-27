@@ -5,10 +5,11 @@ import { accountChoices, type AccountChoice } from './github-choices';
 import { useEffect, useState } from 'react';
 import type { DesktopGitHubBrowse, GitHubAccountChoice } from '../desktop/bridge';
 import { type Hub } from './first-run-flow';
+import { hostWords } from './host-words';
 
 /** The account on the switcher's button: its login, else whose sign-in it is. */
 const whoOf = (hub: Hub) =>
-  hub.login ?? (hub.via === 'git' ? 'This Mac’s Git Sign-In' : 'GitHub Account');
+  hub.login ?? (hub.via === 'git' ? hostWords().foundSignInTitle : 'GitHub Account');
 
 /**
  * Whose repositories these are, as a control (Ryan's pick, option 2, 17 Nov 2026; A1617): the

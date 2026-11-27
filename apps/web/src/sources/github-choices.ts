@@ -5,6 +5,7 @@
  */
 import { desktop, type DesktopGitHubBrowse, type GitHubAccountChoice } from '../desktop/bridge';
 import { accountsOf } from '../feedback/github-accounts';
+import { hostWords } from './host-words';
 
 /** One account to pick: `account` undefined is git's own sign-in. */
 export interface AccountChoice {
@@ -34,7 +35,7 @@ export async function accountChoices(
             account: undefined,
             login: gitLogin,
             title: `@${gitLogin}`,
-            line: 'This Mac’s git sign-in',
+            line: hostWords().foundSignInLine,
           },
         ]
       : [];
@@ -45,7 +46,12 @@ export async function accountChoices(
       account: each.login,
       login: each.login,
       title: each.login ? `@${each.login}` : 'Token (Account Not Named)',
-      line: each.primary ? 'Your first account; Send Feedback uses it' : 'Signed in on this Mac',
+      line:
+        each.primary && hostWords().feedback
+          ? 'Your first account; Send Feedback uses it'
+          : each.primary
+            ? 'Your first account'
+            : hostWords().otherAccount,
     })),
   ];
 }

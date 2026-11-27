@@ -12,6 +12,7 @@ import {
   fileFeedback,
   memoryLedger,
   TOKEN_MESSAGES,
+  tokenIsWhole,
   type FeedbackAnswer,
 } from '../src/feedback-github';
 import { FakeFeedbackGitHub } from './support/fake-github-feedback';
@@ -329,6 +330,16 @@ describe('a bug report’s logs (PEN-137)', () => {
     expect((await send(Array.from({ length: 2001 }, () => 'x'))).status).toBe(413);
     expect((await send(['x'.repeat(41 * 1024)])).status).toBe(413);
     expect(fake.calls).toHaveLength(0);
+  });
+});
+
+describe('tokenIsWhole (a pasted token, on the Mac and the relay)', () => {
+  it('takes one line with no spaces, and refuses an empty or overlong one', () => {
+    expect(tokenIsWhole('github_pat_11ABC')).toBe(true);
+    expect(tokenIsWhole('')).toBe(false);
+    expect(tokenIsWhole('ghp_a b')).toBe(false);
+    expect(tokenIsWhole('ghp_a\nb')).toBe(false);
+    expect(tokenIsWhole('x'.repeat(256))).toBe(false);
   });
 });
 

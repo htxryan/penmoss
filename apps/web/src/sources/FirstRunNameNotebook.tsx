@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import { type Place } from './first-run-flow';
 import { Action, Frame, LinkButton, PlaceCard } from './FirstRunFrame';
 import { freeName, nameClash, useOtherNotebookNames } from './notebook-names';
+import { hostWords } from './host-words';
 
 /** The notebook name field, with a word when another notebook here has the name. */
 export function NameField({
@@ -34,7 +35,7 @@ export function NameField({
       {twin ? (
         // Allowed, but agents can't tell two notebooks with one name apart (Ryan's review of #192).
         <span className="fr-warn" role="status" data-testid="notebook-name-clash">
-          Another notebook on this Mac is called {twin}.{' '}
+          Another notebook on {hostWords().here} is called {twin}.{' '}
           <LinkButton
             data-event="firstrun.name.use-suggestion"
             testId="notebook-name-clash-use"

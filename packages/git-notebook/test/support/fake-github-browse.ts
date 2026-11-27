@@ -215,6 +215,16 @@ export class FakeGitHubBrowse {
         headers,
       );
     }
+    if (method === 'GET' && path === '/installation/repositories') {
+      // An App installation's list: unsorted, inside an object, permissions as the token's.
+      return json(200, {
+        total_count: this.repos.length,
+        repositories: this.repos.map((repo) => ({
+          ...this.apiRepo(repo),
+          permissions: { pull: true, push: false },
+        })),
+      });
+    }
     if (method === 'POST' && (path === '/user/repos' || /^\/orgs\/[^/]+\/repos$/.test(path))) {
       const owner = path === '/user/repos' ? this.options.login : path.split('/')[2]!;
       if (owner !== this.options.login && !this.orgs.includes(owner))

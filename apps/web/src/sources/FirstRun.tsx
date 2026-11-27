@@ -54,6 +54,7 @@ import { SettingUp } from './FirstRunSetup';
 import { useAllSources } from './hooks';
 import { isOpen } from './registry';
 import './sources.css';
+import { hostWords } from './host-words';
 
 /** Renders `children` once there is a notebook; the first run (or a wait) until then. */
 export function FirstRunGate({
@@ -134,7 +135,16 @@ function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
  * Settings. Cancel (on its first screen) or Escape closes it, back on All Notebooks; once the
  * notebook is set up it closes on the notebook's page.
  */
-export function AddNotebook({ git, onClose }: { git: DesktopGit; onClose: () => void }) {
+export function AddNotebook({
+  git,
+  onClose,
+  onAdded,
+}: {
+  git: DesktopGit;
+  onClose: () => void;
+  /** Where a set-up notebook opens; the notebook's page in Settings unless given (the relay's). */
+  onAdded?: (notebookId: string | null) => void;
+}) {
   useEffect(() => {
     const escape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
@@ -152,6 +162,10 @@ export function AddNotebook({ git, onClose }: { git: DesktopGit; onClose: () => 
           firstRun={false}
           onCancel={onClose}
           onDone={(notebookId) => {
+            if (onAdded) {
+              onAdded(notebookId);
+              return;
+            }
             onClose();
             if (notebookId) navigate(gitNotebookPath(notebookId));
           }}
@@ -460,7 +474,7 @@ function NotebookSteps({
               {
                 value: 'url',
                 title: 'Paste a URL',
-                line: 'Anywhere this Mac’s git can push to',
+                line: hostWords().urlLine,
                 testId: 'first-run-way-url',
                 event: 'firstrun.way.paste-a-url',
               },

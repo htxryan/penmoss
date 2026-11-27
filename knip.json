@@ -55,7 +55,7 @@
       "entry": ["scripts/*.ts"]
     },
     "apps/web": {
-      "entry": ["test/perf/**/*.tsx", "test/unit/support/platform.ts"]
+      "entry": ["test/perf/**/*.tsx", "test/unit/support/platform.ts", "src/relay/main.tsx"]
     },
     "site": {
       "entry": ["scripts/*.mjs"],

@@ -3,7 +3,7 @@
  * (GitHubSignIn.tsx) and the notebook steps' GitHub Access screens (FirstRunGitHub.tsx, on the
  * first run and in Add Notebook, A1562) share it.
  */
-import { copyText } from '@penmoss/editor';
+import { copyText } from '@penmoss/editor/copy';
 import { useEffect, useEffectEvent, useState } from 'react';
 import type { DesktopGitHubSignIn, GitHubSignInState } from '../desktop/bridge';
 
