@@ -98,6 +98,9 @@ const message = (error: unknown) => (error instanceof Error ? error.message : St
 /** Where a copy's keys live in the relay's storage. */
 export const prefixOf = (place: Place) => `copy:${placeKey(place)}/`;
 
+/** The key, in a copy's storage, of when it last synced. */
+const SYNCED_AT = 'synced-at';
+
 /** One notebook's copy: its engine over its repository, its queue and its sync. */
 class Copy {
   private open: Open | null = null;
@@ -127,6 +130,10 @@ class Copy {
     },
   ) {
     this.blobs = new PrefixedBlobs(relay.blobs, prefixOf(place));
+    // Kept with the copy, so a relay built again (a new notebook list, an evicted object) still
+    // knows when each notebook last synced.
+    const synced = this.blobs.get(SYNCED_AT);
+    this.syncedAt = synced ? Number(new TextDecoder().decode(synced)) || 0 : 0;
   }
 
   get fingerprint(): string {
@@ -170,6 +177,7 @@ class Copy {
     if (stored && new TextDecoder().decode(stored) !== this.fingerprint) {
       // Another notebook than the copy's: start again from the repository.
       this.blobs.clear();
+      this.syncedAt = 0;
     }
     this.blobs.put('config', new TextEncoder().encode(this.fingerprint));
     const engine = await GitNotebookEngine.open({
@@ -197,6 +205,7 @@ class Copy {
       await engine.save();
       this.lastSync = this.relay.clock();
       this.syncedAt = this.lastSync;
+      this.blobs.put(SYNCED_AT, new TextEncoder().encode(String(this.syncedAt)));
       this.problem = null;
       return report;
     } catch (error) {

@@ -140,6 +140,9 @@ async function setup(options: { private?: boolean } = {}) {
   };
 }
 
+/** The Notebooks page's rows from a relay built again over the same storage, before any call. */
+const rebuiltRows = (rebuilt: () => Relay) => rebuilt().rows();
+
 describe('the relay over MCP', () => {
   it('introduces itself as Penmoss and lists the local tools', async () => {
     const { rpc } = await setup();
@@ -482,8 +485,16 @@ describe('several notebooks in one relay (PEN-192)', () => {
       return response.json<{ result?: Record<string, unknown> }>();
     };
     const tool = (name: string, args: Record<string, unknown>) => call(relay, name, args);
+    /** The relay as the Durable Object builds it again: a new notebook list, or after eviction. */
+    const rebuilt = () =>
+      new Relay(
+        read,
+        { blobs, scheduleSync: () => Promise.resolve(), log: (text) => logs.push(text) },
+        { fetch: fetcher, clock },
+      );
     return {
       relay,
+      rebuilt,
       rpc,
       tool,
       blobs,
@@ -630,7 +641,7 @@ describe('several notebooks in one relay (PEN-192)', () => {
     // Personal's copy is as it was (its sync this time wrote only its bookkeeping).
     const after = new Map(blobs.keys(PERSONAL_COPY).map((key) => [key, blobs.get(key)]));
     for (const [key, bytes] of personalKeys) {
-      if (key.endsWith('/meta')) continue;
+      if (key.endsWith('/meta') || key.endsWith('/synced-at')) continue;
       expect(after.get(key)).toEqual(bytes);
     }
     expect(blobs.keys(QUANTA_COPY).length).toBeGreaterThan(0);
@@ -652,6 +663,13 @@ describe('several notebooks in one relay (PEN-192)', () => {
       problem: null,
     });
     expect(rows.find((row) => row.name === 'Quanta')!.syncedAt).toBeGreaterThan(0);
+  });
+
+  it('keeps when each notebook last synced across a rebuilt relay', async () => {
+    const { tool, rebuilt } = await two();
+    await tool('list_recent', {});
+    const before = await rebuiltRows(rebuilt);
+    expect(before.every((row) => typeof row.syncedAt === 'number' && row.syncedAt > 0)).toBe(true);
   });
 
   it('names each notebook from its notebook.json, adding its repository on a clash', async () => {
