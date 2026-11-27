@@ -769,17 +769,26 @@ describe('the first run (A1030, First Run C)', () => {
     await press('first-run-back');
     await press($$('first-run-repo-pick')[1]!);
     expect(host.querySelector('h2')?.textContent).toBe('Pick Folder');
-    // Root carries the repository's name; each folder its icon.
-    const folders = $$('first-run-folder-option');
-    expect(folders.map((each) => each.dataset['path'])).toEqual(['', 'docs', 'docs/guide']);
-    expect(folders[0]!.textContent).toContain('Root');
-    expect(folders[0]!.textContent).toContain('ryan/code');
-    act(() => folders[1]!.querySelector('input')!.click());
+    // A tree (A1703): Root, then the top level, closed; Notebook Goes In names the repository.
+    const paths = () => $$('first-run-folder-option').map((each) => each.dataset['path']);
+    expect(paths()).toEqual(['', 'docs']);
+    expect($$('first-run-folder-option')[0]!.textContent).toContain('Root');
+    expect($('first-run-folder-chosen')?.textContent).toBe('Root (ryan/code)');
+    await press('first-run-folder-toggle');
+    expect(paths()).toEqual(['', 'docs', 'docs/guide']);
+    act(() => $$('first-run-folder-option')[1]!.querySelector('input')!.click());
+    await settle();
+    expect($('first-run-folder-chosen')?.textContent).toBe('docs/');
+    await press('first-run-new-folder-open');
+    expect($('first-run-new-folder-dialog')?.querySelector('h2')?.textContent).toBe(
+      'New Folder in docs/',
+    );
     await type('first-run-new-folder', 'a/b');
     await press('first-run-new-folder-add');
     expect($('first-run-new-folder-problem')?.textContent).toContain('no slashes');
     await type('first-run-new-folder', 'notes');
     await press('first-run-new-folder-add');
+    expect($('first-run-new-folder-dialog')).toBeNull();
     expect(host.querySelector<HTMLInputElement>('[data-path="docs/notes"] input')?.checked).toBe(
       true,
     );
@@ -810,6 +819,75 @@ describe('the first run (A1030, First Run C)', () => {
     expect($('first-run-open')?.textContent).toBe('Open Personal');
     // At the root, so there is no folder beside it for another.
     expect($('first-run-another')).toBeNull();
+  });
+
+  it('Pick Folder is a tree with a filter that keeps parents, and marks the notebooks (A1703)', async () => {
+    const { browse } = github({
+      repos: { ok: true, via: 'git', value: { more: false, repos: [repo('mixed')] } },
+      folders: {
+        'ryan/mixed': {
+          empty: false,
+          truncated: false,
+          folders: [
+            { path: '', notebook: null },
+            { path: 'src', notebook: null },
+            { path: 'src/lib', notebook: null },
+            { path: 'src/lib/guide', notebook: null },
+            { path: 'docs', notebook: null },
+            { path: 'docs/team', notebook: { id: '01JBNOTEBOOK00000000000088', name: 'Team' } },
+          ],
+        },
+      },
+    });
+    const { add } = await start(browse);
+    await press('first-run-start');
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await press($$('first-run-repo-pick')[0]!);
+    await vi.waitFor(() =>
+      expect(host.querySelector('h2')?.textContent).toBe('Team Is Already Here'),
+    );
+    await press('first-run-start-another');
+    expect(screen()).toBe('folder');
+    const rows = () =>
+      [
+        ...host.querySelectorAll<HTMLElement>('[data-testid="first-run-folder-tree"] [data-path]'),
+      ].map((each) => each.dataset['path']);
+    // The levels down to the notebook start open; the notebook shows, with Open.
+    expect(rows()).toEqual(['', 'docs', 'docs/team', 'src']);
+    expect($('first-run-folder-notebook-chip')?.textContent).toBe('Notebook: Team');
+    expect($('first-run-folder-open')).not.toBeNull();
+    // A count while closed.
+    expect(host.querySelector('[data-path="src"]')?.textContent).toContain('1');
+    // Filter Folders keeps each match's parents, every level open, and marks the match.
+    await type('first-run-folder-filter', 'GUI');
+    expect(rows()).toEqual(['src', 'src/lib', 'src/lib/guide']);
+    expect(host.querySelector('[data-path="src/lib/guide"] mark')?.textContent).toBe('gui');
+    expect($('first-run-folder-all')).toHaveProperty('disabled', true);
+    await type('first-run-folder-filter', 'zzz');
+    expect($('first-run-folder-none')?.textContent).toContain('No Folder Matches “zzz”');
+    await press('first-run-folder-clear');
+    expect(rows()).toEqual(['', 'docs', 'docs/team', 'src']);
+    // Notebooks (1) shows only those.
+    expect($('first-run-folder-notebooks')?.textContent).toBe('Notebooks (1)');
+    await press('first-run-folder-notebooks');
+    expect(rows()).toEqual(['docs', 'docs/team']);
+    await press('first-run-folder-notebooks');
+    // Collapse All, then Expand All.
+    expect($('first-run-folder-all')?.getAttribute('aria-label')).toBe('Collapse All');
+    await press('first-run-folder-all');
+    expect(rows()).toEqual(['', 'docs', 'src']);
+    expect($('first-run-folder-all')?.getAttribute('aria-label')).toBe('Expand All');
+    await press('first-run-folder-all');
+    expect(rows()).toEqual(['', 'docs', 'docs/team', 'src', 'src/lib', 'src/lib/guide']);
+    // Open opens the notebook the folder holds.
+    await press('first-run-folder-open');
+    await vi.waitFor(() =>
+      expect(add).toHaveBeenLastCalledWith(
+        expect.objectContaining({ remote: 'https://github.com/ryan/mixed.git', dir: 'docs/team' }),
+      ),
+    );
   });
 
   it('asks Pick Branch for a repository of several branches, with a filter past eight (A1621)', async () => {
@@ -1076,6 +1154,35 @@ describe('Add Notebook from Settings: the same screens (A1562)', () => {
     expect(add).not.toHaveBeenCalled();
   });
 
+  it('goes straight to the tree when a repository’s one notebook is already here (A1623)', async () => {
+    const { browse } = github({
+      repos: { ok: true, via: 'git', value: { more: false, repos: [repo('kept')] } },
+      folders: {
+        'ryan/kept': {
+          empty: false,
+          truncated: false,
+          folders: [
+            { path: '', notebook: null },
+            { path: 'work', notebook: { id: 'NB1', name: 'Work' } },
+          ],
+        },
+      },
+    });
+    await openAdd(browse);
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await press($$('first-run-repo-pick')[0]!);
+    expect(screen()).toBe('folder');
+    expect(host.textContent).toContain(
+      'Work is already on this Mac. Pick a folder for a new notebook.',
+    );
+    expect($('first-run-folder-notebook-chip')?.textContent).toBe('Notebook: Work · Already Added');
+    expect($('first-run-folder-open')).toBeNull();
+    // No typed folder name anywhere (A1623).
+    expect($('first-run-another')).toBeNull();
+  });
+
   it('says when it can’t reach GitHub, with Try Again and Paste a URL Instead', async () => {
     const { browse, calls } = github({
       repos: { ok: true, via: 'git', value: { more: false, repos: [repo('notes')] } },
@@ -1136,12 +1243,12 @@ describe('Add Notebook from Settings: the same screens (A1562)', () => {
     await press(pick('ryan/big'));
     expect(host.querySelector('h2')?.textContent).toBe('Pick Folder');
     expect(host.textContent).toContain(
-      'Some folders aren’t shown: Paste a URL to give the folder.',
+      'GitHub left some folders out of a large repository. Paste a URL with the folder for one not listed.',
     );
     await press('first-run-back');
     await press(pick('ryan/small'));
     expect(host.querySelector('h2')?.textContent).toBe('Pick Folder');
-    expect(host.textContent).not.toContain('Some folders aren’t shown');
+    expect(host.textContent).not.toContain('GitHub left some folders out');
   });
 });
 

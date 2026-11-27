@@ -64,3 +64,7 @@ export const hostWords = (): HostWords => words;
 export function setHostWords(next: HostWords): void {
   words = next;
 }
+
+/** Pick Folder's line when the one notebook a repository holds is already here (A1623). */
+export const alreadyHereLead = (name: string) =>
+  `${name} is already on ${hostWords().here}. Pick a folder for a new notebook.`;

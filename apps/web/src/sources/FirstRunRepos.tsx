@@ -11,22 +11,13 @@
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
+import { fuzzyMatch } from '@penmoss/core/fuzzy';
 import type { GitHubRepo, RepoFolder } from '../desktop/bridge';
 import { notebooksIn, readKey, type Goal, type Hub, type RepoRead } from './first-run-flow';
-import { Action, Frame, LinkButton, Location } from './FirstRunFrame';
+import { Action, Filter, Frame, LinkButton, Location, Marked } from './FirstRunFrame';
 import { pushedWords } from './repo-words';
 import { counted } from '@penmoss/core/words';
 import { hostWords } from './host-words';
-
-/** Text with what the filter matched marked (4.3). */
-function Marked({ text, query }: { text: string; query: string }) {
-  const match = query ? fuzzyMatch(query, text, { scattered: false }) : null;
-  if (!match || match.indices.length === 0) return text;
-  return highlightRuns(text, match.indices).map((run, index) =>
-    run.match ? <mark key={index}>{run.text}</mark> : run.text,
-  );
-}
 
 /** How many repositories the tree reads at once, as they come near the list's view. */
 const READ_AT_ONCE = 3;
@@ -270,25 +261,13 @@ export function RepoTree({
   return (
     <Frame name="list" state="ready" step={2} title="Pick Repository" back={back}>
       {accountLines}
-      <label className="fr-filter">
-        <span className="sr-only">Filter</span>
-        <Icon name="search" size={14} />
-        <input
-          type="search"
-          className="input"
-          placeholder="Filter repositories and notebooks"
-          value={query}
-          data-testid="first-run-filter"
-          onChange={(event) => filter(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape' && query) {
-              event.preventDefault();
-              event.stopPropagation();
-              filter('');
-            }
-          }}
-        />
-      </label>
+      <Filter
+        label="Filter"
+        placeholder="Filter repositories and notebooks"
+        value={query}
+        onChange={filter}
+        testId="first-run-filter"
+      />
       {/* Always there, so the list never moves when the filter is typed in (Ryan's review of #193).
           A live region speaks only when its words change: as the filter is typed or cleared. */}
       <p className="fr-lead fr-small fr-count" role="status" data-testid="first-run-filter-count">

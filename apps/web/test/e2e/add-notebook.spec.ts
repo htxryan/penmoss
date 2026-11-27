@@ -99,20 +99,25 @@ test.describe('Settings', () => {
     await sheet.getByTestId('first-run-continue').click();
     await repoRow(sheet, 'ryan/code').getByTestId('first-run-repo-pick').click();
     await expect(sheet.getByRole('heading', { name: 'Pick Folder' })).toBeVisible();
+    // A tree (A1703): the top level, closed, until a chevron opens a folder.
     const folders = sheet.getByTestId('first-run-folder-option');
-    expect(
-      await folders.evaluateAll((all) => all.map((each) => each.getAttribute('data-path'))),
-    ).toEqual(['', 'docs', 'docs/guide', 'src']);
-    await folders
-      .filter({ hasText: /^docs\// })
-      .first()
-      .click();
-    // A bad name is refused in place; a good one is added under the chosen folder and picked.
-    await sheet.getByTestId('first-run-new-folder').fill('a/b');
-    await sheet.getByTestId('first-run-new-folder-add').click();
-    await expect(sheet.getByTestId('first-run-new-folder-problem')).toContainText('no slashes');
-    await sheet.getByTestId('first-run-new-folder').fill('notes');
-    await sheet.getByTestId('first-run-new-folder-add').click();
+    const paths = () =>
+      folders.evaluateAll((all) => all.map((each) => each.getAttribute('data-path')));
+    expect(await paths()).toEqual(['', 'docs', 'src']);
+    await sheet.getByRole('button', { name: 'Expand docs' }).click();
+    expect(await paths()).toEqual(['', 'docs', 'docs/guide', 'src']);
+    await sheet.locator('[data-testid="first-run-folder-option"][data-path="docs"]').click();
+    await expect(sheet.getByTestId('first-run-folder-chosen')).toHaveText('docs/');
+    // A bad name is refused in New Folder…; a good one is added under the chosen folder and picked.
+    await sheet.getByTestId('first-run-new-folder-open').click();
+    const dialog = sheet.getByTestId('first-run-new-folder-dialog');
+    await expect(dialog.getByRole('heading', { name: 'New Folder in docs/' })).toBeVisible();
+    await dialog.getByTestId('first-run-new-folder').fill('a/b');
+    await dialog.getByTestId('first-run-new-folder-add').click();
+    await expect(dialog.getByTestId('first-run-new-folder-problem')).toContainText('no slashes');
+    await dialog.getByTestId('first-run-new-folder').fill('notes');
+    await dialog.getByTestId('first-run-new-folder-add').click();
+    await expect(dialog).toHaveCount(0);
     await expect(sheet.locator('[data-path="docs/notes"] input')).toBeChecked();
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/new-folder.png` });
     await sheet.getByTestId('first-run-continue').click();
@@ -153,11 +158,22 @@ test.describe('Settings', () => {
     await expect(sheet.getByRole('heading', { name: 'Team wiki Is Already Here' })).toBeVisible();
     await expect(sheet.getByTestId('first-run-open')).toHaveText('Open Team wiki');
     await expect(sheet.getByTestId('first-run-folder-option')).toHaveCount(0);
-    await sheet.getByTestId('first-run-another').fill('.hidden');
-    await sheet.getByTestId('first-run-another-make').click();
-    await expect(sheet.getByRole('alert')).toContainText('dot');
-    await sheet.getByTestId('first-run-another').fill('journal');
-    await sheet.getByTestId('first-run-another-make').click();
+    // Another beside it: the folders, never a typed name (A1623), the notebook's own marked.
+    await sheet.getByTestId('first-run-start-another').click();
+    await expect(sheet.getByRole('heading', { name: 'Pick Folder' })).toBeVisible();
+    await expect(sheet.getByTestId('first-run-folder-notebook-chip')).toHaveText(
+      'Notebook: Team wiki',
+    );
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/pick-folder-notebook.png` });
+    await sheet.getByTestId('first-run-new-folder-open').click();
+    const dialog = sheet.getByTestId('first-run-new-folder-dialog');
+    await dialog.getByTestId('first-run-new-folder').fill('.hidden');
+    await dialog.getByTestId('first-run-new-folder-add').click();
+    await expect(dialog.getByRole('alert')).toContainText('dot');
+    await dialog.getByTestId('first-run-new-folder').fill('journal');
+    await dialog.getByTestId('first-run-new-folder-add').click();
+    await expect(sheet.getByTestId('first-run-folder-chosen')).toHaveText('journal/');
+    await sheet.getByTestId('first-run-continue').click();
     await expect(sheet.getByRole('heading', { name: 'Name Your Notebook' })).toBeVisible();
     await expect(sheet.getByTestId('first-run-place')).toContainText('journal/');
   });

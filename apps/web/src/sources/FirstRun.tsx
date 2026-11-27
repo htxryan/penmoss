@@ -582,6 +582,8 @@ function NotebookSteps({
             folders={loaded.folders}
             beside
             branch={screen.branch}
+            added={added}
+            onOpen={(place, name) => go({ at: 'setup', setup: { kind: 'open', place, name } })}
             onName={(place) => go({ at: 'name', place })}
             back={back}
           />

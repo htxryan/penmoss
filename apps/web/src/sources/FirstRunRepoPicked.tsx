@@ -1,5 +1,5 @@
 /** The first run's one-repository-picked screen (4.5–4.8; FirstRunRepos.tsx has the others). */
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { GitHubRepo, GitHubVia } from '../desktop/bridge';
 import { notebooksIn, placeIn, type Place, type RepoRead } from './first-run-flow';
 import {
@@ -12,9 +12,8 @@ import {
   Problem,
   Working,
 } from './FirstRunFrame';
-import { folderNameProblem } from './repo-words';
 import { FolderPick } from './FirstRunFolderPick';
-import { hostWords } from './host-words';
+import { alreadyHereLead, hostWords } from './host-words';
 
 /**
  * One repository picked (4.5–4.8): empty, it starts at the root; holding a notebook, it opens
@@ -49,8 +48,6 @@ export function RepoPicked({
 }) {
   const [branch, setBranch] = useState(picked);
   const [dir, setDir] = useState('');
-  const [another, setAnother] = useState('');
-  const [anotherProblem, setAnotherProblem] = useState<string | null>(null);
   const [pick, setPick] = useState<string | null>(null);
   const formId = useId();
   useEffect(() => {
@@ -137,18 +134,28 @@ export function RepoPicked({
     );
   }
 
-  // 4.6: one notebook: open it, or start another in a folder beside it.
+  // 4.6, one notebook already here: nothing to open, so straight to the folders to start another,
+  // the notebook's own folder marked Already Added (A1623, A1703).
+  if (notebooks.length === 1 && isAdded(notebooks[0]!) && !rootIsNotebook) {
+    return (
+      <FolderPick
+        repo={repo}
+        via={via}
+        folders={folders}
+        beside
+        branch={branchNow}
+        added={added}
+        onOpen={onOpen}
+        lead={alreadyHereLead(notebooks[0]!.notebook.name)}
+        onName={onName}
+        back={back}
+      />
+    );
+  }
+
+  // 4.6: one notebook: open it, or browse the folders to start another beside it (A1623).
   if (notebooks.length === 1) {
     const only = notebooks[0]!;
-    const startAnother = (event: FormEvent) => {
-      event.preventDefault();
-      const words = folderNameProblem(another);
-      if (words) {
-        setAnotherProblem(words);
-        return;
-      }
-      onName(placeIn(repo, via, another.trim(), branchNow));
-    };
     return (
       <Frame
         name="repo"
@@ -179,42 +186,13 @@ export function RepoPicked({
           </Action>
         )}
         {rootIsNotebook ? null : (
-          <form id={formId} className="fr-another" onSubmit={startAnother}>
-            <p className="fr-or" aria-hidden="true">
-              <span />
-              or
-              <span />
-            </p>
-            <strong>Start Another Notebook in a Folder</strong>
-            <span className="fr-row">
-              <label className="fr-grow">
-                <span className="sr-only">Folder name</span>
-                <input
-                  className="input"
-                  placeholder="journal"
-                  spellCheck={false}
-                  value={another}
-                  data-testid="first-run-another"
-                  onChange={(event) => {
-                    setAnother(event.target.value);
-                    setAnotherProblem(null);
-                  }}
-                />
-              </label>
-              <Action
-                data-event="firstrun.repo.make-notebook"
-                form={formId}
-                testId="first-run-another-make"
-              >
-                Make Notebook
-              </Action>
-            </span>
-            {anotherProblem ? (
-              <span className="fr-invalid-words" role="alert">
-                {anotherProblem}
-              </span>
-            ) : null}
-          </form>
+          <LinkButton
+            data-event="firstrun.repo.start-another"
+            testId="first-run-start-another"
+            onClick={onFolder}
+          >
+            Start Another Notebook in a Folder
+          </LinkButton>
         )}
       </Frame>
     );
@@ -289,6 +267,8 @@ export function RepoPicked({
       via={via}
       folders={folders}
       branch={branchNow}
+      added={added}
+      onOpen={onOpen}
       onName={onName}
       back={back}
     />

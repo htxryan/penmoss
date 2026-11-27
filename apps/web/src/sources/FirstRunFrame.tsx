@@ -4,6 +4,7 @@
  * focus, so a screen reader hears where it is), what it asks, and a footer with Back on the left
  * and its buttons on the right.
  */
+import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import { Icon, type IconName } from '@penmoss/ui/icons';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { copy } from '../analytics/status';
@@ -21,6 +22,7 @@ export function Frame({
   state,
   start,
   above,
+  strip,
   cancel,
 }: {
   /** Above the title (the welcome's mark). */
@@ -44,6 +46,8 @@ export function Frame({
   cancel?: (() => void) | undefined;
   /** The footer's buttons, the primary one last. */
   actions?: ReactNode;
+  /** A line above the footer, out of the screen's scroll (Pick Folder's Notebook Goes In). */
+  strip?: ReactNode;
   /** The welcome: its words in the middle of the screen. */
   centered?: boolean;
   /** What the screen shows of its work, as `data-state`. */
@@ -79,6 +83,7 @@ export function Frame({
         </h2>
         {children}
       </div>
+      {strip ? <div className="fr-strip">{strip}</div> : null}
       {back || cancel || actions || start ? (
         <div className="fr-foot">
           {cancel && !back ? (
@@ -195,6 +200,73 @@ export function LinkButton({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * A filter over a list (Pick Repository's, Pick Branch's, Pick Folder's), the one field all three
+ * use: its search icon, Escape clearing what is typed, and, with `clear`, a × that does too.
+ */
+export function Filter({
+  label,
+  placeholder,
+  value,
+  onChange,
+  testId,
+  clear,
+}: {
+  /** Its name, for a screen reader. */
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  testId: string;
+  /** A Clear Filter button while something is typed: its tracked id and test id. */
+  clear?: { readonly event: string; readonly testId: string };
+}) {
+  return (
+    <label className="fr-filter">
+      <span className="sr-only">{label}</span>
+      <Icon name="search" size={14} />
+      <input
+        type="search"
+        className="input"
+        placeholder={placeholder}
+        value={value}
+        spellCheck={false}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && value) {
+            event.preventDefault();
+            event.stopPropagation();
+            onChange('');
+          }
+        }}
+      />
+      {clear && value ? (
+        <button
+          type="button"
+          className="fr-filter-clear"
+          aria-label="Clear Filter"
+          data-ui="item"
+          data-event={clear.event}
+          data-testid={clear.testId}
+          onClick={() => onChange('')}
+        >
+          <Icon name="close" size={14} />
+        </button>
+      ) : null}
+    </label>
+  );
+}
+
+/** Text with what a filter matched marked (4.3), as Pick Repository's and Pick Folder's lists mark it. */
+export function Marked({ text, query }: { text: string; query: string }) {
+  const match = query ? fuzzyMatch(query, text, { scattered: false }) : null;
+  if (!match || match.indices.length === 0) return text;
+  return highlightRuns(text, match.indices).map((run, index) =>
+    run.match ? <mark key={index}>{run.text}</mark> : run.text,
   );
 }
 

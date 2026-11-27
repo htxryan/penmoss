@@ -267,16 +267,19 @@ test.describe('the first run', () => {
     await firstRun.getByTestId('first-run-tree-repo').getByTestId('first-run-repo-pick').click();
 
     await expect(firstRun.getByRole('heading', { name: 'Pick Folder' })).toBeVisible();
+    // A tree (A1703): the top level, closed; Notebook Goes In names the repository's root.
     const folders = firstRun.getByTestId('first-run-folder-option');
     expect(
       await folders.evaluateAll((all) => all.map((each) => each.getAttribute('data-path'))),
-    ).toEqual(['', 'docs', 'docs/guide', 'src']);
-    // Root carries the repository's name.
-    await expect(folders.first()).toContainText('ryan/code');
-    await folders
-      .filter({ hasText: /^docs\// })
-      .first()
-      .click();
+    ).toEqual(['', 'docs', 'src']);
+    await expect(firstRun.getByTestId('first-run-folder-chosen')).toHaveText('Root (ryan/code)');
+    await firstRun.getByTestId('first-run-folder-filter').fill('gui');
+    expect(
+      await folders.evaluateAll((all) => all.map((each) => each.getAttribute('data-path'))),
+    ).toEqual(['docs', 'docs/guide']);
+    await firstRun.getByTestId('first-run-folder-clear').click();
+    await firstRun.locator('[data-testid="first-run-folder-option"][data-path="docs"]').click();
+    await firstRun.getByTestId('first-run-new-folder-open').click();
     await firstRun.getByTestId('first-run-new-folder').fill('notes');
     await firstRun.getByTestId('first-run-new-folder-add').click();
     await expect(firstRun.locator('[data-path="docs/notes"] input')).toBeChecked();
