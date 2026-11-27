@@ -1,14 +1,17 @@
 /**
  * The Notebooks page (PEN-194), in workerd with GitHub faked: the list with each notebook's place,
- * access and sync state; Add Notebook… through the App or a token, the default branch first, and
- * refused without a notebook.json; Remove… after asking; Replace Token…; a token shown only by its
- * last four characters; and the forms' tokens.
+ * access and sync state; Add Notebook… as the app's flow (the App's repositories or a token's,
+ * then the notebooks found on the repository's branches, one choice to add); Remove… after
+ * asking; Replace Token…; a token shown only by its last four characters; and the forms' tokens.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { call, forgetApp, keepTestApp, keepTestNotebooks, ORIGIN, signInToPages } from './support';
 
 const NOTEBOOK_JSON = (name: string) =>
   btoa(JSON.stringify({ id: '01JBNOTEBOOK0000000000000X', name, format: 1 }));
+
+/** Where each repository holds its notebook, by `repository#branch`: the folder, '' for the root. */
+const NOTEBOOKS: Record<string, string> = { 'ryan/other#main': '', 'quanta/new#dev': 'penmoss' };
 
 /** GitHub, faked: the App's installation, its repositories, and each repository's files. */
 function fakeGitHub(login = 'htxryan') {
@@ -26,6 +29,23 @@ function fakeGitHub(login = 'htxryan') {
     }
     if (url.origin !== 'https://api.github.test') return real(input, init);
     if (path === '/user') return Response.json({ login });
+    if (url.pathname === '/user/repos') {
+      if (auth !== 'Bearer github_pat_new1234') {
+        return Response.json({ message: 'Bad credentials' }, { status: 401 });
+      }
+      const repo = (name: string, push: boolean) => ({
+        full_name: `quanta/${name}`,
+        name,
+        owner: { login: 'quanta' },
+        clone_url: `https://github.com/quanta/${name}.git`,
+        private: true,
+        visibility: 'private',
+        default_branch: 'main',
+        permissions: { push },
+        size: 10,
+      });
+      return Response.json([repo('new', true), repo('readonly', false)]);
+    }
     if (path.startsWith('/app/installations') && path.endsWith('/access_tokens')) {
       return Response.json(
         { token: 'ghs_app', expires_at: '2099-01-01T00:00:00Z' },
@@ -52,6 +72,24 @@ function fakeGitHub(login = 'htxryan') {
     if (!allowed) return Response.json({ message: 'Bad credentials' }, { status: 401 });
     if (rest === '') return Response.json({ default_branch: 'main', private: true });
     if (rest.startsWith('/branches')) return Response.json([{ name: 'dev' }, { name: 'main' }]);
+    const tree = /^\/git\/trees\/([^?]+)\?recursive=1$/.exec(rest);
+    if (tree) {
+      const branch = decodeURIComponent(tree[1]!);
+      const at = NOTEBOOKS[`${name}#${branch}`];
+      const entries = [{ path: 'README.md', type: 'blob', sha: 'readme' }];
+      if (at !== undefined) {
+        const dir = at ? `${at}/` : '';
+        if (at) entries.push({ path: at, type: 'tree', sha: 'dir' });
+        entries.push({ path: `${dir}.penmoss`, type: 'tree', sha: 'meta' });
+        entries.push({ path: `${dir}.penmoss/notebook.json`, type: 'blob', sha: `nb-${name}` });
+      }
+      return Response.json({ tree: entries, truncated: false });
+    }
+    if (rest.startsWith('/git/blobs/nb-')) {
+      return Response.json({
+        content: NOTEBOOK_JSON(name === 'ryan/other' ? 'Other' : 'Quanta New'),
+      });
+    }
     if (rest.startsWith('/contents/')) {
       if (name === 'ryan/empty') return Response.json({ message: 'Not Found' }, { status: 404 });
       return Response.json({
@@ -98,8 +136,6 @@ async function owner() {
   return { get, post, csrf };
 }
 
-const pendingOf = (html: string) => /name="pending" value="([0-9a-f]{48})"/.exec(html)![1]!;
-
 describe('the Notebooks page', () => {
   it('starts empty, with the connector address and Add Notebook…', async () => {
     const { get } = await owner();
@@ -115,71 +151,68 @@ describe('the Notebooks page', () => {
     );
   });
 
-  it('adds a notebook through the App: its repository offered, the default branch first', async () => {
+  it('adds a notebook through the App: its repositories listed, the notebook found, one choice', async () => {
     const { get, post } = await owner();
     const add = await (await get('/notebooks/add')).text();
-    expect(add).toContain('<option value="ryan/other">');
-    const step = await post('/notebooks/add', { repository: 'ryan/other', access: 'app' });
-    expect(step.status).toBe(200);
-    const html = await step.text();
-    expect(html.indexOf('<option value="main">')).toBeLessThan(
-      html.indexOf('<option value="dev">'),
-    );
-    const added = await post('/notebooks/add/finish', {
-      pending: pendingOf(html),
-      branch: 'main',
-      folder: '',
-    });
+    expect(add).toContain('href="/notebooks/add/repo?r=ryan%2Fother">Choose</a>');
+    expect(add).toContain('href="/notebooks/add/repo?r=ryan%2Fempty">Choose</a>');
+    expect(add).toContain('Install on More Repositories…');
+    expect(add).not.toContain('owner/name');
+    const repo = await (await get('/notebooks/add/repo?r=ryan%2Fother')).text();
+    expect(repo).toContain('<span class="lf-row-label">Other</span>');
+    expect(repo).toContain('main · Root');
+    const added = await post('/notebooks/add/finish', { r: 'ryan/other', b: 'main', f: '' });
     expect(added.status).toBe(303);
     const list = await (await get('/notebooks')).text();
     expect(list).toContain('ryan/other · main · GitHub App');
-    expect(list).not.toContain('No Notebooks Yet');
+    expect(await (await get('/notebooks/add/repo?r=ryan%2Fother')).text()).toContain(
+      '<span class="relay-state">Added</span>',
+    );
   });
 
-  it('adds a notebook by a token, showing only its last four characters', async () => {
+  it('adds a notebook by a token: its repositories, the notebook on another branch, never the token', async () => {
     const { get, post } = await owner();
-    const step = await post('/notebooks/add', {
-      repository: 'quanta/new',
-      access: 'token',
-      token: 'github_pat_new1234',
-    });
-    const html = await step.text();
-    expect(html).not.toContain('github_pat_new1234');
+    const started = await post('/notebooks/add/token', { token: 'github_pat_new1234' });
+    expect(started.status).toBe(303);
+    const at = started.headers.get('location')!;
+    const pending = new URL(at, ORIGIN).searchParams.get('p')!;
+    const repos = await (await get(at)).text();
+    expect(repos).toContain('quanta/new');
+    expect(repos).not.toContain('quanta/readonly');
+    expect(repos).not.toContain('github_pat_new1234');
+    const repo = await (await get(`/notebooks/add/repo?p=${pending}&r=quanta%2Fnew`)).text();
+    expect(repo).toContain('<span class="lf-row-label">Quanta New</span>');
+    expect(repo).toContain('dev · penmoss/');
+    expect(repo).not.toContain('github_pat_new1234');
     const added = await post('/notebooks/add/finish', {
-      pending: pendingOf(html),
-      branch: 'main',
-      folder: 'penmoss',
+      p: pending,
+      r: 'quanta/new',
+      b: 'dev',
+      f: 'penmoss',
     });
     expect(added.status).toBe(303);
     const list = await (await get('/notebooks')).text();
-    expect(list).toContain('quanta/new · main · penmoss/ · Token ending 1234');
+    expect(list).toContain('quanta/new · dev · penmoss/ · Token ending 1234');
     expect(list).not.toContain('github_pat_new');
     expect(list).toContain('Replace Token…');
   });
 
-  it('refuses a repository with no notebook.json, or one it can’t read, saying why', async () => {
-    const { post } = await owner();
-    const step = await (
-      await post('/notebooks/add', { repository: 'ryan/empty', access: 'app' })
-    ).text();
-    const refused = await post('/notebooks/add/finish', {
-      pending: pendingOf(step),
-      branch: 'main',
-      folder: '',
-    });
+  it('says why when a token is refused, a repository holds no notebook, or a place has none', async () => {
+    const { get, post } = await owner();
+    const refused = await post('/notebooks/add/token', { token: 'github_pat_wrong' });
     expect(refused.status).toBe(400);
-    expect(await refused.text()).toContain('There’s no Penmoss notebook in ryan/empty on main');
-    const unreadable = await post('/notebooks/add', {
-      repository: 'quanta/new',
-      access: 'token',
-      token: 'github_pat_wrong',
-    });
-    expect(unreadable.status).toBe(400);
-    expect(await unreadable.text()).toContain('can’t be read with this access');
-    const noToken = await post('/notebooks/add', { repository: 'quanta/new', access: 'token' });
-    expect(await noToken.text()).toContain('Paste the notebook’s token');
-    const badName = await post('/notebooks/add', { repository: 'nope', access: 'app' });
-    expect(await badName.text()).toContain('Name the repository as owner/name');
+    expect(await refused.text()).toContain('GitHub refused this token');
+    const empty = await (await get('/notebooks/add/repo?r=ryan%2Fempty')).text();
+    expect(empty).toContain('No Notebooks Found');
+    expect(empty).toContain('None on <code>main</code>, <code>dev</code>.');
+    expect(empty).not.toContain('Look There');
+    const none = await post('/notebooks/add/finish', { r: 'ryan/empty', b: 'main', f: '' });
+    expect(none.status).toBe(400);
+    expect(await none.text()).toContain('There’s no Penmoss notebook in ryan/empty on main');
+    const stale = await (await get(`/notebooks/add/token?p=${'a'.repeat(48)}`)).text();
+    expect(stale).toContain('This was started too long ago');
+    const branch = await (await get('/notebooks/add/repo?r=ryan%2Fother&b=nope')).text();
+    expect(branch).toContain('ryan/other has no branch “nope”');
   });
 
   it('asks before it removes a notebook, and the notes stay in the repository', async () => {
@@ -211,9 +244,8 @@ describe('the Notebooks page', () => {
 
   it('refuses a form without its token', async () => {
     const { post } = await owner();
-    const forged = await post('/notebooks/add', {
-      repository: 'ryan/other',
-      access: 'app',
+    const forged = await post('/notebooks/add/token', {
+      token: 'github_pat_new1234',
       csrf: 'f'.repeat(48),
     });
     expect(forged.status).toBe(403);

@@ -30,14 +30,14 @@ The relay's first page is **Set Up This Relay**.
 
 ## Add your notebooks
 
-On the relay's **Notebooks** page, choose **Add Notebook…** for each notebook Claude may use.
+On the relay's **Notebooks** page, choose **Add Notebook…** for each notebook Claude may use. It works like adding a notebook in Penmoss: you pick, the relay finds.
 
-1. Pick a repository the App can reach, or type one as `owner/name`. Then choose **GitHub App** or **Token**, and **Continue**.
-2. Pick the branch, and type the folder if the notebook isn't at the top of the repository. Choose **Add Notebook**.
+1. Choose the repository that holds the notebook. The page lists every repository your App is installed on; **Install on More Repositories…** adds others.
+2. The relay looks for notebooks on the repository's branches and lists each one it finds, with its branch and folder. Choose **Add** beside the one you want.
 
-The relay checks that a Penmoss notebook is there before adding it. Each notebook shows its name, where it is, and when it last synced, or what went wrong.
+Each notebook on the Notebooks page shows its name, where it is, and when it last synced, or what went wrong.
 
-A repository in an organisation that won't allow your App can use a token of its own. On GitHub, make a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for that one repository, with **Contents: Read and write**. Choose **Token** when you add the notebook, and paste it. The page shows only its last four characters, and **Replace Token…** gives it a new one.
+A repository in an organisation that won't allow your App uses a token of its own. On GitHub, make a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for that repository, with **Contents: Read and write**. Paste it under **Token** on the Add Notebook page and choose **Show Its Repositories**, then pick the repository as above. The relay shows only the token's last four characters from then on, and **Replace Token…** gives a notebook a new one.
 
 **Remove…** stops Claude reaching a notebook. Its notes stay in the repository, and edits not yet pushed are pushed first.
 
