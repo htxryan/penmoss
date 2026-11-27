@@ -163,6 +163,48 @@ describe('the repositories a credential reaches', () => {
   });
 });
 
+describe('a repository’s branches (A1621)', () => {
+  it('lists the default branch first, then the rest by name, and reads another branch’s notebook', async () => {
+    const { fake, browse } = setup();
+    fake.repos = [
+      {
+        owner: 'acme',
+        name: 'scratch',
+        files: { 'README.md': '# scratch' },
+        branches: {
+          dev: {
+            'penmoss/.penmoss/notebook.json': notebookJson('01JBNOTEBOOK00000000000077', 'Quanta'),
+          },
+          Archive: { 'old.md': 'old' },
+        },
+      },
+    ];
+    await expect(browse.branches(TOKEN, 'acme/scratch', 'main')).resolves.toEqual({
+      ok: true,
+      value: ['main', 'Archive', 'dev'],
+    });
+    const main = await browse.folders(TOKEN, 'acme/scratch', 'main');
+    expect(main.ok && main.value.folders.some((each) => each.notebook)).toBe(false);
+    const dev = await browse.folders(TOKEN, 'acme/scratch', 'dev');
+    expect(dev.ok && dev.value.folders.find((each) => each.notebook)).toEqual({
+      path: 'penmoss',
+      notebook: { id: '01JBNOTEBOOK00000000000077', name: 'Quanta' },
+    });
+  });
+
+  it('refuses a name that is not a repository’s, and passes on GitHub’s refusal', async () => {
+    const { browse } = setup();
+    await expect(browse.branches(TOKEN, 'nope', 'main')).resolves.toMatchObject({
+      ok: false,
+      error: { reason: 'invalid' },
+    });
+    await expect(browse.branches('ghs_wrong', 'acme/scratch', 'main')).resolves.toMatchObject({
+      ok: false,
+      error: { reason: 'unauthorized' },
+    });
+  });
+});
+
 describe('a repository’s folders', () => {
   it('lists the root first, hides dot-folders and a notebook’s own folders, and names the notebooks', async () => {
     const { fake, browse } = setup();

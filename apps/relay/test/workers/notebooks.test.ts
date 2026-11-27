@@ -305,6 +305,16 @@ describe('the Notebooks page', () => {
       ['quanta/new', true],
       ['quanta/readonly', false],
     ]);
+    // Pick Branch (A1621): the default first, then by name; the notebook is on dev's penmoss/.
+    const branches = (await bridge('branches', ['quanta/new', 'main', 'quanta-ryan'])).answer;
+    expect(branches).toMatchObject({ ok: true, via: 'penmoss', value: ['main', 'dev'] });
+    const onDev = (await bridge('folders', ['quanta/new', 'dev', 'quanta-ryan'])).answer;
+    expect(onDev.value.folders).toContainEqual({
+      path: 'penmoss',
+      notebook: { id: ID, name: 'Quanta New' },
+    });
+    const onMain = (await bridge('folders', ['quanta/new', 'main', 'quanta-ryan'])).answer;
+    expect(onMain.value.folders.some((each) => each.notebook)).toBe(false);
     // Paste a URL, with its branch and folder: the App isn't installed there, the account is.
     const added = (await bridge('add', [at('https://github.com/quanta/new', 'dev', 'penmoss')]))
       .answer;

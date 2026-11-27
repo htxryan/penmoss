@@ -102,6 +102,8 @@ export type BrowseResult<T> =
 /** At most this many repositories load (D62: 3 pages of 100). */
 export const MAX_REPOS = 300;
 const PAGE = 100;
+/** At most this many branches list for Pick Branch (A1621: 3 pages of 100). */
+const MAX_BRANCHES = 300;
 /** The notebook names read from one tree. */
 const MAX_NOTEBOOKS = 20;
 const GITHUB_API_BASE = 'https://api.github.com';
@@ -369,6 +371,52 @@ export class GitHubBrowse {
       url = nextLink(answer.response.headers.get('link'));
     }
     return { ok: true, value: { repos: repos.slice(0, MAX_REPOS), more: url !== null } };
+  }
+
+  /**
+   * One repository's branches, the default first and then by name, at most [MAX_BRANCHES]: Pick
+   * Branch lists them, since a branch can hold other folders (A1621).
+   */
+  async branches(
+    token: string,
+    fullName: string,
+    defaultBranch: string,
+  ): Promise<BrowseResult<readonly string[]>> {
+    const [owner, name, ...rest] = fullName.split('/');
+    if (!owner || !name || rest.length > 0 || !ownerOk(owner) || !repoNameOk(name)) {
+      return {
+        ok: false,
+        error: { reason: 'invalid', message: 'That is not a GitHub repository name.' },
+      };
+    }
+    const names: string[] = [];
+    let url: string | null = `${this.api}/repos/${owner}/${name}/branches?per_page=${PAGE}`;
+    let pages = 0;
+    while (url && pages < MAX_BRANCHES / PAGE) {
+      const answer = await this.call(url, token);
+      if (!answer.ok) return answer;
+      const body: unknown = await answer.response.json().catch(() => null);
+      if (!Array.isArray(body)) {
+        return {
+          ok: false,
+          error: { reason: 'github', message: 'GitHub sent a list Penmoss cannot read.' },
+        };
+      }
+      for (const raw of body) {
+        const each = text((raw as { name?: unknown } | null)?.name);
+        if (each) names.push(each);
+      }
+      pages += 1;
+      url = nextLink(answer.response.headers.get('link'));
+    }
+    const sorted = [...new Set(names)].sort((a, b) =>
+      a === defaultBranch
+        ? -1
+        : b === defaultBranch
+          ? 1
+          : a.toLowerCase().localeCompare(b.toLowerCase()),
+    );
+    return { ok: true, value: sorted };
   }
 
   /**

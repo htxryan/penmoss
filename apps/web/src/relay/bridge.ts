@@ -107,6 +107,8 @@ export function relayDesktop(call: RelayCall): {
     repos: (account) => call<GitHubAnswer<RepoList>>('repos', as(account)),
     folders: (fullName, branch, account) =>
       call<GitHubAnswer<RepoFolders>>('folders', [fullName, branch, ...as(account)]),
+    branches: (fullName, defaultBranch, account) =>
+      call<GitHubAnswer<readonly string[]>>('branches', [fullName, defaultBranch, ...as(account)]),
     owners: (account) => call<GitHubAnswer<readonly GitHubOwner[]>>('owners', as(account)),
     create: (owner, name, account) =>
       call<GitHubAnswer<GitHubRepo>>('create', [owner, name, ...as(account)]),

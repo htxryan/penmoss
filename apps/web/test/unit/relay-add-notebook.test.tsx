@@ -59,8 +59,19 @@ function relay() {
             via: 'git',
             value: {
               more: false,
-              repos: [repo('ryan/notes'), repo('ryan/empty', { empty: true })],
+              repos: [
+                repo('ryan/notes'),
+                repo('ryan/empty', { empty: true }),
+                // Quanta's shape: the notebook is on `dev`, the default `main` has none.
+                repo('acme/scratch', { pushedAt: '2026-11-01T10:00:00Z' }),
+              ],
             },
+          };
+        case 'branches':
+          return {
+            ok: true,
+            via: 'git',
+            value: args[0] === 'acme/scratch' ? ['main', 'Archive', 'dev'] : [args[1]],
           };
         case 'owners':
           return { ok: true, via: 'git', value: [{ login: 'htxryan', kind: 'user' }] };
@@ -69,18 +80,34 @@ function relay() {
             ok: true,
             via: 'git',
             value:
-              args[0] === 'ryan/notes'
+              args[0] === 'acme/scratch'
                 ? {
                     empty: false,
                     truncated: false,
-                    folders: [{ path: '', notebook: { id: 'NB-P', name: 'Personal' } }],
+                    folders: [
+                      { path: '', notebook: null },
+                      { path: 'claude-global', notebook: null },
+                      ...(args[1] === 'dev'
+                        ? [{ path: 'penmoss', notebook: { id: 'NB-Q', name: 'Quanta' } }]
+                        : []),
+                    ],
                   }
-                : { empty: true, truncated: false, folders: [{ path: '', notebook: null }] },
+                : args[0] === 'ryan/notes'
+                  ? {
+                      empty: false,
+                      truncated: false,
+                      folders: [{ path: '', notebook: { id: 'NB-P', name: 'Personal' } }],
+                    }
+                  : { empty: true, truncated: false, folders: [{ path: '', notebook: null }] },
           };
         case 'add': {
           const input = args[0] as { remote: string; name?: string; dir: string; branch: string };
-          const notebookId = input.remote.includes('notes') ? 'NB-P' : 'NB-NEW';
-          if (!input.remote.includes('notes') && !input.name)
+          const notebookId = input.remote.includes('notes')
+            ? 'NB-P'
+            : input.remote.includes('scratch')
+              ? 'NB-Q'
+              : 'NB-NEW';
+          if (notebookId === 'NB-NEW' && !input.name)
             return { ok: true, value: { kind: 'needs-name' } };
           const notebook: RelayNotebook = {
             notebookId,
@@ -250,6 +277,42 @@ describe('the relay’s Add Notebook (A1701)', () => {
       { remote: 'https://github.com/ryan/empty.git', branch: 'main', dir: '', name: 'Scratch' },
     ]);
     expect(added).toHaveBeenCalledWith('NB-NEW');
+  });
+
+  it('finds a notebook on another branch through Pick Branch, as Android does (A1621)', async () => {
+    const { calls, added } = await open();
+    await press('first-run-continue');
+    await choose('first-run-way-existing');
+    await press('first-run-continue');
+    await settle();
+    const scratch = $$('first-run-repo-pick').find(
+      (each) => each.closest('[data-repo]')?.getAttribute('data-repo') === 'acme/scratch',
+    );
+    await press(scratch!);
+    expect(screen()).toBe('branch');
+    expect(title()).toBe('Pick Branch');
+    const branches = $$('first-run-pick-branch');
+    expect(branches.map((each) => each.querySelector('strong')?.textContent)).toEqual([
+      'main',
+      'Archive',
+      'dev',
+    ]);
+    expect(branches[0]!.textContent).toContain('Default');
+    act(() => branches[2]!.querySelector('input')!.click());
+    await settle();
+    await press('first-run-continue');
+    await settle();
+    expect(screen()).toBe('repo');
+    expect(title()).toBe('Quanta Is Already Here');
+    expect($('first-run-place')?.textContent).toContain('dev');
+    await press('first-run-open');
+    await settle();
+    expect(calls).toContainEqual(['folders', 'acme/scratch', 'dev']);
+    expect(calls).toContainEqual([
+      'add',
+      { remote: 'https://github.com/acme/scratch.git', branch: 'dev', dir: 'penmoss' },
+    ]);
+    expect(added).toHaveBeenCalledWith('NB-Q');
   });
 
   it('takes a token for another account on the app’s GitHub Accounts, in the relay’s words', async () => {

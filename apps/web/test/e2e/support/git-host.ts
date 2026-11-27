@@ -98,6 +98,7 @@ export const CLI_CALLS = ['cliStatus'] as const;
 export const GITHUB_CALLS = [
   'githubRepos',
   'githubFolders',
+  'githubBranches',
   'githubOwners',
   'githubCreate',
   'githubGitLogin',
@@ -475,6 +476,8 @@ export class GitHost {
         return this.browse.repos(a);
       case 'githubFolders':
         return this.browse.folders(a, b, c);
+      case 'githubBranches':
+        return this.browse.branches(a, b, c);
       case 'githubOwners':
         return this.browse.owners(a);
       case 'githubCreate':

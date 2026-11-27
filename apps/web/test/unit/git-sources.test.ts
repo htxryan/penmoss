@@ -200,6 +200,7 @@ function fakeGit(transport: MemoryTransport): DesktopGit & { secrets: Map<string
     github: {
       repos: () => Promise.resolve(null),
       folders: () => Promise.resolve(null),
+      branches: () => Promise.resolve(null),
       owners: () => Promise.resolve(null),
       create: () => Promise.resolve(null),
       // No sign-in here: its status is null, as from a window that may not sign in.
@@ -988,6 +989,7 @@ describe('Delete for good confirmed again from Settings (A855)', () => {
       github: {
         repos: () => Promise.resolve(null),
         folders: () => Promise.resolve(null),
+        branches: () => Promise.resolve(null),
         owners: () => Promise.resolve(null),
         create: () => Promise.resolve(null),
         // No sign-in here: its status is null, as from a window that may not sign in.

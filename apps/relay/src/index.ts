@@ -34,6 +34,7 @@ const ADD_CALLS = new Set([
   'add',
   'repos',
   'folders',
+  'branches',
   'owners',
   'create',
   'gitLogin',

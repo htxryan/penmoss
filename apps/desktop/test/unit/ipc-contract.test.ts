@@ -58,6 +58,7 @@ const POLICY: Record<keyof typeof INVOKE, [Caller, 'none' | 'handler' | { refuse
   gitIdentity: ['window', 'none'],
   gitGithubRepos: ['main', 'none'],
   gitGithubFolders: ['main', 'none'],
+  gitGithubBranches: ['main', 'none'],
   gitGithubOwners: ['main', 'none'],
   gitGithubGitLogin: ['main', 'none'],
   gitGithubCreate: ['main', { refused: BROWSE_NOT_CONFIRMED }],

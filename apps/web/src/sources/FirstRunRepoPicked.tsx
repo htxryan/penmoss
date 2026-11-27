@@ -25,6 +25,7 @@ export function RepoPicked({
   via,
   added,
   loaded,
+  branch: picked,
   read,
   onOpen,
   onName,
@@ -37,22 +38,24 @@ export function RepoPicked({
   /** Notebook ids already on this Mac: shown Already Added, not opened again. */
   added: ReadonlySet<string>;
   loaded: RepoRead | undefined;
-  read: (repo: GitHubRepo, again?: boolean) => void;
+  read: (repo: GitHubRepo, again?: boolean, branch?: string) => void;
+  /** The branch Pick Branch chose (A1621): its folders are the ones shown, and the notebook syncs it. */
+  branch: string;
   onOpen: (place: Place, name: string) => void;
   onName: (place: Place) => void;
   onFolder: () => void;
   onUrl: () => void;
   back: () => void;
 }) {
-  const [branch, setBranch] = useState(repo.defaultBranch || 'main');
+  const [branch, setBranch] = useState(picked);
   const [dir, setDir] = useState('');
   const [another, setAnother] = useState('');
   const [anotherProblem, setAnotherProblem] = useState<string | null>(null);
   const [pick, setPick] = useState<string | null>(null);
   const formId = useId();
   useEffect(() => {
-    if (!loaded) read(repo);
-  }, [loaded, read, repo]);
+    if (!loaded) read(repo, false, picked);
+  }, [loaded, read, repo, picked]);
 
   if (!loaded || loaded.state === 'loading') {
     return (
@@ -83,7 +86,7 @@ export function RepoPicked({
               primary
               icon="refresh"
               testId="first-run-retry"
-              onClick={() => read(repo, true)}
+              onClick={() => read(repo, true, picked)}
             >
               Try Again
             </Action>
@@ -100,7 +103,7 @@ export function RepoPicked({
   const { folders } = loaded;
   const notebooks = notebooksIn(folders);
   const isAdded = (each: { notebook: { id: string } }) => added.has(each.notebook.id);
-  const branchNow = repo.defaultBranch || 'main';
+  const branchNow = picked;
   const rootIsNotebook = notebooks.some((each) => each.path === '');
 
   // 4.5: empty, so the notebook starts at its root.
@@ -144,7 +147,7 @@ export function RepoPicked({
         setAnotherProblem(words);
         return;
       }
-      onName(placeIn(repo, via, another.trim()));
+      onName(placeIn(repo, via, another.trim(), branchNow));
     };
     return (
       <Frame
@@ -170,7 +173,7 @@ export function RepoPicked({
             data-event="firstrun.repo.open"
             primary
             testId="first-run-open"
-            onClick={() => onOpen(placeIn(repo, via, only.path), only.notebook.name)}
+            onClick={() => onOpen(placeIn(repo, via, only.path, branchNow), only.notebook.name)}
           >
             Open {only.notebook.name}
           </Action>
@@ -219,7 +222,7 @@ export function RepoPicked({
 
   // 4.7: several notebooks: pick one.
   if (notebooks.length > 1) {
-    const picked =
+    const chosen =
       notebooks.find((each) => each.path === pick) ??
       notebooks.find((each) => !isAdded(each)) ??
       notebooks[0]!;
@@ -234,11 +237,11 @@ export function RepoPicked({
           <Action
             data-event="firstrun.repo.open"
             primary
-            disabled={isAdded(picked)}
+            disabled={isAdded(chosen)}
             testId="first-run-open"
-            onClick={() => onOpen(placeIn(repo, via, picked.path), picked.notebook.name)}
+            onClick={() => onOpen(placeIn(repo, via, chosen.path, branchNow), chosen.notebook.name)}
           >
-            Open {picked.notebook.name}
+            Open {chosen.notebook.name}
           </Action>
         }
       >
@@ -251,7 +254,7 @@ export function RepoPicked({
               <input
                 type="radio"
                 name={`${formId}-notebook`}
-                checked={each.path === picked.path}
+                checked={each.path === chosen.path}
                 disabled={isAdded(each)}
                 data-event="firstrun.notebook"
                 onChange={() => setPick(each.path)}
@@ -280,5 +283,14 @@ export function RepoPicked({
   }
 
   // 4.8: other files: pick where the notebook goes.
-  return <FolderPick repo={repo} via={via} folders={folders} onName={onName} back={back} />;
+  return (
+    <FolderPick
+      repo={repo}
+      via={via}
+      folders={folders}
+      branch={branchNow}
+      onName={onName}
+      back={back}
+    />
+  );
 }

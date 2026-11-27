@@ -155,6 +155,22 @@ export class GitHubBrowseHost {
     return this.withToken((token) => this.browse.folders(token, fullName, branch), who);
   }
 
+  /** A repository's branches for Pick Branch (A1621), the default first. */
+  branches(
+    fullName: unknown,
+    defaultBranch: unknown,
+    account?: unknown,
+  ): Promise<ViaResult<readonly string[]>> {
+    const who = accountOf(account);
+    if (!isString(fullName, 140) || !isString(defaultBranch, 200) || who === false) {
+      return Promise.resolve({
+        ok: false,
+        error: { reason: 'invalid', message: 'Pick a repository first.' },
+      });
+    }
+    return this.withToken((token) => this.browse.branches(token, fullName, defaultBranch), who);
+  }
+
   owners(account?: unknown): Promise<ViaResult<readonly GitHubOwner[]>> {
     const who = accountOf(account);
     if (who === false) return Promise.resolve({ ok: false, error: NO_ACCOUNT });

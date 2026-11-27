@@ -65,8 +65,10 @@ export type Screen =
   | { readonly at: 'accounts'; readonly then: 'create' | 'list' }
   | { readonly at: 'create' }
   | { readonly at: 'list' }
-  | { readonly at: 'repo'; readonly repo: GitHubRepo }
-  | { readonly at: 'folder'; readonly repo: GitHubRepo }
+  /** Pick Branch (A1621), between the repository and its folders. */
+  | { readonly at: 'branch'; readonly repo: GitHubRepo }
+  | { readonly at: 'repo'; readonly repo: GitHubRepo; readonly branch: string }
+  | { readonly at: 'folder'; readonly repo: GitHubRepo; readonly branch: string }
   | { readonly at: 'url' }
   | { readonly at: 'git-missing' }
   | { readonly at: 'name'; readonly place: Place }
@@ -122,6 +124,7 @@ export function asAccount(
     ...github,
     repos: () => github.repos(account),
     folders: (fullName, branch) => github.folders(fullName, branch, account),
+    branches: (fullName, defaultBranch) => github.branches(fullName, defaultBranch, account),
     owners: () => github.owners(account),
     create: (owner, name) => github.create(owner, name, account),
   };
@@ -175,6 +178,10 @@ export function repoNameOf(address: string): string {
   const last = path.split(/[/:]/).pop() ?? '';
   return last.replace(/\.git$/, '');
 }
+
+/** Where one repository's folders on one branch are kept while the flow is open (A1621). */
+export const readKey = (repo: GitHubRepo, branch?: string) =>
+  `${repo.fullName}@${branch ?? (repo.defaultBranch || 'main')}`;
 
 /** A GitHub repository picked from the list, at a folder. */
 export function placeIn(repo: GitHubRepo, via: GitHubVia, dir = '', branch?: string): Place {

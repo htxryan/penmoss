@@ -214,6 +214,10 @@ interface Invokes {
     [fullName: string, branch: string, account?: string | null],
     GitHubAnswer<RepoFolders> | null
   >;
+  gitGithubBranches: Call<
+    [fullName: string, defaultBranch: string, account?: string | null],
+    GitHubAnswer<readonly string[]> | null
+  >;
   gitGithubOwners: Call<[account?: string | null], GitHubAnswer<readonly GitHubOwner[]> | null>;
   gitGithubCreate: Call<
     // Main checks the owner's kind (`user` or `org`) itself.
@@ -386,6 +390,7 @@ export const INVOKE = {
   // Browsing GitHub in Add a Git Notebook (T81, A1165): the main window only, where adding is.
   gitGithubRepos: { channel: 'penmoss:git:github-repos', from: 'main' },
   gitGithubFolders: { channel: 'penmoss:git:github-folders', from: 'main' },
+  gitGithubBranches: { channel: 'penmoss:git:github-branches', from: 'main' },
   gitGithubOwners: { channel: 'penmoss:git:github-owners', from: 'main' },
   // Whose git's own GitHub sign-in is, for Pick GitHub Account (A1617).
   gitGithubGitLogin: { channel: 'penmoss:git:github-git-login', from: 'main' },

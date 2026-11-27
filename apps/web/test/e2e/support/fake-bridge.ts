@@ -499,6 +499,8 @@ export function installFakeBridge(config: {
       github: {
         repos: (account) => host('githubRepos', account),
         folders: (fullName, branch, account) => host('githubFolders', fullName, branch, account),
+        branches: (fullName, defaultBranch, account) =>
+          host('githubBranches', fullName, defaultBranch, account),
         owners: (account) => host('githubOwners', account),
         create: (owner, name, account) => host('githubCreate', owner, name, account),
         gitLogin: () => host('githubGitLogin'),

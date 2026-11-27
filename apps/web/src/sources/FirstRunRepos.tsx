@@ -13,7 +13,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import type { GitHubRepo, RepoFolder } from '../desktop/bridge';
-import { notebooksIn, type Goal, type Hub, type RepoRead } from './first-run-flow';
+import { notebooksIn, readKey, type Goal, type Hub, type RepoRead } from './first-run-flow';
 import { Action, Frame, LinkButton, Location } from './FirstRunFrame';
 import { pushedWords } from './repo-words';
 import { counted } from '@penmoss/core/words';
@@ -139,7 +139,7 @@ export function RepoTree({
   const q = query.trim();
   const shown = useMemo(() => {
     return repos.flatMap((repo) => {
-      const loaded = reads.get(repo.fullName);
+      const loaded = reads.get(readKey(repo));
       const notebooks = loaded?.state === 'ready' ? notebooksIn(loaded.folders) : [];
       if (!q) return [{ repo, notebooks }];
       const repoMatch = fuzzyMatch(q, repo.fullName, { scattered: false }) !== null;
@@ -157,7 +157,7 @@ export function RepoTree({
     for (const { repo } of shown) {
       if (reading >= READ_AT_ONCE) break;
       const isNear = !seeing || near.has(repo.fullName);
-      if (!isNear || !repo.canPush || repo.empty || reads.has(repo.fullName)) continue;
+      if (!isNear || !repo.canPush || repo.empty || reads.has(readKey(repo))) continue;
       read(repo);
       reading += 1;
     }
@@ -168,7 +168,7 @@ export function RepoTree({
     () =>
       repos
         .filter((repo) => {
-          const loaded = reads.get(repo.fullName);
+          const loaded = reads.get(readKey(repo));
           return (
             !found.has(repo.fullName) &&
             loaded?.state === 'ready' &&
@@ -264,7 +264,7 @@ export function RepoTree({
   const toggle = (repo: GitHubRepo) => {
     const opening = !isOpen(repo.fullName);
     setToggled((now) => new Map(now).set(repo.fullName, opening));
-    if (opening && !repo.empty && !reads.has(repo.fullName)) read(repo);
+    if (opening && !repo.empty && !reads.has(readKey(repo))) read(repo);
   };
 
   return (
@@ -314,7 +314,7 @@ export function RepoTree({
         {shown.map(({ repo, notebooks }) => {
           // A filter shows what matched inside, opened or not.
           const expanded = isOpen(repo.fullName) || (q !== '' && notebooks.length > 0);
-          const loaded = reads.get(repo.fullName);
+          const loaded = reads.get(readKey(repo));
           return (
             <li
               key={repo.fullName}
