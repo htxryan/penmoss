@@ -58,13 +58,23 @@ export const summaryOf = (app: StoredApp): AppSummary => ({
 });
 
 /**
+ * The App's name: the owner's login and the relay's Worker (the first part of its address), so a
+ * second relay's App doesn't clash with the first's. GitHub's names are unique across GitHub and
+ * at most 34 characters; the owner can change it on GitHub's page before making it.
+ */
+export function appName(origin: string, owner: string): string {
+  const worker = new URL(origin).hostname.split('.')[0] ?? '';
+  const relay = /relay/i.test(worker) ? worker : `${worker} relay`;
+  return `${owner} ${relay}`.slice(0, 34).trim();
+}
+
+/**
  * The manifest the setup page posts to GitHub: contents write, metadata read, administration write
  * (Add Notebook's Create New Repo, A1701), no webhook.
  */
 export function manifest(origin: string, owner: string) {
   return {
-    // GitHub's names are unique and at most 34 characters; the owner can change it there.
-    name: `${owner.slice(0, 20)} Penmoss Relay`,
+    name: appName(origin, owner),
     url: origin,
     description: 'Lets Claude read and write your Penmoss notebooks through your relay.',
     hook_attributes: { url: origin, active: false },

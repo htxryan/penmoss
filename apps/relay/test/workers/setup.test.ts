@@ -6,6 +6,7 @@
 import { env, exports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { forgetApp, keepTestApp, keepTestNotebooks, TEST_APP } from './support';
+import { appName } from '../../src/app';
 
 const ORIGIN = 'https://mcp.penmoss.test';
 
@@ -106,10 +107,15 @@ describe('setting up a relay', () => {
       setup_url: `${ORIGIN}/notebooks`,
       hook_attributes: { active: false },
       public: false,
-      default_permissions: { contents: 'write', metadata: 'read' },
+      default_permissions: { contents: 'write', metadata: 'read', administration: 'write' },
       default_events: [],
     });
-    expect(String(manifest['name']).length).toBeLessThanOrEqual(34);
+    // Named for its Worker, so a second relay's App doesn't clash with the first's.
+    expect(manifest['name']).toBe('htxryan mcp relay');
+    expect(appName('https://penmoss-relay-trial.tftm-app.workers.dev', 'htxryan')).toBe(
+      'htxryan penmoss-relay-trial',
+    );
+    expect(appName(`https://${'x'.repeat(40)}.workers.dev`, 'htxryan').length).toBe(34);
     // A second visit has another state: each is good once.
     expect((await openSetup()).state).not.toBe(state);
   });

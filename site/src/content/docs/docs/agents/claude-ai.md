@@ -24,7 +24,7 @@ You need:
 
 The relay's first page is **Set Up This Relay**.
 
-1. Choose **Create GitHub App…**. GitHub opens with an App filled in for your relay. It asks to read and write your repositories' contents, and nothing else. Choose **Create GitHub App**, and you come back to the relay. An App made by any account other than the owner's is refused.
+1. Choose **Create GitHub App…**. GitHub opens with an App filled in for your relay, named for it. It asks to read and write your repositories' contents, and to make repositories, for Add Notebook's **Create New Repo**. Choose **Create GitHub App**, and you come back to the relay. An App made by any account other than the owner's is refused.
 2. Choose **Install on GitHub…**, and pick the repositories that hold your notebooks.
 3. Choose **Sign In with GitHub**, as the owner.
 
@@ -36,7 +36,7 @@ Each notebook on the Notebooks page shows its name, where it is, and when it las
 
 A repository in an organisation that won't allow your App: on GitHub, make a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for it, with **Contents: Read and write**. In Add Notebook, open the account menu above the repositories, choose **Manage GitHub Accounts…**, then **Use a Token Instead…**, and paste it. Its repositories are then one pick away in the same menu. The relay keeps the token; the Notebooks page shows only its last four characters, and **Replace Token…** gives a notebook a new one.
 
-To use **Create New Repo**, your App needs permission to make repositories: on GitHub, open your App's settings, set **Administration** to **Read and write**, save, and accept the change where the App is installed. Relays set up from now on ask for it at the start.
+An App made before 27 November 2026 can't make repositories yet, so **Create New Repo** refuses. Give it permission once: on GitHub, open your App's settings, set **Administration** to **Read and write**, save, and accept the change where the App is installed.
 
 **Remove…** stops Claude reaching a notebook. Its notes stay in the repository, and edits not yet pushed are pushed first.
 

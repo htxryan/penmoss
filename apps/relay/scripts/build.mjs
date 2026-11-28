@@ -13,7 +13,15 @@
  * it bundles has uncommitted edits. The relay's pages show it (src/version.ts).
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -110,6 +118,8 @@ function template(out) {
     main: 'index.js',
     // Already bundled, with its version in it.
     no_bundle: true,
+    // Only index.js: never the wasm and html in node_modules, which Cloudflare's build installs.
+    find_additional_modules: false,
   };
   writeFileSync(
     join(out, 'wrangler.jsonc'),
@@ -147,7 +157,20 @@ function check(dir) {
   const alone = mkdtempSync(join(tmpdir(), 'penmoss-relay-check-'));
   try {
     cpSync(resolve(dir), alone, { recursive: true });
+    // As Cloudflare's build has it: wrangler installed beside the template, wasm and all.
+    const installed = join(alone, 'node_modules', 'blake3-wasm', 'dist');
+    mkdirSync(installed, { recursive: true });
+    writeFileSync(
+      join(installed, 'blake3_js_bg.wasm'),
+      new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]),
+    );
     run(wrangler, ['deploy', '--dry-run', '--outdir', join(alone, '.dry-run')], alone);
+    const uploaded = readdirSync(join(alone, '.dry-run'), { recursive: true })
+      .map(String)
+      .filter((each) => !each.endsWith('.map') && !each.endsWith('README.md'));
+    if (uploaded.join() !== 'index.js') {
+      throw new Error(`The template would upload more than index.js: ${uploaded.join(', ')}`);
+    }
   } finally {
     rmSync(alone, { recursive: true, force: true });
   }

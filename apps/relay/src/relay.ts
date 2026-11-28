@@ -422,10 +422,13 @@ export class Relay {
     );
   }
 
-  /** The served notebooks by name: the name in `notebook.json`, its repository added on a clash. */
-  private async named(): Promise<ReadonlyMap<string, Copy>> {
-    await Promise.all(this.copies.map((copy) => copy.ready()));
-    const base = (copy: Copy) => copy.info?.name ?? copy.place.repository;
+  /**
+   * The served notebooks by name: the name in `notebook.json`, its repository added on a clash.
+   * Claude's calls wait for each first sync; the Notebooks page doesn't (`named(false)`).
+   */
+  private async named(wait = true): Promise<ReadonlyMap<string, Copy>> {
+    if (wait) await Promise.all(this.copies.map((copy) => copy.ready()));
+    const base = (copy: Copy) => copy.info?.name ?? copy.place.name ?? copy.place.repository;
     const count = new Map<string, number>();
     for (const copy of this.copies) count.set(base(copy), (count.get(base(copy)) ?? 0) + 1);
     const repositories = new Map<string, number>();
@@ -451,11 +454,16 @@ export class Relay {
     return this.copies.map((copy) => copy.place.repository);
   }
 
-  /** The notebooks, as the owner's Notebooks page lists them: nothing secret. */
+  /**
+   * The notebooks, as the owner's Notebooks page lists them: nothing secret. It answers at once:
+   * a notebook not synced yet starts its first sync, and shows no sync time until it lands (Add
+   * Notebook's Setting Up asks again until then).
+   */
   async rows(): Promise<NotebookRow[]> {
-    return [...(await this.named())].map(([name, copy]) => ({
+    for (const copy of this.copies) void copy.ready();
+    return [...(await this.named(false))].map(([name, copy]) => ({
       name,
-      id: copy.info?.id ?? null,
+      id: copy.info?.id ?? copy.place.id ?? null,
       key: placeKey(copy.place),
       repository: copy.place.repository,
       branch: copy.place.branch,
