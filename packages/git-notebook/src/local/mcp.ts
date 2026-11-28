@@ -665,6 +665,12 @@ const rpcError = (id: Id, code: number, message: string) => ({
 export interface LocalServerPresentation {
   /** `serverInfo.title` (default `Penmoss git notebook <name>`). */
   readonly title?: string;
+  /** `serverInfo.icons`: what a client such as claude.ai shows beside the server (the relay's). */
+  readonly icons?: readonly {
+    readonly src: string;
+    readonly mimeType: string;
+    readonly sizes: readonly string[];
+  }[];
   /**
    * What `initialize` tells the agent (default `LOCAL_INSTRUCTIONS`): text, or made from the
    * notebooks served at that moment (the relay's, PEN-192).
@@ -810,6 +816,7 @@ export class LocalMcpServer {
               this.presentation.title ??
               (this.router ? 'Penmoss git notebooks' : `Penmoss git notebook ${this.name}`),
             version: LOCAL_SERVER_VERSION,
+            ...(this.presentation.icons ? { icons: this.presentation.icons } : {}),
           },
           instructions:
             (typeof this.presentation.instructions === 'function'
