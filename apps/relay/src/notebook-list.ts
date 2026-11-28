@@ -31,4 +31,6 @@ export const placesOf = (list: readonly StoredNotebook[]): NotebookPlace[] =>
     branch: each.branch,
     root: each.root,
     access: each.token ? { kind: 'token', token: each.token } : { kind: 'app' },
+    ...(each.id ? { id: each.id } : {}),
+    ...(each.name ? { name: each.name } : {}),
   }));

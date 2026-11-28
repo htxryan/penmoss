@@ -37,6 +37,9 @@ export interface Place {
 /** One notebook the relay serves: where it is, and how the relay reaches it. */
 export interface NotebookPlace extends Place {
   readonly access: GitHubAccess;
+  /** Its `notebook.json`'s id and name as it was added, until its first sync reads them. */
+  readonly id?: string;
+  readonly name?: string;
 }
 
 /** What the relay's pages and its sign-in need, set up or not. */

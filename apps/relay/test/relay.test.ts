@@ -17,7 +17,7 @@ import { localTools, RELAY_ABSENT_TOOLS } from '@penmoss/git-notebook/local';
 import { notebookTag, shortNoteRef } from '@penmoss/core/note-ref';
 import { readTitle } from '@penmoss/model/note';
 import { generateKeyPairSync } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   FAKE_API,
   FAKE_REPO,
@@ -383,6 +383,8 @@ describe('several notebooks in one relay (PEN-192)', () => {
     options: {
       names?: [string, string];
       app?: boolean;
+      /** Quanta's id and name kept as it was added, as the Notebooks page keeps them. */
+      kept?: boolean;
       env?: Record<string, string>;
     } = {},
   ) {
@@ -414,6 +416,21 @@ describe('several notebooks in one relay (PEN-192)', () => {
     const quantaGitHub = fakeGitHub(quantaRemote, { repository: WORK_REPO, token: 'github_pat_q' });
     const calls: string[] = [];
     const down = new Set<string>();
+    /** Repositories GitHub is slow to answer for: each call waits until `release()`. */
+    const stalled = new Set<string>();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const answer = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(typeof input === 'string' ? input : (input as Request).url);
+      for (const repository of stalled) {
+        if (url.pathname.startsWith(`/repos/${repository}`)) {
+          return held.then(() => fetcher(input, init));
+        }
+      }
+      return fetcher(input, init);
+    };
     const fetcher = ((input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(typeof input === 'string' ? input : (input as Request).url);
       calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
@@ -455,6 +472,7 @@ describe('several notebooks in one relay (PEN-192)', () => {
           branch: 'dev',
           root: 'penmoss/',
           access: { kind: 'token', token: 'github_pat_q' },
+          ...(options.kept ? { id: QUANTA.id, name: QUANTA.name } : {}),
         },
       ],
     );
@@ -472,7 +490,7 @@ describe('several notebooks in one relay (PEN-192)', () => {
         },
         log: (text) => logs.push(text),
       },
-      { fetch: fetcher, clock },
+      { fetch: answer, clock },
     );
     let id = 0;
     const rpc = async (method: string, params: Record<string, unknown> = {}) => {
@@ -502,6 +520,8 @@ describe('several notebooks in one relay (PEN-192)', () => {
       logs,
       calls,
       down,
+      stalled,
+      release,
       personal,
       quanta,
       personalRemote,
@@ -670,6 +690,23 @@ describe('several notebooks in one relay (PEN-192)', () => {
     await tool('list_recent', {});
     const before = await rebuiltRows(rebuilt);
     expect(before.every((row) => typeof row.syncedAt === 'number' && row.syncedAt > 0)).toBe(true);
+  });
+
+  it('lists the notebooks at once, a first sync still running, as Setting Up asks', async () => {
+    const { relay, stalled, release } = await two({ kept: true });
+    stalled.add(WORK_REPO);
+    const first = await relay.rows();
+    expect(first.find((row) => row.repository === WORK_REPO)).toMatchObject({
+      name: QUANTA.name,
+      id: QUANTA.id,
+      syncedAt: null,
+      problem: null,
+    });
+    release();
+    await vi.waitFor(async () => {
+      const rows = await relay.rows();
+      expect(rows.every((row) => typeof row.syncedAt === 'number' && row.syncedAt > 0)).toBe(true);
+    });
   });
 
   it('names each notebook from its notebook.json, adding its repository on a clash', async () => {
