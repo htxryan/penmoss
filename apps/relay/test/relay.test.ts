@@ -18,6 +18,7 @@ import { notebookTag, shortNoteRef } from '@penmoss/core/note-ref';
 import { readTitle } from '@penmoss/model/note';
 import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
+import { SERVER_ICONS } from '../src/icon';
 import {
   FAKE_API,
   FAKE_REPO,
@@ -149,7 +150,8 @@ describe('the relay over MCP', () => {
     const init = await rpc('initialize', { protocolVersion: '2025-06-18' });
     expect(init.result).toMatchObject({
       protocolVersion: '2025-06-18',
-      serverInfo: { title: 'Penmoss' },
+      // claude.ai shows the logo beside the connector, not a letter (PEN-195's trial).
+      serverInfo: { title: 'Penmoss', icons: SERVER_ICONS },
       instructions: relayInstructions('htxryan', 'claude.ai', [
         { name: 'Personal', tag: notebookTag(NOTEBOOK.id) },
       ]),

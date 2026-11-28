@@ -13,6 +13,7 @@ import { AddBridge, keepOwnerToken } from './add-bridge';
 import { DurableObject } from 'cloudflare:workers';
 import { credentialsOf, keepApp, readApp, summaryOf, type AppSummary, type StoredApp } from './app';
 import { placeKey, readBasics, readConfig, sameLogin, type RelaySettings } from './config';
+import { iconResponse } from './icon';
 import { AppTokens, type OwnerToken } from './github-auth';
 import { branchesOf, type GitHubCall } from './github-api';
 import { placesOf, readNotebookList, writeNotebookList } from './notebook-list';
@@ -271,6 +272,8 @@ function oauth(env: Env, request: Request): OAuthProvider<Env> {
 
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const icon = request.method === 'GET' ? iconResponse(new URL(request.url).pathname) : null;
+    if (icon) return Promise.resolve(icon);
     return oauth(env, request).fetch(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;

@@ -7,6 +7,7 @@
 import { PENMOSS } from '@penmoss/ui/theme/builtins';
 import { themeVariables } from '@penmoss/ui/theme/css';
 import { APP_CSS } from './app-css.gen';
+import { ICON_LINKS } from './icon';
 import { relayVersion, UPDATE_DOCS } from './version';
 
 export const escape = (text: string) =>
@@ -76,7 +77,7 @@ export function page(status: number, title: string, body: string, options: PageO
   const content = options.app
     ? `${body}<div class="relay relay-app-foot">${FOOT}</div>`
     : `<main class="relay"><div class="relay-head"><h1 class="t-page-title">${escape(title)}</h1>${options.aside ? `<span class="relay-who">${options.aside}</span>` : ''}</div>${body}${FOOT}</main>`;
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>${escape(title)}</title>
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">${ICON_LINKS}<title>${escape(title)}</title>
 <style>${APP_CSS}
 ${PAGE_CSS}</style>
 </head><body>${content}</body></html>`;

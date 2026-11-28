@@ -27,6 +27,7 @@ import {
   type ServedNotebook,
 } from '@penmoss/git-notebook/local';
 import { notebookTag } from '@penmoss/core/note-ref';
+import { SERVER_ICONS } from './icon';
 import { placeKey, type NotebookPlace, type Place, type RelayConfig } from './config';
 import { AppTokens, tokenSource } from './github-auth';
 import type { NotebookRow } from './notebooks';
@@ -393,6 +394,7 @@ export class Relay {
     };
     this.server = new LocalMcpServer(set, config.agentLabel, host.log, {
       title: 'Penmoss',
+      icons: SERVER_ICONS,
       instructions: (served) => relayInstructions(config.owner, config.agentLabel, served),
       // Comments to an agent are the local MCP's only (D50, A1064).
       absent: RELAY_ABSENT_TOOLS,
